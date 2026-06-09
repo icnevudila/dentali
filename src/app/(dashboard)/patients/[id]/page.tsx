@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Phone, Mail, MapPin, Printer, ShieldCheck } from "lucide-react"
+import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Phone, Mail, MapPin, Printer, ShieldCheck, Camera } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -43,8 +43,11 @@ export default function PatientProfilePage({ params }: { params: { id: string } 
           <Button variant="ghost" size="icon" asChild className="mt-1">
             <Link href="/patients"><ArrowLeft className="h-4 w-4" /></Link>
           </Button>
-          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary-100 text-primary-700 text-2xl font-bold">
+          <div className="relative group flex items-center justify-center w-16 h-16 rounded-full bg-primary-100 text-primary-700 text-2xl font-bold overflow-hidden cursor-pointer">
             MG
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera className="h-5 w-5 text-white" />
+            </div>
           </div>
           <div>
             <div className="flex items-center gap-2">

@@ -8,7 +8,7 @@ import { patientSchema, type PatientFormValues } from "@/lib/validations/patient
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, UserPlus, AlertCircle } from "lucide-react"
+import { ArrowLeft, UserPlus, AlertCircle, Camera } from "lucide-react"
 import Link from "next/link"
 
 export default function NewPatientPage() {
