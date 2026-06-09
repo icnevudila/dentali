@@ -1,0 +1,14 @@
+- [ ] Initialize project repository and git
+- [ ] Create package.json and install dependencies (next, react, tailwind, supabase, prisma, typescript, eslint, prettier)
+- [ ] Add tsconfig.json with strict mode
+- [ ] Add .eslintrc.json for TypeScript + Prettier
+- [ ] Scaffold src/common utilities (api-response.ts, errors.ts, permissions.ts, audit.ts, time.ts)
+- [ ] Scaffold core backend modules (auth, clinics, users, patients, medical_history, consents, dental_chart, appointments, queue, treatments, invoices, payments, hmo, audit, reports) with 7‑layer folder structure
+- [ ] Scaffold frontend architecture (app router, ui components, forms, odontogram component, lib utils, admin pages, kiosk pages, queue display pages)
+- [ ] Create design system tokens.css and globals.css
+- [ ] Set up Prisma schema with required tables and integer money fields
+- [ ] Add initial CI scripts (lint, test, typecheck)
+- [ ] Write initial README with project overview
+- [ ] Verify all non‑negotiables (TS strict, audit logs, permission checks, UI states)
+- [ ] Run initial typecheck and lint
+- [ ] Commit initial scaffold

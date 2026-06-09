@@ -1,0 +1,21 @@
+# Node.js / npm
+node_modules/
+# Logs
+npm-debug.log*
+# OS files
+.DS_Store
+Thumbs.db
+# Environment variables
+.env
+# Build output
+dist/
+build/
+# IDE files
+.vscode/
+.idea/
+# Supabase functions
+supabase/functions/*
+# Large media
+screens/*
+# Temporary files
+*.tmp

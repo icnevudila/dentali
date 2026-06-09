@@ -1,0 +1,519 @@
+{
+  "name": "Philippines Multi-Branch Dental App 24 Module Pack",
+  "backend": "Supabase",
+  "module_count": 24,
+  "modules": [
+    {
+      "no": "01",
+      "title": "Organization & Multi-Branch",
+      "cat": "01-foundation",
+      "slug": "ORGANIZATION_MULTI_BRANCH",
+      "phase": "MVP Foundation",
+      "tables": [
+        "organizations",
+        "branches",
+        "branch_settings",
+        "staff_branch_assignments",
+        "audit_logs"
+      ],
+      "relations": [
+        "Auth/RBAC",
+        "Staff",
+        "Settings",
+        "All branch-scoped modules"
+      ]
+    },
+    {
+      "no": "02",
+      "title": "Auth, Roles & Permissions",
+      "cat": "01-foundation",
+      "slug": "AUTH_ROLES_PERMISSIONS",
+      "phase": "MVP Foundation",
+      "tables": [
+        "profiles",
+        "roles",
+        "permissions",
+        "role_permissions",
+        "staff_branch_assignments",
+        "session_audit_logs"
+      ],
+      "relations": [
+        "Organization",
+        "Staff",
+        "Settings",
+        "Audit"
+      ]
+    },
+    {
+      "no": "03",
+      "title": "Staff & Team Management",
+      "cat": "01-foundation",
+      "slug": "STAFF_TEAM",
+      "phase": "MVP Foundation",
+      "tables": [
+        "profiles",
+        "staff_profiles",
+        "staff_branch_assignments",
+        "roles",
+        "audit_logs"
+      ],
+      "relations": [
+        "Auth/RBAC",
+        "Appointments",
+        "Clinical Notes",
+        "Audit"
+      ]
+    },
+    {
+      "no": "04",
+      "title": "Settings & Configuration",
+      "cat": "01-foundation",
+      "slug": "SETTINGS_CONFIGURATION",
+      "phase": "MVP Foundation",
+      "tables": [
+        "organization_settings",
+        "branch_settings",
+        "clinic_hours",
+        "public_tokens",
+        "notification_templates",
+        "audit_logs"
+      ],
+      "relations": [
+        "Organization",
+        "Appointments",
+        "Kiosk",
+        "Notifications",
+        "Queue"
+      ]
+    },
+    {
+      "no": "05",
+      "title": "Patient Registry",
+      "cat": "02-patient-clinical",
+      "slug": "PATIENT_REGISTRY",
+      "phase": "MVP Clinical Core",
+      "tables": [
+        "patients",
+        "patient_contacts",
+        "patient_identifiers",
+        "patient_branch_links",
+        "documents",
+        "audit_logs"
+      ],
+      "relations": [
+        "Intake",
+        "Medical History",
+        "Consent",
+        "Appointments",
+        "Billing",
+        "Dental Chart"
+      ]
+    },
+    {
+      "no": "06",
+      "title": "Patient Intake",
+      "cat": "02-patient-clinical",
+      "slug": "PATIENT_INTAKE",
+      "phase": "MVP Clinical Core",
+      "tables": [
+        "patient_intakes",
+        "patients",
+        "patient_contacts",
+        "patient_identifiers",
+        "patient_insurance_profiles"
+      ],
+      "relations": [
+        "Patient Registry",
+        "Medical History",
+        "Consent",
+        "Kiosk"
+      ]
+    },
+    {
+      "no": "07",
+      "title": "Medical History",
+      "cat": "02-patient-clinical",
+      "slug": "MEDICAL_HISTORY",
+      "phase": "MVP Clinical Core",
+      "tables": [
+        "medical_histories",
+        "medical_history_versions",
+        "patient_conditions",
+        "patient_allergies",
+        "patient_medications",
+        "audit_logs"
+      ],
+      "relations": [
+        "Patient Registry",
+        "Dental Chart",
+        "Treatment Plan",
+        "Clinical Notes",
+        "Consent"
+      ]
+    },
+    {
+      "no": "08",
+      "title": "Consent & Legal Forms",
+      "cat": "02-patient-clinical",
+      "slug": "CONSENT_FORMS",
+      "phase": "MVP Clinical Core",
+      "tables": [
+        "consent_templates",
+        "consent_forms",
+        "consent_signatures",
+        "documents",
+        "audit_logs"
+      ],
+      "relations": [
+        "Patient Intake",
+        "Medical History",
+        "Treatment Plan",
+        "PhilHealth",
+        "Documents"
+      ]
+    },
+    {
+      "no": "09",
+      "title": "Dental Chart / Odontogram",
+      "cat": "02-patient-clinical",
+      "slug": "DENTAL_CHART_ODONTOGRAM",
+      "phase": "MVP Clinical Core",
+      "tables": [
+        "dental_charts",
+        "tooth_records",
+        "tooth_surface_records",
+        "tooth_findings",
+        "chart_versions",
+        "audit_logs"
+      ],
+      "relations": [
+        "Medical History",
+        "Treatment Plan",
+        "Clinical Notes",
+        "Invoices",
+        "Reports"
+      ]
+    },
+    {
+      "no": "10",
+      "title": "Treatment Plan",
+      "cat": "02-patient-clinical",
+      "slug": "TREATMENT_PLAN",
+      "phase": "MVP Clinical Core",
+      "tables": [
+        "treatment_plans",
+        "treatment_plan_items",
+        "procedure_catalog",
+        "procedure_prices",
+        "approvals",
+        "audit_logs"
+      ],
+      "relations": [
+        "Dental Chart",
+        "Procedure Catalog",
+        "Invoices",
+        "HMO Claims",
+        "Consent"
+      ]
+    },
+    {
+      "no": "11",
+      "title": "Clinical Notes & Visit Timeline",
+      "cat": "02-patient-clinical",
+      "slug": "CLINICAL_NOTES_TIMELINE",
+      "phase": "Phase 2 Clinical Depth",
+      "tables": [
+        "visits",
+        "clinical_notes",
+        "note_versions",
+        "documents",
+        "document_links",
+        "audit_logs"
+      ],
+      "relations": [
+        "Appointments",
+        "Dental Chart",
+        "Consent",
+        "Invoices",
+        "Reports"
+      ]
+    },
+    {
+      "no": "12",
+      "title": "Orthodontic Treatment Record",
+      "cat": "02-patient-clinical",
+      "slug": "ORTHODONTIC_RECORD",
+      "phase": "Phase 2 Specialty",
+      "tables": [
+        "ortho_cases",
+        "ortho_adjustments",
+        "ortho_appliances",
+        "ortho_progress_photos",
+        "payment_plans",
+        "audit_logs"
+      ],
+      "relations": [
+        "Patient Registry",
+        "Appointments",
+        "Invoices",
+        "Clinical Notes",
+        "Documents"
+      ]
+    },
+    {
+      "no": "13",
+      "title": "Appointments",
+      "cat": "03-operations",
+      "slug": "APPOINTMENTS",
+      "phase": "MVP Operations",
+      "tables": [
+        "appointments",
+        "provider_availability",
+        "clinic_hours",
+        "queue_entries",
+        "notification_logs",
+        "audit_logs"
+      ],
+      "relations": [
+        "Patients",
+        "Staff",
+        "Queue",
+        "Notifications",
+        "Clinical Notes",
+        "Invoices"
+      ]
+    },
+    {
+      "no": "14",
+      "title": "Waitlist",
+      "cat": "03-operations",
+      "slug": "WAITLIST",
+      "phase": "Phase 2 Operations",
+      "tables": [
+        "waitlist_entries",
+        "contact_attempts",
+        "appointments",
+        "notification_logs",
+        "audit_logs"
+      ],
+      "relations": [
+        "Patients",
+        "Appointments",
+        "Notifications",
+        "Reports"
+      ]
+    },
+    {
+      "no": "15",
+      "title": "Check-in & Queue",
+      "cat": "03-operations",
+      "slug": "CHECKIN_QUEUE",
+      "phase": "Phase 2 Operations",
+      "tables": [
+        "queue_entries",
+        "appointments",
+        "visits",
+        "chairs",
+        "branch_settings",
+        "audit_logs"
+      ],
+      "relations": [
+        "Appointments",
+        "Kiosk",
+        "TV Queue",
+        "Clinical Notes",
+        "Reports"
+      ]
+    },
+    {
+      "no": "16",
+      "title": "Kiosk / Patient Tablet",
+      "cat": "03-operations",
+      "slug": "KIOSK_TABLET",
+      "phase": "Phase 2 Patient Facing",
+      "tables": [
+        "public_tokens",
+        "kiosk_sessions",
+        "patient_intakes",
+        "queue_entries",
+        "appointments",
+        "audit_logs"
+      ],
+      "relations": [
+        "Settings",
+        "Patient Intake",
+        "Appointments",
+        "Queue",
+        "Notifications"
+      ]
+    },
+    {
+      "no": "17",
+      "title": "TV Queue Display",
+      "cat": "03-operations",
+      "slug": "TV_QUEUE_DISPLAY",
+      "phase": "Phase 2 Patient Facing",
+      "tables": [
+        "public_tokens",
+        "queue_entries",
+        "branch_settings",
+        "announcements"
+      ],
+      "relations": [
+        "Queue",
+        "Settings",
+        "Kiosk",
+        "Notifications"
+      ]
+    },
+    {
+      "no": "18",
+      "title": "Notifications / SMS",
+      "cat": "03-operations",
+      "slug": "NOTIFICATIONS_SMS",
+      "phase": "Phase 2 Operations",
+      "tables": [
+        "notification_templates",
+        "notification_logs",
+        "notification_preferences",
+        "scheduled_jobs",
+        "audit_logs"
+      ],
+      "relations": [
+        "Appointments",
+        "Waitlist",
+        "Billing",
+        "Settings",
+        "Patient Registry"
+      ]
+    },
+    {
+      "no": "19",
+      "title": "Procedure Catalog & Pricing",
+      "cat": "04-billing-claims",
+      "slug": "PROCEDURE_CATALOG_PRICING",
+      "phase": "MVP Billing Support",
+      "tables": [
+        "procedure_categories",
+        "procedures",
+        "procedure_prices",
+        "price_history",
+        "audit_logs"
+      ],
+      "relations": [
+        "Treatment Plan",
+        "Invoices",
+        "HMO Claims",
+        "Reports"
+      ]
+    },
+    {
+      "no": "20",
+      "title": "Invoices, Payments & Ledger",
+      "cat": "04-billing-claims",
+      "slug": "INVOICES_PAYMENTS_LEDGER",
+      "phase": "MVP Billing Core",
+      "tables": [
+        "invoices",
+        "invoice_items",
+        "payments",
+        "payment_methods",
+        "ledger_entries",
+        "audit_logs"
+      ],
+      "relations": [
+        "Treatment Plan",
+        "Procedure Catalog",
+        "HMO Claims",
+        "Reports",
+        "Patient Registry"
+      ]
+    },
+    {
+      "no": "21",
+      "title": "HMO Claims",
+      "cat": "04-billing-claims",
+      "slug": "HMO_CLAIMS",
+      "phase": "Phase 2 Billing",
+      "tables": [
+        "hmo_providers",
+        "hmo_claims",
+        "hmo_claim_items",
+        "claim_documents",
+        "claim_status_history",
+        "audit_logs"
+      ],
+      "relations": [
+        "Invoices",
+        "Patients",
+        "Documents",
+        "Reports",
+        "Procedure Catalog"
+      ]
+    },
+    {
+      "no": "22",
+      "title": "PhilHealth / eClaims Readiness",
+      "cat": "04-billing-claims",
+      "slug": "PHILHEALTH_ECLAIMS",
+      "phase": "Phase 3 Compliance/Risk",
+      "tables": [
+        "philhealth_claims",
+        "philhealth_claim_documents",
+        "philhealth_sync_logs",
+        "encrypted_payload_refs",
+        "audit_logs"
+      ],
+      "relations": [
+        "Patients",
+        "Consent",
+        "Documents",
+        "Invoices",
+        "Audit",
+        "Settings"
+      ]
+    },
+    {
+      "no": "23",
+      "title": "Inventory & Supplies",
+      "cat": "05-control-intelligence",
+      "slug": "INVENTORY_SUPPLIES",
+      "phase": "Phase 2 Operations Control",
+      "tables": [
+        "inventory_items",
+        "inventory_movements",
+        "inventory_categories",
+        "suppliers",
+        "stock_alerts",
+        "audit_logs"
+      ],
+      "relations": [
+        "Procedure Catalog",
+        "Compliance",
+        "Reports",
+        "Branch Settings"
+      ]
+    },
+    {
+      "no": "24",
+      "title": "Compliance, Audit & Reports",
+      "cat": "05-control-intelligence",
+      "slug": "COMPLIANCE_AUDIT_REPORTS",
+      "phase": "MVP Audit + Phase 2 Reports",
+      "tables": [
+        "audit_logs",
+        "compliance_cycles",
+        "report_runs",
+        "report_exports",
+        "dashboard_snapshots"
+      ],
+      "relations": [
+        "All modules",
+        "Inventory",
+        "Settings",
+        "Invoices",
+        "Appointments"
+      ]
+    }
+  ]
+}
