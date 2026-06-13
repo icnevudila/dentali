@@ -54,6 +54,7 @@ function BillingPageContent() {
   const [amount, setAmount] = React.useState("")
   const [dueDate, setDueDate] = React.useState("")
   const [creating, setCreating] = React.useState(false)
+  const [series, setSeries] = React.useState("INV")
 
   const load = React.useCallback(() => {
     if (!activeBranch) return
@@ -140,6 +141,7 @@ function BillingPageContent() {
       totalAmount,
       dueDate: dueDate || undefined,
       userId: user.id,
+      series: series,
     })
 
     setCreating(false)
@@ -150,6 +152,7 @@ function BillingPageContent() {
       setDueDate("")
       setPatientQuery("")
       setSelectedPatientId("")
+      setSeries("INV")
       load()
       if (data?.id) window.location.href = `/billing/${data.id}`
     }
@@ -284,6 +287,23 @@ function BillingPageContent() {
                         ))}
                       </ul>
                     )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      Invoice Series
+                    </label>
+                    <select
+                      className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none"
+                      value={series}
+                      onChange={(e) => setSeries(e.target.value)}
+                    >
+                      <option value="INV">INV (Default)</option>
+                      <option value="A">Series A</option>
+                      <option value="B">Series B</option>
+                      <option value="C">Series C</option>
+                      <option value="REC">REC (Receipt)</option>
+                    </select>
                   </div>
 
                   <div className="space-y-1">

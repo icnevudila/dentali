@@ -11,6 +11,7 @@ export interface InvoiceRecord {
   created_at: string
   due_date?: string | null
   patient_name?: string
+  series?: string | null
 }
 
 export async function fetchInvoices(
@@ -24,7 +25,7 @@ export async function fetchInvoices(
   const supabase = createClient()
   const { data, error } = await supabase
     .from("invoices")
-    .select("id, invoice_number, total_amount, paid_amount, status, patient_id, created_at, due_date, patients(first_name, last_name)")
+    .select("id, invoice_number, total_amount, paid_amount, status, patient_id, created_at, due_date, series, patients(first_name, last_name)")
     .eq("branch_id", branchId)
     .order("created_at", { ascending: false })
     .limit(50)
@@ -45,6 +46,7 @@ export async function fetchInvoices(
         created_at: row.created_at,
         due_date: row.due_date,
         patient_name: patient ? `${patient.first_name} ${patient.last_name}` : undefined,
+        series: row.series,
       }
     }),
     error: null,
@@ -83,13 +85,15 @@ export async function createManualInvoice(params: {
   totalAmount: number
   dueDate?: string
   userId: string
+  series?: string
 }): Promise<{ data: { id: string } | null; error: string | null }> {
   if (params.totalAmount <= 0) {
     return { data: null, error: "Amount must be greater than zero" }
   }
 
   const supabase = createClient()
-  const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`
+  const series = params.series || "INV"
+  const invoiceNumber = `${series}-${Date.now().toString(36).toUpperCase()}`
 
   const { data, error } = await supabase
     .from("invoices")
@@ -98,6 +102,7 @@ export async function createManualInvoice(params: {
       branch_id: params.branchId,
       patient_id: params.patientId,
       invoice_number: invoiceNumber,
+      series: series,
       total_amount: 0,
       status: "sent",
       due_date: params.dueDate ?? null,
@@ -125,9 +130,11 @@ export async function createInvoiceFromPlan(params: {
   treatmentPlanId: string
   totalAmount: number
   userId: string
+  series?: string
 }): Promise<{ data: { id: string } | null; error: string | null }> {
   const supabase = createClient()
-  const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`
+  const series = params.series || "INV"
+  const invoiceNumber = `${series}-${Date.now().toString(36).toUpperCase()}`
 
   const { data, error } = await supabase
     .from("invoices")
@@ -137,6 +144,7 @@ export async function createInvoiceFromPlan(params: {
       patient_id: params.patientId,
       treatment_plan_id: params.treatmentPlanId,
       invoice_number: invoiceNumber,
+      series: series,
       total_amount: 0,
       status: "sent",
       created_by: params.userId,

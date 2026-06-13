@@ -120,9 +120,28 @@ export function buildInvoicePrintHtml(params: {
       body { padding: 20px 24px; }
       .no-print { display: none; }
     }
+    .watermark {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      font-size: 3.5rem;
+      color: rgba(220, 38, 38, 0.12);
+      font-weight: 800;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 9999;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border: 8px solid rgba(220, 38, 38, 0.12);
+      padding: 8px 16px;
+      border-radius: 12px;
+      font-family: sans-serif;
+    }
   </style>
 </head>
 <body>
+  <div class="watermark">SAMPLE - NOT A VALID INVOICE</div>
   <div class="header">
     <div>
       <div class="clinic">${escapeHtml(clinicName)}</div>
