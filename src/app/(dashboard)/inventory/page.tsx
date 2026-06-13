@@ -59,6 +59,9 @@ function InventoryPageContent() {
   const [minStock, setMinStock] = React.useState("5")
   const [initialQty, setInitialQty] = React.useState("0")
   const [expiry, setExpiry] = React.useState("")
+  const [supplier, setSupplier] = React.useState("")
+  const [brand, setBrand] = React.useState("")
+  const [unitCost, setUnitCost] = React.useState("")
   const [saving, setSaving] = React.useState(false)
   const [adjustId, setAdjustId] = React.useState<string | null>(null)
   const [adjustQty, setAdjustQty] = React.useState("")
@@ -100,6 +103,8 @@ function InventoryPageContent() {
       sku: sku || undefined, category: category || undefined,
       minStockLevel: parseFloat(minStock) || 0, expiryDate: expiry || undefined,
       initialQty: parseFloat(initialQty) || 0, userId: user.id,
+      supplier: supplier || undefined, brand: brand || undefined,
+      unitCost: parseFloat(unitCost) || 0,
     })
     setSaving(false)
     if (err) {
@@ -230,6 +235,9 @@ function InventoryPageContent() {
                 <Input placeholder="Item name *" required value={name} onChange={(e) => setName(e.target.value)} />
                 <Input placeholder="SKU" value={sku} onChange={(e) => setSku(e.target.value)} />
                 <Input placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
+                <Input placeholder="Brand" value={brand} onChange={(e) => setBrand(e.target.value)} />
+                <Input placeholder="Supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} />
+                <Input type="number" step="0.01" placeholder="Unit Cost (₱)" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} />
                 <Input type="number" placeholder="Min stock" value={minStock} onChange={(e) => setMinStock(e.target.value)} />
                 <Input type="number" placeholder="Initial qty" value={initialQty} onChange={(e) => setInitialQty(e.target.value)} />
                 <Input type="date" placeholder="Expiry" value={expiry} onChange={(e) => setExpiry(e.target.value)} />
@@ -268,8 +276,9 @@ function InventoryPageContent() {
                   <thead>
                     <tr className="border-b text-neutral-500">
                       <th className="pb-2 text-left">{t("inventory.item", "Item")}</th>
-                      <th className="pb-2 text-left">{t("inventory.sku", "SKU")}</th>
+                      <th className="pb-2 text-left">Brand/Category</th>
                       <th className="pb-2 text-right">{t("inventory.onHand", "On hand")}</th>
+                      <th className="pb-2 text-right">Cost</th>
                       <th className="pb-2 text-left">{t("inventory.status", "Status")}</th>
                       <th className="pb-2 text-left">{t("inventory.expiry", "Expiry")}</th>
                       <th className="pb-2 text-right">{t("inventory.reorderSuggest", "Reorder")}</th>
@@ -282,9 +291,17 @@ function InventoryPageContent() {
                       const reorderQty = suggestedReorderQty(item)
                       return (
                         <tr key={item.id} className={level === "critical" || level === "expired" ? "border-l-4 border-l-red-500" : level === "low" ? "border-l-4 border-l-amber-400" : ""}>
-                          <td className="py-2 font-medium">{item.name}</td>
-                          <td className="py-2 font-mono text-xs">{item.sku ?? "—"}</td>
+                          <td className="py-2 font-medium">
+                            {item.name}
+                            <div className="text-[10px] text-neutral-400 font-mono">{item.sku ?? "—"}</div>
+                          </td>
+                          <td className="py-2 text-xs text-neutral-500">
+                            {item.brand ? <span className="font-semibold">{item.brand}</span> : null}
+                            {item.brand && item.category ? " / " : ""}
+                            {item.category}
+                          </td>
                           <td className="py-2 text-right">{item.quantity_on_hand} {item.unit}</td>
+                          <td className="py-2 text-right text-neutral-600">₱{item.unit_cost?.toLocaleString() ?? "0"}</td>
                           <td className="py-2"><Badge variant={LEVEL_VARIANT[level]}>{level}</Badge></td>
                           <td className="py-2 text-neutral-500">{item.expiry_date ?? "—"}</td>
                           <td className="py-2 text-right text-neutral-600">

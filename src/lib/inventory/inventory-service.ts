@@ -9,6 +9,9 @@ export interface InventoryItem {
   quantity_on_hand: number
   min_stock_level: number
   expiry_date: string | null
+  supplier: string | null
+  brand: string | null
+  unit_cost: number
   is_active: boolean
 }
 
@@ -37,7 +40,7 @@ export async function fetchInventoryItems(
   const supabase = createClient()
   const { data, error } = await supabase
     .from("inventory_items")
-    .select("id, name, sku, category, unit, quantity_on_hand, min_stock_level, expiry_date, is_active")
+    .select("id, name, sku, category, unit, quantity_on_hand, min_stock_level, expiry_date, supplier, brand, unit_cost, is_active")
     .eq("branch_id", branchId)
     .eq("is_active", true)
     .order("name")
@@ -56,6 +59,9 @@ export async function createInventoryItem(params: {
   minStockLevel: number
   expiryDate?: string
   initialQty: number
+  supplier?: string
+  brand?: string
+  unitCost?: number
   userId: string
 }): Promise<{ error: string | null }> {
   const supabase = createClient()
@@ -70,6 +76,9 @@ export async function createInventoryItem(params: {
       unit: params.unit ?? "pc",
       min_stock_level: params.minStockLevel,
       expiry_date: params.expiryDate ?? null,
+      supplier: params.supplier ?? null,
+      brand: params.brand ?? null,
+      unit_cost: params.unitCost ?? 0,
       quantity_on_hand: 0,
       created_by: params.userId,
     })

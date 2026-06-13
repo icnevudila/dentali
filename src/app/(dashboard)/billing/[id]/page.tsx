@@ -123,7 +123,7 @@ export default function InvoiceDetailPage() {
       return
     }
 
-    toast.success("Payment recorded successfully")
+    toast.success("Payment recorded! Doktor hakedişi (%40) otomatik hesaplanıp maaş hesabına aktarıldı.")
 
     const org = await fetchOrganization()
     if (org) {

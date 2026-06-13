@@ -6,6 +6,7 @@ import {
   Clock,
   CreditCard,
   FileCheck2,
+  FlaskConical,
   Home,
   ListOrdered,
   Monitor,
@@ -97,6 +98,13 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         href: "/patients/new",
         icon: UserPlus,
         permission: PERMISSIONS.PATIENTS_WRITE,
+      },
+      {
+        nameKey: "nav.labCases",
+        fallback: "Lab Cases",
+        href: "/lab-cases",
+        icon: FlaskConical,
+        permission: PERMISSIONS.PATIENTS_READ,
       },
       {
         nameKey: "nav.appointments",
