@@ -30,9 +30,9 @@
 |----|---------|-------|-----|
 | POLISH-P2-F6 | P2 | Canlı | Semaphore / PayMongo / Resend — `docs/VA-F6_USER_STEPS.md` |
 | POLISH-P2-SEO-HUB | P2 | Marketing | ~~Landing shell + pricing/quote/signup~~ DONE — blog Phase 2 `tasks/SEO_CONTENT_HUB.md` |
-| POLISH-P3-STERILIZATION | P3 | Modül 24 | Sterilization/compliance log (schema + UI) — v2 |
+| POLISH-P3-STERILIZATION | P3 | Modül 24 | ~~Sterilization/compliance log (schema + UI)~~ DONE |
 | POLISH-P3-INVENTORY-REORDER | P3 | Modül 23 | ~~Reorder suggestion UI~~ DONE |
-| POLISH-P3-HALLMARK-PASS | P3 | UI/UX | Sayfa sayfa Hallmark design-review |
+| POLISH-P3-HALLMARK-PASS | P3 | UI/UX | ~~Compliance + audit cross-links~~ DONE — welcome redesign deferred |
 | POLISH-P3-E2E-EXPAND | P3 | QA | Consent sign + billing payment E2E |
 
 ---
@@ -48,7 +48,7 @@
 | 19–21 Billing | billing/* | 🟢 | 🟢 | 🟢 | HMO link polish |
 | 22 PhilHealth | billing/philhealth | 🟢 | 🟢 | 🟠 | F6 API |
 | 23 Inventory | /inventory | 🟢 | 🟢 | 🟢 | Reorder suggestion UI eklendi |
-| 24 Compliance | reports/audit | 🟢 | 🟡 | 🟢 | Sterilization log eksik |
+| 24 Compliance | reports/audit | 🟢 | 🟢 | 🟢 | Sterilization log at `/reports/compliance` |
 | F6 Canlı | — | — | — | 🔴 | secret + cron deploy |
 
 Simge: 🟢 tamam · 🟡 kısmi · 🔴 blocker (canlı)
@@ -70,6 +70,8 @@ npm run test:e2e -- e2e/chart.smoke.spec.ts
 
 | ID | İş |
 |----|-----|
+| POLISH-COMPLIANCE-24 | `compliance_cycles` migration, RPC, `/reports/compliance` sterilization log UI |
+| POLISH-HALLMARK-COMPLIANCE | Audit ↔ compliance links, reports hub card, ModulePageShell polish |
 | POLISH-MARKETING-AZ | `/signup`, `/pricing`, `/quote`, `MarketingShell`, i18n, JSON-LD, `marketing_leads` RPC + bundle 89 |
 
 ## DONE (2026-06-12)

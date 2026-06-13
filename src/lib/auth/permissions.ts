@@ -19,6 +19,8 @@ export const PERMISSIONS = {
   NOTIFICATIONS_READ: "notifications.read",
   NOTIFICATIONS_WRITE: "notifications.write",
   AUDIT_READ: "audit.read",
+  COMPLIANCE_READ: "compliance.read",
+  COMPLIANCE_WRITE: "compliance.write",
 } as const
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS]

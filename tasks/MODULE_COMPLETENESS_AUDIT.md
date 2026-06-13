@@ -44,7 +44,7 @@
 | 21 | HMO | `/billing/hmo` | 🟢 | Invoice/plan → HMO link → **POLISH-FLOW-09** |
 | 22 | PhilHealth | `/billing/philhealth` | 🟡 | Dry-run submit (F6) |
 | 23 | Inventory | `/inventory` | 🟢 | Reorder suggestion UI eklendi |
-| 24 | Compliance / reports | `/reports`, audit | 🟠 | **Sterilization log** modül parçası yok (major, v2) |
+| 24 | Compliance / reports | `/reports`, `/reports/compliance`, audit | 🟢 | Sterilization log UI eklendi |
 
 ---
 

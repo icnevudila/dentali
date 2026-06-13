@@ -16,6 +16,7 @@ import {
   Download,
   RefreshCw,
   MapPin,
+  Shield,
 } from "lucide-react"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
@@ -74,6 +75,12 @@ export default function ReportsHubPage() {
         description: t("reports.linkAuditDesc", "Compliance trail and CSV export"),
         href: "/settings/audit",
         icon: ScrollText,
+      },
+      {
+        title: t("reports.linkCompliance", "Sterilization log"),
+        description: t("reports.linkComplianceDesc", "Autoclave cycles and indicator results"),
+        href: "/reports/compliance",
+        icon: Shield,
       },
       {
         title: t("reports.linkInventory", "Inventory"),

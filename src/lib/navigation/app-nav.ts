@@ -70,6 +70,13 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         icon: BarChart3,
         permission: PERMISSIONS.AUDIT_READ,
       },
+      {
+        nameKey: "nav.compliance",
+        fallback: "Sterilization log",
+        href: "/reports/compliance",
+        icon: Shield,
+        permission: PERMISSIONS.COMPLIANCE_READ,
+      },
     ],
   },
   {

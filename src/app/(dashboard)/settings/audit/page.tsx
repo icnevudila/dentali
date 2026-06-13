@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
@@ -14,7 +15,7 @@ import { auditPeriodToSince, type AuditPeriod } from "@/lib/audit/audit-filters"
 import { useBranch } from "@/hooks/use-branch"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Download, RefreshCw, ScrollText, Search } from "lucide-react"
+import { Download, RefreshCw, ScrollText, Search, Shield } from "lucide-react"
 import { useLocale } from "@/hooks/use-locale"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
@@ -100,6 +101,12 @@ export default function AuditLogPage() {
             >
               <Download className="h-4 w-4" />
               {t("settings.exportCsv", "Export CSV")}
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2" asChild>
+              <Link href="/reports/compliance">
+                <Shield className="h-4 w-4" />
+                {t("compliance.title", "Sterilization log")}
+              </Link>
             </Button>
             <Button variant="outline" size="sm" className="gap-2" onClick={() => void load()}>
               <RefreshCw className="h-4 w-4" />
