@@ -341,26 +341,30 @@ export default function WaitlistPage() {
               <PageLoadingSkeleton variant="inline" />
             ) : entries.length === 0 ? (
               <div className="py-8">
-                <div className="text-center text-neutral-500 mb-8 animate-fade-rise">
-                  <Clock className="h-10 w-10 mx-auto mb-3 text-neutral-300" />
-                  <p className="font-medium text-neutral-700">
-                    {tab === "active"
-                      ? t("waitlist.emptyActive", "No patients on the waitlist yet")
-                      : t("waitlist.emptyHistory", "No waitlist history yet")}
+                <div className="text-center">
+                  <Clock className="mx-auto h-12 w-12 text-neutral-300" aria-hidden />
+                  <p className="mt-4 font-semibold text-neutral-900">
+                    {tab === "active" ? "Bekleme Listesi (Waitlist) Boş" : t("waitlist.emptyHistoryTitle", "No history")}
                   </p>
-                  <p className="text-sm mt-1 max-w-md mx-auto">
-                    {tab === "active"
-                      ? t("waitlist.emptyActiveHint", "Each row shows urgency, contact progress, and quick actions.")
-                      : t("waitlist.emptyHistoryHint", "Booked, cancelled, and expired entries appear here.")}
-                  </p>
+                  <div className="text-sm mt-2 max-w-md mx-auto text-neutral-500 space-y-2">
+                    {tab === "active" ? (
+                      <>
+                        <p><strong>Waitlist ne işe yarar?</strong></p>
+                        <p>Randevu takviminiz tamamen doluysa ve bir hasta ısrarla erken tarihe randevu istiyorsa onu "Waitlist"e eklersiniz.</p>
+                        <p>Daha sonra herhangi bir hastanız randevusunu iptal ettiğinde, sistem bu listedeki hastaları sırasıyla uyararak o boşluğa randevu almanızı sağlar.</p>
+                      </>
+                    ) : (
+                      <p>{t("waitlist.emptyHistoryHint", "Booked, cancelled, and expired entries appear here.")}</p>
+                    )}
+                  </div>
                   {tab === "active" && (
-                    <Button variant="outline" className="mt-4 gap-2" onClick={() => setShowAdd(true)}>
-                      <Plus className="h-4 w-4" /> {t("waitlist.addFirst", "Add first entry")}
+                    <Button variant="outline" className="mt-6 gap-2 border-primary-200 text-primary-700 hover:bg-primary-50" onClick={() => setShowAdd(true)}>
+                      <Plus className="h-4 w-4" /> Waitlist'e Hasta Ekle
                     </Button>
                   )}
                 </div>
                 {tab === "active" ? (
-                  <div className="mx-auto max-w-xl rounded-xl border border-dashed border-neutral-200 bg-neutral-50/80 p-4 pointer-events-none select-none">
+                  <div className="mt-12 mx-auto max-w-xl rounded-xl border border-dashed border-neutral-200 bg-neutral-50/80 p-4 pointer-events-none select-none">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400 mb-3">
                       {t("waitlist.previewLabel", "Preview — how entries will look")}
                     </p>

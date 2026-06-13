@@ -337,14 +337,36 @@ export default function QueuePage() {
       <DirectionalTransition className="mx-auto w-full max-w-7xl">
         <ContentPanel padding="lg" className="space-y-6">
           <SectionEyebrow icon={Users}>
-            {t("queue.eyebrow", "Front desk")} · {t("queue.title", "Queue Board")}
+            {t("queue.eyebrow", "Front desk")} · {t("queue.title", "Queue & Patient Flow")}
           </SectionEyebrow>
 
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 text-xs font-semibold uppercase tracking-wider text-neutral-400">
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-100 text-[10px]">1</span>
+              <span>Appointment</span>
+            </div>
+            <div className="h-0.5 w-8 bg-neutral-200 shrink-0" />
+            <div className="flex items-center gap-2 text-primary-600 shrink-0">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-[10px]">2</span>
+              <span>Waiting Room (Queue)</span>
+            </div>
+            <div className="h-0.5 w-8 bg-neutral-200 shrink-0" />
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-100 text-[10px]">3</span>
+              <span>In Chair (Treatment)</span>
+            </div>
+            <div className="h-0.5 w-8 bg-neutral-200 shrink-0" />
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-100 text-[10px]">4</span>
+              <span>Billing & Exit</span>
+            </div>
+          </div>
+
           <PageHeader
-            title={t("queue.title", "Queue Board")}
+            title="Queue & Patient Flow"
             description={t(
               "queue.subtitle",
-              "Check patients in, call the next number, and monitor wait times."
+              "Check patients in from Appointments, move them to the Chair, and send to Billing."
             )}
             actions={
               <>

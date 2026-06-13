@@ -613,7 +613,7 @@ export function AppointmentWeekCalendar({
                               className="h-8 w-8 text-neutral-500 hover:text-neutral-700"
                               disabled={checkingInId === appt.id}
                               onClick={() => onCheckIn(appt.id)}
-                              title="Check In Patient"
+                              title="Bekleme Salonuna Al (Send to Queue)"
                             >
                               <UserCheck className="h-4 w-4" />
                             </Button>
