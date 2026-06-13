@@ -461,7 +461,7 @@ function AppointmentsPageContent() {
                   )}
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium">Provider</label>
+                  <label className="text-xs font-medium">Dentist</label>
                   <select
                     value={selectedProviderId}
                     onChange={(e) => setSelectedProviderId(e.target.value)}
@@ -469,11 +469,11 @@ function AppointmentsPageContent() {
                     required
                   >
                     {providers.length === 0 ? (
-                      <option value="">No providers for this branch</option>
+                      <option value="">No dentists for this branch</option>
                     ) : (
                       providers.map((p) => (
                         <option key={p.profile_id} value={p.profile_id}>
-                          {p.full_name ?? p.email ?? "Provider"}
+                          {p.full_name ?? p.email ?? "Dentist"}
                         </option>
                       ))
                     )}
@@ -537,10 +537,10 @@ function AppointmentsPageContent() {
                   {slotsLoading ? (
                     <p className="text-xs text-neutral-500">Loading slots…</p>
                   ) : !date || !selectedProviderId ? (
-                    <p className="text-xs text-neutral-500">Select provider and date.</p>
+                    <p className="text-xs text-neutral-500">Select dentist and date.</p>
                   ) : slots.length === 0 ? (
                     <div className="space-y-2">
-                      <p className="text-xs text-amber-700">No slots — provider may be closed this day or has no active clinic hours.</p>
+                      <p className="text-xs text-amber-700">No slots — dentist may be closed this day or has no active clinic hours.</p>
                       <Button
                         type="button"
                         variant="outline"
@@ -649,7 +649,7 @@ function AppointmentsPageContent() {
             branchId={activeBranch?.id}
             providers={providers.map((p) => ({
               profile_id: p.profile_id,
-              name: p.full_name || p.email || "Provider",
+              name: p.full_name || p.email || "Dentist",
             }))}
             canWrite={canWriteAppts}
             onSaved={reloadAvailability}

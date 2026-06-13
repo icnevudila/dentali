@@ -199,8 +199,9 @@ export async function createAppointment(params: {
   durationMinutes?: number
 }): Promise<{ data: { id: string } | null; error: string | null }> {
   const supabase = createClient()
-  const { data, error } = await supabase.rpc("create_appointment_validated", {
-    p_payload: {
+  const { data, error } = await supabase
+    .from("appointments")
+    .insert({
       organization_id: params.organizationId,
       branch_id: params.branchId,
       patient_id: params.patientId,
@@ -208,12 +209,13 @@ export async function createAppointment(params: {
       scheduled_at: params.scheduledAt,
       purpose: params.purpose,
       duration_minutes: params.durationMinutes ?? 30,
-    },
-  })
+      status: "scheduled",
+    })
+    .select("id")
+    .single()
 
   if (error) return { data: null, error: error.message }
-  const raw = data as { id: string }
-  return { data: { id: raw.id }, error: null }
+  return { data, error: null }
 }
 
 export async function checkInAppointment(
