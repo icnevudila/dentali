@@ -127,6 +127,24 @@ export async function openPublicDevice(
   return { error: null }
 }
 
+export async function verifyPortalPatient(
+  sessionId: string,
+  phone: string,
+  lastName: string
+): Promise<{ data: { patient_id: string } | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("verify_portal_patient", {
+    p_session_id: sessionId,
+    p_phone: phone,
+    p_last_name: lastName,
+  })
+
+  if (error) return { data: null, error: error.message }
+  const result = data as { patient_id: string }
+  if (!result?.patient_id) return { data: null, error: "We could not find your record." }
+  return { data: { patient_id: result.patient_id }, error: null }
+}
+
 export async function submitPortalAppointment(params: {
   sessionId: string
   phone: string
