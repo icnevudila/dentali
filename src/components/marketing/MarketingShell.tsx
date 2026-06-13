@@ -22,6 +22,12 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { t } = useLocale()
 
+  const isLandingPage = pathname === "/welcome" || pathname === "/"
+
+  if (isLandingPage) {
+    return <>{children}</>
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-white">
       <header className="sticky top-0 z-40 border-b border-neutral-200/90 bg-white/95 backdrop-blur-sm">
