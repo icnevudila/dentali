@@ -4,7 +4,7 @@ Supabase **SQL Editor**'da bu sırayla çalıştırın. Her adımın sonunda bek
 
 | Proje ref (örnek) | `ahipxdlxyuvqikcybjpm` |
 |-------------------|-------------------------|
-| Migration sayısı | **89** (bundle) |
+| Migration sayısı | **90** (bundle) |
 | Son güncelleme | 2026-06-12 |
 
 ---
@@ -36,7 +36,7 @@ cd "c:\Users\TP2\Documents\2026 yeni dişçi"
 npm run db:bundle:idempotent
 ```
 
-Çıktı: `Wrote ... _APPLY_ALL_IDEMPOTENT.sql (89 files, idempotent)`
+Çıktı: `Wrote ... _APPLY_ALL_IDEMPOTENT.sql (90 files, idempotent)`
 
 > Bundle'ı her migration değişikliğinden sonra yenileyin. SQL Editor'a yapıştırmadan önce güncel bundle kullanın.
 
