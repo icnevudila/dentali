@@ -53,15 +53,15 @@ export async function submitKioskIntake(
   payload: KioskIntakePayload
 ): Promise<{ data: { intake_id: string; status: string } | null; error: string | null }> {
   const supabase = createClient()
-  const { data, error } = await supabase.functions.invoke("submit-kiosk-intake", {
-    body: { session_id: sessionId, payload },
+  const { data, error } = await supabase.rpc("submit_kiosk_intake", {
+    p_session_id: sessionId,
+    p_payload: payload,
   })
 
   if (error) return { data: null, error: error.message }
-  const result = data as { data?: { intake_id: string; status: string }; error?: string }
-  if (result.error) return { data: null, error: result.error }
-  if (!result.data?.intake_id) return { data: null, error: "Invalid response from kiosk intake" }
-  return { data: { intake_id: result.data.intake_id, status: result.data.status }, error: null }
+  const result = data as { intake_id: string; status: string }
+  if (!result?.intake_id) return { data: null, error: "Invalid response from kiosk intake" }
+  return { data: { intake_id: result.intake_id, status: result.status }, error: null }
 }
 
 export async function generateBranchPublicToken(
