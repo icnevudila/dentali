@@ -439,25 +439,52 @@ function AppointmentsPageContent() {
               <form onSubmit={handleBook} className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2 space-y-2">
                   <label className="text-xs font-medium">{t("appointments.searchPatient", "Search patient")}</label>
-                  <Input
-                    value={patientQuery}
-                    onChange={(e) => setPatientQuery(e.target.value)}
-                    placeholder={t("appointments.searchPatientPlaceholder", "Name or phone…")}
-                  />
-                  {patients.length > 0 && (
-                    <ul className="border rounded-md divide-y max-h-32 overflow-y-auto text-sm">
-                      {patients.map((p) => (
-                        <li key={p.id}>
-                          <button
-                            type="button"
-                            className={`w-full text-left px-3 py-2 hover:bg-neutral-50 ${selectedPatientId === p.id ? "bg-primary-50" : ""}`}
-                            onClick={() => setSelectedPatientId(p.id)}
-                          >
-                            {p.first_name} {p.last_name} — {p.phone}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                  {selectedPatientId ? (
+                    <div className="flex items-center justify-between p-2 border rounded-md bg-primary-50 border-primary-200">
+                      <span className="text-sm font-medium text-primary-900">
+                        {patientQuery || "Selected Patient"}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs text-primary-700 hover:bg-primary-100"
+                        onClick={() => {
+                          setSelectedPatientId("")
+                          setPatientQuery("")
+                        }}
+                      >
+                        Change
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Input
+                        value={patientQuery}
+                        onChange={(e) => setPatientQuery(e.target.value)}
+                        placeholder={t("appointments.searchPatientPlaceholder", "Name or phone…")}
+                      />
+                      {patients.length > 0 && (
+                        <ul className="border rounded-md divide-y max-h-32 overflow-y-auto text-sm mt-1">
+                          {patients.map((p) => (
+                            <li key={p.id}>
+                              <button
+                                type="button"
+                                className="w-full text-left px-3 py-2 hover:bg-neutral-50"
+                                onClick={() => {
+                                  setSelectedPatientId(p.id)
+                                  setPatientQuery(`${p.first_name} ${p.last_name} — ${p.phone || ""}`)
+                                  setPatients([])
+                                }}
+                              >
+                                <span className="font-medium">{p.first_name} {p.last_name}</span>
+                                {p.phone && <span className="text-neutral-500 ml-1">— {p.phone}</span>}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
                   )}
                 </div>
                 <div className="space-y-1">
