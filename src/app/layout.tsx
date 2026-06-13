@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { LocaleBootstrap } from "@/components/i18n/LocaleBootstrap";
 import { getSiteUrl } from "@/lib/site-url";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -48,6 +49,7 @@ export default function RootLayout({
         <LocaleBootstrap />
         <ServiceWorkerRegister />
         {children}
+        <Toaster position="bottom-right" richColors closeButton />
       </body>
     </html>
   );

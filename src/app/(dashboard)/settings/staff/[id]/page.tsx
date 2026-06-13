@@ -15,6 +15,7 @@ import { PERMISSIONS } from "@/lib/auth/permissions"
 import { fetchAllOrgBranches } from "@/lib/org/branch-service"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { logAuditEvent } from "@/lib/audit/audit-service"
+import { toast } from "sonner"
 import {
   fetchRolesList,
   getStaffMember,
@@ -70,8 +71,13 @@ export default function StaffDetailPage() {
       phoneNumber,
       specialization,
     })
-    if (err) setError(err)
-    else await load()
+    if (err) {
+      toast.error(err)
+      setError(err)
+    } else {
+      toast.success("Profile updated successfully")
+      await load()
+    }
     setProfileSaving(false)
   }
 
@@ -79,8 +85,10 @@ export default function StaffDetailPage() {
     if (!branchId || !roleId) return
     setSaving(true)
     const { error: err } = await upsertStaffAssignment(profileId, branchId, roleId)
-    if (err) setError(err)
-    else {
+    if (err) {
+      toast.error(err)
+      setError(err)
+    } else {
       const org = await fetchOrganization()
       if (org) {
         await logAuditEvent({
@@ -92,6 +100,7 @@ export default function StaffDetailPage() {
           metadata: { branch_id: branchId, role_id: roleId, op: "assign" },
         })
       }
+      toast.success("Branch assignment added")
       await load()
     }
     setSaving(false)
@@ -100,8 +109,10 @@ export default function StaffDetailPage() {
   const handleRemove = async (bId: string) => {
     setSaving(true)
     const { error: err } = await removeStaffAssignment(profileId, bId)
-    if (err) setError(err)
-    else {
+    if (err) {
+      toast.error(err)
+      setError(err)
+    } else {
       const org = await fetchOrganization()
       if (org) {
         await logAuditEvent({
@@ -113,6 +124,7 @@ export default function StaffDetailPage() {
           metadata: { branch_id: bId, op: "remove" },
         })
       }
+      toast.success("Branch assignment removed")
       await load()
     }
     setSaving(false)

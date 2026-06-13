@@ -18,7 +18,9 @@ import {
   rescheduleAppointment,
   updateAppointmentStatus,
   markAppointmentNoShow,
+  updateAppointmentDetails,
 } from "@/lib/appointments/appointment-service"
+import { toast } from "sonner"
 import {
   fetchAvailableAppointmentSlots,
   fetchBranchProviderAvailability,
@@ -96,6 +98,9 @@ function AppointmentsPageContent() {
   const [providers, setProviders] = React.useState<StaffMember[]>([])
   const [selectedProviderId, setSelectedProviderId] = React.useState("")
   const [slots, setSlots] = React.useState<AppointmentSlot[]>([])
+  const [editingAppt, setEditingAppt] = React.useState<AppointmentRecord | null>(null)
+  const [editProviderId, setEditProviderId] = React.useState("")
+  const [editPurpose, setEditPurpose] = React.useState("")
   const [slotsLoading, setSlotsLoading] = React.useState(false)
   const [availabilityRows, setAvailabilityRows] = React.useState<ProviderAvailabilityRow[]>([])
   const [availabilityLoading, setAvailabilityLoading] = React.useState(false)
@@ -220,12 +225,33 @@ function AppointmentsPageContent() {
       providerId: selectedProviderId || undefined,
     })
     setBooking(false)
-    if (err) setError(err)
-    else {
+    if (err) {
+      toast.error(err)
+      setError(err)
+    } else {
+      toast.success(t("appointments.bookingSuccess", "Appointment created successfully"))
       setShowBook(false)
       setSelectedPatientId("")
       setPurpose("")
       setSelectedDate(date)
+      reload()
+    }
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingAppt) return
+    setBooking(true)
+    const { error: err } = await updateAppointmentDetails(editingAppt.id, {
+      providerId: editProviderId || null,
+      purpose: editPurpose
+    })
+    setBooking(false)
+    if (err) {
+      toast.error(err)
+    } else {
+      toast.success("Appointment updated successfully")
+      setEditingAppt(null)
       reload()
     }
   }
@@ -239,8 +265,10 @@ function AppointmentsPageContent() {
     const scheduledAt = buildRescheduledAt(appt.scheduled_at, targetDateKey)
     const { error: err } = await rescheduleAppointment(id, scheduledAt)
     setReschedulingId(null)
-    if (err) setError(err)
-    else {
+    if (err) {
+      toast.error(err)
+    } else {
+      toast.success("Appointment rescheduled successfully")
       setSelectedDate(targetDateKey)
       reload()
       void tryNotifyWaitlist(freedSlotAt)
@@ -255,8 +283,10 @@ function AppointmentsPageContent() {
     if (status === "no_show") {
       const { data, error: err } = await markAppointmentNoShow(id)
       setUpdatingId(null)
-      if (err) setError(err)
-      else {
+      if (err) {
+        toast.error(err)
+      } else {
+        toast.success("Appointment marked as no-show")
         reload()
         const slotAt = data?.scheduled_at ?? appt?.scheduled_at
         if (slotAt) void tryNotifyWaitlist(slotAt)
@@ -266,8 +296,10 @@ function AppointmentsPageContent() {
 
     const { error: err } = await updateAppointmentStatus(id, status)
     setUpdatingId(null)
-    if (err) setError(err)
-    else {
+    if (err) {
+      toast.error(err)
+    } else {
+      toast.success(`Appointment status updated to ${status}`)
       reload()
       if (status === "cancelled" && appt?.scheduled_at) {
         void tryNotifyWaitlist(appt.scheduled_at)
@@ -281,9 +313,10 @@ function AppointmentsPageContent() {
     setReminderNotice(null)
     const { data, error: err } = await checkInAppointment(appointmentId)
     setCheckingInId(null)
-    if (err) setError(err)
-    else if (data) {
-      setError(null)
+    if (err) {
+      toast.error(err)
+    } else if (data) {
+      toast.success("Patient checked in and added to queue")
       setCheckInQueueNotice(true)
       reload()
     }
@@ -640,7 +673,47 @@ function AppointmentsPageContent() {
         {loading ? (
           <PageLoadingSkeleton variant="block" />
         ) : (
-          <AppointmentWeekCalendar
+          <>
+            {editingAppt && (
+          <Card className="border-primary-200/60 shadow-sm mt-4">
+            <CardHeader>
+              <CardTitle className="text-base">Edit Appointment: {editingAppt.patient_name}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleEditSubmit} className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Dentist</label>
+                  <select
+                    value={editProviderId}
+                    onChange={(e) => setEditProviderId(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="">Any Dentist</option>
+                    {providers.map((p) => (
+                      <option key={p.profile_id} value={p.profile_id}>
+                        {p.full_name ?? p.email ?? "Dentist"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Purpose</label>
+                  <Input value={editPurpose} onChange={(e) => setEditPurpose(e.target.value)} />
+                </div>
+                <div className="sm:col-span-2 flex flex-wrap gap-2">
+                  <Button type="submit" disabled={booking}>
+                    {booking ? "Saving…" : "Save Changes"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setEditingAppt(null)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        <AppointmentWeekCalendar
             appointments={weekAppointments}
             weekStart={weekStart}
             onWeekChange={(start) => {
@@ -651,8 +724,13 @@ function AppointmentsPageContent() {
             onSelectDate={setSelectedDate}
             onStatusChange={handleStatus}
             onReschedule={canWriteAppts ? handleReschedule : undefined}
-            onCheckIn={handleCheckIn}
-            onRemind={handleSendReminder}
+            onCheckIn={canWriteAppts ? handleCheckIn : undefined}
+            onRemind={canWriteAppts ? handleSendReminder : undefined}
+            onEdit={canWriteAppts ? (appt) => {
+              setEditingAppt(appt)
+              setEditProviderId(appt.provider_id || "")
+              setEditPurpose(appt.purpose || "")
+            } : undefined}
             updatingId={updatingId}
             reschedulingId={reschedulingId}
             checkingInId={checkingInId}
@@ -667,6 +745,7 @@ function AppointmentsPageContent() {
             }
             providers={providers}
           />
+          </>
         )}
 
         {!showBook && (

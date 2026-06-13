@@ -18,6 +18,7 @@ import {
   filterOverdueInvoices,
   type InvoiceStatusFilter,
 } from "@/lib/billing/invoice-service"
+import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -145,8 +146,11 @@ function BillingPageContent() {
     })
 
     setCreating(false)
-    if (err) setError(err)
-    else {
+    if (err) {
+      toast.error(err)
+      setError(err)
+    } else {
+      toast.success("Invoice created successfully")
       setShowCreate(false)
       setAmount("")
       setDueDate("")

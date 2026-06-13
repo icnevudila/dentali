@@ -20,6 +20,7 @@ import {
 } from "@/lib/billing/payment-gateway-service"
 import { AuditHistoryPanel } from "@/components/audit/AuditHistoryPanel"
 import { logAuditEvent } from "@/lib/audit/audit-service"
+import { toast } from "sonner"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
@@ -73,8 +74,10 @@ export default function InvoiceDetailPage() {
     })
     setSaving(false)
     if (updateErr) {
+      toast.error(updateErr)
       setError(updateErr)
     } else {
+      toast.success("Line item updated")
       setEditingLineId(null)
       await load()
     }
@@ -114,10 +117,13 @@ export default function InvoiceDetailPage() {
     })
 
     if (err) {
+      toast.error(err)
       setError(err)
       setSaving(false)
       return
     }
+
+    toast.success("Payment recorded successfully")
 
     const org = await fetchOrganization()
     if (org) {
@@ -153,9 +159,11 @@ export default function InvoiceDetailPage() {
     })
     setGatewayLoading(null)
     if (err) {
+      toast.error(err)
       setError(err)
       return
     }
+    toast.success("Payment intent created")
     if (data) {
       setPendingIntents((prev) => [data, ...prev])
       setGatewayDryRun(dryRun === true)
@@ -168,9 +176,11 @@ export default function InvoiceDetailPage() {
     const { data, error: err } = await completePaymentIntent(intentId)
     setGatewayLoading(null)
     if (err) {
+      toast.error(err)
       setError(err)
       return
     }
+    toast.success("Payment intent completed")
     if (data && invoice) {
       setInvoice({ ...invoice, paid_amount: data.paid_amount, status: data.status })
       const newBalance = invoice.total_amount - data.paid_amount
@@ -187,9 +197,11 @@ export default function InvoiceDetailPage() {
     const { data, error: err } = await voidInvoice(invoiceId, voidReason.trim())
     setVoiding(false)
     if (err) {
+      toast.error(err)
       setError(err)
       return
     }
+    toast.success("Invoice voided")
     if (data && invoice) {
       setInvoice({ ...invoice, status: data.status })
       setVoidReason("")

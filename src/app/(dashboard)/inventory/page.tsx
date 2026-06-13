@@ -8,6 +8,7 @@ import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
 import { useAuth } from "@/hooks/use-auth"
 import { fetchOrganization } from "@/lib/auth/auth-service"
+import { toast } from "sonner"
 import {
   adjustInventoryStock,
   createInventoryItem,
@@ -101,8 +102,13 @@ function InventoryPageContent() {
       initialQty: parseFloat(initialQty) || 0, userId: user.id,
     })
     setSaving(false)
-    if (err) setError(err)
-    else { setShowAdd(false); setName(""); load() }
+    if (err) {
+      toast.error(err)
+      setError(err)
+    } else {
+      toast.success("Item added successfully")
+      setShowAdd(false); setName(""); load()
+    }
   }
 
   const handleStockIn = async (itemId: string) => {
@@ -112,8 +118,13 @@ function InventoryPageContent() {
     const { error: err } = await adjustInventoryStock(itemId, "in", qty)
     setAdjustId(null)
     setAdjustQty("")
-    if (err) setError(err)
-    else load()
+    if (err) {
+      toast.error(err)
+      setError(err)
+    } else {
+      toast.success(`Stock increased by ${qty}`)
+      load()
+    }
   }
 
   const criticalCount = items.filter((i) => stockLevel(i) === "critical" || stockLevel(i) === "expired").length

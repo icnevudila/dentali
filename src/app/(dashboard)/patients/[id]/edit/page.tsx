@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
 import { Save } from "lucide-react"
+import { toast } from "sonner"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { ContentPanel } from "@/components/layout/ContentPanel"
@@ -63,10 +64,13 @@ export default function EditPatientPage() {
 
     const { error } = await updatePatient(patientId, values, user.id)
     if (error) {
+      toast.error(error)
       setSubmitError(error)
       setIsSaving(false)
       return
     }
+
+    toast.success("Patient details updated successfully")
 
     const org = await fetchOrganization()
     if (org) {

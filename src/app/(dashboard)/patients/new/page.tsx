@@ -44,6 +44,7 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { uploadPatientProfilePhoto } from "@/lib/patients/patient-documents-service"
 import Link from "next/link"
 import { Suspense } from "react"
+import { toast } from "sonner"
 
 const STEP_FIELDS: (keyof PatientFormValues)[][] = [
   ["firstName", "lastName", "dateOfBirth", "gender"],
@@ -245,6 +246,7 @@ function NewPatientPageContent() {
     )
 
     if (error || !created) {
+      toast.error(error ?? "Failed to register patient")
       setSubmitError(error ?? "Failed to register patient")
       setIsSubmitting(false)
       return
@@ -277,12 +279,14 @@ function NewPatientPageContent() {
         planName: insurance.planName || undefined,
       })
       if (insuranceErr) {
+        toast.error(`Patient registered but insurance save failed: ${insuranceErr}`)
         setSubmitError(`Patient registered but insurance save failed: ${insuranceErr}`)
         setIsSubmitting(false)
         return
       }
     }
 
+    toast.success("Patient registered successfully")
     clearIntakeDraft(activeBranch.id, user.id)
     if (kioskDraftIntakeId) {
       await markIntakeDraftFinalized(kioskDraftIntakeId, created.id)
