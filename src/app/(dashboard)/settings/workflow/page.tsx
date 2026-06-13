@@ -27,77 +27,77 @@ type WorkflowRule = {
 
 const WORKFLOW_GROUPS: { title: string; items: WorkflowRule[] }[] = [
   {
-    title: "Queue & appointments",
+    title: "Randevu ve Bekleme Salonu",
     items: [
       {
         key: "auto_checkin_updates_appointment",
-        label: "Check-in updates appointment",
-        description: "When a patient is checked in from the queue, linked appointment moves to checked_in.",
+        label: "Randevu -> Bekleme Salonu Senkronizasyonu",
+        description: "Hasta bekleme salonuna alındığında, takvimdeki randevusu otomatik olarak 'Bekliyor' statüsüne geçer.",
       },
       {
         key: "auto_served_completes_appointment",
-        label: "Served completes appointment",
-        description: "Marking queue entry as served completes the linked appointment.",
+        label: "İşlem Bittiğinde Randevuyu Kapat",
+        description: "Hastanın işlemi bitip (Served) olarak işaretlendiğinde, o güne ait randevusu otomatik tamamlandı (Completed) olur.",
       },
       {
         key: "consent_gate_checkin",
-        label: "Consent gate on check-in",
-        description: "Block check-in when required consents are unsigned; staff can override with audit.",
+        label: "Onam Formu Zorunluluğu (Güvenlik Kalkanı)",
+        description: "Hastanın imzasız onam formu varsa bekleme salonuna alınmasını engeller. Sekreter zorla almak isterse sisteme log düşülür.",
       },
       {
         key: "auto_waitlist_on_slot_open",
-        label: "No-show opens waitlist slot",
-        description: "Cancelled or no-show appointments notify matching waitlist entries.",
+        label: "Boşluk Bulucu (Yedek Liste Alarmı)",
+        description: "Bir randevu iptal edildiğinde veya hasta gelmediğinde, o saate talip olan yedek listedeki (Waitlist) hastaları otomatik olarak uyarır.",
       },
     ],
   },
   {
-    title: "Billing & claims",
+    title: "Fatura ve Tahsilat",
     items: [
       {
         key: "auto_approve_creates_invoice",
-        label: "Plan approval creates invoice draft",
-        description: "Approved treatment plan automatically creates a draft invoice.",
+        label: "Otomatik Fatura Taslağı",
+        description: "Doktor bir tedavi planını 'Onaylandı' yaptığında, sistem vezne için otomatik olarak bir fatura taslağı hazırlar.",
       },
       {
         key: "auto_hmo_claim_on_invoice",
-        label: "Invoice creates HMO claim draft",
-        description: "Issued invoice with HMO coverage spawns a draft HMO claim.",
+        label: "Otomatik Sigorta (HMO) Talebi",
+        description: "Sigortalı bir hastaya fatura kesildiğinde, sigorta şirketine gönderilmek üzere otomatik bir hak talebi (Claim) taslağı oluşturulur.",
       },
       {
         key: "auto_payment_reminder",
-        label: "Payment balance reminders",
-        description: "Overdue balances enqueue SMS reminders via payment-reminder-cron.",
+        label: "Tahsilat Asistanı (Gecikmiş Ödemeler)",
+        description: "Bakiyesi ekside olan veya ödemesi geciken hastalara sistem arka planda otomatik SMS hatırlatıcıları gönderir.",
       },
     ],
   },
   {
-    title: "Clinical inventory",
+    title: "Klinik Stok ve Depo",
     items: [
       {
         key: "auto_deduct_procedure_bom",
-        label: "Auto-deduct procedure BOM",
-        description: "When queue entry is served, deduct linked inventory materials from approved treatment plan procedures.",
+        label: "Tedavi Başına Otomatik Stok Düşüşü",
+        description: "Hasta koltuktan kalktığında, uygulanan tedavilere (örn: Kanal Tedavisi) bağlı malzemeler (Eğe, Pamuk vb.) depodan otomatik olarak eksilir.",
       },
     ],
   },
   {
-    title: "Notifications",
+    title: "Akıllı Bildirimler (SMS)",
     items: [
       {
         key: "auto_sms_reminders",
-        label: "SMS appointment reminders",
-        description: "T-24h and T-2h appointment reminders via appointment-reminders-cron.",
+        label: "Randevu Hatırlatıcıları",
+        description: "Hastalara randevularından 24 saat ve 2 saat önce otomatik hatırlatma SMS'leri gönderilir.",
       },
       {
         key: "auto_hygiene_recall",
-        label: "Hygiene recall SMS (6 months)",
-        description: "Patients due for check-up receive SMS with booking link via recall-reminder-cron.",
+        label: "Pazarlama: 6 Aylık Rutin Kontrol",
+        description: "Tedavisi biten hastalara tam 6 ay sonra 'Diş taşı temizliği ve kontrol zamanınız geldi' şeklinde otomatik randevu linki gönderilir.",
       },
       {
         key: "auto_owner_digest_sms",
-        label: "Owner daily digest SMS",
-        description: "End-of-day branch summary SMS to owner/admin phones via owner-digest-sms-cron.",
+        label: "Klinik Sahibi Gün Sonu Özeti",
+        description: "Her günün sonunda klinik sahibinin veya yöneticinin cep telefonuna o günün ciro, hasta sayısı ve randevu istatistikleri SMS olarak atılır.",
       },
     ],
   },

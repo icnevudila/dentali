@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import {
   ClipboardPen,
   ExternalLink,
@@ -117,6 +118,7 @@ export function ConsentFormsPanel({
     const url = `${window.location.origin}/sign/${token}`
     await navigator.clipboard.writeText(url)
     setLinkCopiedSlug(template.slug)
+    toast.success("Bağlantı kopyalandı! Hastaya WhatsApp veya SMS üzerinden gönderebilirsiniz.")
     setTimeout(() => setLinkCopiedSlug(null), 2500)
   }
 
