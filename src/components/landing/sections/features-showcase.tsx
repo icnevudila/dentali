@@ -246,21 +246,17 @@ export function FeaturesShowcase() {
                     </div>
                   </div>
 
-                  {/* Mobil Görünüm İçin Ekran Görüntüsü veya İnteraktif Bileşen */}
+                  {/* Mobil Görünüm İçin Ekran Görüntüsü */}
                   {isActive && (
                     <div className="mt-4 block lg:hidden w-full overflow-hidden rounded-xl border border-neutral-200/80 shadow-md">
-                      {feature.id === "chart" ? (
-                        renderInteractiveChart(true)
-                      ) : (
-                        <Image
-                          src={`/screenshots/all-pages/${feature.screenshot}`}
-                          alt={lt(feature.title, locale)}
-                          width={1440}
-                          height={836}
-                          className="w-full h-auto"
-                          priority
-                        />
-                      )}
+                      <Image
+                        src={`/screenshots/all-pages/${feature.screenshot}`}
+                        alt={lt(feature.title, locale)}
+                        width={1440}
+                        height={836}
+                        className="w-full h-auto"
+                        priority
+                      />
                     </div>
                   )}
                 </div>
@@ -268,7 +264,7 @@ export function FeaturesShowcase() {
             })}
           </div>
 
-          {/* Right Side: Sticky Interactive Screenshot / Component (Desktop Only) */}
+          {/* Right Side: Sticky Interactive Screenshot (Desktop Only) */}
           <div className="hidden lg:block lg:col-span-7 sticky top-28">
             <div className="relative w-full aspect-[16/10] rounded-2xl border border-neutral-200 bg-neutral-100 shadow-xl overflow-hidden">
               {FEATURES.map((feature, idx) => (
@@ -279,17 +275,13 @@ export function FeaturesShowcase() {
                   }`}
                   data-visible={activeTab === idx ? "true" : "false"}
                 >
-                  {feature.id === "chart" ? (
-                    renderInteractiveChart(false)
-                  ) : (
-                    <Image
-                      src={`/screenshots/all-pages/${feature.screenshot}`}
-                      alt={lt(feature.title, locale)}
-                      fill
-                      className="object-cover object-top"
-                      priority={idx === 0}
-                    />
-                  )}
+                  <Image
+                    src={`/screenshots/all-pages/${feature.screenshot}`}
+                    alt={lt(feature.title, locale)}
+                    fill
+                    className="object-cover object-top"
+                    priority={idx === 0}
+                  />
                 </div>
               ))}
             </div>
