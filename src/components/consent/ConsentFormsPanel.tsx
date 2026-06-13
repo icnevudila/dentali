@@ -118,7 +118,7 @@ export function ConsentFormsPanel({
     const url = `${window.location.origin}/sign/${token}`
     await navigator.clipboard.writeText(url)
     setLinkCopiedSlug(template.slug)
-    toast.success("Bağlantı kopyalandı! Hastaya WhatsApp veya SMS üzerinden gönderebilirsiniz.")
+    toast.success("Link copied! You can send it via WhatsApp or SMS.")
     setTimeout(() => setLinkCopiedSlug(null), 2500)
   }
 
