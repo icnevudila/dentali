@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <svg id="interactive-odontogram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 800" width="1100" height="800" role="img" aria-labelledby="title desc">
   <title id="title">Interactive Odontogram SVG</title>
   <desc id="desc">Adult FDI odontogram with clickable permanent teeth and a tooth anatomy diagram.</desc>
@@ -50,7 +50,7 @@
   <text x="550" y="72" class="subtitle" text-anchor="middle">Interactive FDI tooth chart • click / tap / Enter on a tooth</text>
 
   
-  <g id="anatomy-panel" transform="translate(30 95)">
+  <g id="anatomy-panel" transform="translate(725 95)">
     <rect x="0" y="0" width="345" height="650" rx="22" class="panel-bg"/>
     <text x="172" y="34" class="panel-title">TOOTH ANATOMY</text>
     <g transform="translate(78 70)">
@@ -77,7 +77,7 @@
   </g>
 
 
-  <g id="odontogram-panel" transform="translate(405 95)">
+  <g id="odontogram-panel" transform="translate(30 95)">
     <rect x="0" y="0" width="665" height="650" rx="22" class="panel-bg"/>
     <text x="332" y="34" class="panel-title">PERMANENT TEETH - FDI NUMBERING</text>
     <text x="35" y="342" class="label">Patient Right</text>

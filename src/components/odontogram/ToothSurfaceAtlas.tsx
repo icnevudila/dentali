@@ -9,14 +9,29 @@ export function ToothSurfaceAtlas({ className }: { className?: string }) {
 
   React.useEffect(() => {
     let cancelled = false
-    fetch(TOOTH_SURFACE_ATLAS_SVG)
+    fetch("/odontogram/interactive-odontogram.svg")
       .then((res) => (res.ok ? res.text() : Promise.reject()))
       .then((markup) => {
-        if (!cancelled && containerRef.current) {
-          containerRef.current.innerHTML = markup
+        if (cancelled || !containerRef.current) return
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(markup, "image/svg+xml")
+        const anatomyPanel = doc.getElementById("anatomy-panel")
+        if (anatomyPanel) {
+          // Remove transform to align it to 0,0
+          anatomyPanel.removeAttribute("transform")
+          const styles = doc.querySelector("style")?.innerHTML || ""
+          const svgHtml = `
+            <svg viewBox="0 0 345 650" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto">
+              <style>${styles}</style>
+              ${anatomyPanel.outerHTML}
+            </svg>
+          `
+          containerRef.current.innerHTML = svgHtml
         }
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error("ToothSurfaceAtlas: failed to load anatomy panel", err)
+      })
 
     return () => {
       cancelled = true

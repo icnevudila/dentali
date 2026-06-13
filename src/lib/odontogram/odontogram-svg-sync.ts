@@ -57,52 +57,64 @@ export function syncOdontogramVisuals(
   selectedTooth: number | null,
   options?: { showAnatomy?: boolean; compact?: boolean }
 ) {
-  const svg = root.querySelector(`#${svgId}`) as SVGSVGElement | null
-  if (!svg) return
-
-  if (!options?.compact) {
-    svg.classList.toggle("clinical-mode", !options?.showAnatomy)
-    if (options?.showAnatomy && svgId === "interactive-odontogram") {
-      svg.setAttribute("viewBox", "0 0 1100 800")
-    } else if (!options?.showAnatomy) {
-      svg.setAttribute("viewBox", "395 85 690 660")
-    }
-    const anatomyPanel = svg.querySelector("#anatomy-panel")
-    anatomyPanel?.setAttribute("display", options?.showAnatomy ? "inline" : "none")
-    stripDemoChrome(svg)
-  }
-
-  svg.querySelectorAll<SVGGElement>(".tooth").forEach((toothEl) => {
-    const num = toothEl.getAttribute("data-tooth")
-    if (!num) return
-
-    const finding = findingsByTooth.get(num)
-    applyVisualStateClasses(toothEl, finding)
-
-    toothEl.classList.toggle("selected", selectedTooth === parseInt(num, 10))
-
-    let missingMark = toothEl.querySelector(".missing-mark")
-    const isMissing =
-      finding?.condition === "missing_caries" ||
-      finding?.condition === "missing_other" ||
-      finding?.condition === "indicated_extraction"
-
-    if (isMissing && !missingMark) {
-      missingMark = document.createElementNS("http://www.w3.org/2000/svg", "line")
-      missingMark.setAttribute("class", "missing-mark")
-      missingMark.setAttribute("x1", "-22")
-      missingMark.setAttribute("y1", "-22")
-      missingMark.setAttribute("x2", "22")
-      missingMark.setAttribute("y2", "22")
-      toothEl.querySelector(".tooth-shape")?.appendChild(missingMark)
-    } else if (!isMissing && missingMark) {
-      missingMark.remove()
-    }
+  try {
+    const svg = root.querySelector(`#${svgId}`) as SVGSVGElement | null
+    if (!svg) return
 
     if (!options?.compact) {
-      applySurfaceDots(toothEl, finding)
+      svg.classList.toggle("clinical-mode", !options?.showAnatomy)
+      if (options?.showAnatomy && svgId === "interactive-odontogram") {
+        svg.setAttribute("viewBox", "0 0 1100 800")
+      } else if (!options?.showAnatomy) {
+        if (svgId === "interactive-odontogram") {
+          svg.setAttribute("viewBox", "15 85 710 660")
+        } else {
+          svg.setAttribute("viewBox", "375 85 725 660")
+        }
+      }
+      const anatomyPanel = svg.querySelector("#anatomy-panel")
+      anatomyPanel?.setAttribute("display", options?.showAnatomy ? "inline" : "none")
+      stripDemoChrome(svg)
     }
-  })
+
+    svg.querySelectorAll<SVGGElement>(".tooth").forEach((toothEl) => {
+      try {
+        const num = toothEl.getAttribute("data-tooth")
+        if (!num) return
+
+        const finding = findingsByTooth.get(num)
+        applyVisualStateClasses(toothEl, finding)
+
+        toothEl.classList.toggle("selected", selectedTooth === parseInt(num, 10))
+
+        let missingMark = toothEl.querySelector(".missing-mark")
+        const isMissing =
+          finding?.condition === "missing_caries" ||
+          finding?.condition === "missing_other" ||
+          finding?.condition === "indicated_extraction"
+
+        if (isMissing && !missingMark) {
+          missingMark = document.createElementNS("http://www.w3.org/2000/svg", "line")
+          missingMark.setAttribute("class", "missing-mark")
+          missingMark.setAttribute("x1", "-22")
+          missingMark.setAttribute("y1", "-22")
+          missingMark.setAttribute("x2", "22")
+          missingMark.setAttribute("y2", "22")
+          toothEl.querySelector(".tooth-shape")?.appendChild(missingMark)
+        } else if (!isMissing && missingMark) {
+          missingMark.remove()
+        }
+
+        if (!options?.compact) {
+          applySurfaceDots(toothEl, finding)
+        }
+      } catch (err) {
+        console.error("syncOdontogramVisuals: Error syncing tooth element:", toothEl, err)
+      }
+    })
+  } catch (globalErr) {
+    console.error("syncOdontogramVisuals: Global sync error:", globalErr)
+  }
 }
 
 export { buildFindingsByTooth, applyVisualStateClasses }

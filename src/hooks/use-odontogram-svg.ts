@@ -51,17 +51,21 @@ export function useOdontogramSvg(options: {
 
     fetch(svgPath)
       .then((res) => {
-        if (!res.ok) throw new Error("SVG not found")
-        return res.text()
+        if (!res.ok) {
+          console.error(`useOdontogramSvg: Failed to fetch SVG at path: ${svgPath}. Status: ${res.status}`);
+          throw new Error("SVG not found");
+        }
+        return res.text();
       })
       .then((svgMarkup) => {
-        if (cancelled || !containerRef.current) return
-        containerRef.current.innerHTML = svgMarkup
-        setLoadState("ready")
+        if (cancelled || !containerRef.current) return;
+        containerRef.current.innerHTML = svgMarkup;
+        setLoadState("ready");
       })
-      .catch(() => {
-        if (!cancelled) setLoadState("error")
-      })
+      .catch((err) => {
+        console.error("useOdontogramSvg: Fetch error caught:", err);
+        if (!cancelled) setLoadState("error");
+      });
 
     return () => {
       cancelled = true

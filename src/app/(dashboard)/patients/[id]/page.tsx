@@ -98,32 +98,42 @@ export default function PatientProfilePage() {
 
   React.useEffect(() => {
     if (!patientId) return
-    getPatient(patientId).then(({ data, error }) => {
-      setPatient(data)
-      setLoadError(error)
-      setLoading(false)
-    })
-    refreshConsents()
-    refreshAppointments()
-    fetchPatientTreatmentPlans(patientId).then(({ data }) => setTreatmentPlans(data))
-    getLatestMedicalHistory(patientId).then(({ data }) => {
-      if (data) {
-        setMedicalHistory({
-          allergies: data.allergies,
-          medications: data.medications,
-          conditions: data.conditions,
-        })
-      }
-    })
-    getPatientBalance(patientId).then(({ data, error }) => {
-      setBalance(data)
-      setBalanceError(error)
-    })
-    fetchPatientTimeline(patientId).then(({ data, error }) => {
-      setTimeline(data)
-      setTimelineError(error)
-    })
-  }, [patientId, refreshConsents, refreshAppointments])
+    setLoading(true)
+    Promise.all([
+      getPatient(patientId),
+      fetchPatientConsents(patientId),
+      fetchPatientAppointments(patientId),
+      fetchPatientTreatmentPlans(patientId),
+      getLatestMedicalHistory(patientId),
+      getPatientBalance(patientId),
+      fetchPatientTimeline(patientId),
+    ])
+      .then(([patientRes, consentsRes, apptsRes, plansRes, medRes, balanceRes, timelineRes]) => {
+        setPatient(patientRes.data)
+        setLoadError(patientRes.error)
+        setConsents(consentsRes.data)
+        setAppointments(apptsRes.data)
+        setTreatmentPlans(plansRes.data)
+        if (medRes.data) {
+          setMedicalHistory({
+            allergies: medRes.data.allergies,
+            medications: medRes.data.medications,
+            conditions: medRes.data.conditions,
+          })
+        } else {
+          setMedicalHistory(null)
+        }
+        setBalance(balanceRes.data)
+        setBalanceError(balanceRes.error)
+        setTimeline(timelineRes.data)
+        setTimelineError(timelineRes.error)
+        setLoading(false)
+      })
+      .catch((err: any) => {
+        setLoadError(err?.message || "Failed to load patient profile")
+        setLoading(false)
+      })
+  }, [patientId])
 
   React.useEffect(() => {
     if (!patientId || !activeBranch?.id) return
@@ -322,281 +332,301 @@ export default function PatientProfilePage() {
         editHref={`/patients/${patientId}/medical-history`}
       />
 
-      {/* TABS NAVIGATION */}
-      <div className="border-b border-neutral-200 overflow-x-auto hide-scrollbar">
-        <nav className="flex space-x-6 min-w-max px-2">
-          {PATIENT_TABS.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`pb-4 pt-2 text-sm font-medium transition-colors border-b-2 ${
-                activeTab === tab.id 
-                  ? "border-primary-500 text-primary-600" 
-                  : "border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"
-              }`}
+      {/* TWO-COLUMN SIDEBAR & CONTENT LAYOUT */}
+      <div className="flex flex-col md:flex-row gap-6 items-start mt-4">
+        {/* SIDEBAR TABS NAVIGATION */}
+        <aside className="w-full md:w-60 shrink-0">
+          {/* Mobile dropdown selector */}
+          <div className="md:hidden">
+            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1 block">
+              Menu Tab
+            </label>
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value as PatientTabId)}
+              className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-      </div>
+              {PATIENT_TABS.map((tab) => (
+                <option key={tab.id} value={tab.id}>
+                  {tab.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      {/* TAB CONTENT */}
-      <div className="mt-6">
-        
-        {activeTab === "record" && (
-          <PatientRecordOnePage
-            patientId={patientId}
-            patient={patient}
-            consents={consents}
-            appointments={appointments}
-            treatmentPlans={treatmentPlans}
-            medicalHistory={medicalHistory}
-            balance={balance}
-            balanceError={balanceError}
-            timeline={timeline}
-            timelineError={timelineError}
-            onConsentsChange={refreshConsents}
-            onAppointmentsChange={refreshAppointments}
-            onOpenTab={(tabId) => setActiveTab(tabId as PatientTabId)}
-          />
-        )}
+          {/* Desktop sidebar list */}
+          <nav className="hidden md:flex flex-col gap-1 border-r border-neutral-200 pr-6 w-full">
+            {PATIENT_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? "bg-primary-50 text-primary-700"
+                    : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </aside>
 
-        {/* CONSENTS TAB */}
-        {activeTab === "consents" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Consent Forms & Legal Documents</CardTitle>
-              <CardDescription>
-                Clinic paper forms (DRG / PDA). Fill at the desk or send a patient link — then export PDF or Word.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ConsentFormsPanel
-                patientId={patientId}
-                consents={consents}
-                onConsentsChange={refreshConsents}
-              />
-            </CardContent>
-          </Card>
-        )}
+        {/* TAB CONTENT PANEL */}
+        <div className="flex-1 w-full min-w-0">
+          {activeTab === "record" && (
+            <PatientRecordOnePage
+              patientId={patientId}
+              patient={patient}
+              consents={consents}
+              appointments={appointments}
+              treatmentPlans={treatmentPlans}
+              medicalHistory={medicalHistory}
+              balance={balance}
+              balanceError={balanceError}
+              timeline={timeline}
+              timelineError={timelineError}
+              onConsentsChange={refreshConsents}
+              onAppointmentsChange={refreshAppointments}
+              onOpenTab={(tabId) => setActiveTab(tabId as PatientTabId)}
+            />
+          )}
 
-        {activeTab === "documents" && <PatientDocumentsPanel patientId={patientId} />}
-
-        {/* MEDICAL HISTORY TAB */}
-        {activeTab === "medical-history" && (
-          <div className="space-y-6">
+          {/* CONSENTS TAB */}
+          {activeTab === "consents" && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardHeader>
+                <CardTitle>Consent Forms & Legal Documents</CardTitle>
+                <CardDescription>
+                  Clinic paper forms (DRG / PDA). Fill at the desk or send a patient link — then export PDF or Word.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ConsentFormsPanel
+                  patientId={patientId}
+                  consents={consents}
+                  onConsentsChange={refreshConsents}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === "documents" && <PatientDocumentsPanel patientId={patientId} />}
+
+          {/* MEDICAL HISTORY TAB */}
+          {activeTab === "medical-history" && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <div>
+                    <CardTitle>Medical Conditions & Allergies</CardTitle>
+                    <CardDescription>Patient's self-reported medical history.</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/patients/${patientId}/medical-history`} transitionTypes={NAV_FORWARD_TRANSITION}>
+                      Update History
+                    </Link>
+                  </Button>
+                </CardHeader>
+                <CardContent className="grid gap-6 md:grid-cols-2 mt-4">
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-neutral-900 border-b pb-2">Allergies</h4>
+                    <ul className="space-y-2">
+                      {(medicalHistory?.allergies ?? []).length === 0 ? (
+                        <li className="text-sm text-neutral-500">None recorded</li>
+                      ) : (
+                        medicalHistory!.allergies.map((a) => (
+                          <li key={a} className="flex items-center gap-2 text-sm text-neutral-700">
+                            <AlertTriangle className="h-4 w-4 text-danger-500" /> {a}
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </div>
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-neutral-900 border-b pb-2">Chronic Conditions</h4>
+                    <ul className="space-y-2">
+                      {(medicalHistory?.conditions ?? []).length === 0 ? (
+                        <li className="text-sm text-neutral-500">None recorded</li>
+                      ) : (
+                        medicalHistory!.conditions.map((c) => (
+                          <li key={c} className="flex items-center gap-2 text-sm text-neutral-700">
+                            <Activity className="h-4 w-4 text-primary-500" /> {c}
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* DENTAL CHART TAB */}
+          {activeTab === "dental-chart" && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Medical Conditions & Allergies</CardTitle>
-                  <CardDescription>Patient's self-reported medical history.</CardDescription>
+                  <CardTitle>Clinical Odontogram</CardTitle>
+                  <CardDescription>Interactive representation of tooth conditions.</CardDescription>
                 </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/patients/${patientId}/medical-history`} transitionTypes={NAV_FORWARD_TRANSITION}>
-                    Update History
+                <Button size="sm" asChild>
+                  <Link href={`/patients/${patientId}/chart`} transitionTypes={NAV_FORWARD_TRANSITION}>
+                    Open Full Chart
                   </Link>
                 </Button>
               </CardHeader>
-              <CardContent className="grid gap-6 md:grid-cols-2 mt-4">
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-neutral-900 border-b pb-2">Allergies</h4>
-                  <ul className="space-y-2">
-                    {(medicalHistory?.allergies ?? []).length === 0 ? (
-                      <li className="text-sm text-neutral-500">None recorded</li>
-                    ) : (
-                      medicalHistory!.allergies.map((a) => (
-                        <li key={a} className="flex items-center gap-2 text-sm text-neutral-700">
-                          <AlertTriangle className="h-4 w-4 text-danger-500" /> {a}
-                        </li>
-                      ))
-                    )}
-                  </ul>
+              <CardContent>
+                <PatientOdontogramSummary patientId={patientId} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* CLINICAL NOTES TAB */}
+          {activeTab === "clinical-notes" && (
+            <Card>
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle>Visit Timeline & Notes</CardTitle>
+                  <CardDescription>SOAP notes, signed records, and appointment history.</CardDescription>
                 </div>
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-neutral-900 border-b pb-2">Chronic Conditions</h4>
-                  <ul className="space-y-2">
-                    {(medicalHistory?.conditions ?? []).length === 0 ? (
-                      <li className="text-sm text-neutral-500">None recorded</li>
-                    ) : (
-                      medicalHistory!.conditions.map((c) => (
-                        <li key={c} className="flex items-center gap-2 text-sm text-neutral-700">
-                          <Activity className="h-4 w-4 text-primary-500" /> {c}
-                        </li>
-                      ))
-                    )}
-                  </ul>
+                <Button size="sm" className="gap-2 shrink-0" asChild>
+                  <Link href={`/patients/${patientId}/notes`} transitionTypes={NAV_FORWARD_TRANSITION}>
+                    <FileText className="h-4 w-4" /> Open Timeline
+                  </Link>
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <ClinicalNotesWorkspace
+                  patientId={patientId}
+                  patientName={fullName}
+                  embedded
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ORTHODONTICS TAB */}
+          {activeTab === "orthodontics" && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Orthodontic Treatment Record</CardTitle>
+                  <CardDescription>Adjustment log, next visits, and payment balance.</CardDescription>
+                </div>
+                <Button size="sm" className="gap-2" asChild>
+                  <Link href={`/patients/${patientId}/ortho`} transitionTypes={NAV_FORWARD_TRANSITION}>
+                    <Activity className="h-4 w-4" /> Open Ortho Record
+                  </Link>
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <OrthoRecordSummary patientId={patientId} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* TREATMENT PLANS TAB */}
+          {activeTab === "treatment-plans" && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Proposed Treatments</CardTitle>
+                  <CardDescription>Active and historical treatment plans.</CardDescription>
+                </div>
+                <Button size="sm" className="gap-2" asChild>
+                  <Link href={`/patients/${patientId}/treatment-plan`} transitionTypes={NAV_FORWARD_TRANSITION}>
+                    <FileText className="h-4 w-4" /> Create Plan
+                  </Link>
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="border border-neutral-200 rounded-lg overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-neutral-50 border-b border-neutral-200">
+                      <tr>
+                        <th className="px-4 py-3 font-medium text-neutral-700">Plan Name</th>
+                        <th className="px-4 py-3 font-medium text-neutral-700">Date Created</th>
+                        <th className="px-4 py-3 font-medium text-neutral-700">Total Cost</th>
+                        <th className="px-4 py-3 font-medium text-neutral-700">Status</th>
+                        <th className="px-4 py-3 font-medium text-right text-neutral-700">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-200">
+                      {treatmentPlans.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-8 text-center text-neutral-500">No treatment plans yet.</td>
+                        </tr>
+                      ) : (
+                        treatmentPlans.map((plan) => (
+                          <tr key={plan.id} className="hover:bg-neutral-50">
+                            <td className="px-4 py-3 font-medium text-neutral-900">{plan.title}</td>
+                            <td className="px-4 py-3 text-neutral-600">{new Date(plan.created_at).toLocaleDateString("en-PH")}</td>
+                            <td className="px-4 py-3 text-neutral-900">₱{Number(plan.total_estimated).toLocaleString()}</td>
+                            <td className="px-4 py-3"><Badge variant={plan.status === "completed" ? "success" : "warning"}>{plan.status}</Badge></td>
+                            <td className="px-4 py-3 text-right">
+                              <Button variant="ghost" size="sm" asChild>
+                                <Link
+                                  href={`/patients/${patientId}/treatment-plan?plan=${plan.id}`}
+                                  transitionTypes={NAV_FORWARD_TRANSITION}
+                                >
+                                  View
+                                </Link>
+                              </Button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>
-          </div>
-        )}
+          )}
 
-        {/* DENTAL CHART TAB */}
-        {activeTab === "dental-chart" && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Clinical Odontogram</CardTitle>
-                <CardDescription>Interactive representation of tooth conditions.</CardDescription>
-              </div>
-              <Button size="sm" asChild>
-                <Link href={`/patients/${patientId}/chart`} transitionTypes={NAV_FORWARD_TRANSITION}>
-                  Open Full Chart
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <PatientOdontogramSummary patientId={patientId} />
-            </CardContent>
-          </Card>
-        )}
-
-        {/* CLINICAL NOTES TAB */}
-        {activeTab === "clinical-notes" && (
-          <Card>
-            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle>Visit Timeline & Notes</CardTitle>
-                <CardDescription>SOAP notes, signed records, and appointment history.</CardDescription>
-              </div>
-              <Button size="sm" className="gap-2 shrink-0" asChild>
-                <Link href={`/patients/${patientId}/notes`} transitionTypes={NAV_FORWARD_TRANSITION}>
-                  <FileText className="h-4 w-4" /> Open Timeline
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <ClinicalNotesWorkspace
-                patientId={patientId}
-                patientName={fullName}
-                embedded
-              />
-            </CardContent>
-          </Card>
-        )}
-
-        {/* ORTHODONTICS TAB */}
-        {activeTab === "orthodontics" && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Orthodontic Treatment Record</CardTitle>
-                <CardDescription>Adjustment log, next visits, and payment balance.</CardDescription>
-              </div>
-              <Button size="sm" className="gap-2" asChild>
-                <Link href={`/patients/${patientId}/ortho`} transitionTypes={NAV_FORWARD_TRANSITION}>
-                  <Activity className="h-4 w-4" /> Open Ortho Record
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <OrthoRecordSummary patientId={patientId} />
-            </CardContent>
-          </Card>
-        )}
-
-        {/* TREATMENT PLANS TAB */}
-        {activeTab === "treatment-plans" && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Proposed Treatments</CardTitle>
-                <CardDescription>Active and historical treatment plans.</CardDescription>
-              </div>
-              <Button size="sm" className="gap-2" asChild>
-                <Link href={`/patients/${patientId}/treatment-plan`} transitionTypes={NAV_FORWARD_TRANSITION}>
-                  <FileText className="h-4 w-4" /> Create Plan
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="border border-neutral-200 rounded-lg overflow-hidden">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-neutral-50 border-b border-neutral-200">
-                    <tr>
-                      <th className="px-4 py-3 font-medium text-neutral-700">Plan Name</th>
-                      <th className="px-4 py-3 font-medium text-neutral-700">Date Created</th>
-                      <th className="px-4 py-3 font-medium text-neutral-700">Total Cost</th>
-                      <th className="px-4 py-3 font-medium text-neutral-700">Status</th>
-                      <th className="px-4 py-3 font-medium text-right text-neutral-700">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-200">
-                    {treatmentPlans.length === 0 ? (
+          {/* APPOINTMENTS TAB */}
+          {activeTab === "appointments" && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Appointment History</CardTitle>
+                  <CardDescription>Past and upcoming visits.</CardDescription>
+                </div>
+                <BookAppointmentDialog patientId={patientId} onBooked={refreshAppointments} />
+              </CardHeader>
+              <CardContent>
+                <div className="border border-neutral-200 rounded-lg overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-neutral-50 border-b border-neutral-200">
                       <tr>
-                        <td colSpan={5} className="px-4 py-8 text-center text-neutral-500">No treatment plans yet.</td>
+                        <th className="px-4 py-3 font-medium text-neutral-700">Date & Time</th>
+                        <th className="px-4 py-3 font-medium text-neutral-700">Purpose</th>
+                        <th className="px-4 py-3 font-medium text-neutral-700">Status</th>
                       </tr>
-                    ) : (
-                      treatmentPlans.map((plan) => (
-                        <tr key={plan.id} className="hover:bg-neutral-50">
-                          <td className="px-4 py-3 font-medium text-neutral-900">{plan.title}</td>
-                          <td className="px-4 py-3 text-neutral-600">{new Date(plan.created_at).toLocaleDateString("en-PH")}</td>
-                          <td className="px-4 py-3 text-neutral-900">₱{Number(plan.total_estimated).toLocaleString()}</td>
-                          <td className="px-4 py-3"><Badge variant={plan.status === "completed" ? "success" : "warning"}>{plan.status}</Badge></td>
-                          <td className="px-4 py-3 text-right">
-                            <Button variant="ghost" size="sm" asChild>
-                              <Link
-                                href={`/patients/${patientId}/treatment-plan?plan=${plan.id}`}
-                                transitionTypes={NAV_FORWARD_TRANSITION}
-                              >
-                                View
-                              </Link>
-                            </Button>
-                          </td>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-200">
+                      {appointments.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="px-4 py-8 text-center text-neutral-500">No appointments scheduled.</td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* APPOINTMENTS TAB */}
-        {activeTab === "appointments" && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Appointment History</CardTitle>
-                <CardDescription>Past and upcoming visits.</CardDescription>
-              </div>
-              <BookAppointmentDialog patientId={patientId} onBooked={refreshAppointments} />
-            </CardHeader>
-            <CardContent>
-              <div className="border border-neutral-200 rounded-lg overflow-hidden">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-neutral-50 border-b border-neutral-200">
-                    <tr>
-                      <th className="px-4 py-3 font-medium text-neutral-700">Date & Time</th>
-                      <th className="px-4 py-3 font-medium text-neutral-700">Purpose</th>
-                      <th className="px-4 py-3 font-medium text-neutral-700">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-200">
-                    {appointments.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} className="px-4 py-8 text-center text-neutral-500">No appointments scheduled.</td>
-                      </tr>
-                    ) : (
-                      appointments.map((appt) => (
-                        <tr key={appt.id} className="hover:bg-neutral-50">
-                          <td className="px-4 py-3 font-medium text-neutral-900">
-                            {new Date(appt.scheduled_at).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}
-                          </td>
-                          <td className="px-4 py-3 text-neutral-600">{appt.purpose ?? "—"}</td>
-                          <td className="px-4 py-3"><Badge variant={appt.status === "completed" ? "success" : "info"}>{appt.status}</Badge></td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
+                      ) : (
+                        appointments.map((appt) => (
+                          <tr key={appt.id} className="hover:bg-neutral-50">
+                            <td className="px-4 py-3 font-medium text-neutral-900">
+                              {new Date(appt.scheduled_at).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}
+                            </td>
+                            <td className="px-4 py-3 text-neutral-600">{appt.purpose ?? "—"}</td>
+                            <td className="px-4 py-3"><Badge variant={appt.status === "completed" ? "success" : "info"}>{appt.status}</Badge></td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </DirectionalTransition>
     </PermissionGate>

@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { Plus, Receipt, FileText } from "lucide-react"
+import { Plus, Receipt, FileText, X } from "lucide-react"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useBranch } from "@/hooks/use-branch"
@@ -239,20 +239,34 @@ function BillingPageContent() {
         <ContentPanel padding="lg" className="space-y-6">
 
           {showCreate && (
-            <Card className="border-primary-200 animate-fade-rise">
-              <CardHeader>
-                <CardTitle className="text-base">{t("billing.createInvoiceTitle", "Create manual invoice")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleCreate} className="grid gap-3 sm:grid-cols-2 max-w-2xl">
-                  <div className="sm:col-span-2">
+            <div className="fixed inset-0 z-50 flex justify-end">
+              <button
+                type="button"
+                className="absolute inset-0 bg-neutral-950/40 animate-fade-in"
+                aria-label="Close form"
+                onClick={() => setShowCreate(false)}
+              />
+              <aside className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col p-6 animate-slide-left border-l border-neutral-200">
+                <div className="flex items-center justify-between border-b pb-4 mb-6">
+                  <h2 className="text-lg font-bold text-neutral-950">
+                    {t("billing.createInvoiceTitle", "Create manual invoice")}
+                  </h2>
+                  <Button variant="ghost" size="icon" onClick={() => setShowCreate(false)}>
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+                <form onSubmit={handleCreate} className="space-y-4">
+                  <div className="space-y-1 relative">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      {t("billing.searchPatient", "Search patient")}
+                    </label>
                     <Input
                       placeholder={t("appointments.searchPatientPlaceholder", "Name or phone…")}
                       value={patientQuery}
                       onChange={(e) => setPatientQuery(e.target.value)}
                     />
                     {patients.length > 0 && (
-                      <ul className="border rounded-md divide-y mt-1 max-h-32 overflow-y-auto">
+                      <ul className="absolute z-10 left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-md shadow-lg divide-y max-h-48 overflow-y-auto">
                         {patients.map((p) => (
                           <li key={p.id}>
                             <button
@@ -271,32 +285,45 @@ function BillingPageContent() {
                       </ul>
                     )}
                   </div>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    placeholder={t("billing.invoiceAmount", "Amount (PHP)")}
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    required
-                  />
-                  <Input
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    aria-label={t("billing.dueDate", "Due date")}
-                  />
-                  <div className="sm:col-span-2 flex gap-2">
-                    <Button type="submit" disabled={creating || !selectedPatientId}>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      {t("billing.invoiceAmountLabel", "Invoice Amount (PHP)")}
+                    </label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      placeholder={t("billing.invoiceAmount", "Amount (PHP)")}
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      {t("billing.dueDateLabel", "Due date")}
+                    </label>
+                    <Input
+                      type="date"
+                      value={dueDate}
+                      onChange={(e) => setDueDate(e.target.value)}
+                      aria-label={t("billing.dueDate", "Due date")}
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-4 border-t">
+                    <Button type="submit" className="w-full" disabled={creating || !selectedPatientId}>
                       {creating ? t("billing.creating", "Creating…") : t("billing.createInvoice", "New invoice")}
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => setShowCreate(false)}>
+                    <Button type="button" variant="outline" className="w-full" onClick={() => setShowCreate(false)}>
                       {t("common.cancel", "Cancel")}
                     </Button>
                   </div>
                 </form>
-              </CardContent>
-            </Card>
+              </aside>
+            </div>
           )}
 
           {(patientFilter || focusOverdue || focusOpen) && (

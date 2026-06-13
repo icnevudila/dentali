@@ -42,10 +42,10 @@ import { DisplayAnalyticsPanel } from "@/components/analytics/DisplayAnalyticsPa
 
 type Tab = "board" | "history"
 
-const COLUMNS: { key: QueueStatus[]; title: string; color: string }[] = [
-  { key: ["waiting", "ready"], title: "Waiting", color: "border-amber-200 bg-amber-50/50" },
-  { key: ["now_serving"], title: "Now Serving", color: "border-blue-200 bg-blue-50/50" },
-  { key: ["in_chair"], title: "In Chair", color: "border-emerald-200 bg-emerald-50/50" },
+const COLUMNS: { key: QueueStatus[]; title: string; borderClass: string }[] = [
+  { key: ["waiting", "ready"], title: "Waiting", borderClass: "border-t-2 border-t-amber-500 bg-white" },
+  { key: ["now_serving"], title: "Now Serving", borderClass: "border-t-2 border-t-blue-500 bg-white" },
+  { key: ["in_chair"], title: "In Chair", borderClass: "border-t-2 border-t-emerald-500 bg-white" },
 ]
 
 function QueueCard({
@@ -485,11 +485,11 @@ export default function QueuePage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCheckIn} className="space-y-3 max-w-md">
-                <div className="space-y-1">
+                <div className="space-y-1 relative">
                   <label className="text-xs font-medium">Search patient</label>
                   <Input value={patientQuery} onChange={(e) => setPatientQuery(e.target.value)} placeholder="Name or phone…" />
                   {patients.length > 0 && (
-                    <ul className="border rounded-md divide-y max-h-32 overflow-y-auto">
+                    <ul className="absolute z-10 left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-md shadow-lg divide-y max-h-48 overflow-y-auto">
                       {patients.map((p) => (
                         <li key={p.id}>
                           <button
@@ -563,7 +563,7 @@ export default function QueuePage() {
               {COLUMNS.map((col) => {
                 const colEntries = entries.filter((e) => col.key.includes(e.status))
                 return (
-                  <div key={col.title} className={`rounded-lg border-2 p-4 min-h-[200px] ${col.color}`}>
+                  <div key={col.title} className={`rounded-lg border border-neutral-200 p-4 min-h-[200px] shadow-sm ${col.borderClass}`}>
                     <h2 className="font-semibold text-sm text-neutral-700 mb-3">
                       {col.title}
                       <span className="ml-2 text-neutral-400">({colEntries.length})</span>
@@ -591,34 +591,42 @@ export default function QueuePage() {
         ) : (
           <Card>
             <CardContent className="pt-6">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-neutral-500">
-                    <th className="pb-3 text-left font-medium">Code</th>
-                    <th className="pb-3 text-left font-medium">Patient</th>
-                    <th className="pb-3 text-left font-medium">Status</th>
-                    <th className="pb-3 text-left font-medium">Checked in</th>
-                    <th className="pb-3 text-left font-medium">Completed</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {entries.map((e) => (
-                    <tr key={e.id}>
-                      <td className="py-2 font-mono font-bold">{e.display_code}</td>
-                      <td className="py-2">
-                        <Link href={`/patients/${e.patient_id}`} className="text-primary-600 hover:underline">
-                          {e.patient_name}
-                        </Link>
-                      </td>
-                      <td className="py-2"><Badge>{e.status}</Badge></td>
-                      <td className="py-2 text-neutral-500 text-xs">{new Date(e.checked_in_at).toLocaleString("en-PH")}</td>
-                      <td className="py-2 text-neutral-500 text-xs">
-                        {e.completed_at ? new Date(e.completed_at).toLocaleString("en-PH") : "—"}
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-neutral-500">
+                      <th className="pb-3 text-left font-medium">Code</th>
+                      <th className="pb-3 text-left font-medium">Patient</th>
+                      <th className="pb-3 text-left font-medium">Status</th>
+                      <th className="pb-3 text-left font-medium">Checked in</th>
+                      <th className="pb-3 text-left font-medium">Completed</th>
+                      <th className="pb-3 text-left font-medium">Wait time</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y">
+                    {entries.map((e) => (
+                      <tr key={e.id}>
+                        <td className="py-2 font-mono font-bold">{e.display_code}</td>
+                        <td className="py-2">
+                          <Link href={`/patients/${e.patient_id}`} className="text-primary-600 hover:underline">
+                            {e.patient_name}
+                          </Link>
+                        </td>
+                        <td className="py-2"><Badge>{e.status}</Badge></td>
+                        <td className="py-2 text-neutral-500 text-xs">{new Date(e.checked_in_at).toLocaleString("en-PH")}</td>
+                        <td className="py-2 text-neutral-500 text-xs">
+                          {e.completed_at ? new Date(e.completed_at).toLocaleString("en-PH") : "—"}
+                        </td>
+                        <td className="py-2 text-neutral-500 text-xs">
+                          {e.completed_at
+                            ? `${Math.round((new Date(e.completed_at).getTime() - new Date(e.checked_in_at).getTime()) / 60000)} min`
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
         )}

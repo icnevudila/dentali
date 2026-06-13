@@ -42,12 +42,11 @@ export function ProblemSection() {
               key={idx} 
               direction={idx % 2 === 0 ? "left" : "right"} 
               delay={150 * idx}
-              className="landing-problem-card border border-red-100/50 bg-red-50/20 p-6 rounded-2xl flex gap-4 transition duration-300 hover:border-red-200/80 hover:bg-red-50/40"
+              className="landing-problem-card border border-red-100/50 bg-red-50/20 p-6 rounded-2xl flex gap-4 transition duration-300 hover:border-red-200/80 hover:bg-red-50/40 items-center"
             >
-              <div className="text-3xl select-none pt-1">{card.emoji}</div>
-              <div className="space-y-1">
-                <h3 className="font-semibold text-neutral-900">{lt(card.title, locale)}</h3>
-                <p className="text-sm text-neutral-600 leading-relaxed">{lt(card.desc, locale)}</p>
+              <div className="text-3xl select-none">{card.icon}</div>
+              <div>
+                <p className="text-base font-medium text-neutral-800 leading-relaxed">{lt(card.text, locale)}</p>
               </div>
             </ScrollReveal>
           ))}

@@ -57,7 +57,7 @@ export async function fetchAppointments(
 
   const { data, error } = await supabase
     .from("appointments")
-    .select("id, scheduled_at, purpose, status, patient_id, patients(first_name, last_name)")
+    .select("id, scheduled_at, purpose, status, patient_id, provider_id, patients(first_name, last_name)")
     .eq("branch_id", branchId)
     .order("scheduled_at", { ascending: true })
 
@@ -73,6 +73,7 @@ export async function fetchAppointments(
       status: row.status,
       patient_id: row.patient_id,
       patient_name: patient ? `${patient.first_name} ${patient.last_name}` : undefined,
+      provider_id: row.provider_id,
     }
   })
 
@@ -124,7 +125,7 @@ export async function fetchAppointmentsRange(
 
   const { data, error } = await supabase
     .from("appointments")
-    .select("id, scheduled_at, purpose, status, patient_id, patients(first_name, last_name)")
+    .select("id, scheduled_at, purpose, status, patient_id, provider_id, patients(first_name, last_name)")
     .eq("branch_id", branchId)
     .gte("scheduled_at", `${startDate}T00:00:00+08:00`)
     .lte("scheduled_at", `${endDate}T23:59:59+08:00`)
@@ -142,6 +143,7 @@ export async function fetchAppointmentsRange(
       status: row.status,
       patient_id: row.patient_id,
       patient_name: patient ? `${patient.first_name} ${patient.last_name}` : undefined,
+      provider_id: row.provider_id,
     }
   })
 

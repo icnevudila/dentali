@@ -48,30 +48,26 @@ export function AnatomicOdontogramChart({
   const ariaLabel =
     variant === "primary" ? "FDI primary teeth odontogram" : "FDI permanent teeth odontogram"
 
-  if (loadState === "loading") {
-    return (
-      <div className="relative min-h-[420px] overflow-hidden rounded-xl border border-neutral-200">
-        <PageLoadingSkeleton variant="block" className="absolute inset-0 h-full rounded-xl" />
-        <div className="relative flex min-h-[420px] items-center justify-center">
-          <p className="text-sm text-neutral-500">Loading dental chart…</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (loadState === "error") {
-    return (
-      <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-800">
-        Dental chart SVG could not be loaded. Please refresh the page.
-      </div>
-    )
-  }
-
   return (
     <div className="anatomic-odontogram-chart w-full overflow-x-auto">
+      {loadState === "loading" && (
+        <div className="relative min-h-[420px] overflow-hidden rounded-xl border border-neutral-200">
+          <PageLoadingSkeleton variant="block" className="absolute inset-0 h-full rounded-xl" />
+          <div className="relative flex min-h-[420px] items-center justify-center">
+            <p className="text-sm text-neutral-500">Loading dental chart…</p>
+          </div>
+        </div>
+      )}
+
+      {loadState === "error" && (
+        <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-800">
+          Dental chart SVG could not be loaded. Please refresh the page.
+        </div>
+      )}
+
       <div
         ref={containerRef}
-        className="min-w-[640px] [&_svg]:h-auto [&_svg]:max-h-[720px] [&_svg]:w-full [&_svg]:rounded-xl"
+        className={`w-full min-w-[480px] md:min-w-0 [&_svg]:h-auto [&_svg]:max-h-[720px] [&_svg]:w-full [&_svg]:rounded-xl ${loadState !== "ready" ? "hidden" : ""}`}
         role="application"
         aria-label={ariaLabel}
       />

@@ -7,6 +7,9 @@ import { ToothFinding } from "@/lib/types/dental"
 import { isPrimaryToothNumber } from "@/lib/odontogram/svg-assets"
 import { Button } from "@/components/ui/button"
 import { ToothDetailDrawer } from "./ToothDetailDrawer"
+import { cn } from "@/lib/utils"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { MousePointerClick, ShieldAlert } from "lucide-react"
 
 interface OdontogramWorkspaceProps {
   findings: ToothFinding[]
@@ -129,23 +132,42 @@ export function OdontogramWorkspace({
           </div>
         </div>
 
-        <div className="w-full shrink-0 xl:w-[380px] print:hidden">
+        <div className={cn(
+          "w-full shrink-0 xl:w-[380px] print:hidden",
+          selectedTooth && !readOnly
+            ? "fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 xl:relative xl:inset-auto xl:z-0 xl:flex xl:items-start xl:justify-start xl:bg-transparent xl:backdrop-blur-none xl:p-0"
+            : "hidden xl:block"
+        )}>
           {selectedTooth && !readOnly ? (
-            <ToothDetailDrawer
-              selectedTooth={selectedTooth}
-              currentFinding={selectedFinding}
-              onClose={() => setSelectedTooth(null)}
-              onSaveFinding={(f) => {
-                onSaveFinding(f)
-              }}
-              data-testid="tooth-drawer"
-            />
-          ) : (
-            <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-6 text-center text-sm text-neutral-500 xl:min-h-[520px]">
-              {readOnly
-                ? "Read-only chart view."
-                : "Select a tooth on the chart to record condition, surfaces, restoration, or notes."}
+            <div className="w-full max-w-md xl:max-w-none">
+              <ToothDetailDrawer
+                selectedTooth={selectedTooth}
+                currentFinding={selectedFinding}
+                onClose={() => setSelectedTooth(null)}
+                onSaveFinding={(f) => {
+                  onSaveFinding(f)
+                }}
+                data-testid="tooth-drawer"
+              />
             </div>
+          ) : (
+            <Card className="flex min-h-[420px] xl:min-h-[560px] flex-col border-neutral-200 shadow-sm bg-neutral-50/50 justify-center items-center text-center p-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-50 text-primary-600 mb-4 ring-8 ring-primary-50/50 animate-pulse">
+                {readOnly ? (
+                  <ShieldAlert className="h-6 w-6" />
+                ) : (
+                  <MousePointerClick className="h-6 w-6" />
+                )}
+              </div>
+              <h4 className="font-semibold text-neutral-800 text-base mb-1">
+                {readOnly ? "Read-Only Mode" : "Select a Tooth"}
+              </h4>
+              <p className="text-xs text-neutral-500 max-w-[240px] leading-relaxed">
+                {readOnly
+                  ? "This chart is in read-only mode. Changes cannot be applied."
+                  : "Click any tooth on the odontogram chart to record diagnoses, surfaces, restorations, or custom clinical notes."}
+              </p>
+            </Card>
           )}
         </div>
       </div>

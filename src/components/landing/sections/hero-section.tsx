@@ -72,19 +72,16 @@ export function HeroSection() {
             </ScrollReveal>
           </div>
 
-          {/* Right Column: 3D perspective screenshot mockup */}
+          {/* Right Column: 3D perspective screenshot mockup slideshow */}
           <div className="lg:col-span-6 relative flex justify-center lg:justify-end">
             <ScrollReveal direction="scale" delay={300} className="w-full max-w-lg lg:max-w-none">
-              <div className="landing-hero-screenshot w-full relative">
-                <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-primary-500 to-teal-500 opacity-20 blur-xl group-hover:opacity-30 transition duration-1000" />
-                <Image
-                  src="/screenshots/all-pages/dashboard/desktop.png"
-                  alt="dentali dashboard mockup"
-                  width={1440}
-                  height={836}
-                  className="relative rounded-xl border border-neutral-200/80 shadow-2xl bg-white w-full h-auto"
-                  priority
-                />
+              <div className="landing-hero-screenshot w-full aspect-[1440/836] relative">
+                <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-primary-500 to-teal-500 opacity-20 blur-xl" />
+                
+                {/* Slideshow Container */}
+                <div className="relative w-full h-full rounded-xl border border-neutral-200/80 shadow-2xl bg-white overflow-hidden">
+                  <HeroSlideshow />
+                </div>
               </div>
             </ScrollReveal>
           </div>
@@ -92,5 +89,44 @@ export function HeroSection() {
         </div>
       </div>
     </section>
+  )
+}
+
+const HERO_SLIDES = [
+  { src: "/screenshots/all-pages/dashboard/desktop.png", alt: "dentali dashboard" },
+  { src: "/screenshots/all-pages/patient-chart/desktop.png", alt: "dentali dental chart" },
+  { src: "/screenshots/all-pages/appointments/desktop.png", alt: "dentali scheduler" },
+  { src: "/screenshots/all-pages/patient-treatment-plan/desktop.png", alt: "dentali treatment plan" }
+]
+
+function HeroSlideshow() {
+  const [activeIdx, setActiveIdx] = React.useState(0)
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveIdx((prev) => (prev + 1) % HERO_SLIDES.length)
+    }, 4500) // Her 4.5 saniyede bir değişim
+    return () => clearInterval(timer)
+  }, [])
+
+  return (
+    <div className="relative w-full h-full">
+      {HERO_SLIDES.map((slide, idx) => (
+        <div
+          key={slide.src}
+          className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${
+            idx === activeIdx ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
+          }`}
+        >
+          <Image
+            src={slide.src}
+            alt={slide.alt}
+            fill
+            className="object-cover object-top"
+            priority={idx === 0}
+          />
+        </div>
+      ))}
+    </div>
   )
 }

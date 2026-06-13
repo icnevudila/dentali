@@ -252,56 +252,58 @@ function InventoryPageContent() {
                 </p>
               </div>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-neutral-500">
-                    <th className="pb-2 text-left">{t("inventory.item", "Item")}</th>
-                    <th className="pb-2 text-left">{t("inventory.sku", "SKU")}</th>
-                    <th className="pb-2 text-right">{t("inventory.onHand", "On hand")}</th>
-                    <th className="pb-2 text-left">{t("inventory.status", "Status")}</th>
-                    <th className="pb-2 text-left">{t("inventory.expiry", "Expiry")}</th>
-                    <th className="pb-2 text-right">{t("inventory.reorderSuggest", "Reorder")}</th>
-                    <th className="pb-2 text-right">{t("inventory.stockIn", "Stock in")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {displayedItems.map((item) => {
-                    const level = stockLevel(item)
-                    const reorderQty = suggestedReorderQty(item)
-                    return (
-                      <tr key={item.id} className={level === "critical" || level === "expired" ? "border-l-4 border-l-red-500" : level === "low" ? "border-l-4 border-l-amber-400" : ""}>
-                        <td className="py-2 font-medium">{item.name}</td>
-                        <td className="py-2 font-mono text-xs">{item.sku ?? "—"}</td>
-                        <td className="py-2 text-right">{item.quantity_on_hand} {item.unit}</td>
-                        <td className="py-2"><Badge variant={LEVEL_VARIANT[level]}>{level}</Badge></td>
-                        <td className="py-2 text-neutral-500">{item.expiry_date ?? "—"}</td>
-                        <td className="py-2 text-right text-neutral-600">
-                          {reorderQty > 0 ? (
-                            <button
-                              type="button"
-                              className="text-primary-600 hover:underline font-medium"
-                              onClick={() => {
-                                setAdjustId(item.id)
-                                setAdjustQty(String(reorderQty))
-                              }}
-                            >
-                              +{reorderQty} {item.unit}
-                            </button>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="py-2 text-right">
-                          <div className="flex justify-end gap-1">
-                            <Input className="w-16 h-8 text-xs" type="number" placeholder="Qty" value={adjustId === item.id ? adjustQty : ""} onFocus={() => setAdjustId(item.id)} onChange={(e) => setAdjustQty(e.target.value)} />
-                            <Button size="sm" variant="outline" disabled={adjustId === item.id && !adjustQty} onClick={() => handleStockIn(item.id)}>+</Button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-neutral-500">
+                      <th className="pb-2 text-left">{t("inventory.item", "Item")}</th>
+                      <th className="pb-2 text-left">{t("inventory.sku", "SKU")}</th>
+                      <th className="pb-2 text-right">{t("inventory.onHand", "On hand")}</th>
+                      <th className="pb-2 text-left">{t("inventory.status", "Status")}</th>
+                      <th className="pb-2 text-left">{t("inventory.expiry", "Expiry")}</th>
+                      <th className="pb-2 text-right">{t("inventory.reorderSuggest", "Reorder")}</th>
+                      <th className="pb-2 text-right">{t("inventory.stockIn", "Stock in")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {displayedItems.map((item) => {
+                      const level = stockLevel(item)
+                      const reorderQty = suggestedReorderQty(item)
+                      return (
+                        <tr key={item.id} className={level === "critical" || level === "expired" ? "border-l-4 border-l-red-500" : level === "low" ? "border-l-4 border-l-amber-400" : ""}>
+                          <td className="py-2 font-medium">{item.name}</td>
+                          <td className="py-2 font-mono text-xs">{item.sku ?? "—"}</td>
+                          <td className="py-2 text-right">{item.quantity_on_hand} {item.unit}</td>
+                          <td className="py-2"><Badge variant={LEVEL_VARIANT[level]}>{level}</Badge></td>
+                          <td className="py-2 text-neutral-500">{item.expiry_date ?? "—"}</td>
+                          <td className="py-2 text-right text-neutral-600">
+                            {reorderQty > 0 ? (
+                              <button
+                                type="button"
+                                className="text-primary-600 hover:underline font-medium"
+                                onClick={() => {
+                                  setAdjustId(item.id)
+                                  setAdjustQty(String(reorderQty))
+                                }}
+                              >
+                                +{reorderQty} {item.unit}
+                              </button>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="py-2 text-right">
+                            <div className="flex justify-end gap-1">
+                              <Input className="w-16 h-8 text-xs" type="number" placeholder="Qty" value={adjustId === item.id ? adjustQty : ""} onFocus={() => setAdjustId(item.id)} onChange={(e) => setAdjustQty(e.target.value)} />
+                              <Button size="sm" variant="outline" disabled={adjustId === item.id && !adjustQty} onClick={() => handleStockIn(item.id)}>+</Button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </CardContent>
         </Card>

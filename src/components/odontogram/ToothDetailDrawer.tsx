@@ -55,50 +55,74 @@ export function ToothDetailDrawer({
   const surfacesDisabled =
     draft.condition != null && MISSING_CONDITIONS.has(draft.condition)
 
-  const handleSurfaceClick = (surface: ToothSurface) => {
-    if (surfacesDisabled) return
-    setDraft((prev) => {
-      const surfaces = prev.surfaces || []
-      if (surfaces.includes(surface)) {
-        return { ...prev, surfaces: surfaces.filter((s) => s !== surface) }
-      }
-      return { ...prev, surfaces: [...surfaces, surface] }
-    })
-  }
-
-  const handleSave = () => {
+  const saveDraft = React.useCallback((updatedDraft: Partial<ToothFinding>) => {
     onSaveFinding({
-      ...draft,
+      ...updatedDraft,
       tooth_number: selectedTooth.toString(),
       dentition_type:
-        draft.dentition_type ??
+        updatedDraft.dentition_type ??
         (isPrimaryToothNumber(selectedTooth) ? "primary" : "permanent"),
       status: "active",
     })
+  }, [selectedTooth, onSaveFinding])
+
+  const handleSurfaceClick = (surface: ToothSurface) => {
+    if (surfacesDisabled) return
+    const prevSurfaces = draft.surfaces || []
+    const nextSurfaces = prevSurfaces.includes(surface)
+      ? prevSurfaces.filter((s) => s !== surface)
+      : [...prevSurfaces, surface]
+
+    const updated = { ...draft, surfaces: nextSurfaces }
+    setDraft(updated)
+    saveDraft(updated)
   }
 
   const setCondition = (condition: ToothFinding["condition"]) => {
+    let updated: Partial<ToothFinding> = {}
     if (condition && MISSING_CONDITIONS.has(condition)) {
-      setDraft((p) => ({
-        ...p,
+      updated = {
+        ...draft,
         condition,
         surfaces: [],
         restoration_type: null,
-      }))
-      return
+      }
+    } else {
+      updated = { ...draft, condition }
     }
-    setDraft((p) => ({ ...p, condition }))
+    setDraft(updated)
+    saveDraft(updated)
+  }
+
+  const toggleRestoration = (value: ToothFinding["restoration_type"]) => {
+    const updated = {
+      ...draft,
+      restoration_type: draft.restoration_type === value ? null : value,
+    }
+    setDraft(updated)
+    saveDraft(updated)
+  }
+
+  const toggleSurgery = (value: ToothFinding["surgery_type"]) => {
+    const updated = {
+      ...draft,
+      surgery_type: draft.surgery_type === value ? null : value,
+    }
+    setDraft(updated)
+    saveDraft(updated)
   }
 
   const clearFinding = () => {
-    setDraft({
+    const updated = {
       condition: null,
       surfaces: [],
       restoration_type: null,
       surgery_type: null,
       notes: "",
-      dentition_type: isPrimaryToothNumber(selectedTooth) ? "primary" : "permanent",
-    })
+      dentition_type: (isPrimaryToothNumber(selectedTooth) ? "primary" : "permanent") as any,
+    }
+    setDraft(updated)
+    saveDraft(updated)
   }
 
   return (
@@ -117,7 +141,7 @@ export function ToothDetailDrawer({
       </CardHeader>
 
       <CardContent className="flex-1 space-y-6 overflow-y-auto p-5">
-        <div className="relative flex flex-col items-center rounded-xl border-2 border-dashed border-neutral-200 bg-white p-5">
+        <div className="relative flex flex-col items-center rounded-xl border border-neutral-200 bg-neutral-50/50 p-5">
           <div className="absolute left-3 top-3 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
             <MousePointerClick className="h-3 w-3" /> Surfaces
           </div>
@@ -150,7 +174,6 @@ export function ToothDetailDrawer({
               )
             })}
           </div>
-          <ToothSurfaceAtlas className="mt-4 max-w-[280px] opacity-90" />
         </div>
 
         <section className="space-y-2">
@@ -184,12 +207,7 @@ export function ToothDetailDrawer({
                 active={draft.restoration_type === opt.value}
                 label={opt.label}
                 tone="blue"
-                onClick={() =>
-                  setDraft((p) => ({
-                    ...p,
-                    restoration_type: p.restoration_type === opt.value ? null : opt.value,
-                  }))
-                }
+                onClick={() => toggleRestoration(opt.value)}
               />
             ))}
           </div>
@@ -204,12 +222,7 @@ export function ToothDetailDrawer({
                 active={draft.surgery_type === opt.value}
                 label={opt.label}
                 tone="amber"
-                onClick={() =>
-                  setDraft((p) => ({
-                    ...p,
-                    surgery_type: p.surgery_type === opt.value ? null : opt.value,
-                  }))
-                }
+                onClick={() => toggleSurgery(opt.value)}
               />
             ))}
           </div>
@@ -220,6 +233,7 @@ export function ToothDetailDrawer({
           <textarea
             value={draft.notes ?? ""}
             onChange={(e) => setDraft((p) => ({ ...p, notes: e.target.value }))}
+            onBlur={() => saveDraft(draft)}
             placeholder="Optional notes for this tooth…"
             rows={3}
             className="flex w-full resize-none rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
@@ -227,17 +241,10 @@ export function ToothDetailDrawer({
         </section>
       </CardContent>
 
-      <CardFooter className="gap-2 border-t border-neutral-200 bg-neutral-50 p-4">
-        <Button variant="outline" className="flex-1" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button
-          className="flex-[2] gap-2"
-          onClick={handleSave}
-          data-testid="tooth-apply-btn"
-        >
+      <CardFooter className="border-t border-neutral-200 bg-neutral-50 p-4">
+        <Button variant="outline" className="w-full gap-2" onClick={onClose}>
           <Check className="h-4 w-4" />
-          Apply tooth {selectedTooth}
+          Done / Close Panel
         </Button>
       </CardFooter>
     </Card>
@@ -264,13 +271,13 @@ function OptionButton({
   testId?: string
 }) {
   const activeStyles = {
-    default: "border-primary-600 bg-primary-600 text-white",
-    red: "border-red-600 bg-red-600 text-white",
-    amber: "border-amber-600 bg-amber-600 text-white",
-    blue: "border-blue-600 bg-blue-600 text-white",
-    neutral: "border-neutral-800 bg-neutral-800 text-white",
+    default: "border-primary-200 bg-primary-50 text-primary-700 ring-1 ring-primary-500/20 font-semibold shadow-sm",
+    red: "border-red-200 bg-red-50 text-red-700 ring-1 ring-red-500/20 font-semibold shadow-sm",
+    amber: "border-amber-200 bg-amber-50 text-amber-700 ring-1 ring-amber-500/20 font-semibold shadow-sm",
+    blue: "border-blue-200 bg-blue-50 text-blue-700 ring-1 ring-blue-500/20 font-semibold shadow-sm",
+    neutral: "border-neutral-300 bg-neutral-100 text-neutral-800 ring-1 ring-neutral-500/10 font-semibold shadow-sm",
   }
-  const idle = "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300"
+  const idle = "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 transition-all shadow-sm"
 
   return (
     <button
@@ -278,7 +285,7 @@ function OptionButton({
       onClick={onClick}
       data-testid={testId}
       className={cn(
-        "rounded-lg border px-2 py-2 text-left text-[11px] font-medium leading-tight transition-colors",
+        "rounded-lg border px-2.5 py-2.5 text-left text-[11px] font-medium leading-tight transition-all active:scale-[0.98]",
         active ? activeStyles[tone] : idle
       )}
     >

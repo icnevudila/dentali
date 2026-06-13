@@ -69,7 +69,7 @@ export function DayInClinic() {
                       </div>
                       
                       <p className="text-sm text-neutral-600 leading-relaxed">
-                        {lt(step.desc, locale)}
+                        {lt(step.description, locale)}
                       </p>
 
                       {step.screenshot && (

@@ -40,7 +40,7 @@ export function WallOfLove() {
         <ScrollReveal direction="up" delay={200} className="landing-masonry gap-6">
           {TESTIMONIALS.map((testimonial, idx) => (
             <div key={idx} className="break-inside-avoid mb-6">
-              <TestimonialCard testimonial={testimonial} locale={locale} />
+              <TestimonialCard testimonial={testimonial} locale={locale === "tr" ? "tr" : "en"} />
             </div>
           ))}
         </ScrollReveal>

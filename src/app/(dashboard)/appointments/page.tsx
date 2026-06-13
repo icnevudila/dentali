@@ -40,6 +40,7 @@ import {
   buildRescheduledAt,
   parseDateKey,
   formatAppointmentTime,
+  appointmentDateKey,
 } from "@/lib/appointments/week-calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -53,7 +54,6 @@ import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
-import { AppointmentsAnalyticsPanel } from "@/components/analytics/AppointmentsAnalyticsPanel"
 
 type ViewMode = "today" | "week"
 
@@ -73,10 +73,8 @@ function AppointmentsPageContent() {
   const { t } = useLocale()
   const { hasPermission } = usePermission()
   const canWriteAppts = hasPermission(PERMISSIONS.APPOINTMENTS_WRITE)
-  const [viewMode, setViewMode] = React.useState<ViewMode>("week")
   const [weekStart, setWeekStart] = React.useState(() => startOfWeekMonday(new Date()))
   const [selectedDate, setSelectedDate] = React.useState(() => toDateKey(new Date()))
-  const [appointments, setAppointments] = React.useState<Awaited<ReturnType<typeof fetchAppointments>>["data"]>([])
   const [weekAppointments, setWeekAppointments] = React.useState<Awaited<ReturnType<typeof fetchAppointmentsRange>>["data"]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -95,7 +93,6 @@ function AppointmentsPageContent() {
   const [reminderNotice, setReminderNotice] = React.useState<string | null>(null)
   const [waitlistNotice, setWaitlistNotice] = React.useState<string | null>(null)
   const [checkInQueueNotice, setCheckInQueueNotice] = React.useState(false)
-  const [dayDate, setDayDate] = React.useState(() => toDateKey(new Date()))
   const [providers, setProviders] = React.useState<StaffMember[]>([])
   const [selectedProviderId, setSelectedProviderId] = React.useState("")
   const [slots, setSlots] = React.useState<AppointmentSlot[]>([])
@@ -105,21 +102,11 @@ function AppointmentsPageContent() {
 
   const today = toDateKey(new Date())
 
-  const loadDay = React.useCallback(() => {
-    if (!activeBranch) return
-    setLoading(true)
-    fetchAppointments(activeBranch.id, dayDate).then(({ data, error: err }) => {
-      setAppointments(data)
-      setError(err)
-      setLoading(false)
-    })
-  }, [activeBranch, dayDate])
-
   const loadWeek = React.useCallback(() => {
     if (!activeBranch) return
     setLoading(true)
-    const start = toDateKey(weekStart)
-    const end = toDateKey(addDays(weekStart, 6))
+    const start = toDateKey(addDays(weekStart, -15))
+    const end = toDateKey(addDays(weekStart, 30))
     fetchAppointmentsRange(activeBranch.id, start, end).then(({ data, error: err }) => {
       setWeekAppointments(data)
       setError(err)
@@ -128,9 +115,8 @@ function AppointmentsPageContent() {
   }, [activeBranch, weekStart])
 
   React.useEffect(() => {
-    if (viewMode === "today") loadDay()
-    else loadWeek()
-  }, [viewMode, loadDay, loadWeek])
+    loadWeek()
+  }, [loadWeek])
 
   React.useEffect(() => {
     if (!activeBranch) return
@@ -170,48 +156,6 @@ function AppointmentsPageContent() {
     })
   }, [activeBranch, selectedProviderId, date])
 
-  const sortedDayAppointments = React.useMemo(
-    () => [...appointments].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()),
-    [appointments]
-  )
-
-  const dayStats = React.useMemo(() => {
-    const scheduled = sortedDayAppointments.filter((a) => a.status === "scheduled" || a.status === "confirmed").length
-    const completed = sortedDayAppointments.filter((a) => a.status === "completed").length
-    const cancelled = sortedDayAppointments.filter((a) => a.status === "cancelled").length
-    const noShow = sortedDayAppointments.filter((a) => a.status === "no_show").length
-    return { total: sortedDayAppointments.length, scheduled, completed, cancelled, noShow }
-  }, [sortedDayAppointments])
-
-  const appointmentStatusVariant = (status: string) => {
-    if (status === "completed") return "success"
-    if (status === "cancelled" || status === "no_show") return "outline"
-    return "info"
-  }
-
-  const nextUpId = React.useMemo(() => {
-    const now = Date.now()
-    const upcoming = sortedDayAppointments.find(
-      (a) =>
-        (a.status === "scheduled" || a.status === "confirmed") &&
-        new Date(a.scheduled_at).getTime() >= now
-    )
-    return upcoming?.id ?? null
-  }, [sortedDayAppointments])
-
-  const dayLabel = React.useMemo(() => {
-    const d = parseDateKey(dayDate)
-    const formatted = d.toLocaleDateString("en-PH", {
-      weekday: "long",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      timeZone: "Asia/Manila",
-    })
-    return dayDate === today
-      ? `${t("appointments.todayPrefix", "Today")} · ${formatted}`
-      : formatted
-  }, [dayDate, today, t])
 
   React.useEffect(() => {
     if (!activeBranch || patientQuery.length < 2) {
@@ -225,8 +169,7 @@ function AppointmentsPageContent() {
   }, [patientQuery, activeBranch])
 
   const reload = () => {
-    if (viewMode === "today") loadDay()
-    else loadWeek()
+    loadWeek()
   }
 
   const reloadAvailability = React.useCallback(async () => {
@@ -306,7 +249,7 @@ function AppointmentsPageContent() {
 
   const handleStatus = async (id: string, status: string) => {
     const appt =
-      appointments.find((a) => a.id === id) ?? weekAppointments.find((a) => a.id === id)
+      weekAppointments.find((a) => a.id === id)
     setUpdatingId(id)
 
     if (status === "no_show") {
@@ -362,63 +305,33 @@ function AppointmentsPageContent() {
     }
   }
 
-  const weekStats = React.useMemo(() => {
-    const scheduled = weekAppointments.filter((a) => a.status === "scheduled" || a.status === "confirmed").length
-    const completed = weekAppointments.filter((a) => a.status === "completed").length
-    return { total: weekAppointments.length, scheduled, completed }
-  }, [weekAppointments])
+  const metricItems = React.useMemo(() => {
+    const todayAppts = weekAppointments.filter((a) => appointmentDateKey(a.scheduled_at) === today)
+    const todayTotal = todayAppts.length
+    const todayUpcoming = todayAppts.filter((a) => a.status === "scheduled" || a.status === "confirmed").length
+    const todayCompleted = todayAppts.filter((a) => a.status === "completed").length
 
-  const metricItems =
-    viewMode === "today"
-      ? [
-          {
-            label: t("appointments.metricTotal", "Today"),
-            value: loading ? "—" : dayStats.total,
-            hint: dayLabel,
-            icon: Calendar,
-          },
-          {
-            label: t("appointments.metricUpcoming", "Upcoming"),
-            value: loading ? "—" : dayStats.scheduled,
-            hint: t("appointments.metricUpcomingHint", "Scheduled or confirmed"),
-            variant: "default" as const,
-          },
-          {
-            label: t("appointments.metricDone", "Completed"),
-            value: loading ? "—" : dayStats.completed,
-            hint: t("appointments.metricDoneHint", "Marked done today"),
-            variant: "success" as const,
-          },
-          ...(dayStats.noShow > 0
-            ? [
-                {
-                  label: t("appointments.noShow", "No-show"),
-                  value: dayStats.noShow,
-                  hint: t("appointments.metricNoShowHint", "Did not arrive"),
-                  variant: "warning" as const,
-                },
-              ]
-            : []),
-        ]
-      : [
-          {
-            label: t("appointments.metricWeek", "This week"),
-            value: loading ? "—" : weekStats.total,
-            hint: t("appointments.viewWeek", "Week view"),
-            icon: Calendar,
-          },
-          {
-            label: t("appointments.metricUpcoming", "Upcoming"),
-            value: loading ? "—" : weekStats.scheduled,
-            hint: t("appointments.metricUpcomingHint", "Scheduled or confirmed"),
-          },
-          {
-            label: t("appointments.metricDone", "Completed"),
-            value: loading ? "—" : weekStats.completed,
-            hint: t("appointments.metricDoneHint", "Marked done"),
-            variant: "success" as const,
-          },
-        ]
+    return [
+      {
+        label: t("appointments.metricTotal", "Today"),
+        value: loading ? "—" : todayTotal,
+        hint: t("appointments.todayPrefix", "Today"),
+        icon: Calendar,
+      },
+      {
+        label: t("appointments.metricUpcoming", "Upcoming Today"),
+        value: loading ? "—" : todayUpcoming,
+        hint: t("appointments.metricUpcomingHint", "Scheduled or confirmed"),
+        variant: "default" as const,
+      },
+      {
+        label: t("appointments.metricDone", "Completed Today"),
+        value: loading ? "—" : todayCompleted,
+        hint: t("appointments.metricDoneHint", "Marked done today"),
+        variant: "success" as const,
+      },
+    ]
+  }, [weekAppointments, today, loading, t])
 
   return (
     <PermissionGate permission={PERMISSIONS.APPOINTMENTS_READ}>
@@ -436,31 +349,6 @@ function AppointmentsPageContent() {
             )}
             actions={
             <>
-              <div className="flex rounded-md border border-neutral-200 bg-neutral-50 p-0.5">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={viewMode === "week" ? "default" : "ghost"}
-                  className="h-8 gap-1"
-                  onClick={() => setViewMode("week")}
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  {t("appointments.viewWeek", "Week")}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={viewMode === "today" ? "default" : "ghost"}
-                  className="h-8 gap-1"
-                  onClick={() => {
-                    setViewMode("today")
-                    setDayDate(today)
-                  }}
-                >
-                  <List className="h-3.5 w-3.5" />
-                  {t("appointments.viewDay", "Today")}
-                </Button>
-              </div>
               <WorkflowSettingsLink />
               <Button
                 className="gap-2"
@@ -468,7 +356,7 @@ function AppointmentsPageContent() {
                   const next = !showBook
                   setShowBook(next)
                   if (next) {
-                    setDate(viewMode === "today" ? dayDate : selectedDate)
+                    setDate(selectedDate)
                   }
                 }}
               >
@@ -504,8 +392,6 @@ function AppointmentsPageContent() {
           ) : null}
 
           <MetricStrip items={metricItems} />
-
-          {activeBranch ? <AppointmentsAnalyticsPanel branchId={activeBranch.id} /> : null}
 
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 animate-fade-rise">
@@ -646,208 +532,37 @@ function AppointmentsPageContent() {
           </Card>
         )}
 
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <h2 className="text-sm font-semibold text-neutral-900">
-                {viewMode === "today"
-                  ? t("appointments.scheduleToday", "Today's schedule")
-                  : t("appointments.scheduleWeek", "Week schedule")}
-              </h2>
-              <p className="text-xs text-neutral-500 mt-0.5">
-                {viewMode === "today"
-                  ? t("appointments.scheduleTodayHint", "Check in patients and update visit status.")
-                  : t("appointments.scheduleWeekHint", "Pick a day below to see visits and actions.")}
-              </p>
-            </div>
-          </div>
-
-        {viewMode === "week" ? (
-          loading ? (
-            <PageLoadingSkeleton variant="block" />
-          ) : (
-            <AppointmentWeekCalendar
-              appointments={weekAppointments}
-              weekStart={weekStart}
-              onWeekChange={(start) => {
-                setWeekStart(start)
-                setSelectedDate(toDateKey(start))
-              }}
-              selectedDate={selectedDate}
-              onSelectDate={setSelectedDate}
-              onStatusChange={handleStatus}
-              onReschedule={canWriteAppts ? handleReschedule : undefined}
-              onCheckIn={handleCheckIn}
-              onRemind={handleSendReminder}
-              updatingId={updatingId}
-              reschedulingId={reschedulingId}
-              checkingInId={checkingInId}
-              remindingId={remindingId}
-              dragHint={
-                canWriteAppts
-                  ? t(
-                      "appointments.dragRescheduleHint",
-                      "Tip: drag a visit onto another day to reschedule (same time)."
-                    )
-                  : undefined
-              }
-            />
-          )
+        {loading ? (
+          <PageLoadingSkeleton variant="block" />
         ) : (
-          <Card className="border-neutral-200">
-            <CardHeader className="pb-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  {dayLabel}
-                </CardTitle>
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setDayDate(addDaysToKey(dayDate, -1))}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={dayDate === today}
-                    onClick={() => setDayDate(today)}
-                  >
-                    {t("appointments.today", "Today")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setDayDate(addDaysToKey(dayDate, 1))}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <PageLoadingSkeleton variant="inline" />
-              ) : sortedDayAppointments.length === 0 ? (
-                <div className="py-10 text-center text-neutral-500">
-                  <p>{t("appointments.emptyDay", "No appointments for this day.")}</p>
-                  <Button
-                    variant="outline"
-                    className="mt-4"
-                    onClick={() => {
-                      setDate(dayDate)
-                      setShowBook(true)
-                    }}
-                  >
-                    {t("appointments.bookAppointment", "Book appointment")}
-                  </Button>
-                </div>
-              ) : (
-                <ul className="space-y-2">
-                  {sortedDayAppointments.map((appt) => {
-                    const isActive = appt.status === "scheduled" || appt.status === "confirmed"
-                    return (
-                      <li
-                        key={appt.id}
-                        className={`rounded-lg border border-neutral-200 bg-white p-3 ${
-                          appt.id === nextUpId ? "border-primary-300 bg-primary-50/40" : ""
-                        }`}
-                      >
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <p className="font-medium text-sm text-neutral-900">
-                              {formatAppointmentTime(appt.scheduled_at)}
-                              <span className="mx-2 text-neutral-300">·</span>
-                              <Link
-                                href={`/patients/${appt.patient_id}`}
-                                className="text-primary-600 hover:underline"
-                              >
-                                {appt.patient_name ?? appt.patient_id.slice(0, 8)}
-                              </Link>
-                              {appt.id === nextUpId ? (
-                                <Badge variant="info" className="ml-2 text-[10px]">
-                                  {t("appointments.upNext", "Up next")}
-                                </Badge>
-                              ) : null}
-                            </p>
-                            <p className="mt-1 text-xs text-neutral-500">{appt.purpose ?? "—"}</p>
-                          </div>
-                          <Badge variant={appointmentStatusVariant(appt.status)}>
-                            {appt.status === "no_show"
-                              ? t("appointments.noShow", "No-show")
-                              : appt.status}
-                          </Badge>
-                        </div>
-                        {isActive ? (
-                          <div className="mt-3 flex flex-wrap gap-1 border-t border-neutral-100 pt-3">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 gap-1"
-                              disabled={remindingId === appt.id}
-                              onClick={() => handleSendReminder(appt.id)}
-                            >
-                              <Bell className="h-3.5 w-3.5" />
-                              {t("appointments.remind", "Remind")}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 gap-1"
-                              disabled={checkingInId === appt.id}
-                              onClick={() => handleCheckIn(appt.id)}
-                            >
-                              <UserCheck className="h-3.5 w-3.5" />
-                              {t("appointments.checkIn", "Check in")}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 gap-1"
-                              disabled={updatingId === appt.id}
-                              onClick={() => handleStatus(appt.id, "completed")}
-                            >
-                              <Check className="h-3.5 w-3.5 text-success-600" />
-                              {t("appointments.markDone", "Done")}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 gap-1"
-                              disabled={updatingId === appt.id}
-                              onClick={() => handleStatus(appt.id, "no_show")}
-                            >
-                              <UserX className="h-3.5 w-3.5" />
-                              {t("appointments.noShow", "No-show")}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 gap-1"
-                              disabled={updatingId === appt.id}
-                              onClick={() => handleStatus(appt.id, "cancelled")}
-                            >
-                              <X className="h-3.5 w-3.5" />
-                              {t("common.cancel", "Cancel")}
-                            </Button>
-                          </div>
-                        ) : null}
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+          <AppointmentWeekCalendar
+            appointments={weekAppointments}
+            weekStart={weekStart}
+            onWeekChange={(start) => {
+              setWeekStart(start)
+              setSelectedDate(toDateKey(start))
+            }}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            onStatusChange={handleStatus}
+            onReschedule={canWriteAppts ? handleReschedule : undefined}
+            onCheckIn={handleCheckIn}
+            onRemind={handleSendReminder}
+            updatingId={updatingId}
+            reschedulingId={reschedulingId}
+            checkingInId={checkingInId}
+            remindingId={remindingId}
+            dragHint={
+              canWriteAppts
+                ? t(
+                    "appointments.dragRescheduleHint",
+                    "Tip: drag a visit onto another day to reschedule (same time)."
+                  )
+                : undefined
+            }
+            providers={providers}
+          />
         )}
-        </div>
 
         {!showBook && (
           <ProviderAvailabilityPanel

@@ -5,4 +5,6 @@ export interface AppointmentRecord {
   status: string
   patient_id: string
   patient_name?: string
+  provider_id?: string | null
 }
+

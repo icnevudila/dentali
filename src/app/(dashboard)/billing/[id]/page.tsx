@@ -332,31 +332,33 @@ export default function InvoiceDetailPage() {
             {lineItems.length === 0 ? (
               <p className="text-sm text-neutral-500">{t("billing.noLineItems", "No line items on this invoice.")}</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-neutral-500">
-                    <th className="pb-2 text-left font-medium">{t("billing.description", "Description")}</th>
-                    <th className="pb-2 text-center font-medium">{t("billing.qty", "Qty")}</th>
-                    <th className="pb-2 text-right font-medium">{t("billing.unitPrice", "Unit")}</th>
-                    <th className="pb-2 text-right font-medium">{t("billing.lineTotal", "Total")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {lineItems.map((item) => (
-                    <tr key={item.id}>
-                      <td className="py-2">
-                        {item.description}
-                        {item.tooth_number && (
-                          <span className="text-neutral-500"> · #{item.tooth_number}</span>
-                        )}
-                      </td>
-                      <td className="py-2 text-center">{item.quantity}</td>
-                      <td className="py-2 text-right">₱{item.unit_price.toLocaleString()}</td>
-                      <td className="py-2 text-right font-medium">₱{item.line_total.toLocaleString()}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-neutral-500">
+                      <th className="pb-2 text-left font-medium">{t("billing.description", "Description")}</th>
+                      <th className="pb-2 text-center font-medium">{t("billing.qty", "Qty")}</th>
+                      <th className="pb-2 text-right font-medium">{t("billing.unitPrice", "Unit")}</th>
+                      <th className="pb-2 text-right font-medium">{t("billing.lineTotal", "Total")}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y">
+                    {lineItems.map((item) => (
+                      <tr key={item.id}>
+                        <td className="py-2">
+                          {item.description}
+                          {item.tooth_number && (
+                            <span className="text-neutral-500"> · #{item.tooth_number}</span>
+                          )}
+                        </td>
+                        <td className="py-2 text-center">{item.quantity}</td>
+                        <td className="py-2 text-right">₱{item.unit_price.toLocaleString()}</td>
+                        <td className="py-2 text-right font-medium">₱{item.line_total.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </CardContent>
         </Card>
