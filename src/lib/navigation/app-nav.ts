@@ -15,6 +15,7 @@ import {
   Settings,
   Shield,
   Tablet,
+  Timer,
   UserPlus,
   Users,
 } from "lucide-react"
@@ -73,10 +74,17 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
       },
       {
         nameKey: "nav.compliance",
-        fallback: "Sterilization log",
+        fallback: "Compliance",
         href: "/reports/compliance",
         icon: Shield,
         permission: PERMISSIONS.COMPLIANCE_READ,
+      },
+      {
+        nameKey: "nav.chairTime",
+        fallback: "Chair Time AI",
+        href: "/reports/chair-time",
+        icon: Timer,
+        permission: PERMISSIONS.REPORTS_READ,
       },
     ],
   },

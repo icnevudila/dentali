@@ -14,6 +14,7 @@ export interface QueueEntry {
   notes: string | null
   checked_in_at: string
   called_at: string | null
+  in_chair_at: string | null
   completed_at: string | null
 }
 
@@ -31,7 +32,7 @@ export async function fetchQueueEntries(
   let query = supabase
     .from("queue_entries")
     .select(
-      "id, patient_id, appointment_id, display_code, status, chair_label, notes, checked_in_at, called_at, completed_at, patients(first_name, last_name)"
+      "id, patient_id, appointment_id, display_code, status, chair_label, notes, checked_in_at, called_at, in_chair_at, completed_at, patients(first_name, last_name)"
     )
     .eq("branch_id", branchId)
     .order("checked_in_at", { ascending: true })
@@ -63,6 +64,7 @@ export async function fetchQueueEntries(
       notes: row.notes,
       checked_in_at: row.checked_in_at,
       called_at: row.called_at,
+      in_chair_at: row.in_chair_at,
       completed_at: row.completed_at,
     }
   })
