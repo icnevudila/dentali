@@ -210,7 +210,7 @@ export function LandingWorkflowSection({ showcase }: { showcase: ShowcaseSnapsho
   const meta = WORKFLOW_STAGES.find((s) => s.id === stage)!
 
   return (
-    <LandingSection tone="muted" className="px-4 py-16 sm:px-6">
+    <LandingSection tone="muted" className="scroll-mt-16 px-4 py-16 sm:px-6" id="product-tour">
       <div className="mx-auto max-w-5xl space-y-10">
         <LandingSectionHeader
           eyebrow="Product tour"

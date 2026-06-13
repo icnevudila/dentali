@@ -1,4 +1,4 @@
-# Modül Tamamlık Denetimi — 2026-06-12
+# Modül Tamamlık Denetimi — 2026-06-13
 
 > DB verify **PASS** sonrası ürün boşluk analizi. Canlı entegrasyonlar (F6) hariç.
 > Ritim: Her dalga bitince ilgili satırı `POLISH_QUEUE.md` → DONE.
@@ -43,7 +43,7 @@
 | 20 | Invoices | `/billing` | 🟢 | Empty → plan/workflow hint → **POLISH-FLOW-08** |
 | 21 | HMO | `/billing/hmo` | 🟢 | Invoice/plan → HMO link → **POLISH-FLOW-09** |
 | 22 | PhilHealth | `/billing/philhealth` | 🟡 | Dry-run submit (F6) |
-| 23 | Inventory | `/inventory` | 🟡 | Reorder suggestion UI yok (spec) |
+| 23 | Inventory | `/inventory` | 🟢 | Reorder suggestion UI eklendi |
 | 24 | Compliance / reports | `/reports`, audit | 🟠 | **Sterilization log** modül parçası yok (major, v2) |
 
 ---

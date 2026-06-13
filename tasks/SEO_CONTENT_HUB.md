@@ -10,9 +10,13 @@
 | Öğe | Dosya / route |
 |-----|----------------|
 | Canonical site URL | `src/lib/site-url.ts` |
-| Sitemap (marketing) | `src/app/sitemap.ts` → `/welcome` |
-| Robots (app kapalı, welcome açık) | `src/app/robots.ts` |
-| Welcome OG + keywords | `src/app/welcome/layout.tsx` |
+| Sitemap (marketing) | `src/app/sitemap.ts` → `/welcome`, `/pricing`, `/quote`, `/signup` |
+| Robots (app kapalı, marketing açık) | `src/app/robots.ts` |
+| Marketing shell (nav + footer) | `src/components/marketing/MarketingShell.tsx` |
+| Welcome OG + JSON-LD | `src/app/(marketing)/welcome/page.tsx` |
+| Pricing FAQ + FAQPage schema | `src/components/marketing/PricingFaqSection.tsx` |
+| Sign up / quote / pricing pages | `src/app/(marketing)/*` |
+| Quote leads RPC | `20260612240000_marketing_leads.sql` → bundle 89 files |
 | Sign token noindex | `src/app/sign/layout.tsx` |
 | Root metadata template | `src/app/layout.tsx` |
 

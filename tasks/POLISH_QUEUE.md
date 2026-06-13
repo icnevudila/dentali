@@ -11,7 +11,7 @@
 |--------|-------|
 | P0 açık | 0 |
 | P1 akış polish | 11 + journey panel | FLOW + A→Z panel uygulandı — manuel smoke |
-| Son güncelleme | 2026-06-12 (CLINICAL_JOURNEY_AZ + visit journey panel) |
+| Son güncelleme | 2026-06-13 (marketing pages + leads RPC) |
 
 ---
 
@@ -29,9 +29,9 @@
 | ID | Öncelik | Modül | İş |
 |----|---------|-------|-----|
 | POLISH-P2-F6 | P2 | Canlı | Semaphore / PayMongo / Resend — `docs/VA-F6_USER_STEPS.md` |
-| POLISH-P2-SEO-HUB | P2 | Marketing | Blog/resources — `tasks/SEO_CONTENT_HUB.md` Phase 2 |
+| POLISH-P2-SEO-HUB | P2 | Marketing | ~~Landing shell + pricing/quote/signup~~ DONE — blog Phase 2 `tasks/SEO_CONTENT_HUB.md` |
 | POLISH-P3-STERILIZATION | P3 | Modül 24 | Sterilization/compliance log (schema + UI) — v2 |
-| POLISH-P3-INVENTORY-REORDER | P3 | Modül 23 | Reorder suggestion UI |
+| POLISH-P3-INVENTORY-REORDER | P3 | Modül 23 | ~~Reorder suggestion UI~~ DONE |
 | POLISH-P3-HALLMARK-PASS | P3 | UI/UX | Sayfa sayfa Hallmark design-review |
 | POLISH-P3-E2E-EXPAND | P3 | QA | Consent sign + billing payment E2E |
 
@@ -47,7 +47,7 @@
 | 18 Notifications | settings/notifications | 🟢 | 🟢 | 🟠 | F6 SMS |
 | 19–21 Billing | billing/* | 🟢 | 🟢 | 🟢 | HMO link polish |
 | 22 PhilHealth | billing/philhealth | 🟢 | 🟢 | 🟠 | F6 API |
-| 23 Inventory | /inventory | 🟢 | 🟡 | 🟢 | Reorder UI eksik |
+| 23 Inventory | /inventory | 🟢 | 🟢 | 🟢 | Reorder suggestion UI eklendi |
 | 24 Compliance | reports/audit | 🟢 | 🟡 | 🟢 | Sterilization log eksik |
 | F6 Canlı | — | — | — | 🔴 | secret + cron deploy |
 
@@ -65,6 +65,12 @@ npm run test:e2e -- e2e/chart.smoke.spec.ts
 ```
 
 ---
+
+## DONE (2026-06-13)
+
+| ID | İş |
+|----|-----|
+| POLISH-MARKETING-AZ | `/signup`, `/pricing`, `/quote`, `MarketingShell`, i18n, JSON-LD, `marketing_leads` RPC + bundle 89 |
 
 ## DONE (2026-06-12)
 

@@ -9,10 +9,36 @@ async function waitForLoginForm(page: Page) {
 test.describe("@smoke Public routes", () => {
   test("welcome page loads with product positioning", async ({ page }) => {
     await page.goto("/welcome", { waitUntil: "networkidle" })
-    await expect(page.getByRole("heading", { name: /Run your clinic on/i })).toBeVisible({
+    await expect(
+      page.getByRole("heading", { level: 1, name: /Run your clinic on dentali/i })
+    ).toBeVisible({
       timeout: 15_000,
     })
-    await expect(page.getByTestId("landing-staff-sign-in")).toBeVisible()
+    await expect(page.getByTestId("landing-start-trial")).toBeVisible()
+    await expect(page.getByTestId("marketing-start-trial")).toBeVisible()
+  })
+
+  test("pricing page loads with plan tiers", async ({ page }) => {
+    await page.goto("/pricing", { waitUntil: "domcontentloaded" })
+    await expect(page.getByRole("heading", { name: /Plans that scale/i })).toBeVisible({
+      timeout: 15_000,
+    })
+    await expect(page.getByTestId("pricing-cta-starter")).toBeVisible()
+    await expect(page.getByRole("heading", { name: /Frequently asked questions/i })).toBeVisible()
+  })
+
+  test("quote page shows request form", async ({ page }) => {
+    await page.goto("/quote", { waitUntil: "domcontentloaded" })
+    await expect(page.getByRole("heading", { name: /Get a quote/i })).toBeVisible({
+      timeout: 15_000,
+    })
+    await expect(page.getByTestId("quote-form")).toBeVisible()
+  })
+
+  test("signup page shows registration form", async ({ page }) => {
+    await page.goto("/signup", { waitUntil: "domcontentloaded" })
+    await expect(page.getByTestId("signup-form")).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator("#signup-email")).toBeVisible()
   })
 
   test("login page shows sign-in form", async ({ page }) => {
@@ -71,11 +97,20 @@ test.describe("@smoke Public routes", () => {
     await expect(page.locator("#login-email")).toBeVisible({ timeout: 30_000 })
   })
 
+  test("welcome start trial navigates to signup", async ({ page }) => {
+    await page.goto("/welcome", { waitUntil: "networkidle" })
+    await page.getByTestId("landing-start-trial").click()
+    await expect(page).toHaveURL(/\/signup/, { timeout: 15_000 })
+    await expect(page.getByTestId("signup-form")).toBeVisible()
+  })
+
   test("login learn-more link returns to welcome", async ({ page }) => {
     await waitForLoginForm(page)
     await page.getByRole("link", { name: /See what the clinic OS includes/i }).click()
     await expect(page).toHaveURL(/\/welcome/, { timeout: 10_000 })
-    await expect(page.getByRole("heading", { name: /Run your clinic on/i })).toBeVisible({
+    await expect(
+      page.getByRole("heading", { level: 1, name: /Run your clinic on dentali/i })
+    ).toBeVisible({
       timeout: 15_000,
     })
   })

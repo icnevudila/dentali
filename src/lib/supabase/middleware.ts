@@ -36,6 +36,9 @@ export async function updateSession(request: NextRequest) {
 
   const isPublicPath =
     request.nextUrl.pathname.startsWith('/login') ||
+    request.nextUrl.pathname.startsWith('/signup') ||
+    request.nextUrl.pathname.startsWith('/pricing') ||
+    request.nextUrl.pathname.startsWith('/quote') ||
     request.nextUrl.pathname.startsWith('/auth') ||
     request.nextUrl.pathname.startsWith('/welcome') ||
     request.nextUrl.pathname.startsWith('/showcase') ||
@@ -52,7 +55,8 @@ export async function updateSession(request: NextRequest) {
 
   if (
     user &&
-    request.nextUrl.pathname.startsWith('/login')
+    (request.nextUrl.pathname.startsWith('/login') ||
+      request.nextUrl.pathname.startsWith('/signup'))
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/'

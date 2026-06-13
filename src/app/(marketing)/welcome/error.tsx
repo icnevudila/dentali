@@ -14,8 +14,8 @@ export default function WelcomeError({
       error={error}
       reset={reset}
       title="Welcome page unavailable"
-      homeHref="/login"
-      homeLabel="Sign in"
+      homeHref="/welcome"
+      homeLabel="Back to home"
     />
   )
 }

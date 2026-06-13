@@ -35,12 +35,19 @@ export function LandingContent({ showcase }: { showcase: ShowcaseSnapshot }) {
               first login. Built for busy Metro Manila clinics.
             </p>
             <div className="relative z-10 mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-              <a href="/login" data-testid="landing-staff-sign-in" className={primaryCtaClassName}>
-                Staff sign in
+              <Link href="/signup" data-testid="landing-start-trial" className={primaryCtaClassName}>
+                Start free trial
                 <ArrowRight className="h-4 w-4" aria-hidden />
-              </a>
+              </Link>
               <Button size="lg" variant="outline" className="h-11 px-6" asChild>
-                <Link href="/kiosk">Kiosk check-in</Link>
+                <Link href="/quote" data-testid="landing-get-quote">
+                  Get a quote
+                </Link>
+              </Button>
+              <Button size="lg" variant="ghost" className="h-11 px-4 text-neutral-700" asChild>
+                <Link href="/login" data-testid="landing-staff-sign-in">
+                  Staff sign in
+                </Link>
               </Button>
             </div>
             {hasLiveData ? (
@@ -61,7 +68,7 @@ export function LandingContent({ showcase }: { showcase: ShowcaseSnapshot }) {
         </div>
       </LandingSection>
 
-      <LandingSection className="px-4 py-16 sm:px-6">
+      <LandingSection id="features" className="scroll-mt-16 px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-5xl space-y-10">
           <LandingSectionHeader
             eyebrow="Every screen"
@@ -78,15 +85,31 @@ export function LandingContent({ showcase }: { showcase: ShowcaseSnapshot }) {
       <LandingSection tone="inset" className="px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-lg text-center">
           <h2 className="text-2xl font-semibold tracking-tight text-neutral-950">
-            Ready to see your branch?
+            Ready to run your clinic on one system?
           </h2>
           <p className="mt-3 text-base text-neutral-600">
-            Sign in with your staff account or seed demo data for a full dashboard preview.
+            Start a free trial, request a quote for multi-branch groups, or sign in with your staff
+            account.
           </p>
-          <a href="/login" className={cn(primaryCtaClassName, "mt-8 px-8")}>
-            Open clinic dashboard
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </a>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Link href="/signup" className={cn(primaryCtaClassName, "px-8")}>
+              Start free trial
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+            <Button size="lg" variant="outline" className="h-11" asChild>
+              <Link href="/pricing">View pricing</Link>
+            </Button>
+          </div>
+          <p className="mt-6 text-sm text-neutral-500">
+            Already using dentali.?{" "}
+            <Link href="/login" className="font-medium text-primary-600 hover:underline">
+              Staff sign in
+            </Link>
+            {" · "}
+            <Link href="/kiosk" className="font-medium text-primary-600 hover:underline">
+              Kiosk check-in
+            </Link>
+          </p>
         </div>
       </LandingSection>
     </>

@@ -141,6 +141,15 @@ export default function LoginPage() {
           </form>
           <p className="mt-6 text-center text-sm text-neutral-500">
             {t("login.newToProduct", "New to dentali.?")}{" "}
+            <Link href="/signup" className="font-medium text-primary-600 hover:underline">
+              {t("login.createAccount", "Create clinic account")}
+            </Link>
+          </p>
+          <p className="mt-3 text-center text-sm text-neutral-500">
+            <Link href="/quote" className="font-medium text-primary-600 hover:underline">
+              {t("login.requestQuote", "Request a demo or quote")}
+            </Link>
+            {" · "}
             <Link href="/welcome" className="font-medium text-primary-600 hover:underline">
               {t("login.learnMore", "See what the clinic OS includes")}
             </Link>
@@ -148,6 +157,19 @@ export default function LoginPage() {
         </CardContent>
       </Card>
       </div>
+      <footer className="border-t border-neutral-200 py-6 text-center text-xs text-neutral-500">
+        <Link href="/pricing" className="hover:text-primary-700">
+          {t("marketing.navPricing", "Pricing")}
+        </Link>
+        {" · "}
+        <Link href="/quote" className="hover:text-primary-700">
+          {t("marketing.navQuote", "Get a quote")}
+        </Link>
+        {" · "}
+        <Link href="/welcome" className="hover:text-primary-700">
+          {t("marketing.navHome", "Home")}
+        </Link>
+      </footer>
     </div>
   )
 }

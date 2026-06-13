@@ -1,0 +1,114 @@
+"use client"
+
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { LocaleSwitcher } from "@/components/i18n/LocaleSwitcher"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import { useLocale } from "@/hooks/use-locale"
+
+const NAV_ITEMS = [
+  { href: "/welcome#features", labelKey: "marketing.navProduct", fallback: "Product" },
+  { href: "/pricing", labelKey: "marketing.navPricing", fallback: "Pricing" },
+  { href: "/quote", labelKey: "marketing.navQuote", fallback: "Get a quote" },
+] as const
+
+function isNavActive(pathname: string, href: string) {
+  if (href.includes("#")) return pathname === href.split("#")[0]
+  return pathname === href
+}
+
+export function MarketingShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const { t } = useLocale()
+
+  return (
+    <div className="flex min-h-screen flex-col bg-white">
+      <header className="sticky top-0 z-40 border-b border-neutral-200/90 bg-white/95 backdrop-blur-sm">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+          <Link href="/welcome" className="shrink-0 text-lg font-bold tracking-tight text-neutral-950">
+            dentali<span className="text-primary-600">.</span>
+          </Link>
+
+          <nav className="hidden items-center gap-1 md:flex" aria-label="Marketing">
+            {NAV_ITEMS.map((item) => {
+              const active = isNavActive(pathname, item.href)
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    active ? "text-primary-700 bg-primary-50" : "text-neutral-600 hover:text-neutral-950 hover:bg-neutral-50"
+                  )}
+                >
+                  {t(item.labelKey, item.fallback)}
+                </Link>
+              )
+            })}
+          </nav>
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            <LocaleSwitcher />
+            <Link
+              href="/login"
+              className="hidden text-sm font-medium text-neutral-700 hover:text-primary-700 sm:inline"
+            >
+              {t("marketing.signIn", "Sign in")}
+            </Link>
+            <Button size="sm" className="shadow-sm" asChild>
+              <Link href="/signup" data-testid="marketing-start-trial">
+                {t("marketing.startTrial", "Start free trial")}
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        <nav
+          className="flex gap-1 overflow-x-auto border-t border-neutral-100 px-4 py-2 md:hidden hide-scrollbar"
+          aria-label="Marketing mobile"
+        >
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="shrink-0 rounded-full border border-neutral-200 px-3 py-1 text-xs font-medium text-neutral-700"
+            >
+              {t(item.labelKey, item.fallback)}
+            </Link>
+          ))}
+          <Link href="/login" className="shrink-0 rounded-full border border-neutral-200 px-3 py-1 text-xs font-medium">
+            {t("marketing.signIn", "Sign in")}
+          </Link>
+        </nav>
+      </header>
+
+      <main className="flex-1">{children}</main>
+
+      <footer className="border-t border-neutral-200 bg-neutral-50/50">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
+          <p className="text-xs text-neutral-500">
+            dentali. — {t("marketing.footerTagline", "clinical operating system for Philippine clinics")}
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-neutral-600">
+            <Link href="/welcome" className="hover:text-primary-700">
+              {t("marketing.navHome", "Home")}
+            </Link>
+            <Link href="/pricing" className="hover:text-primary-700">
+              {t("marketing.navPricing", "Pricing")}
+            </Link>
+            <Link href="/quote" className="hover:text-primary-700">
+              {t("marketing.navQuote", "Get a quote")}
+            </Link>
+            <Link href="/login" className="hover:text-primary-700">
+              {t("marketing.signIn", "Sign in")}
+            </Link>
+            <Link href="/signup" className="hover:text-primary-700">
+              {t("marketing.signUp", "Sign up")}
+            </Link>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}

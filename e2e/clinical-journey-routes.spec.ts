@@ -7,6 +7,10 @@ import { test, expect } from "@playwright/test"
 test.describe("Clinical journey routes", () => {
   const publicRoutes = [
     "/login",
+    "/signup",
+    "/pricing",
+    "/quote",
+    "/welcome",
     "/kiosk",
     "/display",
   ]
