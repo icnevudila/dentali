@@ -191,6 +191,14 @@ export function buildInvoicePrintHtml(params: {
     Generated ${new Date().toLocaleString("en-PH")} · Official receipt for clinic records.<br />
     Use <strong>Print → Save as PDF</strong> to download a copy.
   </p>
+  
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 300);
+    };
+  </script>
 </body>
 </html>`
 }
@@ -205,13 +213,7 @@ export function printInvoice(params: {
   branchName?: string | null
 }): void {
   const html = buildInvoicePrintHtml(params)
-  const win = window.open("", "_blank", "noopener,noreferrer,width=860,height=960")
-  if (!win) return
-  win.document.open()
-  win.document.write(html)
-  win.document.close()
-  setTimeout(() => {
-    win.focus()
-    win.print()
-  }, 300)
+  const base64Html = btoa(unescape(encodeURIComponent(html)))
+  const dataUri = `data:text/html;charset=utf-8;base64,${base64Html}`
+  window.open(dataUri, "_blank", "noopener,noreferrer,width=860,height=960")
 }
