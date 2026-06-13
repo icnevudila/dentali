@@ -109,230 +109,261 @@ function KioskContent() {
   const flowStep = kioskStepFromFlow(step)
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col items-center justify-center bg-gradient-to-b from-primary-800 to-primary-700 p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(3.5rem,env(safe-area-inset-top))] text-white">
-      <p className="absolute left-0 right-0 top-5 text-center text-sm font-bold tracking-tight text-white/90">
-        dentali.
+    <div className="relative flex min-h-[100dvh] flex-col items-center justify-center bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(3.5rem,env(safe-area-inset-top))] text-neutral-900 overflow-hidden">
+      {/* Background decoration */}
+      <div className="landing-hero-bg absolute inset-0 pointer-events-none opacity-40" />
+
+      <p className="absolute left-0 right-0 top-5 text-center text-sm font-bold tracking-wider text-neutral-500 select-none">
+        dentali<span className="text-primary-600">.</span>
       </p>
-      <div className="w-full max-w-lg touch-manipulation">
+
+      <div className="relative z-10 w-full max-w-lg touch-manipulation">
         {showSteps ? <KioskStepIndicator active={flowStep} /> : null}
 
         {step === "loading" && (
-          <div className="space-y-4 text-center">
-            <Loader2 className="mx-auto h-12 w-12 animate-spin opacity-80" />
-            <p className="text-xl">{t("kiosk.starting", "Starting kiosk…")}</p>
+          <div className="space-y-4 text-center py-12">
+            <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary-600" />
+            <p className="text-xl font-medium text-neutral-600">{t("kiosk.starting", "Starting kiosk…")}</p>
           </div>
         )}
 
         {step === "error" && (
-          <div className="space-y-4 rounded-2xl bg-white/10 p-8 text-center backdrop-blur">
-            <AlertCircle className="mx-auto h-16 w-16 text-amber-300" />
-            <h1 className="text-2xl font-bold">{t("kiosk.seeFrontDesk", "Please see the front desk")}</h1>
-            <p className="text-lg text-primary-100">{errorMsg}</p>
-            <Link href="/login" className="mt-4 inline-block text-sm text-primary-200 underline">
+          <div className="space-y-6 rounded-3xl border border-neutral-100 bg-white/85 p-8 text-center shadow-xl backdrop-blur-md">
+            <AlertCircle className="mx-auto h-16 w-16 text-amber-500" />
+            <h1 className="text-2xl font-extrabold text-neutral-900">{t("kiosk.seeFrontDesk", "Please see the front desk")}</h1>
+            <p className="text-lg text-neutral-600 leading-relaxed">{errorMsg}</p>
+            <Link href="/login" className="inline-block mt-2 text-sm font-semibold text-primary-600 hover:text-primary-700 underline transition">
               {t("kiosk.staffLogin", "Staff login")}
             </Link>
           </div>
         )}
 
         {step === "welcome" && (
-          <div className="space-y-6 rounded-2xl bg-white p-8 text-center text-neutral-900 shadow-xl">
-            <div className="inline-flex rounded-full bg-primary-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-primary-700">
-              {branchName}
+          <div className="space-y-6 rounded-3xl border border-neutral-100 bg-white/85 p-8 text-center shadow-xl backdrop-blur-md">
+            <div className="inline-flex rounded-full border border-primary-200 bg-primary-50 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-primary-700">
+              {branchName || "dentali. clinic"}
             </div>
-            <div>
-              <p className="text-sm font-medium uppercase tracking-wide text-primary-600">
+            <div className="space-y-1">
+              <p className="text-xs font-bold uppercase tracking-widest text-primary-600">
                 {t("kiosk.welcomeTo", "Welcome to")}
               </p>
-              <h1 className="mt-1 text-3xl font-bold">{branchName}</h1>
+              <h1 className="text-3xl font-extrabold text-neutral-900">{branchName || "dentali."}</h1>
             </div>
-            <p className="text-lg text-neutral-600">
+            <p className="text-lg text-neutral-600 leading-relaxed">
               {t("kiosk.checkInPrompt", "Tap below to check in for your appointment.")}
             </p>
-            <div className="space-y-3">
-              <Button size="lg" className="h-16 w-full text-xl" onClick={() => setStep("form")}>
+            <div className="space-y-3 pt-2">
+              <button 
+                onClick={() => setStep("form")}
+                className="w-full h-16 text-xl font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-2xl shadow-lg shadow-primary-500/20 transition duration-200 active:scale-98"
+              >
                 {t("kiosk.checkInNow", "Check in now")}
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-14 w-full text-lg"
+              </button>
+              <button
                 onClick={() => setStep("intakeForm")}
+                className="w-full h-14 text-lg font-bold text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl transition duration-200 active:scale-98"
               >
                 {t("kiosk.newPatient", "New patient registration")}
-              </Button>
+              </button>
             </div>
-            <Link href="/login" className="block text-sm text-neutral-400 hover:text-neutral-600">
+            <Link href="/login" className="block text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-primary-600 transition pt-2">
               {t("kiosk.staffLogin", "Staff login")}
             </Link>
           </div>
         )}
 
         {step === "form" && (
-          <div className="rounded-2xl bg-white p-8 text-neutral-900 shadow-xl">
-            <h1 className="mb-2 text-2xl font-bold">{t("kiosk.checkInTitle", "Check in")}</h1>
-            <p className="mb-6 text-neutral-500">
-              {t("kiosk.checkInHint", "Enter the phone number and last name on your record.")}
-            </p>
+          <div className="rounded-3xl border border-neutral-100 bg-white/85 p-8 shadow-xl backdrop-blur-md">
+            <div className="mb-6">
+              <h1 className="text-2xl font-extrabold text-neutral-900">{t("kiosk.checkInTitle", "Check in")}</h1>
+              <p className="text-sm text-neutral-500 mt-1">
+                {t("kiosk.checkInHint", "Enter the phone number and last name on your record.")}
+              </p>
+            </div>
             <form onSubmit={handleCheckIn} className="space-y-5">
-              <div>
-                <label className="mb-2 block text-sm font-medium">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">
                   {t("kiosk.mobileNumber", "Mobile number")}
                 </label>
-                <Input
+                <input
                   type="tel"
                   inputMode="tel"
                   required
-                  className="h-14 text-lg"
-                  placeholder="09XX XXX XXXX"
+                  placeholder="e.g. +1 XXX XXX XXXX"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   autoComplete="tel"
                   autoFocus
+                  className="w-full h-14 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-lg text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
                 />
               </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">{t("kiosk.lastName", "Last name")}</label>
-                <Input
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+                  {t("kiosk.lastName", "Last name")}
+                </label>
+                <input
                   required
-                  className="h-14 text-lg"
                   placeholder="Santos"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   autoComplete="family-name"
+                  className="w-full h-14 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-lg text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
                 />
               </div>
               {errorMsg ? (
-                <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                <div className="rounded-xl bg-red-50 border border-red-100 p-3 text-center text-xs font-semibold text-red-600">
                   {errorMsg}
-                </p>
+                </div>
               ) : null}
-              <Button type="submit" size="lg" className="h-14 w-full text-lg" disabled={submitting}>
+              <button 
+                type="submit" 
+                disabled={submitting}
+                className="w-full h-14 text-lg font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-lg shadow-primary-500/10 transition duration-200 active:scale-98 disabled:opacity-50"
+              >
                 {submitting
                   ? t("kiosk.checkingIn", "Checking in…")
                   : t("kiosk.confirmCheckIn", "Confirm check-in")}
-              </Button>
-              <Button type="button" variant="ghost" className="w-full" onClick={resetToWelcome}>
+              </button>
+              <button 
+                type="button" 
+                onClick={resetToWelcome}
+                className="w-full h-10 text-sm font-semibold text-neutral-500 hover:text-neutral-700 transition"
+              >
                 {t("kiosk.back", "Back")}
-              </Button>
+              </button>
             </form>
           </div>
         )}
 
         {step === "intakeForm" && (
-          <div className="rounded-2xl bg-white p-8 text-neutral-900 shadow-xl">
-            <h1 className="mb-2 text-2xl font-bold">{t("kiosk.intakeTitle", "Patient registration")}</h1>
-            <p className="mb-6 text-neutral-500">
-              {t(
-                "kiosk.intakeHint",
-                "Fill in your details. Front desk will review before creating your record."
-              )}
-            </p>
-            <form onSubmit={handleIntakeSubmit} className="space-y-5">
-              <div>
-                <label className="mb-2 block text-sm font-medium">{t("kiosk.firstName", "First name")}</label>
-                <Input
-                  required
-                  className="h-14 text-lg"
-                  placeholder="Maria"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  autoComplete="given-name"
-                  autoFocus
-                />
+          <div className="rounded-3xl border border-neutral-100 bg-white/85 p-8 shadow-xl backdrop-blur-md">
+            <div className="mb-6">
+              <h1 className="text-2xl font-extrabold text-neutral-900">{t("kiosk.intakeTitle", "Patient registration")}</h1>
+              <p className="text-sm text-neutral-500 mt-1">
+                {t(
+                  "kiosk.intakeHint",
+                  "Fill in your details. Front desk will review before creating your record."
+                )}
+              </p>
+            </div>
+            <form onSubmit={handleIntakeSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">{t("kiosk.firstName", "First name")}</label>
+                  <input
+                    required
+                    placeholder="Maria"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    autoComplete="given-name"
+                    autoFocus
+                    className="w-full h-12 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">{t("kiosk.lastName", "Last name")}</label>
+                  <input
+                    required
+                    placeholder="Santos"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    autoComplete="family-name"
+                    className="w-full h-12 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">{t("kiosk.lastName", "Last name")}</label>
-                <Input
-                  required
-                  className="h-14 text-lg"
-                  placeholder="Santos"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  autoComplete="family-name"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">
+              <div className="space-y-1">
+                <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">
                   {t("kiosk.mobileNumber", "Mobile number")}
                 </label>
-                <Input
+                <input
                   type="tel"
                   inputMode="tel"
-                  className="h-14 text-lg"
-                  placeholder="09XX XXX XXXX"
+                  placeholder="e.g. +1 XXX XXX XXXX"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   autoComplete="tel"
+                  className="w-full h-12 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
                 />
               </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">{t("kiosk.email", "Email")}</label>
-                <Input
+              <div className="space-y-1">
+                <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">{t("kiosk.email", "Email")}</label>
+                <input
                   type="email"
                   inputMode="email"
-                  className="h-14 text-lg"
                   placeholder="maria@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
+                  className="w-full h-12 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
                 />
               </div>
               {errorMsg ? (
-                <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                <div className="rounded-xl bg-red-50 border border-red-100 p-3 text-center text-xs font-semibold text-red-600">
                   {errorMsg}
-                </p>
+                </div>
               ) : null}
-              <Button type="submit" size="lg" className="h-14 w-full text-lg" disabled={submitting}>
+              <button 
+                type="submit" 
+                disabled={submitting}
+                className="w-full h-14 mt-2 text-lg font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-lg shadow-primary-500/10 transition duration-200 active:scale-98 disabled:opacity-50"
+              >
                 {submitting
                   ? t("kiosk.submitting", "Submitting…")
                   : t("kiosk.submitIntake", "Submit registration")}
-              </Button>
-              <Button type="button" variant="ghost" className="w-full" onClick={resetToWelcome}>
+              </button>
+              <button 
+                type="button" 
+                onClick={resetToWelcome}
+                className="w-full h-10 text-sm font-semibold text-neutral-500 hover:text-neutral-700 transition"
+              >
                 {t("kiosk.back", "Back")}
-              </Button>
+              </button>
             </form>
           </div>
         )}
 
         {step === "success" && (
-          <div className="space-y-6 rounded-2xl bg-white p-8 text-center text-neutral-900 shadow-xl">
-            <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-500" />
-            <h1 className="text-2xl font-bold">{t("kiosk.checkedIn", "You're checked in!")}</h1>
-            <div className="rounded-xl bg-primary-50 py-6">
-              <p className="mb-1 text-sm text-neutral-500">{t("kiosk.queueNumber", "Your queue number")}</p>
-              <p className="font-mono text-5xl font-bold text-primary-700">{queueCode}</p>
+          <div className="space-y-6 rounded-3xl border border-neutral-100 bg-white/85 p-8 text-center shadow-xl backdrop-blur-md">
+            <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-500 animate-bounce" />
+            <h1 className="text-2xl font-extrabold text-neutral-900">{t("kiosk.checkedIn", "You're checked in!")}</h1>
+            <div className="rounded-2xl border border-primary-100 bg-primary-50/50 py-6">
+              <p className="mb-1 text-xs font-bold uppercase tracking-wider text-neutral-500">{t("kiosk.queueNumber", "Your queue number")}</p>
+              <p className="font-mono text-5xl font-extrabold text-primary-700">{queueCode}</p>
             </div>
-            <p className="text-neutral-600">
+            <p className="text-neutral-600 text-base leading-relaxed">
               {t("kiosk.waitMessage", "Please take a seat. We will call your number when ready.")}
             </p>
-            <p className="text-xs text-neutral-400">
-              {t("kiosk.autoResetHint", "This screen will reset automatically for the next patient.")}
-            </p>
-            <p className="text-xs text-neutral-400">
-              {t("kiosk.idleResetHint", "Forms reset after 2 minutes of inactivity.")}
-            </p>
-            <Button variant="outline" className="h-12 w-full" onClick={resetToWelcome}>
+            <div className="space-y-1 text-xs text-neutral-400 font-semibold border-t border-neutral-100 pt-4">
+              <p>{t("kiosk.autoResetHint", "This screen will reset automatically for the next patient.")}</p>
+              <p>{t("kiosk.idleResetHint", "Forms reset after 2 minutes of inactivity.")}</p>
+            </div>
+            <button 
+              onClick={resetToWelcome}
+              className="w-full h-12 font-bold text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl transition duration-200 active:scale-98"
+            >
               {t("kiosk.done", "Done")}
-            </Button>
+            </button>
           </div>
         )}
 
         {step === "intakeSuccess" && (
-          <div className="space-y-6 rounded-2xl bg-white p-8 text-center text-neutral-900 shadow-xl">
-            <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-500" />
-            <h1 className="text-2xl font-bold">{t("kiosk.intakeSuccess", "Registration submitted!")}</h1>
-            <p className="text-neutral-600">
+          <div className="space-y-6 rounded-3xl border border-neutral-100 bg-white/85 p-8 text-center shadow-xl backdrop-blur-md">
+            <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-500 animate-bounce" />
+            <h1 className="text-2xl font-extrabold text-neutral-900">{t("kiosk.intakeSuccess", "Registration submitted!")}</h1>
+            <p className="text-neutral-600 text-base leading-relaxed">
               {t("kiosk.intakeSuccessHint", "Please see the front desk to complete your file.")}
             </p>
-            <p className="text-xs text-neutral-400">
-              {t("kiosk.autoResetHint", "This screen will reset automatically for the next patient.")}
-            </p>
-            <p className="text-xs text-neutral-400">
-              {t("kiosk.idleResetHint", "Forms reset after 2 minutes of inactivity.")}
-            </p>
-            <Button variant="outline" className="h-12 w-full" onClick={resetToWelcome}>
+            <div className="space-y-1 text-xs text-neutral-400 font-semibold border-t border-neutral-100 pt-4">
+              <p>{t("kiosk.autoResetHint", "This screen will reset automatically for the next patient.")}</p>
+              <p>{t("kiosk.idleResetHint", "Forms reset after 2 minutes of inactivity.")}</p>
+            </div>
+            <button 
+              onClick={resetToWelcome}
+              className="w-full h-12 font-bold text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl transition duration-200 active:scale-98"
+            >
               {t("kiosk.done", "Done")}
-            </Button>
+            </button>
           </div>
         )}
       </div>
@@ -344,8 +375,8 @@ export default function KioskPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-primary-700 text-white">
-          <Loader2 className="h-10 w-10 animate-spin" />
+        <div className="flex min-h-screen items-center justify-center bg-white text-neutral-600">
+          <Loader2 className="h-10 w-10 animate-spin text-primary-600" />
         </div>
       }
     >

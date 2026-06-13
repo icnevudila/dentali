@@ -87,130 +87,174 @@ export default function SignupPage() {
 
   if (emailSent) {
     return (
-      <div className="px-4 py-12 sm:px-6 sm:py-16">
-        <Card className="mx-auto max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle>{t("signup.checkEmailTitle", "Check your email")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-center text-sm text-neutral-600">
-            <p>
+      <div className="relative flex min-h-screen flex-col bg-white overflow-hidden items-center justify-center p-6">
+        <div className="landing-hero-bg absolute inset-0 pointer-events-none opacity-40" />
+        <div className="relative z-10 w-full max-w-[440px] space-y-6 rounded-3xl border border-neutral-100 bg-white/85 p-8 text-center shadow-xl backdrop-blur-md">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-extrabold text-neutral-900">
+              {t("signup.checkEmailTitle", "Check your email")}
+            </h1>
+            <p className="text-sm text-neutral-600 leading-relaxed">
               {t(
                 "signup.checkEmailBody",
                 "We sent a confirmation link to complete registration. After confirming, you will set up your clinic."
               )}
             </p>
-            <Button variant="outline" asChild>
-              <Link href="/login">{t("marketing.signIn", "Sign in")}</Link>
-            </Button>
-          </CardContent>
-        </Card>
+          </div>
+          <Link
+            href="/login"
+            className="inline-flex w-full items-center justify-center rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition active:scale-98"
+          >
+            {t("marketing.signIn", "Sign in")}
+          </Link>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="px-4 py-12 sm:px-6 sm:py-16">
-      <Card className="mx-auto w-full max-w-md">
-        <CardHeader className="space-y-2 text-center">
-          <CardTitle className="text-2xl font-bold tracking-tight text-neutral-950">
-            {t("signup.title", "Create your clinic account")}
-          </CardTitle>
-          <p className="text-sm text-neutral-500">
-            {t("signup.subtitle", "Free trial — set up your organization in a few minutes.")}
-          </p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSignup} className="space-y-4" data-testid="signup-form">
-            {error ? (
-              <Badge variant="danger" className="w-full justify-center rounded-md py-2">
-                {error}
-              </Badge>
-            ) : null}
+    <div className="relative flex min-h-screen flex-col bg-white overflow-hidden">
+      {/* Background decoration */}
+      <div className="landing-hero-bg absolute inset-0 pointer-events-none opacity-40" />
 
-            <div className="space-y-2">
-              <label htmlFor="signup-name" className="text-sm font-medium text-neutral-700">
+      {/* Header */}
+      <header className="relative z-10 flex items-center justify-between px-6 py-4 max-w-6xl w-full mx-auto">
+        <Link href="/welcome" className="text-xl font-bold tracking-tight text-neutral-900">
+          dentali<span className="text-primary-600">.</span>
+        </Link>
+      </header>
+
+      {/* Form Container */}
+      <div className="relative z-10 flex flex-1 items-center justify-center px-4 py-12">
+        <div className="w-full max-w-[460px] space-y-6 rounded-3xl border border-neutral-100 bg-white/80 p-8 shadow-xl backdrop-blur-md">
+          <div className="space-y-2 text-center">
+            <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900">
+              {t("signup.title", "Create your account")}
+            </h1>
+            <p className="text-sm font-medium text-neutral-500">
+              {t("signup.subtitle", "Free trial — set up your organization in a few minutes.")}
+            </p>
+          </div>
+
+          <form onSubmit={handleSignup} className="space-y-4" data-testid="signup-form">
+            {error && (
+              <div className="rounded-xl bg-red-50 border border-red-100 p-3 text-center text-xs font-semibold text-red-600">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <label htmlFor="signup-name" className="text-xs font-bold uppercase tracking-wider text-neutral-500">
                 {t("signup.fullName", "Your name")}
               </label>
-              <Input
+              <input
                 id="signup-name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
                 autoComplete="name"
+                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
               />
             </div>
-            <div className="space-y-2">
-              <label htmlFor="signup-clinic" className="text-sm font-medium text-neutral-700">
+            <div className="space-y-1">
+              <label htmlFor="signup-clinic" className="text-xs font-bold uppercase tracking-wider text-neutral-500">
                 {t("signup.clinicName", "Clinic name")}
               </label>
-              <Input
+              <input
                 id="signup-clinic"
                 value={clinicName}
                 onChange={(e) => setClinicName(e.target.value)}
                 placeholder="Smile Dental QC"
                 required
+                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 outline-none placeholder-neutral-450 transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
               />
             </div>
-            <div className="space-y-2">
-              <label htmlFor="signup-email" className="text-sm font-medium text-neutral-700">
+            <div className="space-y-1">
+              <label htmlFor="signup-email" className="text-xs font-bold uppercase tracking-wider text-neutral-500">
                 {t("signup.email", "Work email")}
               </label>
-              <Input
+              <input
                 id="signup-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
+                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
               />
             </div>
-            <div className="space-y-2">
-              <label htmlFor="signup-password" className="text-sm font-medium text-neutral-700">
-                {t("signup.password", "Password")}
-              </label>
-              <Input
-                id="signup-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                autoComplete="new-password"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="signup-confirm" className="text-sm font-medium text-neutral-700">
-                {t("signup.confirmPassword", "Confirm password")}
-              </label>
-              <Input
-                id="signup-confirm"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                autoComplete="new-password"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label htmlFor="signup-password" className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+                  {t("signup.password", "Password")}
+                </label>
+                <input
+                  id="signup-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
+                />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="signup-confirm" className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+                  {t("signup.confirmPassword", "Confirm")}
+                </label>
+                <input
+                  id="signup-confirm"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
+                />
+              </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-2 rounded-xl bg-primary-600 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-500/20 transition duration-200 hover:bg-primary-700 active:scale-98 disabled:opacity-50"
+            >
               {loading ? t("signup.creating", "Creating account…") : t("signup.submit", "Create account")}
-            </Button>
+            </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-neutral-500">
-            {t("signup.haveAccount", "Already have an account?")}{" "}
-            <Link href="/login" className="font-medium text-primary-600 hover:underline">
-              {t("marketing.signIn", "Sign in")}
-            </Link>
-          </p>
-          <p className="mt-3 text-center text-sm text-neutral-500">
-            {t("signup.enterprise", "Large group or custom rollout?")}{" "}
-            <Link href="/quote" className="font-medium text-primary-600 hover:underline">
-              {t("marketing.navQuote", "Get a quote")}
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
+          <div className="space-y-3 pt-2 text-center text-sm border-t border-neutral-100">
+            <p className="text-neutral-500">
+              {t("signup.haveAccount", "Already have an account?")}{" "}
+              <Link href="/login" className="font-bold text-primary-600 hover:text-primary-700 transition">
+                {t("marketing.signIn", "Sign in")}
+              </Link>
+            </p>
+            <p className="text-xs text-neutral-500 font-semibold">
+              {t("signup.enterprise", "Large group or custom rollout?")}{" "}
+              <Link href="/quote" className="text-primary-600 hover:text-primary-700 transition">
+                {t("marketing.navQuote", "Get a quote")}
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="relative z-10 border-t border-neutral-100 bg-white py-6 text-center text-xs font-semibold text-neutral-500">
+        <div className="max-w-6xl mx-auto flex justify-center gap-6">
+          <Link href="/pricing" className="hover:text-primary-600 transition">
+            {t("marketing.navPricing", "Pricing")}
+          </Link>
+          <Link href="/quote" className="hover:text-primary-600 transition">
+            {t("marketing.navQuote", "Get a quote")}
+          </Link>
+          <Link href="/welcome" className="hover:text-primary-600 transition">
+            {t("marketing.navHome", "Home")}
+          </Link>
+        </div>
+      </footer>
     </div>
   )
 }
