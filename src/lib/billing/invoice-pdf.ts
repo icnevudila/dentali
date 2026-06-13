@@ -56,9 +56,7 @@ export async function downloadInvoicePdf(
   win.document.write(html)
   win.document.close()
   win.focus()
-  win.onload = () => {
-    win.print()
-  }
+  win.print()
 
   return { error: null }
 }
