@@ -1,63 +1,71 @@
+"use client"
+
 import Link from "next/link"
 import { Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useLocale } from "@/hooks/use-locale"
 import { cn } from "@/lib/utils"
 
-export const PRICING_TIERS = [
-  {
-    id: "starter",
-    name: "Starter",
-    price: "₱4,990",
-    period: "/ month",
-    description: "Single branch, up to 5 staff seats. Core clinical workflow.",
-    features: [
-      "Patient registry & dental chart",
-      "Appointments & queue board",
-      "Billing & receipts",
-      "Kiosk check-in link",
-      "Digital consent templates",
-    ],
-    cta: { label: "Start free trial", href: "/signup" },
-    highlighted: false,
-  },
-  {
-    id: "growth",
-    name: "Growth",
-    price: "₱9,990",
-    period: "/ month",
-    description: "Multi-branch clinics with HMO and inventory.",
-    features: [
-      "Everything in Starter",
-      "Multiple branches",
-      "HMO & PhilHealth-ready fields",
-      "Inventory & low-stock alerts",
-      "Reports & exports",
-    ],
-    cta: { label: "Start free trial", href: "/signup" },
-    highlighted: true,
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    price: "Custom",
-    period: "",
-    description: "Large groups, custom integrations, and dedicated onboarding.",
-    features: [
-      "Unlimited branches & seats",
-      "PayMongo & SMS automation",
-      "Custom workflows & SLA",
-      "Migration assistance",
-      "Priority support",
-    ],
-    cta: { label: "Get a quote", href: "/quote" },
-    highlighted: false,
-  },
-] as const
-
 export function PricingPlans({ className }: { className?: string }) {
+  const { t } = useLocale()
+
+  const tiers = [
+    {
+      id: "starter",
+      name: t("pricingTiers.starterName", "Starter"),
+      price: "₱4,990",
+      period: t("pricingTiers.perMonth", "/ month"),
+      description: t("pricingTiers.starterDesc", "Single branch, up to 5 staff seats. Core clinical workflow."),
+      features: [
+        t("pricingTiers.starterF1", "Patient registry & dental chart"),
+        t("pricingTiers.starterF2", "Appointments & queue board"),
+        t("pricingTiers.starterF3", "Billing & receipts"),
+        t("pricingTiers.starterF4", "Kiosk check-in link"),
+        t("pricingTiers.starterF5", "Digital consent templates"),
+      ],
+      cta: { label: t("marketing.startTrial", "Start free trial"), href: "/signup" },
+      highlighted: false,
+    },
+    {
+      id: "growth",
+      name: t("pricingTiers.growthName", "Growth"),
+      price: "₱9,990",
+      period: t("pricingTiers.perMonth", "/ month"),
+      description: t("pricingTiers.growthDesc", "Multi-branch clinics with HMO and inventory."),
+      features: [
+        t("pricingTiers.growthF1", "Everything in Starter"),
+        t("pricingTiers.growthF2", "Multiple branches"),
+        t("pricingTiers.growthF3", "HMO & PhilHealth-ready fields"),
+        t("pricingTiers.growthF4", "Inventory & low-stock alerts"),
+        t("pricingTiers.growthF5", "Reports & exports"),
+      ],
+      cta: { label: t("marketing.startTrial", "Start free trial"), href: "/signup" },
+      highlighted: true,
+    },
+    {
+      id: "enterprise",
+      name: t("pricingTiers.enterpriseName", "Enterprise"),
+      price: t("pricingTiers.custom", "Custom"),
+      period: "",
+      description: t(
+        "pricingTiers.enterpriseDesc",
+        "Large groups, custom integrations, and dedicated onboarding."
+      ),
+      features: [
+        t("pricingTiers.enterpriseF1", "Unlimited branches & seats"),
+        t("pricingTiers.enterpriseF2", "PayMongo & SMS automation"),
+        t("pricingTiers.enterpriseF3", "Custom workflows & SLA"),
+        t("pricingTiers.enterpriseF4", "Migration assistance"),
+        t("pricingTiers.enterpriseF5", "Priority support"),
+      ],
+      cta: { label: t("marketing.navQuote", "Get a quote"), href: "/quote" },
+      highlighted: false,
+    },
+  ] as const
+
   return (
     <div className={cn("grid gap-6 lg:grid-cols-3", className)}>
-      {PRICING_TIERS.map((tier) => (
+      {tiers.map((tier) => (
         <article
           key={tier.id}
           className={cn(
@@ -67,7 +75,7 @@ export function PricingPlans({ className }: { className?: string }) {
         >
           {tier.highlighted ? (
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-primary-600">
-              Most popular
+              {t("pricingTiers.mostPopular", "Most popular")}
             </p>
           ) : (
             <div className="mb-3 h-4" aria-hidden />

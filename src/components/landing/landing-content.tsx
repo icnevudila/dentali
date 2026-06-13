@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -8,6 +10,7 @@ import {
   LandingWorkflowSection,
 } from "@/components/landing/landing-showcase"
 import { LandingEyebrow, LandingSection, LandingSectionHeader } from "@/components/landing/landing-primitives"
+import { useLocale } from "@/hooks/use-locale"
 import { cn } from "@/lib/utils"
 
 const primaryCtaClassName = cn(
@@ -16,6 +19,7 @@ const primaryCtaClassName = cn(
 )
 
 export function LandingContent({ showcase }: { showcase: ShowcaseSnapshot }) {
+  const { t } = useLocale()
   const hasLiveData = showcase.source !== "empty"
 
   return (
@@ -23,44 +27,50 @@ export function LandingContent({ showcase }: { showcase: ShowcaseSnapshot }) {
       <LandingSection className="landing-hero-glow px-4 py-14 sm:px-6 sm:py-20">
         <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <div className="text-center lg:text-left">
-            <LandingEyebrow>Philippine dental clinic OS</LandingEyebrow>
+            <LandingEyebrow>{t("landing.eyebrow", "Philippine dental clinic OS")}</LandingEyebrow>
             <h1 className="mt-4 text-3xl font-bold tracking-tight text-neutral-950 sm:text-4xl lg:text-[2.5rem] lg:leading-tight">
-              Run your clinic on{" "}
+              {t("landing.heroTitle", "Run your clinic on")}{" "}
               <span className="text-primary-600">
                 dentali<span className="text-neutral-950">.</span>
               </span>
             </h1>
             <p className="mt-4 text-base leading-relaxed text-neutral-600 sm:text-lg">
-              Patients, appointments, charting, billing, queue, and HMO — branch-aware from the
-              first login. Built for busy Metro Manila clinics.
+              {t(
+                "landing.heroSubtitle",
+                "Patients, appointments, charting, billing, queue, and HMO — branch-aware from the first login. Built for busy Metro Manila clinics."
+              )}
             </p>
             <div className="relative z-10 mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
               <Link href="/signup" data-testid="landing-start-trial" className={primaryCtaClassName}>
-                Start free trial
+                {t("marketing.startTrial", "Start free trial")}
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
               <Button size="lg" variant="outline" className="h-11 px-6" asChild>
                 <Link href="/quote" data-testid="landing-get-quote">
-                  Get a quote
+                  {t("marketing.navQuote", "Get a quote")}
                 </Link>
               </Button>
               <Button size="lg" variant="ghost" className="h-11 px-4 text-neutral-700" asChild>
                 <Link href="/login" data-testid="landing-staff-sign-in">
-                  Staff sign in
+                  {t("marketing.signIn", "Staff sign in")}
                 </Link>
               </Button>
             </div>
             {hasLiveData ? (
               <p className="mt-6 text-sm text-neutral-500">
-                Preview below uses{" "}
+                {t("landing.previewUses", "Preview below uses")}{" "}
                 <span className="font-medium text-neutral-700">{showcase.branch.name}</span>
-                {showcase.source === "session" ? " — your signed-in clinic" : " — demo showcase data"}.
+                {showcase.source === "session"
+                  ? t("landing.previewSession", " — your signed-in clinic")
+                  : t("landing.previewDemo", " — demo showcase data")}
+                .
               </p>
             ) : (
               <p className="mt-6 text-sm text-amber-800/90">
-                Run <code className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs">scripts/seed-demo-showcase.sql</code>{" "}
-                and set <code className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs">LANDING_SHOWCASE_BRANCH_ID</code>{" "}
-                to see live previews here.
+                {t(
+                  "landing.previewEmpty",
+                  "Run scripts/seed-demo-showcase.sql and set LANDING_SHOWCASE_BRANCH_ID to see live previews here."
+                )}
               </p>
             )}
           </div>
@@ -71,9 +81,12 @@ export function LandingContent({ showcase }: { showcase: ShowcaseSnapshot }) {
       <LandingSection id="features" className="scroll-mt-16 px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-5xl space-y-10">
           <LandingSectionHeader
-            eyebrow="Every screen"
-            title="Desktop, tablet, mobile, and waiting-room TV"
-            description="Same queue and patient data — optimized layouts for admin desks, kiosk tablets, and the display board."
+            eyebrow={t("landing.featuresEyebrow", "Every screen")}
+            title={t("landing.featuresTitle", "Desktop, tablet, mobile, and waiting-room TV")}
+            description={t(
+              "landing.featuresDescription",
+              "Same queue and patient data — optimized layouts for admin desks, kiosk tablets, and the display board."
+            )}
             align="center"
           />
           <LandingMultiDeviceRow showcase={showcase} />
@@ -85,29 +98,31 @@ export function LandingContent({ showcase }: { showcase: ShowcaseSnapshot }) {
       <LandingSection tone="inset" className="px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-lg text-center">
           <h2 className="text-2xl font-semibold tracking-tight text-neutral-950">
-            Ready to run your clinic on one system?
+            {t("landing.ctaBottomTitle", "Ready to run your clinic on one system?")}
           </h2>
           <p className="mt-3 text-base text-neutral-600">
-            Start a free trial, request a quote for multi-branch groups, or sign in with your staff
-            account.
+            {t(
+              "landing.ctaBottomSubtitle",
+              "Start a free trial, request a quote for multi-branch groups, or sign in with your staff account."
+            )}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link href="/signup" className={cn(primaryCtaClassName, "px-8")}>
-              Start free trial
+              {t("marketing.startTrial", "Start free trial")}
               <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
             <Button size="lg" variant="outline" className="h-11" asChild>
-              <Link href="/pricing">View pricing</Link>
+              <Link href="/pricing">{t("landing.viewPricing", "View pricing")}</Link>
             </Button>
           </div>
           <p className="mt-6 text-sm text-neutral-500">
-            Already using dentali.?{" "}
+            {t("landing.alreadyUsing", "Already using dentali.?")}{" "}
             <Link href="/login" className="font-medium text-primary-600 hover:underline">
-              Staff sign in
+              {t("marketing.signIn", "Staff sign in")}
             </Link>
             {" · "}
             <Link href="/kiosk" className="font-medium text-primary-600 hover:underline">
-              Kiosk check-in
+              {t("landing.kioskCheckIn", "Kiosk check-in")}
             </Link>
           </p>
         </div>

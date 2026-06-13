@@ -1,41 +1,50 @@
-import { getSiteUrl } from "@/lib/site-url"
+"use client"
 
-const FAQ_ITEMS = [
-  {
-    question: "Is dentali. built for Philippine clinics?",
-    answer:
-      "Yes. Branch-aware workflows, HMO and PhilHealth-ready billing fields, kiosk check-in, queue display, and digital consent are designed for Metro Manila and provincial multi-branch groups.",
-  },
-  {
-    question: "Can I start without a sales call?",
-    answer:
-      "Starter and Growth plans include a free trial. Create an account, run onboarding, and invite staff. Enterprise groups can request a quote for migration and custom integrations.",
-  },
-  {
-    question: "What is included in every plan?",
-    answer:
-      "Patient registry, dental chart, appointments, queue board, billing, consent templates, kiosk links, and TV display — the full clinical workflow from front desk to chair side.",
-  },
-  {
-    question: "How does multi-branch pricing work?",
-    answer:
-      "Growth covers multiple branches under one organization. Enterprise pricing is custom based on branch count, integrations (PayMongo, SMS), and onboarding support.",
-  },
-] as const
+import { getSiteUrl } from "@/lib/site-url"
+import { useLocale } from "@/hooks/use-locale"
 
 export function PricingFaqSection() {
+  const { t } = useLocale()
   const siteUrl = getSiteUrl()
+
+  const faqItems = [
+    {
+      q: t("pricingFaq.q1", "Is dentali. built for Philippine clinics?"),
+      a: t(
+        "pricingFaq.a1",
+        "Yes. Branch-aware workflows, HMO and PhilHealth-ready billing fields, kiosk check-in, queue display, and digital consent are designed for Metro Manila and provincial multi-branch groups."
+      ),
+    },
+    {
+      q: t("pricingFaq.q2", "Can I start without a sales call?"),
+      a: t(
+        "pricingFaq.a2",
+        "Starter and Growth plans include a free trial. Create an account, run onboarding, and invite staff. Enterprise groups can request a quote for migration and custom integrations."
+      ),
+    },
+    {
+      q: t("pricingFaq.q3", "What is included in every plan?"),
+      a: t(
+        "pricingFaq.a3",
+        "Patient registry, dental chart, appointments, queue board, billing, consent templates, kiosk links, and TV display — the full clinical workflow from front desk to chair side."
+      ),
+    },
+    {
+      q: t("pricingFaq.q4", "How does multi-branch pricing work?"),
+      a: t(
+        "pricingFaq.a4",
+        "Growth covers multiple branches under one organization. Enterprise pricing is custom based on branch count, integrations (PayMongo, SMS), and onboarding support."
+      ),
+    },
+  ]
 
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: FAQ_ITEMS.map((item) => ({
+    mainEntity: faqItems.map((item) => ({
       "@type": "Question",
-      name: item.question,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: item.answer,
-      },
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
     })),
   }
 
@@ -46,18 +55,18 @@ export function PricingFaqSection() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       <h2 id="pricing-faq" className="text-center text-2xl font-semibold tracking-tight text-neutral-950">
-        Frequently asked questions
+        {t("pricingFaq.title", "Frequently asked questions")}
       </h2>
       <dl className="mx-auto mt-8 max-w-2xl space-y-6">
-        {FAQ_ITEMS.map((item) => (
-          <div key={item.question}>
-            <dt className="text-sm font-semibold text-neutral-900">{item.question}</dt>
-            <dd className="mt-2 text-sm leading-relaxed text-neutral-600">{item.answer}</dd>
+        {faqItems.map((item) => (
+          <div key={item.q}>
+            <dt className="text-sm font-semibold text-neutral-900">{item.q}</dt>
+            <dd className="mt-2 text-sm leading-relaxed text-neutral-600">{item.a}</dd>
           </div>
         ))}
       </dl>
       <p className="mt-8 text-center text-xs text-neutral-400">
-        More details at{" "}
+        {t("pricingFaq.moreDetails", "More details at")}{" "}
         <a href={`${siteUrl}/welcome`} className="text-primary-600 hover:underline">
           {siteUrl.replace(/^https?:\/\//, "")}/welcome
         </a>

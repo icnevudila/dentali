@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
+import { LocaleBootstrap } from "@/components/i18n/LocaleBootstrap";
 import { getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
@@ -44,6 +45,7 @@ export default function RootLayout({
   return (
     <html lang="en-PH" suppressHydrationWarning data-theme="light">
       <body className={inter.className}>
+        <LocaleBootstrap />
         <ServiceWorkerRegister />
         {children}
       </body>

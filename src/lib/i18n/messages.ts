@@ -1,5 +1,11 @@
 import type { AppLocale } from "./config"
 import { DEFAULT_LOCALE } from "./config"
+import {
+  marketingMessagesEn,
+  marketingMessagesFil,
+  marketingMessagesTr,
+  mergeMessageTrees,
+} from "./marketing-messages"
 
 export type MessageTree = {
   [key: string]: string | MessageTree
@@ -1616,5 +1622,9 @@ export const MESSAGE_CATALOG: Record<AppLocale, MessageTree> = {
 }
 
 export function getMessages(locale: AppLocale): MessageTree {
-  return MESSAGE_CATALOG[locale] ?? MESSAGE_CATALOG[DEFAULT_LOCALE]
+  const raw = MESSAGE_CATALOG[locale] ?? MESSAGE_CATALOG[DEFAULT_LOCALE]
+  let merged = mergeMessageTrees(raw, marketingMessagesEn)
+  if (locale === "tr") merged = mergeMessageTrees(merged, marketingMessagesTr)
+  if (locale === "fil") merged = mergeMessageTrees(merged, marketingMessagesFil)
+  return merged
 }

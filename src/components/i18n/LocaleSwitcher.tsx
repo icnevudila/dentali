@@ -1,6 +1,6 @@
 "use client"
 
-import { LOCALES } from "@/lib/i18n/config"
+import { LOCALES, isAppLocale } from "@/lib/i18n/config"
 import { useLocale } from "@/hooks/use-locale"
 import { Languages } from "lucide-react"
 
@@ -13,7 +13,10 @@ export function LocaleSwitcher() {
       <span className="sr-only">{t("common.language", "Language")}</span>
       <select
         value={locale}
-        onChange={(e) => setLocale(e.target.value as typeof locale)}
+        onChange={(e) => {
+          const next = e.target.value
+          if (isAppLocale(next)) setLocale(next)
+        }}
         className="h-8 rounded-md border border-neutral-200 bg-white px-2 text-sm text-neutral-800"
         aria-label={t("common.language", "Language")}
       >
