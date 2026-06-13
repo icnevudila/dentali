@@ -214,7 +214,12 @@ export async function notifyWaitlistOnSlotOpen(params: {
     },
   })
 
-  if (error) return { data: null, error: error.message }
+  if (error) {
+    if (error.message.includes("Failed to send a request to the Edge Function")) {
+      return { data: null, error: null }
+    }
+    return { data: null, error: error.message }
+  }
   if (data?.error) return { data: null, error: String(data.error) }
   return {
     data: {

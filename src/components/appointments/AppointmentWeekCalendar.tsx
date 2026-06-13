@@ -33,6 +33,7 @@ interface AppointmentWeekCalendarProps {
   onReschedule?: (id: string, targetDateKey: string) => void
   onCheckIn?: (id: string) => void
   onRemind?: (id: string) => void
+  onEdit?: (appointment: AppointmentRecord) => void
   updatingId?: string | null
   reschedulingId?: string | null
   checkingInId?: string | null
@@ -51,6 +52,7 @@ export function AppointmentWeekCalendar({
   onReschedule,
   onCheckIn,
   onRemind,
+  onEdit,
   updatingId,
   reschedulingId,
   checkingInId,
@@ -321,6 +323,10 @@ export function AppointmentWeekCalendar({
                           e.stopPropagation()
                           handleDragStart(e, appt)
                         }}
+                        onDoubleClick={(e) => {
+                          e.stopPropagation()
+                          onEdit?.(appt)
+                        }}
                         className={cn(
                           "text-[9px] font-medium px-1 py-0.5 rounded border flex items-center justify-between gap-1",
                           getStatusColor(appt.status),
@@ -403,6 +409,10 @@ export function AppointmentWeekCalendar({
                         onDragStart={(e) => {
                           e.stopPropagation()
                           handleDragStart(e, appt)
+                        }}
+                        onDoubleClick={(e) => {
+                          e.stopPropagation()
+                          onEdit?.(appt)
                         }}
                         className={cn(
                           "rounded p-1.5 border text-left text-[10px] flex flex-col gap-0.5 shadow-sm bg-white/95",
@@ -551,6 +561,7 @@ export function AppointmentWeekCalendar({
                     key={appt.id}
                     draggable={draggable}
                     onDragStart={(e) => handleDragStart(e, appt)}
+                    onDoubleClick={() => onEdit?.(appt)}
                     className={cn(
                       "rounded-lg border border-neutral-200 bg-white p-3.5 transition-all shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4",
                       draggable && "cursor-grab active:cursor-grabbing hover:border-neutral-300",

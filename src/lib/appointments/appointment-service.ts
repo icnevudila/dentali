@@ -175,6 +175,28 @@ export async function updateAppointmentStatus(
   return { error: error?.message ?? null }
 }
 
+export async function updateAppointmentDetails(
+  appointmentId: string,
+  params: {
+    providerId?: string | null
+    purpose?: string
+    durationMinutes?: number
+  }
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from("appointments")
+    .update({
+      ...(params.providerId !== undefined && { provider_id: params.providerId }),
+      ...(params.purpose !== undefined && { purpose: params.purpose }),
+      ...(params.durationMinutes !== undefined && { duration_minutes: params.durationMinutes }),
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", appointmentId)
+
+  return { error: error?.message ?? null }
+}
+
 export async function markAppointmentNoShow(
   appointmentId: string
 ): Promise<{ data: { scheduled_at: string } | null; error: string | null }> {
