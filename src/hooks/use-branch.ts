@@ -3,14 +3,22 @@
 import { useBranchStore } from '@/stores/branch-store'
 
 export function useBranch() {
-  const { activeBranch, availableBranches, setActiveBranch, setAvailableBranches } = useBranchStore()
+  const {
+    activeBranch,
+    availableBranches,
+    branchRevision,
+    setActiveBranch,
+    setAvailableBranches,
+    bumpBranchRevision,
+  } = useBranchStore()
 
   return {
     activeBranch,
     availableBranches,
+    branchRevision,
     setActiveBranch,
     setAvailableBranches,
-    // Helper to check if a branch is selected
-    hasActiveBranch: activeBranch !== null
+    bumpBranchRevision,
+    hasActiveBranch: activeBranch !== null,
   }
 }

@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="compact-odontogram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 168" width="640" height="168" role="img" aria-label="Compact dental chart">
+  <style><![CDATA[
+    #compact-odontogram { font-family: Inter, Segoe UI, Arial, sans-serif; }
+    .tooth .crown { fill: #f3f4f6; stroke: #9ca3af; stroke-width: 1.2; }
+    .tooth.state-decayed .crown { fill: #fecaca; stroke: #dc2626; }
+    .tooth.state-restored .crown { fill: #bfdbfe; stroke: #2563eb; }
+    .tooth.state-missing .crown { fill: #fef3c7; stroke: #d97706; opacity: .5; }
+    .tooth.state-impacted .crown { fill: #e9d5ff; stroke: #7c3aed; }
+    .tooth.state-other .crown { fill: #f1f5f9; stroke: #64748b; }
+    .arch-line { stroke: #e5e7eb; stroke-width: 1; stroke-dasharray: 4 3; }
+  ]]></style>
+  <rect width="640" height="168" fill="#fafafa" rx="8"/>
+  <line class="arch-line" x1="8" y1="84" x2="632" y2="84"/>
+  <text x="320" y="14" text-anchor="middle" fill="#64748b" font-size="9" font-weight="700">UPPER</text>
+  <text x="320" y="164" text-anchor="middle" fill="#64748b" font-size="9" font-weight="700">LOWER</text>
+  
+    <g id="tooth-18" class="tooth molar" data-tooth="18" data-type="molar">
+      <g class="tooth-shape" transform="translate(48 28) rotate(-8)">
+        <path class="crown" d="M -8,-6 C -9,-9 -10,-10 -7,-8 L -10,-12 L -10,-5 L -10,5 C -10,11 -10,10 -6,9 L -9,12 L -10,10 L -10,5 C -10,15 10,15 10,5 C 10,10 11,12 6,9 C 10,10 10,11 10,5 L 10,-5 C 10,-10 9,-12 7,-8 C 10,-10 9,-9 8,-6 C 6,-11 -6,-11 -8,-6 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-17" class="tooth molar" data-tooth="17" data-type="molar">
+      <g class="tooth-shape" transform="translate(82 28) rotate(-6)">
+        <path class="crown" d="M -8,-6 C -9,-9 -10,-10 -7,-8 L -10,-12 L -10,-5 L -10,5 C -10,11 -10,10 -6,9 L -9,12 L -10,10 L -10,5 C -10,15 10,15 10,5 C 10,10 11,12 6,9 C 10,10 10,11 10,5 L 10,-5 C 10,-10 9,-12 7,-8 C 10,-10 9,-9 8,-6 C 6,-11 -6,-11 -8,-6 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-16" class="tooth molar" data-tooth="16" data-type="molar">
+      <g class="tooth-shape" transform="translate(116 28) rotate(-4)">
+        <path class="crown" d="M -8,-6 C -9,-9 -10,-10 -7,-8 L -10,-12 L -10,-5 L -10,5 C -10,11 -10,10 -6,9 L -9,12 L -10,10 L -10,5 C -10,15 10,15 10,5 C 10,10 11,12 6,9 C 10,10 10,11 10,5 L 10,-5 C 10,-10 9,-12 7,-8 C 10,-10 9,-9 8,-6 C 6,-11 -6,-11 -8,-6 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-15" class="tooth premolar" data-tooth="15" data-type="premolar">
+      <g class="tooth-shape" transform="translate(150 28) rotate(-2)">
+        <path class="crown" d="M -6,-5 C -7,-8 -8,-9 -5,-7 L -8,-10 L -8,-4 L -8,4 C -8,10 -8,9 -4,8 L -7,10 L -8,8 L -8,4 C -8,12 8,12 8,4 C 8,8 9,10 4,8 C 8,9 8,10 8,4 L 8,-4 C 8,-9 7,-10 5,-7 C 8,-9 7,-8 6,-5 C 4,-10 -4,-10 -6,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-14" class="tooth premolar" data-tooth="14" data-type="premolar">
+      <g class="tooth-shape" transform="translate(184 28) rotate(0)">
+        <path class="crown" d="M -6,-5 C -7,-8 -8,-9 -5,-7 L -8,-10 L -8,-4 L -8,4 C -8,10 -8,9 -4,8 L -7,10 L -8,8 L -8,4 C -8,12 8,12 8,4 C 8,8 9,10 4,8 C 8,9 8,10 8,4 L 8,-4 C 8,-9 7,-10 5,-7 C 8,-9 7,-8 6,-5 C 4,-10 -4,-10 -6,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-13" class="tooth canine" data-tooth="13" data-type="canine">
+      <g class="tooth-shape" transform="translate(218 28) rotate(2)">
+        <path class="crown" d="M -5,-5 C -6,-8 -7,-9 -4,-7 L -7,-10 L -7,-4 L -7,4 C -7,10 -7,9 -3,8 L -6,10 L -7,8 L -7,4 C -7,12 7,12 7,4 C 7,8 8,10 3,8 C 7,9 7,10 7,4 L 7,-4 C 7,-9 6,-10 4,-7 C 7,-9 6,-8 5,-5 C 3,-10 -3,-10 -5,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-12" class="tooth incisor" data-tooth="12" data-type="incisor">
+      <g class="tooth-shape" transform="translate(252 28) rotate(4)">
+        <path class="crown" d="M -5,-5 C -6,-8 -7,-9 -4,-7 L -7,-10 L -7,-4 L -7,4 C -7,10 -7,9 -3,8 L -6,10 L -7,8 L -7,4 C -7,12 7,12 7,4 C 7,8 8,10 3,8 C 7,9 7,10 7,4 L 7,-4 C 7,-9 6,-10 4,-7 C 7,-9 6,-8 5,-5 C 3,-10 -3,-10 -5,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-11" class="tooth incisor" data-tooth="11" data-type="incisor">
+      <g class="tooth-shape" transform="translate(286 28) rotate(6)">
+        <path class="crown" d="M -5,-5 C -6,-8 -7,-9 -4,-7 L -7,-10 L -7,-4 L -7,4 C -7,10 -7,9 -3,8 L -6,10 L -7,8 L -7,4 C -7,12 7,12 7,4 C 7,8 8,10 3,8 C 7,9 7,10 7,4 L 7,-4 C 7,-9 6,-10 4,-7 C 7,-9 6,-8 5,-5 C 3,-10 -3,-10 -5,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-21" class="tooth incisor" data-tooth="21" data-type="incisor">
+      <g class="tooth-shape" transform="translate(328 28) rotate(8)">
+        <path class="crown" d="M -5,-5 C -6,-8 -7,-9 -4,-7 L -7,-10 L -7,-4 L -7,4 C -7,10 -7,9 -3,8 L -6,10 L -7,8 L -7,4 C -7,12 7,12 7,4 C 7,8 8,10 3,8 C 7,9 7,10 7,4 L 7,-4 C 7,-9 6,-10 4,-7 C 7,-9 6,-8 5,-5 C 3,-10 -3,-10 -5,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-22" class="tooth incisor" data-tooth="22" data-type="incisor">
+      <g class="tooth-shape" transform="translate(362 28) rotate(6)">
+        <path class="crown" d="M -5,-5 C -6,-8 -7,-9 -4,-7 L -7,-10 L -7,-4 L -7,4 C -7,10 -7,9 -3,8 L -6,10 L -7,8 L -7,4 C -7,12 7,12 7,4 C 7,8 8,10 3,8 C 7,9 7,10 7,4 L 7,-4 C 7,-9 6,-10 4,-7 C 7,-9 6,-8 5,-5 C 3,-10 -3,-10 -5,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-23" class="tooth canine" data-tooth="23" data-type="canine">
+      <g class="tooth-shape" transform="translate(396 28) rotate(4)">
+        <path class="crown" d="M -5,-5 C -6,-8 -7,-9 -4,-7 L -7,-10 L -7,-4 L -7,4 C -7,10 -7,9 -3,8 L -6,10 L -7,8 L -7,4 C -7,12 7,12 7,4 C 7,8 8,10 3,8 C 7,9 7,10 7,4 L 7,-4 C 7,-9 6,-10 4,-7 C 7,-9 6,-8 5,-5 C 3,-10 -3,-10 -5,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-24" class="tooth premolar" data-tooth="24" data-type="premolar">
+      <g class="tooth-shape" transform="translate(430 28) rotate(2)">
+        <path class="crown" d="M -6,-5 C -7,-8 -8,-9 -5,-7 L -8,-10 L -8,-4 L -8,4 C -8,10 -8,9 -4,8 L -7,10 L -8,8 L -8,4 C -8,12 8,12 8,4 C 8,8 9,10 4,8 C 8,9 8,10 8,4 L 8,-4 C 8,-9 7,-10 5,-7 C 8,-9 7,-8 6,-5 C 4,-10 -4,-10 -6,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-25" class="tooth premolar" data-tooth="25" data-type="premolar">
+      <g class="tooth-shape" transform="translate(464 28) rotate(0)">
+        <path class="crown" d="M -6,-5 C -7,-8 -8,-9 -5,-7 L -8,-10 L -8,-4 L -8,4 C -8,10 -8,9 -4,8 L -7,10 L -8,8 L -8,4 C -8,12 8,12 8,4 C 8,8 9,10 4,8 C 8,9 8,10 8,4 L 8,-4 C 8,-9 7,-10 5,-7 C 8,-9 7,-8 6,-5 C 4,-10 -4,-10 -6,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-26" class="tooth molar" data-tooth="26" data-type="molar">
+      <g class="tooth-shape" transform="translate(498 28) rotate(-2)">
+        <path class="crown" d="M -8,-6 C -9,-9 -10,-10 -7,-8 L -10,-12 L -10,-5 L -10,5 C -10,11 -10,10 -6,9 L -9,12 L -10,10 L -10,5 C -10,15 10,15 10,5 C 10,10 11,12 6,9 C 10,10 10,11 10,5 L 10,-5 C 10,-10 9,-12 7,-8 C 10,-10 9,-9 8,-6 C 6,-11 -6,-11 -8,-6 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-27" class="tooth molar" data-tooth="27" data-type="molar">
+      <g class="tooth-shape" transform="translate(532 28) rotate(-4)">
+        <path class="crown" d="M -8,-6 C -9,-9 -10,-10 -7,-8 L -10,-12 L -10,-5 L -10,5 C -10,11 -10,10 -6,9 L -9,12 L -10,10 L -10,5 C -10,15 10,15 10,5 C 10,10 11,12 6,9 C 10,10 10,11 10,5 L 10,-5 C 10,-10 9,-12 7,-8 C 10,-10 9,-9 8,-6 C 6,-11 -6,-11 -8,-6 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-28" class="tooth molar" data-tooth="28" data-type="molar">
+      <g class="tooth-shape" transform="translate(566 28) rotate(-6)">
+        <path class="crown" d="M -8,-6 C -9,-9 -10,-10 -7,-8 L -10,-12 L -10,-5 L -10,5 C -10,11 -10,10 -6,9 L -9,12 L -10,10 L -10,5 C -10,15 10,15 10,5 C 10,10 11,12 6,9 C 10,10 10,11 10,5 L 10,-5 C 10,-10 9,-12 7,-8 C 10,-10 9,-9 8,-6 C 6,-11 -6,-11 -8,-6 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-48" class="tooth molar" data-tooth="48" data-type="molar">
+      <g class="tooth-shape" transform="translate(48 132) rotate(8)">
+        <path class="crown" d="M -8,-6 C -9,-9 -10,-10 -7,-8 L -10,-12 L -10,-5 L -10,5 C -10,11 -10,10 -6,9 L -9,12 L -10,10 L -10,5 C -10,15 10,15 10,5 C 10,10 11,12 6,9 C 10,10 10,11 10,5 L 10,-5 C 10,-10 9,-12 7,-8 C 10,-10 9,-9 8,-6 C 6,-11 -6,-11 -8,-6 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-47" class="tooth molar" data-tooth="47" data-type="molar">
+      <g class="tooth-shape" transform="translate(82 132) rotate(6)">
+        <path class="crown" d="M -8,-6 C -9,-9 -10,-10 -7,-8 L -10,-12 L -10,-5 L -10,5 C -10,11 -10,10 -6,9 L -9,12 L -10,10 L -10,5 C -10,15 10,15 10,5 C 10,10 11,12 6,9 C 10,10 10,11 10,5 L 10,-5 C 10,-10 9,-12 7,-8 C 10,-10 9,-9 8,-6 C 6,-11 -6,-11 -8,-6 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-46" class="tooth molar" data-tooth="46" data-type="molar">
+      <g class="tooth-shape" transform="translate(116 132) rotate(4)">
+        <path class="crown" d="M -8,-6 C -9,-9 -10,-10 -7,-8 L -10,-12 L -10,-5 L -10,5 C -10,11 -10,10 -6,9 L -9,12 L -10,10 L -10,5 C -10,15 10,15 10,5 C 10,10 11,12 6,9 C 10,10 10,11 10,5 L 10,-5 C 10,-10 9,-12 7,-8 C 10,-10 9,-9 8,-6 C 6,-11 -6,-11 -8,-6 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-45" class="tooth premolar" data-tooth="45" data-type="premolar">
+      <g class="tooth-shape" transform="translate(150 132) rotate(2)">
+        <path class="crown" d="M -6,-5 C -7,-8 -8,-9 -5,-7 L -8,-10 L -8,-4 L -8,4 C -8,10 -8,9 -4,8 L -7,10 L -8,8 L -8,4 C -8,12 8,12 8,4 C 8,8 9,10 4,8 C 8,9 8,10 8,4 L 8,-4 C 8,-9 7,-10 5,-7 C 8,-9 7,-8 6,-5 C 4,-10 -4,-10 -6,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-44" class="tooth premolar" data-tooth="44" data-type="premolar">
+      <g class="tooth-shape" transform="translate(184 132) rotate(0)">
+        <path class="crown" d="M -6,-5 C -7,-8 -8,-9 -5,-7 L -8,-10 L -8,-4 L -8,4 C -8,10 -8,9 -4,8 L -7,10 L -8,8 L -8,4 C -8,12 8,12 8,4 C 8,8 9,10 4,8 C 8,9 8,10 8,4 L 8,-4 C 8,-9 7,-10 5,-7 C 8,-9 7,-8 6,-5 C 4,-10 -4,-10 -6,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-43" class="tooth canine" data-tooth="43" data-type="canine">
+      <g class="tooth-shape" transform="translate(218 132) rotate(-2)">
+        <path class="crown" d="M -5,-5 C -6,-8 -7,-9 -4,-7 L -7,-10 L -7,-4 L -7,4 C -7,10 -7,9 -3,8 L -6,10 L -7,8 L -7,4 C -7,12 7,12 7,4 C 7,8 8,10 3,8 C 7,9 7,10 7,4 L 7,-4 C 7,-9 6,-10 4,-7 C 7,-9 6,-8 5,-5 C 3,-10 -3,-10 -5,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-42" class="tooth incisor" data-tooth="42" data-type="incisor">
+      <g class="tooth-shape" transform="translate(252 132) rotate(-4)">
+        <path class="crown" d="M -5,-5 C -6,-8 -7,-9 -4,-7 L -7,-10 L -7,-4 L -7,4 C -7,10 -7,9 -3,8 L -6,10 L -7,8 L -7,4 C -7,12 7,12 7,4 C 7,8 8,10 3,8 C 7,9 7,10 7,4 L 7,-4 C 7,-9 6,-10 4,-7 C 7,-9 6,-8 5,-5 C 3,-10 -3,-10 -5,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-41" class="tooth incisor" data-tooth="41" data-type="incisor">
+      <g class="tooth-shape" transform="translate(286 132) rotate(-6)">
+        <path class="crown" d="M -5,-5 C -6,-8 -7,-9 -4,-7 L -7,-10 L -7,-4 L -7,4 C -7,10 -7,9 -3,8 L -6,10 L -7,8 L -7,4 C -7,12 7,12 7,4 C 7,8 8,10 3,8 C 7,9 7,10 7,4 L 7,-4 C 7,-9 6,-10 4,-7 C 7,-9 6,-8 5,-5 C 3,-10 -3,-10 -5,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-31" class="tooth incisor" data-tooth="31" data-type="incisor">
+      <g class="tooth-shape" transform="translate(328 132) rotate(-8)">
+        <path class="crown" d="M -5,-5 C -6,-8 -7,-9 -4,-7 L -7,-10 L -7,-4 L -7,4 C -7,10 -7,9 -3,8 L -6,10 L -7,8 L -7,4 C -7,12 7,12 7,4 C 7,8 8,10 3,8 C 7,9 7,10 7,4 L 7,-4 C 7,-9 6,-10 4,-7 C 7,-9 6,-8 5,-5 C 3,-10 -3,-10 -5,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-32" class="tooth incisor" data-tooth="32" data-type="incisor">
+      <g class="tooth-shape" transform="translate(362 132) rotate(-6)">
+        <path class="crown" d="M -5,-5 C -6,-8 -7,-9 -4,-7 L -7,-10 L -7,-4 L -7,4 C -7,10 -7,9 -3,8 L -6,10 L -7,8 L -7,4 C -7,12 7,12 7,4 C 7,8 8,10 3,8 C 7,9 7,10 7,4 L 7,-4 C 7,-9 6,-10 4,-7 C 7,-9 6,-8 5,-5 C 3,-10 -3,-10 -5,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-33" class="tooth canine" data-tooth="33" data-type="canine">
+      <g class="tooth-shape" transform="translate(396 132) rotate(-4)">
+        <path class="crown" d="M -5,-5 C -6,-8 -7,-9 -4,-7 L -7,-10 L -7,-4 L -7,4 C -7,10 -7,9 -3,8 L -6,10 L -7,8 L -7,4 C -7,12 7,12 7,4 C 7,8 8,10 3,8 C 7,9 7,10 7,4 L 7,-4 C 7,-9 6,-10 4,-7 C 7,-9 6,-8 5,-5 C 3,-10 -3,-10 -5,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-34" class="tooth premolar" data-tooth="34" data-type="premolar">
+      <g class="tooth-shape" transform="translate(430 132) rotate(-2)">
+        <path class="crown" d="M -6,-5 C -7,-8 -8,-9 -5,-7 L -8,-10 L -8,-4 L -8,4 C -8,10 -8,9 -4,8 L -7,10 L -8,8 L -8,4 C -8,12 8,12 8,4 C 8,8 9,10 4,8 C 8,9 8,10 8,4 L 8,-4 C 8,-9 7,-10 5,-7 C 8,-9 7,-8 6,-5 C 4,-10 -4,-10 -6,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-35" class="tooth premolar" data-tooth="35" data-type="premolar">
+      <g class="tooth-shape" transform="translate(464 132) rotate(0)">
+        <path class="crown" d="M -6,-5 C -7,-8 -8,-9 -5,-7 L -8,-10 L -8,-4 L -8,4 C -8,10 -8,9 -4,8 L -7,10 L -8,8 L -8,4 C -8,12 8,12 8,4 C 8,8 9,10 4,8 C 8,9 8,10 8,4 L 8,-4 C 8,-9 7,-10 5,-7 C 8,-9 7,-8 6,-5 C 4,-10 -4,-10 -6,-5 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-36" class="tooth molar" data-tooth="36" data-type="molar">
+      <g class="tooth-shape" transform="translate(498 132) rotate(2)">
+        <path class="crown" d="M -8,-6 C -9,-9 -10,-10 -7,-8 L -10,-12 L -10,-5 L -10,5 C -10,11 -10,10 -6,9 L -9,12 L -10,10 L -10,5 C -10,15 10,15 10,5 C 10,10 11,12 6,9 C 10,10 10,11 10,5 L 10,-5 C 10,-10 9,-12 7,-8 C 10,-10 9,-9 8,-6 C 6,-11 -6,-11 -8,-6 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-37" class="tooth molar" data-tooth="37" data-type="molar">
+      <g class="tooth-shape" transform="translate(532 132) rotate(4)">
+        <path class="crown" d="M -8,-6 C -9,-9 -10,-10 -7,-8 L -10,-12 L -10,-5 L -10,5 C -10,11 -10,10 -6,9 L -9,12 L -10,10 L -10,5 C -10,15 10,15 10,5 C 10,10 11,12 6,9 C 10,10 10,11 10,5 L 10,-5 C 10,-10 9,-12 7,-8 C 10,-10 9,-9 8,-6 C 6,-11 -6,-11 -8,-6 Z"/>
+      </g>
+    </g>
+
+    <g id="tooth-38" class="tooth molar" data-tooth="38" data-type="molar">
+      <g class="tooth-shape" transform="translate(566 132) rotate(6)">
+        <path class="crown" d="M -8,-6 C -9,-9 -10,-10 -7,-8 L -10,-12 L -10,-5 L -10,5 C -10,11 -10,10 -6,9 L -9,12 L -10,10 L -10,5 C -10,15 10,15 10,5 C 10,10 11,12 6,9 C 10,10 10,11 10,5 L 10,-5 C 10,-10 9,-12 7,-8 C 10,-10 9,-9 8,-6 C 6,-11 -6,-11 -8,-6 Z"/>
+      </g>
+    </g>
+</svg>

@@ -1,17 +1,7 @@
 {
-  "$schema": "https://vercel.com/static/schema.json",
-  "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [],
-  "env": {
-    "NEXT_PUBLIC_SUPABASE_URL": "<YOUR_SUPABASE_URL>",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "<YOUR_SUPABASE_ANON_KEY>",
-    "SUPABASE_SERVICE_ROLE_KEY": "<YOUR_SERVICE_ROLE_KEY>"
-  },
-  "crons": []
+  "$schema": "https://openapi.vercel.com/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "regions": ["sin1"]
 }

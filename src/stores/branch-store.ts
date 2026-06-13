@@ -10,8 +10,11 @@ interface Branch {
 interface BranchState {
   activeBranch: Branch | null
   availableBranches: Branch[]
+  /** Bumps when user switches branch — client pages refetch scoped data */
+  branchRevision: number
   setActiveBranch: (branch: Branch) => void
   setAvailableBranches: (branches: Branch[]) => void
+  bumpBranchRevision: () => void
   clearBranchData: () => void
 }
 
@@ -20,12 +23,18 @@ export const useBranchStore = create<BranchState>()(
     (set) => ({
       activeBranch: null,
       availableBranches: [],
+      branchRevision: 0,
       setActiveBranch: (branch) => set({ activeBranch: branch }),
       setAvailableBranches: (branches) => set({ availableBranches: branches }),
-      clearBranchData: () => set({ activeBranch: null, availableBranches: [] }),
+      bumpBranchRevision: () => set((s) => ({ branchRevision: s.branchRevision + 1 })),
+      clearBranchData: () => set({ activeBranch: null, availableBranches: [], branchRevision: 0 }),
     }),
     {
       name: 'dentali-branch-storage',
+      partialize: (state) => ({
+        activeBranch: state.activeBranch,
+        availableBranches: state.availableBranches,
+      }),
     }
   )
 )

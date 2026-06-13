@@ -1,0 +1,62 @@
+# Supabase local / CLI config
+project_id = "dentali-ph"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[functions.invite-staff]
+verify_jwt = true
+
+[functions.send-sms]
+verify_jwt = true
+
+[functions.send-appointment-reminder]
+verify_jwt = true
+
+[functions.daily-reminder-cron]
+verify_jwt = false
+
+[functions.submit-kiosk-intake]
+verify_jwt = false
+
+[functions.generate-intake-pdf]
+verify_jwt = true
+
+[functions.generate-invoice-pdf]
+verify_jwt = true
+
+[functions.sync-philhealth-claim]
+verify_jwt = true
+
+[functions.create-payment-intent]
+verify_jwt = true
+
+[functions.notify-waitlist-slot]
+verify_jwt = true
+
+[functions.process-slot-notifications]
+verify_jwt = false
+
+[functions.appointment-reminders-cron]
+verify_jwt = false
+
+[functions.payment-reminder-cron]
+verify_jwt = false
+
+[functions.paymongo-webhook]
+verify_jwt = false
+
+[functions.send-closeout-email-cron]
+verify_jwt = false

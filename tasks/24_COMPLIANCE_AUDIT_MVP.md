@@ -1,14 +1,17 @@
 # Modül 24: Compliance, Audit & Reports (MVP)
 
 ## Backend / Database
-- [ ] Kritik tablolar için audit trigger'larının oluşturulması
-- [ ] `dashboard_snapshots` tablosu
-- [ ] RPC: `get_dashboard_summary`
+- [x] `organization_audit_logs` + `session_audit_logs`
+- [x] RPC: `get_unified_audit_trail`
+- [x] RPC: `get_dashboard_stats` (KPI genişletmesi)
 
 ## UI Bileşenleri
-- [ ] `DashboardMetrics` (Metrik kartları)
-- [ ] `AuditLogViewer`
+- [x] Dashboard KPI kartları (6 metrik)
+- [x] Dashboard KPI realtime — Supabase Realtime subscription + `useDashboardStats` hook (Q135)
+- [x] `AuditLogViewer` (birleşik + CSV export)
 
 ## Frontend Ekranları
-- [ ] `/` (Dashboard sayfası)
-- [ ] `/admin/audit` sayfası
+- [x] `/` Dashboard
+- [x] `/settings/audit`
+
+## Durum: ✅ MVP entegre (Q059, Q062)

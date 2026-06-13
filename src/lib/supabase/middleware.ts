@@ -34,15 +34,29 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const isPublicPath =
+    request.nextUrl.pathname.startsWith('/login') ||
+    request.nextUrl.pathname.startsWith('/auth') ||
+    request.nextUrl.pathname.startsWith('/welcome') ||
+    request.nextUrl.pathname.startsWith('/showcase') ||
+    request.nextUrl.pathname.startsWith('/kiosk') ||
+    request.nextUrl.pathname.startsWith('/display') ||
+    request.nextUrl.pathname.startsWith('/sign') ||
+    request.nextUrl.pathname.startsWith('/ui-preview')
+
+  if (!user && !isPublicPath) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
+
   if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth')
+    user &&
+    request.nextUrl.pathname.startsWith('/login')
   ) {
-    // TEMPORARY DISABLE FOR UI PREVIEW:
-    // const url = request.nextUrl.clone()
-    // url.pathname = '/login'
-    // return NextResponse.redirect(url)
+    const url = request.nextUrl.clone()
+    url.pathname = '/'
+    return NextResponse.redirect(url)
   }
 
   return supabaseResponse

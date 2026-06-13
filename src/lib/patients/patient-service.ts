@@ -1,0 +1,337 @@
+import { createClient } from "@/lib/supabase/client"
+import type { PatientFormValues } from "@/lib/validations/patient"
+import { getShowcaseSnapshot } from "@/lib/showcase/intercept"
+import { seedDefaultConsentsForPatient } from "@/lib/patients/consent-service"
+import {
+  DEFAULT_PATIENT_LIST_FILTERS,
+  resolveVisitRange,
+  type PatientListFilters,
+} from "@/lib/patients/patient-list-filters"
+
+export interface PatientRecord {
+  id: string
+  first_name: string
+  last_name: string
+  date_of_birth: string | null
+  gender: string | null
+  phone: string | null
+  email: string | null
+  address: string | null
+  status: string
+  last_visit_at?: string | null
+  intake_pct?: number
+}
+
+export type PatientSearchOptions = {
+  page?: number
+  pageSize?: number
+  filters?: PatientListFilters
+}
+
+export interface PatientWithContacts extends PatientRecord {
+  emergency_contact?: { name: string; phone: string | null } | null
+}
+
+function isMissingSearchPatientsRpc(message: string): boolean {
+  return (
+    message.includes("Could not find the function") ||
+    message.includes("PGRST202") ||
+    message.includes("schema cache")
+  )
+}
+
+type SearchPatientsRow = PatientRecord & { total_count?: number }
+
+function mapSearchPatientsRows(rows: SearchPatientsRow[]) {
+  const total = rows.length > 0 ? Number(rows[0].total_count ?? rows.length) : 0
+  const patients = rows.map(({ total_count: _tc, ...patient }) => patient)
+  return { data: patients, total }
+}
+
+export async function searchPatients(
+  query: string,
+  branchId: string | null,
+  options?: PatientSearchOptions
+): Promise<{ data: PatientRecord[]; total: number; error: string | null }> {
+  const showcase = getShowcaseSnapshot()
+  if (showcase && branchId === showcase.branch.id) {
+    const page = Math.max(1, options?.page ?? 1)
+    const pageSize = Math.min(50, Math.max(1, options?.pageSize ?? 20))
+    const offset = (page - 1) * pageSize
+    const slice = showcase.patients.slice(offset, offset + pageSize)
+    return { data: slice, total: showcase.patients.length, error: null }
+  }
+
+  const supabase = createClient()
+  const page = Math.max(1, options?.page ?? 1)
+  const pageSize = Math.min(50, Math.max(1, options?.pageSize ?? 20))
+  const offset = (page - 1) * pageSize
+  const filters = options?.filters ?? DEFAULT_PATIENT_LIST_FILTERS
+  const visitRange = resolveVisitRange(filters)
+  const trimmedQuery = query.trim() || null
+
+  const { data, error } = await supabase.rpc("search_patients", {
+    p_query: trimmedQuery,
+    p_branch_id: branchId,
+    p_limit: pageSize,
+    p_offset: offset,
+    p_status: filters.status,
+    p_last_visit_from: visitRange.from,
+    p_last_visit_to: visitRange.to,
+    p_never_visited: visitRange.neverVisited,
+    p_sort: filters.sort,
+  })
+
+  if (!error) {
+    return { ...mapSearchPatientsRows((data ?? []) as SearchPatientsRow[]), error: null }
+  }
+
+  if (!isMissingSearchPatientsRpc(error.message)) {
+    return { data: [], total: 0, error: error.message }
+  }
+
+  const legacy = await supabase.rpc("search_patients", {
+    p_query: trimmedQuery,
+    p_branch_id: branchId,
+    p_limit: pageSize,
+    p_offset: offset,
+  })
+
+  if (legacy.error) {
+    return {
+      data: [],
+      total: 0,
+      error: `${error.message} (legacy RPC also failed: ${legacy.error.message})`,
+    }
+  }
+
+  return { ...mapSearchPatientsRows((legacy.data ?? []) as SearchPatientsRow[]), error: null }
+}
+
+export async function findPatientsByPhone(
+  phone: string
+): Promise<{ data: Pick<PatientRecord, "id" | "first_name" | "last_name" | "phone">[]; error: string | null }> {
+  const digits = phone.replace(/\D/g, "")
+  if (digits.length < 7) return { data: [], error: null }
+
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("patients")
+    .select("id, first_name, last_name, phone")
+    .eq("status", "active")
+    .ilike("phone", `%${digits.slice(-7)}%`)
+    .limit(5)
+
+  if (error) return { data: [], error: error.message }
+
+  const matches = (data ?? []).filter((p) => {
+    const pDigits = (p.phone ?? "").replace(/\D/g, "")
+    return pDigits === digits || pDigits.endsWith(digits.slice(-7))
+  })
+
+  return { data: matches, error: null }
+}
+
+export interface DuplicateCandidate {
+  patient_id: string
+  first_name: string
+  last_name: string
+  date_of_birth: string | null
+  phone: string | null
+  match_reason: string
+  score: number
+}
+
+export async function detectDuplicatePatients(params: {
+  firstName: string
+  lastName: string
+  dateOfBirth?: string
+  phone?: string
+}): Promise<{ data: DuplicateCandidate[]; error: string | null }> {
+  if (!params.firstName.trim() || !params.lastName.trim()) {
+    return { data: [], error: null }
+  }
+
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("detect_duplicate_patient", {
+    p_first_name: params.firstName.trim(),
+    p_last_name: params.lastName.trim(),
+    p_date_of_birth: params.dateOfBirth || null,
+    p_phone: params.phone || null,
+  })
+
+  if (error) return { data: [], error: error.message }
+  return { data: (data ?? []) as DuplicateCandidate[], error: null }
+}
+
+export async function mergePatients(params: {
+  masterId: string
+  duplicateId: string
+  reason?: string
+}): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase.rpc("merge_patients", {
+    p_master_id: params.masterId,
+    p_duplicate_id: params.duplicateId,
+    p_reason: params.reason ?? null,
+  })
+  return { error: error?.message ?? null }
+}
+
+export async function getPatient(
+  patientId: string
+): Promise<{ data: PatientWithContacts | null; error: string | null }> {
+  const showcase = getShowcaseSnapshot()
+  if (showcase) {
+    const found = showcase.patients.find((p) => p.id === patientId)
+    if (found) {
+      return { data: { ...found, emergency_contact: null }, error: null }
+    }
+  }
+
+  const supabase = createClient()
+
+  const { data: patient, error } = await supabase
+    .from("patients")
+    .select("*")
+    .eq("id", patientId)
+    .maybeSingle()
+
+  if (error || !patient) {
+    return { data: null, error: error?.message ?? "Patient not found" }
+  }
+
+  const { data: contacts } = await supabase
+    .from("patient_contacts")
+    .select("name, phone")
+    .eq("patient_id", patientId)
+    .eq("contact_type", "emergency")
+    .limit(1)
+    .maybeSingle()
+
+  return {
+    data: {
+      ...(patient as PatientRecord),
+      emergency_contact: contacts ?? null,
+    },
+    error: null,
+  }
+}
+
+export async function finalizePatientIntake(
+  form: PatientFormValues,
+  branchId: string,
+  organizationId: string
+): Promise<{ data: { id: string; intakeId: string } | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("finalize_patient_intake", {
+    p_payload: {
+      organization_id: organizationId,
+      branch_id: branchId,
+      first_name: form.firstName,
+      last_name: form.lastName,
+      date_of_birth: form.dateOfBirth || null,
+      gender: form.gender,
+      phone: form.phoneNumber,
+      email: form.email || null,
+      address_line1: form.addressLine1,
+      city: form.city,
+      emergency_contact_name: form.emergencyContactName || null,
+      emergency_contact_phone: form.emergencyContactPhone || null,
+      medical_alerts: form.medicalAlerts || null,
+    },
+  })
+
+  if (error) return { data: null, error: error.message }
+
+  const raw = data as { patient_id: string; intake_id: string }
+  await seedDefaultConsentsForPatient({
+    patientId: raw.patient_id,
+    organizationId,
+    branchId,
+  })
+
+  return { data: { id: raw.patient_id, intakeId: raw.intake_id }, error: null }
+}
+
+export async function createPatient(
+  form: PatientFormValues,
+  branchId: string,
+  organizationId: string,
+  userId: string
+): Promise<{ data: { id: string } | null; error: string | null }> {
+  const { data, error } = await finalizePatientIntake(form, branchId, organizationId)
+  if (error || !data) return { data: null, error: error ?? "Failed to create patient" }
+  return { data: { id: data.id }, error: null }
+}
+
+export async function updatePatient(
+  patientId: string,
+  form: PatientFormValues,
+  userId: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const address = [form.addressLine1, form.city].filter(Boolean).join(", ")
+
+  const { error } = await supabase
+    .from("patients")
+    .update({
+      first_name: form.firstName,
+      last_name: form.lastName,
+      date_of_birth: form.dateOfBirth || null,
+      gender: form.gender,
+      phone: form.phoneNumber,
+      email: form.email || null,
+      address,
+      updated_by: userId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", patientId)
+
+  if (error) return { error: error.message }
+
+  if (form.emergencyContactName) {
+    const { data: existing } = await supabase
+      .from("patient_contacts")
+      .select("id")
+      .eq("patient_id", patientId)
+      .eq("contact_type", "emergency")
+      .maybeSingle()
+
+    if (existing) {
+      await supabase
+        .from("patient_contacts")
+        .update({
+          name: form.emergencyContactName,
+          phone: form.emergencyContactPhone || null,
+        })
+        .eq("id", existing.id)
+    } else {
+      await supabase.from("patient_contacts").insert({
+        patient_id: patientId,
+        contact_type: "emergency",
+        name: form.emergencyContactName,
+        phone: form.emergencyContactPhone || null,
+      })
+    }
+  }
+
+  return { error: null }
+}
+
+export function patientToFormValues(patient: PatientWithContacts): PatientFormValues {
+  const [addressLine1 = "", city = ""] = (patient.address ?? "").split(", ").concat(["", ""])
+  return {
+    firstName: patient.first_name,
+    lastName: patient.last_name,
+    dateOfBirth: patient.date_of_birth ?? "",
+    gender: (patient.gender as PatientFormValues["gender"]) ?? "prefer_not_to_say",
+    email: patient.email ?? "",
+    phoneNumber: patient.phone ?? "",
+    addressLine1,
+    city: city || addressLine1,
+    emergencyContactName: patient.emergency_contact?.name ?? "",
+    emergencyContactPhone: patient.emergency_contact?.phone ?? "",
+    medicalAlerts: "",
+  }
+}

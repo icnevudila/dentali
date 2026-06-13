@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="tooth-surface-atlas" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200" role="img" aria-label="Tooth surface map reference">
+  <style><![CDATA[
+    .panel { fill: #fff; stroke: #e2e8f0; }
+    .surf { stroke: #94a3b8; stroke-width: 2; fill: #fff; }
+    .surf-f { fill: #ecfdf5; }
+    .surf-o { fill: #fef9c3; }
+    .surf-m { fill: #eff6ff; }
+    .surf-d { fill: #fdf2f8; }
+    .surf-l { fill: #f5f3ff; }
+    .lbl { font: 700 11px Inter, Arial, sans-serif; fill: #334155; }
+    .hint { font: 500 10px Inter, Arial, sans-serif; fill: #64748b; }
+  ]]></style>
+  <rect class="panel" x="4" y="4" width="312" height="192" rx="12"/>
+  <text x="160" y="24" class="lbl" text-anchor="middle">Surface map (molar / premolar)</text>
+  <g transform="translate(160 108)">
+    <path class="surf surf-f" d="M -52 -28 L 52 -28 L 38 -8 L -38 -8 Z"/>
+    <text x="0" y="-16" class="lbl" text-anchor="middle">F / B</text>
+    <path class="surf surf-l" d="M -52 28 L 52 28 L 38 8 L -38 8 Z"/>
+    <text x="0" y="22" class="lbl" text-anchor="middle">L</text>
+    <path class="surf surf-m" d="M -52 -28 L -38 -8 L -38 8 L -52 28 Z"/>
+    <text x="-46" y="4" class="lbl" text-anchor="middle">M</text>
+    <path class="surf surf-d" d="M 52 -28 L 38 -8 L 38 8 L 52 28 Z"/>
+    <text x="46" y="4" class="lbl" text-anchor="middle">D</text>
+    <path class="surf surf-o" d="M -38 -8 L 38 -8 L 38 8 L -38 8 Z"/>
+    <text x="0" y="4" class="lbl" text-anchor="middle">O</text>
+  </g>
+  <text x="160" y="186" class="hint" text-anchor="middle">Facial/Buccal · Lingual · Mesial · Distal · Occlusal</text>
+</svg>

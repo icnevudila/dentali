@@ -1,13 +1,16 @@
 # Modül 07: Medical History
 
 ## Backend / Database
-- [ ] `medical_histories`, `patient_conditions`, `patient_allergies`, `patient_medications` tabloları
-- [ ] RPC: `create_medical_history_version`
-- [ ] RPC: `calculate_medical_risk_flags`
+- [x] `patient_medical_histories` tablosu (versioned JSON arrays)
+- [x] RPC: `calculate_medical_risk_flags` (stub rules)
+- [x] RPC: `create_medical_history_version`
 
 ## UI Bileşenleri
-- [ ] `MedicalAlertBanner` (Uyarı afişi)
-- [ ] Koşul ve Alerji satır içi düzenleyicileri
+- [x] `MedicalAlertBanner` (profile)
+- [x] `MedicalHistoryVersionDrawer` (compare vN → vM)
+- [x] Clinical risk flags card on history page
 
 ## Frontend Ekranları
-- [ ] `/patients/[id]/medical-history` sayfası
+- [x] `/patients/[id]/medical-history` sayfası
+
+## Durum: ✅ MVP entegre (Q077, Q082, Q092)

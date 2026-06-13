@@ -1,13 +1,15 @@
 # Modül 09: Dental Chart / Odontogram
 
 ## Backend / Database
-- [ ] `dental_charts`, `tooth_records`, `tooth_findings`, `chart_versions` tabloları
-- [ ] RPC: `upsert_tooth_finding`
-- [ ] RPC: `create_chart_version`
+- [x] `dental_charts`, `tooth_records`, `tooth_findings` (MVP via RPC)
+- [x] RPC: `upsert_tooth_finding`, `get_patient_odontogram`
 
 ## UI Bileşenleri
-- [ ] `FDIOdontogram` (İnteraktif SVG diş şeması)
-- [ ] `ToothDrawer` (Diş detay paneli)
+- [x] `InteractiveOdontogram` / `AnatomicOdontogramChart`
+- [x] `ToothDetailDrawer`
 
 ## Frontend Ekranları
-- [ ] `/patients/[id]/chart` sayfası
+- [x] `/patients/[id]/chart` sayfası
+- [x] `/patients/[id]/tooth/[toothId]` deep link
+
+## Durum: ✅ MVP entegre (Q038+)

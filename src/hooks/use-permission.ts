@@ -1,19 +1,20 @@
 "use client"
 
-import { useAuth } from './use-auth'
-import { useBranch } from './use-branch'
-import { useCallback } from 'react'
+import { useCallback } from "react"
+import { useAuth } from "./use-auth"
+import { usePermissionStore } from "@/stores/permission-store"
 
 export function usePermission() {
-  const { user } = useAuth()
-  const { activeBranch } = useBranch()
+  const { user, loading: authLoading } = useAuth()
+  const { loading, hasPermission: storeHas } = usePermissionStore()
 
-  const hasPermission = useCallback((permissionKey: string) => {
-    if (!user) return false
-    // TODO: In Wave 1 backend integration, this will check against the user's role 
-    // and the role_permissions table via Supabase JWT claims or RPC.
-    return true 
-  }, [user, activeBranch])
+  const hasPermission = useCallback(
+    (permissionKey: string) => {
+      if (!user) return false
+      return storeHas(permissionKey)
+    },
+    [user, storeHas]
+  )
 
-  return { hasPermission }
+  return { hasPermission, loading: authLoading || loading }
 }

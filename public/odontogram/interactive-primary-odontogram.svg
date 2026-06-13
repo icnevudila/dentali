@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="interactive-primary-odontogram" xmlns="http://www.w3.org/2000/svg" viewBox="395 85 690 660" width="690" height="660" role="img" aria-labelledby="title desc">
+  <title id="title">Primary Odontogram SVG</title>
+  <desc id="desc">Primary FDI odontogram with clickable deciduous teeth.</desc>
+  <style><![CDATA[
+    #interactive-odontogram, #interactive-primary-odontogram, #compact-odontogram { font-family: Inter, Segoe UI, Arial, sans-serif; background: #f8fafc; }
+    .panel-bg { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1; }
+    .panel-title { font-size: 16px; font-weight: 800; text-anchor: middle; fill: #243044; letter-spacing: 1.2px; }
+    .jaw-bg { fill: #ecfdf5; stroke: #99f6e4; stroke-width: 2; }
+    .palate { fill: #5eead4; opacity: .28; }
+    .midline { stroke: #0d9488; stroke-width: 1.6; opacity: .45; stroke-dasharray: 5 7; }
+    .tooth { cursor: pointer; outline: none; }
+    .tooth .crown { fill: #fffbeb; stroke: #a8a29e; stroke-width: 2.2; transition: fill .16s ease, stroke .16s ease; }
+    .tooth .detail { fill: none; stroke: #92400e; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; opacity: .75; }
+    .tooth .num circle { fill: #e2e8f0; stroke: #fff; stroke-width: 2; }
+    .tooth .num text { font-size: 10px; font-weight: 800; fill: #0f172a; text-anchor: middle; pointer-events: none; }
+    .tooth.molar .num circle { fill: #0369a1; }
+    .tooth.canine .num circle { fill: #0891b2; }
+    .tooth.incisor .num circle { fill: #0d9488; }
+    .tooth.molar .num text, .tooth.canine .num text, .tooth.incisor .num text { fill: #fff; }
+    .label { fill: #64748b; font-size: 13px; font-weight: 700; }
+    .arch-label { fill: #0f766e; font-size: 16px; font-weight: 800; text-anchor: middle; }
+]]></style>
+  <rect width="1100" height="800" fill="#f8fafc"/>
+  <g id="odontogram-panel" transform="translate(405 95)">
+    <rect x="0" y="0" width="665" height="650" rx="22" class="panel-bg"/>
+    <text x="332" y="34" class="panel-title">PRIMARY TEETH - FDI NUMBERING</text>
+    <text x="35" y="342" class="label">Patient Right</text>
+    <text x="544" y="342" class="label">Patient Left</text>
+    <text x="355" y="88" class="arch-label">Upper / Maxillary</text>
+    <text x="355" y="595" class="arch-label">Lower / Mandibular</text>
+    <g transform="translate(-405 -95)">
+      <path class="jaw-bg" d="M 560 390 C 585 210, 936 210, 961 390 C 886 340, 634 340, 560 390 Z"/>
+      <path class="palate" d="M 624 340 C 646 220, 874 220, 898 340 C 814 302, 709 302, 624 340 Z"/>
+      <line class="midline" x1="760" y1="170" x2="760" y2="397"/>
+      <path class="jaw-bg" d="M 560 470 C 634 520, 886 520, 961 470 C 936 670, 585 670, 560 470 Z"/>
+      <path class="palate" d="M 624 512 C 709 552, 812 552, 898 512 C 875 655, 646 655, 624 512 Z"/>
+      <line class="midline" x1="760" y1="455" x2="760" y2="707"/>
+      
+    <g id="tooth-55" class="tooth molar" data-tooth="55" data-type="molar" role="button" tabindex="0" aria-label="Tooth 55">
+      <title>Tooth 55 - molar</title>
+      <g class="tooth-shape" transform="translate(548 318) rotate(-92) scale(0.88)">
+        <path class="crown" d="M -21.0,-16.0 C -24.0,-24.0 -25.0,-26.0 -18.0,-22.0 C -23.0,-30.0 -25.0,-26.0 -25.0,-17.0 L -25.0,14.0 C -25.0,29.0 -25.0,26.0 -17.0,24.0 C -23.0,30.0 -25.0,26.0 -25.0,17.0 C -25.0,39.0 25.0,39.0 25.0,17.0 C 25.0,26.0 27.0,30.0 17.0,24.0 C 25.0,26.0 25.0,29.0 25.0,14.0 L 25.0,-17.0 C 25.0,-26.0 23.0,-30.0 18.0,-22.0 C 25.0,-26.0 24.0,-24.0 21.0,-16.0 C 17.0,-28.0 -17.0,-28.0 -21.0,-16.0 Z"/>
+        <path class="detail" d="M -12.5,-9.4 L 12.5,9.4 M 12.5,-9.4 L -12.5,9.4"/>
+<ellipse class="detail" cx="0" cy="0" rx="9.0" ry="7.3"/>
+      </g>
+      <g class="num" transform="translate(543 274)">
+        <circle r="13"/>
+        <text dy="4">55</text>
+      </g>
+    </g>
+
+    <g id="tooth-54" class="tooth molar" data-tooth="54" data-type="molar" role="button" tabindex="0" aria-label="Tooth 54">
+      <title>Tooth 54 - molar</title>
+      <g class="tooth-shape" transform="translate(532 268) rotate(-72) scale(0.88)">
+        <path class="crown" d="M -21.0,-16.0 C -24.0,-24.0 -25.0,-26.0 -18.0,-22.0 C -23.0,-30.0 -25.0,-26.0 -25.0,-17.0 L -25.0,14.0 C -25.0,29.0 -25.0,26.0 -17.0,24.0 C -23.0,30.0 -25.0,26.0 -25.0,17.0 C -25.0,39.0 25.0,39.0 25.0,17.0 C 25.0,26.0 27.0,30.0 17.0,24.0 C 25.0,26.0 25.0,29.0 25.0,14.0 L 25.0,-17.0 C 25.0,-26.0 23.0,-30.0 18.0,-22.0 C 25.0,-26.0 24.0,-24.0 21.0,-16.0 C 17.0,-28.0 -17.0,-28.0 -21.0,-16.0 Z"/>
+        <path class="detail" d="M -12.5,-9.4 L 12.5,9.4 M 12.5,-9.4 L -12.5,9.4"/>
+<ellipse class="detail" cx="0" cy="0" rx="9.0" ry="7.3"/>
+      </g>
+      <g class="num" transform="translate(527 224)">
+        <circle r="13"/>
+        <text dy="4">54</text>
+      </g>
+    </g>
+
+    <g id="tooth-53" class="tooth canine" data-tooth="53" data-type="canine" role="button" tabindex="0" aria-label="Tooth 53">
+      <title>Tooth 53 - canine</title>
+      <g class="tooth-shape" transform="translate(568 218) rotate(-52) scale(0.92)">
+        <path class="crown" d="M -12.0,-16.0 C -15.0,-24.0 -16.0,-26.0 -9.0,-22.0 C -14.0,-30.0 -16.0,-26.0 -16.0,-17.0 L -16.0,14.0 C -16.0,29.0 -16.0,26.0 -8.0,24.0 C -14.0,30.0 -16.0,26.0 -16.0,17.0 C -16.0,39.0 16.0,39.0 16.0,17.0 C 16.0,26.0 18.0,30.0 8.0,24.0 C 16.0,26.0 16.0,29.0 16.0,14.0 L 16.0,-17.0 C 16.0,-26.0 14.0,-30.0 9.0,-22.0 C 16.0,-26.0 15.0,-24.0 12.0,-16.0 C 8.0,-28.0 -8.0,-28.0 -12.0,-16.0 Z"/>
+        <path class="detail" d="M 0,-14.6 L -7.0,7.3 L 7.0,7.3 Z"/>
+      </g>
+      <g class="num" transform="translate(563 174)">
+        <circle r="13"/>
+        <text dy="4">53</text>
+      </g>
+    </g>
+
+    <g id="tooth-52" class="tooth incisor" data-tooth="52" data-type="incisor" role="button" tabindex="0" aria-label="Tooth 52">
+      <title>Tooth 52 - incisor</title>
+      <g class="tooth-shape" transform="translate(628 178) rotate(-32) scale(0.95)">
+        <path class="crown" d="M -9.0,-13.0 C -12.0,-21.0 -13.0,-23.0 -6.0,-19.0 C -11.0,-27.0 -13.0,-23.0 -13.0,-14.0 L -13.0,11.0 C -13.0,26.0 -13.0,23.0 -5.0,21.0 C -11.0,27.0 -13.0,23.0 -13.0,14.0 C -13.0,36.0 13.0,36.0 13.0,14.0 C 13.0,23.0 15.0,27.0 5.0,21.0 C 13.0,23.0 13.0,26.0 13.0,11.0 L 13.0,-14.0 C 13.0,-23.0 11.0,-27.0 6.0,-19.0 C 13.0,-23.0 12.0,-21.0 9.0,-13.0 C 5.0,-25.0 -5.0,-25.0 -9.0,-13.0 Z"/>
+        <path class="detail" d="M -6.5,0 C -2.6,-8.3 2.6,-8.3 6.5,0"/>
+      </g>
+      <g class="num" transform="translate(623 134)">
+        <circle r="13"/>
+        <text dy="4">52</text>
+      </g>
+    </g>
+
+    <g id="tooth-51" class="tooth incisor" data-tooth="51" data-type="incisor" role="button" tabindex="0" aria-label="Tooth 51">
+      <title>Tooth 51 - incisor</title>
+      <g class="tooth-shape" transform="translate(702 158) rotate(-12) scale(0.95)">
+        <path class="crown" d="M -9.0,-13.0 C -12.0,-21.0 -13.0,-23.0 -6.0,-19.0 C -11.0,-27.0 -13.0,-23.0 -13.0,-14.0 L -13.0,11.0 C -13.0,26.0 -13.0,23.0 -5.0,21.0 C -11.0,27.0 -13.0,23.0 -13.0,14.0 C -13.0,36.0 13.0,36.0 13.0,14.0 C 13.0,23.0 15.0,27.0 5.0,21.0 C 13.0,23.0 13.0,26.0 13.0,11.0 L 13.0,-14.0 C 13.0,-23.0 11.0,-27.0 6.0,-19.0 C 13.0,-23.0 12.0,-21.0 9.0,-13.0 C 5.0,-25.0 -5.0,-25.0 -9.0,-13.0 Z"/>
+        <path class="detail" d="M -6.5,0 C -2.6,-8.3 2.6,-8.3 6.5,0"/>
+      </g>
+      <g class="num" transform="translate(697 114)">
+        <circle r="13"/>
+        <text dy="4">51</text>
+      </g>
+    </g>
+
+    <g id="tooth-61" class="tooth incisor" data-tooth="61" data-type="incisor" role="button" tabindex="0" aria-label="Tooth 61">
+      <title>Tooth 61 - incisor</title>
+      <g class="tooth-shape" transform="translate(818 158) rotate(12) scale(0.95)">
+        <path class="crown" d="M -9.0,-13.0 C -12.0,-21.0 -13.0,-23.0 -6.0,-19.0 C -11.0,-27.0 -13.0,-23.0 -13.0,-14.0 L -13.0,11.0 C -13.0,26.0 -13.0,23.0 -5.0,21.0 C -11.0,27.0 -13.0,23.0 -13.0,14.0 C -13.0,36.0 13.0,36.0 13.0,14.0 C 13.0,23.0 15.0,27.0 5.0,21.0 C 13.0,23.0 13.0,26.0 13.0,11.0 L 13.0,-14.0 C 13.0,-23.0 11.0,-27.0 6.0,-19.0 C 13.0,-23.0 12.0,-21.0 9.0,-13.0 C 5.0,-25.0 -5.0,-25.0 -9.0,-13.0 Z"/>
+        <path class="detail" d="M -6.5,0 C -2.6,-8.3 2.6,-8.3 6.5,0"/>
+      </g>
+      <g class="num" transform="translate(813 114)">
+        <circle r="13"/>
+        <text dy="4">61</text>
+      </g>
+    </g>
+
+    <g id="tooth-62" class="tooth incisor" data-tooth="62" data-type="incisor" role="button" tabindex="0" aria-label="Tooth 62">
+      <title>Tooth 62 - incisor</title>
+      <g class="tooth-shape" transform="translate(892 178) rotate(32) scale(0.95)">
+        <path class="crown" d="M -9.0,-13.0 C -12.0,-21.0 -13.0,-23.0 -6.0,-19.0 C -11.0,-27.0 -13.0,-23.0 -13.0,-14.0 L -13.0,11.0 C -13.0,26.0 -13.0,23.0 -5.0,21.0 C -11.0,27.0 -13.0,23.0 -13.0,14.0 C -13.0,36.0 13.0,36.0 13.0,14.0 C 13.0,23.0 15.0,27.0 5.0,21.0 C 13.0,23.0 13.0,26.0 13.0,11.0 L 13.0,-14.0 C 13.0,-23.0 11.0,-27.0 6.0,-19.0 C 13.0,-23.0 12.0,-21.0 9.0,-13.0 C 5.0,-25.0 -5.0,-25.0 -9.0,-13.0 Z"/>
+        <path class="detail" d="M -6.5,0 C -2.6,-8.3 2.6,-8.3 6.5,0"/>
+      </g>
+      <g class="num" transform="translate(887 134)">
+        <circle r="13"/>
+        <text dy="4">62</text>
+      </g>
+    </g>
+
+    <g id="tooth-63" class="tooth canine" data-tooth="63" data-type="canine" role="button" tabindex="0" aria-label="Tooth 63">
+      <title>Tooth 63 - canine</title>
+      <g class="tooth-shape" transform="translate(952 218) rotate(52) scale(0.92)">
+        <path class="crown" d="M -12.0,-16.0 C -15.0,-24.0 -16.0,-26.0 -9.0,-22.0 C -14.0,-30.0 -16.0,-26.0 -16.0,-17.0 L -16.0,14.0 C -16.0,29.0 -16.0,26.0 -8.0,24.0 C -14.0,30.0 -16.0,26.0 -16.0,17.0 C -16.0,39.0 16.0,39.0 16.0,17.0 C 16.0,26.0 18.0,30.0 8.0,24.0 C 16.0,26.0 16.0,29.0 16.0,14.0 L 16.0,-17.0 C 16.0,-26.0 14.0,-30.0 9.0,-22.0 C 16.0,-26.0 15.0,-24.0 12.0,-16.0 C 8.0,-28.0 -8.0,-28.0 -12.0,-16.0 Z"/>
+        <path class="detail" d="M 0,-14.6 L -7.0,7.3 L 7.0,7.3 Z"/>
+      </g>
+      <g class="num" transform="translate(947 174)">
+        <circle r="13"/>
+        <text dy="4">63</text>
+      </g>
+    </g>
+
+    <g id="tooth-64" class="tooth molar" data-tooth="64" data-type="molar" role="button" tabindex="0" aria-label="Tooth 64">
+      <title>Tooth 64 - molar</title>
+      <g class="tooth-shape" transform="translate(988 268) rotate(72) scale(0.88)">
+        <path class="crown" d="M -21.0,-16.0 C -24.0,-24.0 -25.0,-26.0 -18.0,-22.0 C -23.0,-30.0 -25.0,-26.0 -25.0,-17.0 L -25.0,14.0 C -25.0,29.0 -25.0,26.0 -17.0,24.0 C -23.0,30.0 -25.0,26.0 -25.0,17.0 C -25.0,39.0 25.0,39.0 25.0,17.0 C 25.0,26.0 27.0,30.0 17.0,24.0 C 25.0,26.0 25.0,29.0 25.0,14.0 L 25.0,-17.0 C 25.0,-26.0 23.0,-30.0 18.0,-22.0 C 25.0,-26.0 24.0,-24.0 21.0,-16.0 C 17.0,-28.0 -17.0,-28.0 -21.0,-16.0 Z"/>
+        <path class="detail" d="M -12.5,-9.4 L 12.5,9.4 M 12.5,-9.4 L -12.5,9.4"/>
+<ellipse class="detail" cx="0" cy="0" rx="9.0" ry="7.3"/>
+      </g>
+      <g class="num" transform="translate(983 224)">
+        <circle r="13"/>
+        <text dy="4">64</text>
+      </g>
+    </g>
+
+    <g id="tooth-65" class="tooth molar" data-tooth="65" data-type="molar" role="button" tabindex="0" aria-label="Tooth 65">
+      <title>Tooth 65 - molar</title>
+      <g class="tooth-shape" transform="translate(972 318) rotate(92) scale(0.88)">
+        <path class="crown" d="M -21.0,-16.0 C -24.0,-24.0 -25.0,-26.0 -18.0,-22.0 C -23.0,-30.0 -25.0,-26.0 -25.0,-17.0 L -25.0,14.0 C -25.0,29.0 -25.0,26.0 -17.0,24.0 C -23.0,30.0 -25.0,26.0 -25.0,17.0 C -25.0,39.0 25.0,39.0 25.0,17.0 C 25.0,26.0 27.0,30.0 17.0,24.0 C 25.0,26.0 25.0,29.0 25.0,14.0 L 25.0,-17.0 C 25.0,-26.0 23.0,-30.0 18.0,-22.0 C 25.0,-26.0 24.0,-24.0 21.0,-16.0 C 17.0,-28.0 -17.0,-28.0 -21.0,-16.0 Z"/>
+        <path class="detail" d="M -12.5,-9.4 L 12.5,9.4 M 12.5,-9.4 L -12.5,9.4"/>
+<ellipse class="detail" cx="0" cy="0" rx="9.0" ry="7.3"/>
+      </g>
+      <g class="num" transform="translate(967 274)">
+        <circle r="13"/>
+        <text dy="4">65</text>
+      </g>
+    </g>
+
+    <g id="tooth-85" class="tooth molar" data-tooth="85" data-type="molar" role="button" tabindex="0" aria-label="Tooth 85">
+      <title>Tooth 85 - molar</title>
+      <g class="tooth-shape" transform="translate(548 542) rotate(92) scale(0.88)">
+        <path class="crown" d="M -21.0,-16.0 C -24.0,-24.0 -25.0,-26.0 -18.0,-22.0 C -23.0,-30.0 -25.0,-26.0 -25.0,-17.0 L -25.0,14.0 C -25.0,29.0 -25.0,26.0 -17.0,24.0 C -23.0,30.0 -25.0,26.0 -25.0,17.0 C -25.0,39.0 25.0,39.0 25.0,17.0 C 25.0,26.0 27.0,30.0 17.0,24.0 C 25.0,26.0 25.0,29.0 25.0,14.0 L 25.0,-17.0 C 25.0,-26.0 23.0,-30.0 18.0,-22.0 C 25.0,-26.0 24.0,-24.0 21.0,-16.0 C 17.0,-28.0 -17.0,-28.0 -21.0,-16.0 Z"/>
+        <path class="detail" d="M -12.5,-9.4 L 12.5,9.4 M 12.5,-9.4 L -12.5,9.4"/>
+<ellipse class="detail" cx="0" cy="0" rx="9.0" ry="7.3"/>
+      </g>
+      <g class="num" transform="translate(543 586)">
+        <circle r="13"/>
+        <text dy="4">85</text>
+      </g>
+    </g>
+
+    <g id="tooth-84" class="tooth molar" data-tooth="84" data-type="molar" role="button" tabindex="0" aria-label="Tooth 84">
+      <title>Tooth 84 - molar</title>
+      <g class="tooth-shape" transform="translate(532 592) rotate(72) scale(0.88)">
+        <path class="crown" d="M -21.0,-16.0 C -24.0,-24.0 -25.0,-26.0 -18.0,-22.0 C -23.0,-30.0 -25.0,-26.0 -25.0,-17.0 L -25.0,14.0 C -25.0,29.0 -25.0,26.0 -17.0,24.0 C -23.0,30.0 -25.0,26.0 -25.0,17.0 C -25.0,39.0 25.0,39.0 25.0,17.0 C 25.0,26.0 27.0,30.0 17.0,24.0 C 25.0,26.0 25.0,29.0 25.0,14.0 L 25.0,-17.0 C 25.0,-26.0 23.0,-30.0 18.0,-22.0 C 25.0,-26.0 24.0,-24.0 21.0,-16.0 C 17.0,-28.0 -17.0,-28.0 -21.0,-16.0 Z"/>
+        <path class="detail" d="M -12.5,-9.4 L 12.5,9.4 M 12.5,-9.4 L -12.5,9.4"/>
+<ellipse class="detail" cx="0" cy="0" rx="9.0" ry="7.3"/>
+      </g>
+      <g class="num" transform="translate(527 636)">
+        <circle r="13"/>
+        <text dy="4">84</text>
+      </g>
+    </g>
+
+    <g id="tooth-83" class="tooth canine" data-tooth="83" data-type="canine" role="button" tabindex="0" aria-label="Tooth 83">
+      <title>Tooth 83 - canine</title>
+      <g class="tooth-shape" transform="translate(568 642) rotate(52) scale(0.92)">
+        <path class="crown" d="M -12.0,-16.0 C -15.0,-24.0 -16.0,-26.0 -9.0,-22.0 C -14.0,-30.0 -16.0,-26.0 -16.0,-17.0 L -16.0,14.0 C -16.0,29.0 -16.0,26.0 -8.0,24.0 C -14.0,30.0 -16.0,26.0 -16.0,17.0 C -16.0,39.0 16.0,39.0 16.0,17.0 C 16.0,26.0 18.0,30.0 8.0,24.0 C 16.0,26.0 16.0,29.0 16.0,14.0 L 16.0,-17.0 C 16.0,-26.0 14.0,-30.0 9.0,-22.0 C 16.0,-26.0 15.0,-24.0 12.0,-16.0 C 8.0,-28.0 -8.0,-28.0 -12.0,-16.0 Z"/>
+        <path class="detail" d="M 0,-14.6 L -7.0,7.3 L 7.0,7.3 Z"/>
+      </g>
+      <g class="num" transform="translate(563 686)">
+        <circle r="13"/>
+        <text dy="4">83</text>
+      </g>
+    </g>
+
+    <g id="tooth-82" class="tooth incisor" data-tooth="82" data-type="incisor" role="button" tabindex="0" aria-label="Tooth 82">
+      <title>Tooth 82 - incisor</title>
+      <g class="tooth-shape" transform="translate(628 682) rotate(32) scale(0.95)">
+        <path class="crown" d="M -9.0,-13.0 C -12.0,-21.0 -13.0,-23.0 -6.0,-19.0 C -11.0,-27.0 -13.0,-23.0 -13.0,-14.0 L -13.0,11.0 C -13.0,26.0 -13.0,23.0 -5.0,21.0 C -11.0,27.0 -13.0,23.0 -13.0,14.0 C -13.0,36.0 13.0,36.0 13.0,14.0 C 13.0,23.0 15.0,27.0 5.0,21.0 C 13.0,23.0 13.0,26.0 13.0,11.0 L 13.0,-14.0 C 13.0,-23.0 11.0,-27.0 6.0,-19.0 C 13.0,-23.0 12.0,-21.0 9.0,-13.0 C 5.0,-25.0 -5.0,-25.0 -9.0,-13.0 Z"/>
+        <path class="detail" d="M -6.5,0 C -2.6,-8.3 2.6,-8.3 6.5,0"/>
+      </g>
+      <g class="num" transform="translate(623 726)">
+        <circle r="13"/>
+        <text dy="4">82</text>
+      </g>
+    </g>
+
+    <g id="tooth-81" class="tooth incisor" data-tooth="81" data-type="incisor" role="button" tabindex="0" aria-label="Tooth 81">
+      <title>Tooth 81 - incisor</title>
+      <g class="tooth-shape" transform="translate(702 702) rotate(12) scale(0.95)">
+        <path class="crown" d="M -9.0,-13.0 C -12.0,-21.0 -13.0,-23.0 -6.0,-19.0 C -11.0,-27.0 -13.0,-23.0 -13.0,-14.0 L -13.0,11.0 C -13.0,26.0 -13.0,23.0 -5.0,21.0 C -11.0,27.0 -13.0,23.0 -13.0,14.0 C -13.0,36.0 13.0,36.0 13.0,14.0 C 13.0,23.0 15.0,27.0 5.0,21.0 C 13.0,23.0 13.0,26.0 13.0,11.0 L 13.0,-14.0 C 13.0,-23.0 11.0,-27.0 6.0,-19.0 C 13.0,-23.0 12.0,-21.0 9.0,-13.0 C 5.0,-25.0 -5.0,-25.0 -9.0,-13.0 Z"/>
+        <path class="detail" d="M -6.5,0 C -2.6,-8.3 2.6,-8.3 6.5,0"/>
+      </g>
+      <g class="num" transform="translate(697 746)">
+        <circle r="13"/>
+        <text dy="4">81</text>
+      </g>
+    </g>
+
+    <g id="tooth-71" class="tooth incisor" data-tooth="71" data-type="incisor" role="button" tabindex="0" aria-label="Tooth 71">
+      <title>Tooth 71 - incisor</title>
+      <g class="tooth-shape" transform="translate(818 702) rotate(-12) scale(0.95)">
+        <path class="crown" d="M -9.0,-13.0 C -12.0,-21.0 -13.0,-23.0 -6.0,-19.0 C -11.0,-27.0 -13.0,-23.0 -13.0,-14.0 L -13.0,11.0 C -13.0,26.0 -13.0,23.0 -5.0,21.0 C -11.0,27.0 -13.0,23.0 -13.0,14.0 C -13.0,36.0 13.0,36.0 13.0,14.0 C 13.0,23.0 15.0,27.0 5.0,21.0 C 13.0,23.0 13.0,26.0 13.0,11.0 L 13.0,-14.0 C 13.0,-23.0 11.0,-27.0 6.0,-19.0 C 13.0,-23.0 12.0,-21.0 9.0,-13.0 C 5.0,-25.0 -5.0,-25.0 -9.0,-13.0 Z"/>
+        <path class="detail" d="M -6.5,0 C -2.6,-8.3 2.6,-8.3 6.5,0"/>
+      </g>
+      <g class="num" transform="translate(813 746)">
+        <circle r="13"/>
+        <text dy="4">71</text>
+      </g>
+    </g>
+
+    <g id="tooth-72" class="tooth incisor" data-tooth="72" data-type="incisor" role="button" tabindex="0" aria-label="Tooth 72">
+      <title>Tooth 72 - incisor</title>
+      <g class="tooth-shape" transform="translate(892 682) rotate(-32) scale(0.95)">
+        <path class="crown" d="M -9.0,-13.0 C -12.0,-21.0 -13.0,-23.0 -6.0,-19.0 C -11.0,-27.0 -13.0,-23.0 -13.0,-14.0 L -13.0,11.0 C -13.0,26.0 -13.0,23.0 -5.0,21.0 C -11.0,27.0 -13.0,23.0 -13.0,14.0 C -13.0,36.0 13.0,36.0 13.0,14.0 C 13.0,23.0 15.0,27.0 5.0,21.0 C 13.0,23.0 13.0,26.0 13.0,11.0 L 13.0,-14.0 C 13.0,-23.0 11.0,-27.0 6.0,-19.0 C 13.0,-23.0 12.0,-21.0 9.0,-13.0 C 5.0,-25.0 -5.0,-25.0 -9.0,-13.0 Z"/>
+        <path class="detail" d="M -6.5,0 C -2.6,-8.3 2.6,-8.3 6.5,0"/>
+      </g>
+      <g class="num" transform="translate(887 726)">
+        <circle r="13"/>
+        <text dy="4">72</text>
+      </g>
+    </g>
+
+    <g id="tooth-73" class="tooth canine" data-tooth="73" data-type="canine" role="button" tabindex="0" aria-label="Tooth 73">
+      <title>Tooth 73 - canine</title>
+      <g class="tooth-shape" transform="translate(952 642) rotate(-52) scale(0.92)">
+        <path class="crown" d="M -12.0,-16.0 C -15.0,-24.0 -16.0,-26.0 -9.0,-22.0 C -14.0,-30.0 -16.0,-26.0 -16.0,-17.0 L -16.0,14.0 C -16.0,29.0 -16.0,26.0 -8.0,24.0 C -14.0,30.0 -16.0,26.0 -16.0,17.0 C -16.0,39.0 16.0,39.0 16.0,17.0 C 16.0,26.0 18.0,30.0 8.0,24.0 C 16.0,26.0 16.0,29.0 16.0,14.0 L 16.0,-17.0 C 16.0,-26.0 14.0,-30.0 9.0,-22.0 C 16.0,-26.0 15.0,-24.0 12.0,-16.0 C 8.0,-28.0 -8.0,-28.0 -12.0,-16.0 Z"/>
+        <path class="detail" d="M 0,-14.6 L -7.0,7.3 L 7.0,7.3 Z"/>
+      </g>
+      <g class="num" transform="translate(947 686)">
+        <circle r="13"/>
+        <text dy="4">73</text>
+      </g>
+    </g>
+
+    <g id="tooth-74" class="tooth molar" data-tooth="74" data-type="molar" role="button" tabindex="0" aria-label="Tooth 74">
+      <title>Tooth 74 - molar</title>
+      <g class="tooth-shape" transform="translate(988 592) rotate(-72) scale(0.88)">
+        <path class="crown" d="M -21.0,-16.0 C -24.0,-24.0 -25.0,-26.0 -18.0,-22.0 C -23.0,-30.0 -25.0,-26.0 -25.0,-17.0 L -25.0,14.0 C -25.0,29.0 -25.0,26.0 -17.0,24.0 C -23.0,30.0 -25.0,26.0 -25.0,17.0 C -25.0,39.0 25.0,39.0 25.0,17.0 C 25.0,26.0 27.0,30.0 17.0,24.0 C 25.0,26.0 25.0,29.0 25.0,14.0 L 25.0,-17.0 C 25.0,-26.0 23.0,-30.0 18.0,-22.0 C 25.0,-26.0 24.0,-24.0 21.0,-16.0 C 17.0,-28.0 -17.0,-28.0 -21.0,-16.0 Z"/>
+        <path class="detail" d="M -12.5,-9.4 L 12.5,9.4 M 12.5,-9.4 L -12.5,9.4"/>
+<ellipse class="detail" cx="0" cy="0" rx="9.0" ry="7.3"/>
+      </g>
+      <g class="num" transform="translate(983 636)">
+        <circle r="13"/>
+        <text dy="4">74</text>
+      </g>
+    </g>
+
+    <g id="tooth-75" class="tooth molar" data-tooth="75" data-type="molar" role="button" tabindex="0" aria-label="Tooth 75">
+      <title>Tooth 75 - molar</title>
+      <g class="tooth-shape" transform="translate(972 542) rotate(-92) scale(0.88)">
+        <path class="crown" d="M -21.0,-16.0 C -24.0,-24.0 -25.0,-26.0 -18.0,-22.0 C -23.0,-30.0 -25.0,-26.0 -25.0,-17.0 L -25.0,14.0 C -25.0,29.0 -25.0,26.0 -17.0,24.0 C -23.0,30.0 -25.0,26.0 -25.0,17.0 C -25.0,39.0 25.0,39.0 25.0,17.0 C 25.0,26.0 27.0,30.0 17.0,24.0 C 25.0,26.0 25.0,29.0 25.0,14.0 L 25.0,-17.0 C 25.0,-26.0 23.0,-30.0 18.0,-22.0 C 25.0,-26.0 24.0,-24.0 21.0,-16.0 C 17.0,-28.0 -17.0,-28.0 -21.0,-16.0 Z"/>
+        <path class="detail" d="M -12.5,-9.4 L 12.5,9.4 M 12.5,-9.4 L -12.5,9.4"/>
+<ellipse class="detail" cx="0" cy="0" rx="9.0" ry="7.3"/>
+      </g>
+      <g class="num" transform="translate(967 586)">
+        <circle r="13"/>
+        <text dy="4">75</text>
+      </g>
+    </g>
+    </g>
+  </g>
+</svg>

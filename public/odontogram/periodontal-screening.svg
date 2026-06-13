@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="periodontal-screening" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="360" height="200" role="img" aria-label="Periodontal six-site screening reference">
+  <style><![CDATA[
+    .title { font: 700 12px Inter, Arial, sans-serif; fill: #0f766e; }
+    .sext-box { fill: #f0fdfa; stroke: #99f6e4; stroke-width: 1.2; }
+    .sext-label { font: 700 10px Inter, Arial, sans-serif; fill: #115e59; }
+    .site { fill: #fff; stroke: #14b8a6; stroke-width: 1.5; }
+    .legend { font: 600 9px Inter, Arial, sans-serif; fill: #475569; }
+  ]]></style>
+  <text x="180" y="16" class="title" text-anchor="middle">PSR / BOP — six sites per sextant</text>
+  
+    <g class="sextant" transform="translate(40 36)">
+      <rect x="-36" y="-22" width="72" height="44" rx="8" class="sext-box"/>
+      <text x="0" y="-28" class="sext-label" text-anchor="middle">UR</text>
+      <circle cx="-18" cy="0" r="5" class="site site-dfb"/>
+      <circle cx="0" cy="-10" r="5" class="site site-mb"/>
+      <circle cx="18" cy="0" r="5" class="site site-mfb"/>
+      <circle cx="-18" cy="14" r="5" class="site site-dlb"/>
+      <circle cx="0" cy="20" r="5" class="site site-lb"/>
+      <circle cx="18" cy="14" r="5" class="site site-mlb"/>
+    </g>
+
+    <g class="sextant" transform="translate(160 36)">
+      <rect x="-36" y="-22" width="72" height="44" rx="8" class="sext-box"/>
+      <text x="0" y="-28" class="sext-label" text-anchor="middle">UA</text>
+      <circle cx="-18" cy="0" r="5" class="site site-dfb"/>
+      <circle cx="0" cy="-10" r="5" class="site site-mb"/>
+      <circle cx="18" cy="0" r="5" class="site site-mfb"/>
+      <circle cx="-18" cy="14" r="5" class="site site-dlb"/>
+      <circle cx="0" cy="20" r="5" class="site site-lb"/>
+      <circle cx="18" cy="14" r="5" class="site site-mlb"/>
+    </g>
+
+    <g class="sextant" transform="translate(280 36)">
+      <rect x="-36" y="-22" width="72" height="44" rx="8" class="sext-box"/>
+      <text x="0" y="-28" class="sext-label" text-anchor="middle">UL</text>
+      <circle cx="-18" cy="0" r="5" class="site site-dfb"/>
+      <circle cx="0" cy="-10" r="5" class="site site-mb"/>
+      <circle cx="18" cy="0" r="5" class="site site-mfb"/>
+      <circle cx="-18" cy="14" r="5" class="site site-dlb"/>
+      <circle cx="0" cy="20" r="5" class="site site-lb"/>
+      <circle cx="18" cy="14" r="5" class="site site-mlb"/>
+    </g>
+
+    <g class="sextant" transform="translate(40 148)">
+      <rect x="-36" y="-22" width="72" height="44" rx="8" class="sext-box"/>
+      <text x="0" y="-28" class="sext-label" text-anchor="middle">LR</text>
+      <circle cx="-18" cy="0" r="5" class="site site-dfb"/>
+      <circle cx="0" cy="-10" r="5" class="site site-mb"/>
+      <circle cx="18" cy="0" r="5" class="site site-mfb"/>
+      <circle cx="-18" cy="14" r="5" class="site site-dlb"/>
+      <circle cx="0" cy="20" r="5" class="site site-lb"/>
+      <circle cx="18" cy="14" r="5" class="site site-mlb"/>
+    </g>
+
+    <g class="sextant" transform="translate(160 148)">
+      <rect x="-36" y="-22" width="72" height="44" rx="8" class="sext-box"/>
+      <text x="0" y="-28" class="sext-label" text-anchor="middle">LA</text>
+      <circle cx="-18" cy="0" r="5" class="site site-dfb"/>
+      <circle cx="0" cy="-10" r="5" class="site site-mb"/>
+      <circle cx="18" cy="0" r="5" class="site site-mfb"/>
+      <circle cx="-18" cy="14" r="5" class="site site-dlb"/>
+      <circle cx="0" cy="20" r="5" class="site site-lb"/>
+      <circle cx="18" cy="14" r="5" class="site site-mlb"/>
+    </g>
+
+    <g class="sextant" transform="translate(280 148)">
+      <rect x="-36" y="-22" width="72" height="44" rx="8" class="sext-box"/>
+      <text x="0" y="-28" class="sext-label" text-anchor="middle">LL</text>
+      <circle cx="-18" cy="0" r="5" class="site site-dfb"/>
+      <circle cx="0" cy="-10" r="5" class="site site-mb"/>
+      <circle cx="18" cy="0" r="5" class="site site-mfb"/>
+      <circle cx="-18" cy="14" r="5" class="site site-dlb"/>
+      <circle cx="0" cy="20" r="5" class="site site-lb"/>
+      <circle cx="18" cy="14" r="5" class="site site-mlb"/>
+    </g>
+  <text x="12" y="192" class="legend">DFB · MB · MFB · DLB · LB · MLB</text>
+</svg>

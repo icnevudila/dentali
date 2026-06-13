@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../styles/tokens.css";
 
 @theme {
   --color-primary-50: #f0fdfa;
@@ -69,5 +70,272 @@
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Subtle motion — golden-page reference (respects reduced motion below) */
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes serve-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.45);
+  }
+  40% {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 18px rgba(20, 184, 166, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(20, 184, 166, 0);
+  }
+}
+
+@keyframes serve-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes display-ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@layer utilities {
+  .animate-page-enter {
+    animation: fade-rise 140ms ease-out both;
+  }
+
+  .animate-fade-rise {
+    animation: fade-rise 120ms ease-out both;
+  }
+
+  .animate-stagger-item {
+    animation: fade-rise 140ms ease-out both;
+    animation-delay: calc(var(--stagger-index, 0) * 28ms);
+  }
+
+  .animate-serve-pulse {
+    animation: serve-pulse 0.75s ease-out both;
+  }
+
+  .animate-serve-enter {
+    animation: serve-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-display-ticker {
+    animation: display-ticker 42s linear infinite;
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--color-neutral-100) 0%,
+      var(--color-neutral-50) 45%,
+      var(--color-neutral-100) 90%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Landing page — calm clinic marketing surfaces */
+  .landing-surface-muted {
+    background-color: var(--color-neutral-50);
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% -10%, rgb(20 184 166 / 0.07), transparent 55%),
+      linear-gradient(to bottom, rgb(249 250 251 / 1), rgb(243 244 246 / 0.5));
+  }
+
+  .landing-surface-inset {
+    background-color: var(--color-neutral-100);
+    background-image: radial-gradient(circle at 1px 1px, rgb(15 23 42 / 0.04) 1px, transparent 0);
+    background-size: 24px 24px;
+  }
+
+  .landing-hero-glow {
+    background-image:
+      radial-gradient(ellipse 90% 70% at 70% 20%, rgb(20 184 166 / 0.14), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 10% 80%, rgb(45 212 191 / 0.08), transparent 50%);
+  }
+
+  .landing-showcase-well-glow {
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgb(255 255 255 / 0.9), transparent 70%);
+  }
+
+  .landing-device-tab {
+    transition:
+      color 180ms ease,
+      border-color 180ms ease,
+      background-color 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  .landing-stage-card-active {
+    box-shadow:
+      0 0 0 1px rgb(20 184 166 / 0.25),
+      0 8px 24px -8px rgb(15 23 42 / 0.12);
+  }
+
+  .landing-preview-fade {
+    animation: fade-rise 160ms ease-out both;
+  }
+
+  .landing-preview-vignette {
+    box-shadow: inset 0 0 24px rgb(15 23 42 / 0.04);
+  }
+}
+
+/* View transition timing (React <ViewTransition> recipes) */
+:root {
+  --duration-exit: 100ms;
+  --duration-enter: 140ms;
+  --duration-move: 260ms;
+}
+
+@keyframes vt-fade {
+  from {
+    filter: blur(2px);
+    opacity: 0;
+  }
+  to {
+    filter: blur(0);
+    opacity: 1;
+  }
+}
+
+@keyframes vt-slide {
+  from {
+    translate: var(--slide-offset);
+  }
+  to {
+    translate: 0;
+  }
+}
+
+::view-transition-old(.nav-forward) {
+  --slide-offset: -60px;
+  animation:
+    var(--duration-exit) ease-in both vt-fade reverse,
+    var(--duration-move) ease-in-out both vt-slide reverse;
+}
+::view-transition-new(.nav-forward) {
+  --slide-offset: 60px;
+  animation:
+    var(--duration-enter) ease-out var(--duration-exit) both vt-fade,
+    var(--duration-move) ease-in-out both vt-slide;
+}
+
+::view-transition-old(.nav-back) {
+  --slide-offset: 60px;
+  animation:
+    var(--duration-exit) ease-in both vt-fade reverse,
+    var(--duration-move) ease-in-out both vt-slide reverse;
+}
+::view-transition-new(.nav-back) {
+  --slide-offset: -60px;
+  animation:
+    var(--duration-enter) ease-out var(--duration-exit) both vt-fade,
+    var(--duration-move) ease-in-out both vt-slide;
+}
+
+::view-transition-group(app-sidebar),
+::view-transition-group(app-topbar) {
+  animation: none;
+  z-index: 100;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-enter,
+  .animate-fade-rise,
+  .animate-stagger-item,
+  .animate-shimmer,
+  .animate-serve-pulse,
+  .animate-serve-enter,
+  .animate-display-ticker {
+    animation: none !important;
+  }
+
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
+.consent-document-scroll {
+  background-color: #fff;
+  background-image: linear-gradient(to bottom, rgb(249 250 251 / 0.35), transparent 48px);
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #consent-print-document,
+  #consent-print-document * {
+    visibility: visible;
+  }
+
+  #consent-print-document,
+  #patient-print-document,
+  #chart-print-document {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  #consent-print-document,
+  #consent-print-document *,
+  #patient-print-document,
+  #patient-print-document *,
+  #chart-print-document,
+  #chart-print-document * {
+    visibility: visible;
+  }
+
+  #chart-print-document {
+    display: block !important;
   }
 }
