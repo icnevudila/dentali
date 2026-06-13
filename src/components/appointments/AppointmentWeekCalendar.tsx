@@ -283,11 +283,15 @@ export function AppointmentWeekCalendar({
             return (
               <div
                 key={key}
+                onDragOver={(e) => handleDragOver(e, key)}
+                onDragLeave={() => setDropTarget((prev) => (prev === key ? null : prev))}
+                onDrop={(e) => handleDrop(e, key)}
                 onClick={() => onSelectDate(key)}
                 className={cn(
-                  "bg-white p-2 min-h-[90px] cursor-pointer transition-colors relative hover:bg-neutral-50/50 flex flex-col justify-between",
+                  "bg-white p-2 min-h-[90px] cursor-pointer transition-all relative hover:bg-neutral-50/50 flex flex-col justify-between",
                   !isCurrentMonth && "bg-neutral-50/30 text-neutral-400",
-                  isSelected && "ring-1 ring-primary-500 bg-primary-50/10 z-10"
+                  isSelected && "ring-1 ring-primary-500 bg-primary-50/10 z-10",
+                  dropTarget === key && "bg-primary-50 ring-2 ring-primary-300"
                 )}
               >
                 <div className="flex items-center justify-between mb-1">
@@ -307,18 +311,27 @@ export function AppointmentWeekCalendar({
                 </div>
 
                 <div className="space-y-1 overflow-hidden flex-1">
-                  {dayAppts.slice(0, 3).map((appt) => (
-                    <div
-                      key={appt.id}
-                      className={cn(
-                        "text-[9px] font-medium px-1 py-0.5 rounded border flex items-center justify-between gap-1",
-                        getStatusColor(appt.status)
-                      )}
-                    >
-                      <span className="truncate">{appt.patient_name ?? "Patient"}</span>
-                      <span className="shrink-0 text-neutral-400">{formatAppointmentTime(appt.scheduled_at)}</span>
-                    </div>
-                  ))}
+                  {dayAppts.slice(0, 3).map((appt) => {
+                    const draggable = canReschedule && (appt.status === "scheduled" || appt.status === "confirmed")
+                    return (
+                      <div
+                        key={appt.id}
+                        draggable={draggable}
+                        onDragStart={(e) => {
+                          e.stopPropagation()
+                          handleDragStart(e, appt)
+                        }}
+                        className={cn(
+                          "text-[9px] font-medium px-1 py-0.5 rounded border flex items-center justify-between gap-1",
+                          getStatusColor(appt.status),
+                          draggable && "cursor-grab active:cursor-grabbing hover:border-neutral-300"
+                        )}
+                      >
+                        <span className="truncate">{appt.patient_name ?? "Patient"}</span>
+                        <span className="shrink-0 text-neutral-400">{formatAppointmentTime(appt.scheduled_at)}</span>
+                      </div>
+                    )
+                  })}
                   {dayAppts.length > 3 && (
                     <p className="text-[9px] text-primary-600 font-semibold pl-1">
                       +{dayAppts.length - 3} more

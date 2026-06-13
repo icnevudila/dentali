@@ -37,10 +37,10 @@ export function RecordRow({
   const hasLeading = Boolean(leading || initials)
 
   const inner = (
-    <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
-      {hasLeading ? (
-        <div className="row-span-2 sm:row-span-1 self-start sm:self-center">
-          {leading ? (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full min-w-0 gap-4">
+      <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
+        {hasLeading && (
+          leading ? (
             <div
               className={cn(
                 "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
@@ -61,27 +61,19 @@ export function RecordRow({
             >
               {initials}
             </div>
-          )}
+          )
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold leading-snug text-neutral-950 text-sm sm:text-base">{primary}</div>
+          {secondary ? (
+            <div className="mt-0.5 text-xs sm:text-sm leading-snug text-neutral-500 break-words">{secondary}</div>
+          ) : null}
+          {meta ? <div className="mt-2 flex flex-wrap items-center gap-2">{meta}</div> : null}
         </div>
-      ) : null}
-
-      <div className={cn("min-w-0", hasLeading ? "col-start-2" : "col-start-1")}>
-        <div className="font-medium leading-snug text-neutral-950">{primary}</div>
-        {secondary ? (
-          <div className="mt-0.5 text-sm leading-snug text-neutral-500">{secondary}</div>
-        ) : null}
-        {meta ? <div className="mt-2 flex flex-wrap items-center gap-2">{meta}</div> : null}
       </div>
 
-      {trailing || href ? (
-        <div
-          className={cn(
-            "flex min-w-0 items-center justify-end gap-2",
-            hasLeading ? "col-start-2 sm:col-start-3" : "col-start-1 sm:col-start-2",
-            "sm:row-start-1 sm:self-center",
-            meta ? "mt-1 sm:mt-0" : "mt-2 sm:mt-0"
-          )}
-        >
+      {(trailing || href) && (
+        <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 border-t border-neutral-100 sm:border-0 pt-3 sm:pt-0">
           {trailing}
           {href ? (
             <ChevronRight
@@ -90,7 +82,7 @@ export function RecordRow({
             />
           ) : null}
         </div>
-      ) : null}
+      )}
     </div>
   )
 

@@ -29,7 +29,7 @@ import {
 import { sendAppointmentReminder } from "@/lib/notifications/notification-service"
 import { notifyWaitlistOnSlotOpen } from "@/lib/waitlist/waitlist-service"
 import { usePermission } from "@/hooks/use-permission"
-import { fetchOrgStaff, type StaffMember } from "@/lib/staff/staff-service"
+import { fetchOrgStaff, type StaffMember, addStaffMemberDirectly, fetchRolesList } from "@/lib/staff/staff-service"
 import { AppointmentWeekCalendar } from "@/components/appointments/AppointmentWeekCalendar"
 import { ProviderAvailabilityPanel } from "@/components/appointments/ProviderAvailabilityPanel"
 import {
@@ -478,6 +478,50 @@ function AppointmentsPageContent() {
                       ))
                     )}
                   </select>
+                  {providers.length === 0 && (
+                    <div className="mt-1 space-y-1">
+                      <p className="text-[11px] text-amber-700 font-medium">
+                        No doctors assigned to this branch yet.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="text-[10px] h-7 px-2 border-amber-300 hover:bg-amber-50"
+                        onClick={async () => {
+                          setError(null)
+                          const roleList = await fetchRolesList()
+                          const dentistRole = roleList.find((r) => r.name === "dentist")
+                          if (!dentistRole) {
+                            setError("Dentist role not found in database")
+                            return
+                          }
+                          const { error: directErr } = await addStaffMemberDirectly({
+                            email: `dr.santos@${activeBranch?.name.toLowerCase().replace(/\s+/g, "") || "clinic"}.com`,
+                            fullName: "Dr. Maria Santos",
+                            branchId: activeBranch!.id,
+                            roleId: dentistRole.id,
+                            specialization: "General Dentistry",
+                            phoneNumber: "+63 912 345 6789"
+                          })
+                          if (directErr) {
+                            setError(directErr)
+                          } else {
+                            // Reload staff/providers
+                            const { data: staffData } = await fetchOrgStaff()
+                            const branchProviders = staffData.filter(
+                              (s) => s.is_active && s.branch_names.includes(activeBranch!.name)
+                            )
+                            setProviders(branchProviders)
+                            if (branchProviders.length > 0) {
+                              setSelectedProviderId(branchProviders[0].profile_id)
+                            }
+                          }
+                        }}
+                      >
+                        ⚡ Quick Add Dentist (Dr. Maria Santos)
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium">Date</label>

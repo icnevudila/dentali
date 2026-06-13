@@ -266,3 +266,42 @@ export async function revokeStaffInvitation(
   })
   return { error: error?.message ?? null }
 }
+
+export async function addStaffMemberDirectly(params: {
+  email: string
+  fullName: string
+  branchId: string
+  roleId: string
+  phoneNumber?: string
+  specialization?: string
+}): Promise<{ error: string | null; profileId?: string }> {
+  const supabase = createClient()
+  const newProfileId = crypto.randomUUID()
+  
+  // 1. Insert into profiles
+  const { error: profileError } = await supabase.from("profiles").insert({
+    id: newProfileId,
+    full_name: params.fullName,
+    email: params.email
+  })
+  if (profileError) return { error: profileError.message }
+
+  // 2. Insert into staff_profiles
+  const { error: staffError } = await supabase.from("staff_profiles").insert({
+    profile_id: newProfileId,
+    is_active: true,
+    phone_number: params.phoneNumber || null,
+    specialization: params.specialization || null
+  })
+  if (staffError) return { error: staffError.message }
+
+  // 3. Insert into staff_branch_assignments
+  const { error: assignError } = await supabase.from("staff_branch_assignments").insert({
+    profile_id: newProfileId,
+    branch_id: params.branchId,
+    role_id: params.roleId
+  })
+  if (assignError) return { error: assignError.message }
+
+  return { error: null, profileId: newProfileId }
+}

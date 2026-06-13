@@ -122,7 +122,7 @@ export function buildClinicalVisitJourney(params: {
   const profileDone = intakeItems.find((i) => i.id === "profile")?.done ?? false
   const medicalDone = intakeItems.find((i) => i.id === "medical")?.done ?? false
   const consentsDone =
-    hasSignedConsent(consents, "dpa-consent") && hasSignedConsent(consents, "general-treatment")
+    hasSignedConsent(consents, "general-treatment")
 
   const { hasBooked, hasCheckedIn, hasCompletedVisit } = appointmentProgress(appointments)
   const hasClinicalNote = timeline.some((e) => e.event_type === "clinical_note")

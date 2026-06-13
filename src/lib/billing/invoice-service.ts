@@ -368,3 +368,92 @@ export async function voidInvoice(
   const raw = data as { status: string }
   return { data: { status: raw.status }, error: null }
 }
+
+export async function deleteInvoicePayment(
+  paymentId: string,
+  invoiceId: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  
+  // 1. Delete payment
+  const { error: deleteError } = await supabase
+    .from("invoice_payments")
+    .delete()
+    .eq("id", paymentId)
+  if (deleteError) return { error: deleteError.message }
+
+  // 2. Fetch remaining payments
+  const { data: payments } = await supabase
+    .from("invoice_payments")
+    .select("amount")
+    .eq("invoice_id", invoiceId)
+  
+  const paidAmount = (payments ?? []).reduce((sum, p) => sum + Number(p.amount), 0)
+
+  // 3. Fetch invoice total
+  const { data: inv } = await supabase
+    .from("invoices")
+    .select("total_amount")
+    .eq("id", invoiceId)
+    .single()
+
+  const totalAmount = inv ? Number(inv.total_amount) : 0
+  const status = paidAmount >= totalAmount ? "paid" : paidAmount > 0 ? "partial" : "sent"
+
+  // 4. Update invoice
+  const { error: updateError } = await supabase
+    .from("invoices")
+    .update({ paid_amount: paidAmount, status })
+    .eq("id", invoiceId)
+
+  return { error: updateError?.message ?? null }
+}
+
+export async function updateInvoiceLineItem(params: {
+  itemId: string
+  invoiceId: string
+  description: string
+  unitPrice: number
+  quantity: number
+}): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const lineTotal = params.unitPrice * params.quantity
+  
+  // 1. Update line item
+  const { error: lineError } = await supabase
+    .from("invoice_line_items")
+    .update({
+      description: params.description,
+      unit_price: params.unitPrice,
+      quantity: params.quantity,
+      line_total: lineTotal
+    })
+    .eq("id", params.itemId)
+  if (lineError) return { error: lineError.message }
+
+  // 2. Fetch all line items
+  const { data: items } = await supabase
+    .from("invoice_line_items")
+    .select("line_total")
+    .eq("invoice_id", params.invoiceId)
+  
+  const totalAmount = (items ?? []).reduce((sum, i) => sum + Number(i.line_total), 0)
+
+  // 3. Fetch invoice paid
+  const { data: inv } = await supabase
+    .from("invoices")
+    .select("paid_amount")
+    .eq("id", params.invoiceId)
+    .single()
+  
+  const paidAmount = inv ? Number(inv.paid_amount) : 0
+  const status = paidAmount >= totalAmount ? "paid" : paidAmount > 0 ? "partial" : "sent"
+
+  // 4. Update invoice
+  const { error: updateError } = await supabase
+    .from("invoices")
+    .update({ total_amount: totalAmount, status })
+    .eq("id", params.invoiceId)
+
+  return { error: updateError?.message ?? null }
+}

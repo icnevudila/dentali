@@ -44,14 +44,8 @@ export function buildPatientRecordChecklist(params: {
       href: `/patients/${patientId}/medical-history`,
     },
     {
-      id: "dpa",
-      label: "DPA consent signed",
-      done: hasSigned("dpa-consent"),
-      href: `/patients/${patientId}?tab=consents`,
-    },
-    {
       id: "general",
-      label: "General treatment consent",
+      label: "DPA & General Treatment Consent",
       done: hasSigned("general-treatment"),
       href: `/patients/${patientId}?tab=consents`,
     },

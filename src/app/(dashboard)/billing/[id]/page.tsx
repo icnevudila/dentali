@@ -2,14 +2,14 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { ArrowLeft, Download, ExternalLink, Printer, Receipt } from "lucide-react"
+import { ArrowLeft, Download, ExternalLink, Printer, Receipt, X, Edit } from "lucide-react"
 import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { useParams } from "next/navigation"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
-import { getInvoice, recordInvoicePayment, voidInvoice } from "@/lib/billing/invoice-service"
+import { getInvoice, recordInvoicePayment, voidInvoice, deleteInvoicePayment, updateInvoiceLineItem } from "@/lib/billing/invoice-service"
 import { printInvoice } from "@/lib/billing/invoice-print"
 import { downloadInvoicePdf } from "@/lib/billing/invoice-pdf"
 import {
@@ -51,6 +51,34 @@ export default function InvoiceDetailPage() {
   const [clinicName, setClinicName] = React.useState("Dental Clinic")
   const [pdfLoading, setPdfLoading] = React.useState(false)
   const [paymentJustSettled, setPaymentJustSettled] = React.useState(false)
+
+  // Edit line item states
+  const [editingLineId, setEditingLineId] = React.useState<string | null>(null)
+  const [editDesc, setEditDesc] = React.useState("")
+  const [editPrice, setEditPrice] = React.useState("")
+  const [editQty, setEditQty] = React.useState("1")
+
+  const handleUpdateLineItem = async (itemId: string) => {
+    const price = parseFloat(editPrice)
+    const qty = parseInt(editQty, 10)
+    if (isNaN(price) || isNaN(qty) || qty <= 0 || !editDesc.trim()) return
+    setSaving(true)
+    setError(null)
+    const { error: updateErr } = await updateInvoiceLineItem({
+      itemId,
+      invoiceId,
+      description: editDesc.trim(),
+      unitPrice: price,
+      quantity: qty,
+    })
+    setSaving(false)
+    if (updateErr) {
+      setError(updateErr)
+    } else {
+      setEditingLineId(null)
+      await load()
+    }
+  }
 
   const load = React.useCallback(async () => {
     setLoading(true)
@@ -343,19 +371,89 @@ export default function InvoiceDetailPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {lineItems.map((item) => (
-                      <tr key={item.id}>
-                        <td className="py-2">
-                          {item.description}
-                          {item.tooth_number && (
-                            <span className="text-neutral-500"> · #{item.tooth_number}</span>
-                          )}
-                        </td>
-                        <td className="py-2 text-center">{item.quantity}</td>
-                        <td className="py-2 text-right">₱{item.unit_price.toLocaleString()}</td>
-                        <td className="py-2 text-right font-medium">₱{item.line_total.toLocaleString()}</td>
-                      </tr>
-                    ))}
+                    {lineItems.map((item) => {
+                      const isEditing = editingLineId === item.id
+                      if (isEditing) {
+                        return (
+                          <tr key={item.id} className="bg-neutral-50/50">
+                            <td className="py-2 pr-2">
+                              <Input
+                                value={editDesc}
+                                onChange={(e) => setEditDesc(e.target.value)}
+                                className="h-8 text-xs bg-white"
+                              />
+                            </td>
+                            <td className="py-2 px-1 text-center w-16">
+                              <Input
+                                type="number"
+                                value={editQty}
+                                onChange={(e) => setEditQty(e.target.value)}
+                                className="h-8 text-xs text-center bg-white"
+                                min="1"
+                              />
+                            </td>
+                            <td className="py-2 px-1 text-right w-24">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={editPrice}
+                                onChange={(e) => setEditPrice(e.target.value)}
+                                className="h-8 text-xs text-right bg-white"
+                              />
+                            </td>
+                            <td className="py-2 pl-2 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  size="sm"
+                                  className="h-7 text-[10px]"
+                                  onClick={() => handleUpdateLineItem(item.id)}
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-[10px]"
+                                  onClick={() => setEditingLineId(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      }
+                      return (
+                        <tr key={item.id} className="group hover:bg-neutral-50/20">
+                          <td className="py-2">
+                            {item.description}
+                            {item.tooth_number && (
+                              <span className="text-neutral-500"> · #{item.tooth_number}</span>
+                            )}
+                          </td>
+                          <td className="py-2 text-center">{item.quantity}</td>
+                          <td className="py-2 text-right">₱{item.unit_price.toLocaleString()}</td>
+                          <td className="py-2 text-right font-medium">
+                            <div className="flex items-center justify-end gap-2">
+                              <span>₱{item.line_total.toLocaleString()}</span>
+                              <Button
+                                variant="ghost"
+                                className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0 flex items-center justify-center text-primary-600"
+                                onClick={() => {
+                                  setEditingLineId(item.id)
+                                  setEditDesc(item.description)
+                                  setEditPrice(String(item.unit_price))
+                                  setEditQty(String(item.quantity))
+                                }}
+                                title="Edit Item"
+                              >
+                                <Edit className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -531,9 +629,26 @@ export default function InvoiceDetailPage() {
             ) : (
               <ul className="divide-y text-sm">
                 {payments.map((p) => (
-                  <li key={p.id} className="py-3 flex justify-between">
+                  <li key={p.id} className="py-3 flex justify-between items-center">
                     <span>{new Date(p.created_at).toLocaleString("en-PH")} · {p.payment_method}</span>
-                    <span className="font-medium">₱{p.amount.toLocaleString()}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">₱{p.amount.toLocaleString()}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-red-500 hover:text-red-700"
+                        onClick={async () => {
+                          if (!confirm("Are you sure you want to delete this payment record? The invoice paid amount and status will be recalculated.")) return
+                          setError(null)
+                          const { error: delErr } = await deleteInvoicePayment(p.id, invoiceId)
+                          if (delErr) setError(delErr)
+                          else await load()
+                        }}
+                        title="Delete Payment"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </li>
                 ))}
               </ul>
