@@ -37,10 +37,9 @@ export function WhyDifferentSection() {
         </div>
 
         {/* USPs Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {USP_CARDS.map((card, idx) => {
-            // Dinamik olarak Lucide icon bileşenini alıyoruz
-            const IconComponent = (Icons as any)[card.icon] || Icons.HelpCircle
+            const IconComponent = card.icon
 
             return (
               <ScrollReveal 
@@ -55,7 +54,7 @@ export function WhyDifferentSection() {
                   </div>
                   <div className="space-y-2">
                     <h3 className="text-lg font-semibold text-neutral-900">{lt(card.title, locale)}</h3>
-                    <p className="text-sm text-neutral-600 leading-relaxed">{lt(card.desc, locale)}</p>
+                    <p className="text-sm text-neutral-600 leading-relaxed">{lt(card.description, locale)}</p>
                   </div>
                 </div>
               </ScrollReveal>

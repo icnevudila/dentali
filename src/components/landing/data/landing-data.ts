@@ -81,11 +81,27 @@ export const USP_CARDS: UspCard[] = [
     ),
   },
   {
-    icon: Globe,
-    title: t("Made for Philippine clinics", "Filipin klinikleri için tasarlandı"),
+    icon: FileText,
+    title: t("Paperless Consent Forms", "Kağıtsız Onam Formları"),
     description: t(
-      "PhilHealth eClaims, HMO tracking, PHP billing — no workarounds, native support.",
-      "PhilHealth eClaims, HMO takibi, PHP faturalama — geçici çözüm yok, yerleşik destek."
+      "Design custom intake and treatment consents. Patients sign digitally on tablets or phones — instantly saved to history.",
+      "Özel kabul ve tedavi onam formları tasarlayın. Hastalar tablet veya telefondan dijital imza atsın — anında geçmişe kaydedilsin."
+    ),
+  },
+  {
+    icon: BarChart3,
+    title: t("Multi-Branch Analytics", "Çoklu Şube Analitiği"),
+    description: t(
+      "Consolidated revenues, active patient count, and appointment performance across all clinics in real time.",
+      "Tüm kliniklerinizdeki konsolide gelirleri, aktif hasta sayısını ve randevu performansını gerçek zamanlı takip edin."
+    ),
+  },
+  {
+    icon: Globe,
+    title: t("Cloud Native & Fast", "Bulut Tabanlı ve Hızlı"),
+    description: t(
+      "Access your data securely from anywhere. Fast page loads, automatic daily backups, and offline protection.",
+      "Verilerinize her yerden güvenle erişin. Hızlı sayfa yüklemeleri, otomatik günlük yedeklemeler ve çevrimdışı koruma."
     ),
   },
   {
@@ -207,7 +223,7 @@ export const TIMELINE_STEPS: TimelineStep[] = [
     time: "8:00",
     title: t("Patient checks in at kiosk", "Hasta kiosk'tan kayıt yaptırır"),
     description: t("Walk-in or appointed — the patient taps their name on the tablet and gets a queue number.", "Randevulu veya randevusuz — hasta tablette ismini seçer ve sıra numarası alır."),
-    screenshot: null,
+    screenshot: "queue/tablet.png",
     device: "tablet",
   },
   {
@@ -228,7 +244,7 @@ export const TIMELINE_STEPS: TimelineStep[] = [
     time: "10:00",
     title: t("Waiting room shows live queue", "Bekleme odası canlı sırayı gösterir"),
     description: t("The TV display board shows who's next — calm typography, no PHI beyond first names.", "TV ekranı sıradakini gösterir — sakin tipografi, ad dışında kişisel bilgi yok."),
-    screenshot: null,
+    screenshot: "queue/desktop.png",
     device: "tv",
   },
   {
@@ -489,24 +505,27 @@ export const FAQ_ITEMS: FaqItem[] = [
 
 export const LANDING_HEADINGS = {
   hero: {
-    eyebrow: t("Dental clinic OS for the Philippines", "Filipinler için diş kliniği işletim sistemi"),
+    eyebrow: t("Modern Dental Clinic Operating System", "Modern Diş Kliniği İşletim Sistemi"),
     title1: t("Your entire clinic.", "Tüm kliniğiniz."),
     title2: t("One system.", "Tek bir sistem."),
     subtitle: t(
-      "Patients, appointments, charting, billing, queue, kiosk, and HMO — branch-aware from day one.",
-      "Hastalar, randevular, diş şeması, faturalama, sıra, kiosk ve HMO — ilk günden çok şubeli."
+      "Patients, appointments, charting, billing, queue, kiosk, and consent — branch-aware from day one.",
+      "Hastalar, randevular, diş şeması, faturalama, sıra, kiosk ve onam formları — ilk günden çok şubeli."
     ),
-    cta1: t("Start free trial", "Ücretsiz denemeyi başlat"),
-    cta2: t("Get a quote", "Teklif alın"),
-    trust: t("Trusted by 50+ clinics across the Philippines", "Filipinler genelinde 50+ klinik tarafından güveniliyor"),
+    ctaPrimary: t("Start free trial →", "Ücretsiz denemeyi başlat →"),
+    ctaSecondary: t("Get a quote", "Teklif alın"),
+    trustLine: t("Trusted by 50+ modern clinics worldwide", "Dünya genelinde 50+ modern klinik tarafından güveniliyor"),
   },
   problem: {
+    eyebrow: t("Operations Chaos", "Operasyonel Kaos"),
     title: t("Sound familiar?", "Tanıdık geldi mi?"),
+    subtitle: t("Running a clinic is hard. Running it with five disconnected tools is harder.", "Klinik yönetmek zordur. Beş farklı kopuk araçla yönetmek daha da zordur."),
     transition: t("There's a better way.", "Daha iyi bir yol var."),
   },
   whyDifferent: {
     eyebrow: t("Why dentali.", "Neden dentali."),
     title: t("Built different. Built for you.", "Farklı düşünüldü. Sizin için tasarlandı."),
+    subtitle: t("We design systems around the daily workflows of doctors and clinic staff.", "Sistemlerimizi doktorların ve klinik personelinin günlük iş akışlarına göre tasarlıyoruz."),
   },
   features: {
     eyebrow: t("Features", "Özellikler"),
@@ -525,22 +544,34 @@ export const LANDING_HEADINGS = {
     ),
   },
   multiDevice: {
+    eyebrow: t("Seamless Access", "Kusursuz Erişim"),
     title: t("One system. Every screen.", "Tek sistem. Her ekran."),
     subtitle: t(
       "Admin desk, reception tablet, doctor's phone, waiting room TV — same data, optimized for each.",
       "Yönetici masaüstü, resepsiyon tableti, doktor telefonu, bekleme odası TV — aynı veri, her biri için optimize."
     ),
+    desktopLabel: t("Admin Desk", "Yönetici Masası"),
+    tabletLabel: t("Reception Kiosk", "Resepsiyon Kiosku"),
+    mobileLabel: t("Doctor's Companion", "Doktor Mobil"),
   },
-  wallOfLove: {
+  testimonials: {
     eyebrow: t("Wall of Love", "Sevgi Duvarı"),
-    title: t("Loved by clinics across the Philippines", "Filipinler'deki klinikler tarafından seviliyor"),
+    title: t("Loved by clinics worldwide", "Dünya genelindeki klinikler tarafından seviliyor"),
+    subtitle: t("Hear directly from dental clinic owners, doctors, and staff.", "Doğrudan klinik sahiplerinden, diş hekimlerinden ve personelden dinleyin."),
   },
   faq: {
+    eyebrow: t("Support", "Destek"),
     title: t("Questions? We've got answers.", "Sorularınız mı var? Cevaplarımız hazır."),
+    subtitle: t("Everything you need to know about setting up and using dentali.", "dentali. kurulumu ve kullanımı hakkında bilmeniz gereken her şey."),
   },
   finalCta: {
     title: t("Ready to modernize your clinic?", "Kliniğinizi modernleştirmeye hazır mısınız?"),
     subtitle: t("Join 50+ clinics already running on dentali.", "dentali. üzerinde çalışan 50+ kliniğe katılın."),
+    ctaPrimary: t("Start free trial →", "Ücretsiz denemeyi başlat →"),
+    ctaSecondary: t("Get a quote", "Teklif alın"),
+    loginPrefix: t("Already using dentali.?", "Zaten dentali. kullanıyor musunuz?"),
+    loginLink: t("Sign in", "Giriş yap"),
+    kioskLink: t("Kiosk check-in", "Kiosk giriş"),
   },
   nav: {
     product: t("Product", "Ürün"),
@@ -550,19 +581,17 @@ export const LANDING_HEADINGS = {
     startTrial: t("Start free trial", "Ücretsiz dene"),
   },
   footer: {
-    product: t("Product", "Ürün"),
-    access: t("Access", "Erişim"),
-    resources: t("Resources", "Kaynaklar"),
-    legal: t("Legal", "Yasal"),
-    tagline: t("Clinic OS for the Philippines", "Filipinler için klinik işletim sistemi"),
-    features: t("Features", "Özellikler"),
-    pricing: t("Pricing", "Fiyatlandırma"),
-    getQuote: t("Get a quote", "Teklif alın"),
-    signIn: t("Sign in", "Giriş yap"),
-    kioskCheckIn: t("Kiosk check-in", "Kiosk giriş"),
-    queueDisplay: t("Queue display", "Sıra ekranı"),
-    faq: t("FAQ", "SSS"),
-    privacy: t("Privacy policy", "Gizlilik politikası"),
-    terms: t("Terms of service", "Hizmet şartları"),
+    slogan: t("Running modern dental clinics on one branch-aware system.", "Modern diş kliniklerini şube bilincine sahip tek bir sistemle yönetin."),
+    productTitle: t("Product", "Ürün"),
+    companyTitle: t("Company", "Şirket"),
+    legalTitle: t("Legal", "Yasal"),
+    featuresLink: t("Features", "Özellikler"),
+    pricingLink: t("Pricing", "Fiyatlandırma"),
+    securityLink: t("Security", "Güvenlik"),
+    aboutLink: t("About", "Hakkımızda"),
+    contactLink: t("Contact", "İletişim"),
+    blogLink: t("Blog", "Blog"),
+    privacyLink: t("Privacy policy", "Gizlilik politikası"),
+    termsLink: t("Terms of service", "Hizmet şartları"),
   },
 } as const
