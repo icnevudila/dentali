@@ -303,5 +303,11 @@ export async function addStaffMemberDirectly(params: {
   })
   if (assignError) return { error: assignError.message }
 
+  // 4. Ensure default provider availability slots (e.g., 9:00 - 17:00)
+  await supabase.rpc("ensure_provider_availability_defaults", {
+    p_branch_id: params.branchId,
+    p_provider_id: newProfileId
+  })
+
   return { error: null, profileId: newProfileId }
 }
