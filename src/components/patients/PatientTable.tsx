@@ -187,6 +187,7 @@ export function PatientTable({
                 transitionTypes={NAV_FORWARD_TRANSITION}
                 staggerIndex={index}
                 initials={patientInitials(patient.first_name, patient.last_name)}
+                avatarUrl={patient.profile_photo_url}
                 primary={
                   <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="truncate">{fullName}</span>

@@ -9,6 +9,7 @@ type RecordRowProps = {
   transitionTypes?: string[]
   onClick?: () => void
   initials?: string
+  avatarUrl?: string | null
   leading?: ReactNode
   avatarClassName?: string
   primary: ReactNode
@@ -25,6 +26,7 @@ export function RecordRow({
   transitionTypes,
   onClick,
   initials,
+  avatarUrl,
   leading,
   avatarClassName,
   primary,
@@ -50,6 +52,13 @@ export function RecordRow({
             >
               {leading}
             </div>
+          ) : avatarUrl ? (
+            <img 
+              src={avatarUrl} 
+              alt={initials ?? ""} 
+              className={cn("h-11 w-11 shrink-0 rounded-full object-cover", avatarClassName)}
+              aria-hidden
+            />
           ) : (
             <div
               className={cn(
