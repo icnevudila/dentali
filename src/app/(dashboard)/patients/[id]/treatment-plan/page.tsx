@@ -77,7 +77,7 @@ function TreatmentPlanContent() {
       if (data) setPatientName(`${data.first_name} ${data.last_name}`)
     })
     getMedicalRiskFlags(patientId).then(({ data }) => {
-      if (data) setRiskFlags(data)
+      if (data) setRiskFlags(data.flags.map((flag) => flag.label))
     })
     fetchProcedures(activeBranch?.id).then(({ data }) => setProcedures(data))
     if (planId) loadPlan(planId)
@@ -266,14 +266,15 @@ function TreatmentPlanContent() {
                   </div>
                 )}
                 <ChartFindingSuggestionsCard
-                patientId={patientId}
-                branchId={activeBranch?.id ?? null}
-                procedures={procedures}
-                planItems={items}
-                onAddAll={() => void handleBulkFromChart()}
-                saving={saving}
-                disabled={!activePlanId}
-              />
+                  patientId={patientId}
+                  branchId={activeBranch?.id ?? null}
+                  procedures={procedures}
+                  planItems={items}
+                  onAddAll={() => void handleBulkFromChart()}
+                  saving={saving}
+                  disabled={!activePlanId}
+                />
+              </>
             ) : null}
 
             <Card>

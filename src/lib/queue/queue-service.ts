@@ -16,6 +16,7 @@ export interface QueueEntry {
   called_at: string | null
   in_chair_at: string | null
   completed_at: string | null
+  patient_mood?: string | null
 }
 
 export async function fetchQueueEntries(
@@ -32,7 +33,7 @@ export async function fetchQueueEntries(
   let query = supabase
     .from("queue_entries")
     .select(
-      "id, patient_id, appointment_id, display_code, status, chair_label, notes, checked_in_at, called_at, in_chair_at, completed_at, patients(first_name, last_name)"
+      "id, patient_id, appointment_id, display_code, status, chair_label, notes, checked_in_at, called_at, in_chair_at, completed_at, patient_mood, patients(first_name, last_name)"
     )
     .eq("branch_id", branchId)
     .order("checked_in_at", { ascending: true })
@@ -66,7 +67,8 @@ export async function fetchQueueEntries(
       called_at: row.called_at,
       in_chair_at: row.in_chair_at,
       completed_at: row.completed_at,
-    }
+      patient_mood: row.patient_mood,
+    } as QueueEntry
   })
 
   return { data: mapped, error: null }
@@ -105,6 +107,16 @@ export async function updateQueueStatus(
     p_entry_id: entryId,
     p_status: status,
     p_chair_label: chairLabel ?? null,
+  })
+  return { error: error?.message ?? null }
+}
+
+export async function recallQueuePatient(
+  entryId: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase.rpc("recall_queue_patient", {
+    p_entry_id: entryId,
   })
   return { error: error?.message ?? null }
 }

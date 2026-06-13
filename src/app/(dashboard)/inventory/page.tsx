@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { useSearchParams } from "next/navigation"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
@@ -227,27 +228,38 @@ function InventoryPageContent() {
           </div>
         )}
 
-        {showAdd && (
-          <Card className="border-primary-200">
-            <CardHeader><CardTitle className="text-base">{t("inventory.newItem", "New inventory item")}</CardTitle></CardHeader>
-            <CardContent>
-              <form onSubmit={handleAdd} className="grid gap-3 sm:grid-cols-2 max-w-xl">
-                <Input placeholder="Item name *" required value={name} onChange={(e) => setName(e.target.value)} />
-                <Input placeholder="SKU" value={sku} onChange={(e) => setSku(e.target.value)} />
-                <Input placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
-                <Input placeholder="Brand" value={brand} onChange={(e) => setBrand(e.target.value)} />
-                <Input placeholder="Supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} />
-                <Input type="number" step="0.01" placeholder="Unit Cost (₱)" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} />
-                <Input type="number" placeholder="Min stock" value={minStock} onChange={(e) => setMinStock(e.target.value)} />
-                <Input type="number" placeholder="Initial qty" value={initialQty} onChange={(e) => setInitialQty(e.target.value)} />
-                <Input type="date" placeholder="Expiry" value={expiry} onChange={(e) => setExpiry(e.target.value)} />
-                <div className="sm:col-span-2 flex gap-2">
-                  <Button type="submit" disabled={saving}>{t("common.save", "Save")}</Button>
-                  <Button type="button" variant="outline" onClick={() => setShowAdd(false)}>{t("common.cancel", "Cancel")}</Button>
+        {showAdd && createPortal(
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-md rounded-xl bg-white shadow-xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+              <div className="p-6 overflow-y-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg font-semibold text-neutral-900">{t("inventory.newItem", "New inventory item")}</h2>
                 </div>
-              </form>
-            </CardContent>
-          </Card>
+                <form onSubmit={handleAdd} className="grid gap-3 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <label className="text-xs text-neutral-500 font-medium">Image URL</label>
+                    <Input placeholder="https://..." value={brand} onChange={(e) => setBrand(e.target.value)} />
+                    <p className="text-[10px] text-neutral-400 mt-0.5">For the demo, paste an image URL here.</p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Input placeholder="Item name *" required value={name} onChange={(e) => setName(e.target.value)} />
+                  </div>
+                  <Input placeholder="SKU" value={sku} onChange={(e) => setSku(e.target.value)} />
+                  <Input placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
+                  <Input placeholder="Supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} />
+                  <Input type="number" step="0.01" placeholder="Unit Cost (₱)" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} />
+                  <Input type="number" placeholder="Min stock" value={minStock} onChange={(e) => setMinStock(e.target.value)} />
+                  <Input type="number" placeholder="Initial qty" value={initialQty} onChange={(e) => setInitialQty(e.target.value)} />
+                  <Input type="date" placeholder="Expiry" value={expiry} onChange={(e) => setExpiry(e.target.value)} />
+                  <div className="sm:col-span-2 flex justify-end gap-2 mt-2 pt-2 border-t">
+                    <Button type="button" variant="ghost" onClick={() => setShowAdd(false)}>{t("common.cancel", "Cancel")}</Button>
+                    <Button type="submit" disabled={saving}>{t("common.save", "Save")}</Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>,
+          document.body
         )}
 
         <div className="space-y-3">
@@ -292,12 +304,23 @@ function InventoryPageContent() {
                       return (
                         <tr key={item.id} className={level === "critical" || level === "expired" ? "border-l-4 border-l-red-500" : level === "low" ? "border-l-4 border-l-amber-400" : ""}>
                           <td className="py-2 font-medium">
-                            {item.name}
-                            <div className="text-[10px] text-neutral-400 font-mono">{item.sku ?? "—"}</div>
+                            <div className="flex items-center gap-3">
+                              {item.brand && item.brand.startsWith("http") ? (
+                                <img src={item.brand} alt={item.name} className="w-10 h-10 object-cover rounded-md border border-neutral-200 shrink-0" />
+                              ) : (
+                                <div className="w-10 h-10 bg-neutral-100 border border-neutral-200 rounded-md flex items-center justify-center text-neutral-400 shrink-0">
+                                  <Package className="w-5 h-5" />
+                                </div>
+                              )}
+                              <div>
+                                {item.name}
+                                <div className="text-[10px] text-neutral-400 font-mono">{item.sku ?? "—"}</div>
+                              </div>
+                            </div>
                           </td>
                           <td className="py-2 text-xs text-neutral-500">
-                            {item.brand ? <span className="font-semibold">{item.brand}</span> : null}
-                            {item.brand && item.category ? " / " : ""}
+                            {(!item.brand || !item.brand.startsWith("http")) && item.brand ? <span className="font-semibold">{item.brand}</span> : null}
+                            {(!item.brand || !item.brand.startsWith("http")) && item.brand && item.category ? " / " : ""}
                             {item.category}
                           </td>
                           <td className="py-2 text-right">{item.quantity_on_hand} {item.unit}</td>

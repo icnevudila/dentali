@@ -54,7 +54,7 @@ function QueueCard({
   loading,
 }: {
   entry: QueueEntry
-  onAction: (status: QueueStatus, chair?: string) => void
+  onAction: (status: QueueStatus | "announce", chair?: string) => void
   loading: boolean
 }) {
   const mins = waitMinutes(entry.checked_in_at)
@@ -63,7 +63,12 @@ function QueueCard({
     <div className="rounded-lg border border-neutral-200 bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <span className="font-mono text-lg font-bold text-primary-700">{entry.display_code}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-lg font-bold text-primary-700">{entry.display_code}</span>
+            {entry.patient_mood === 'anxious' && <span title="Patient is a bit anxious" className="text-xl cursor-help animate-pulse">😰</span>}
+            {entry.patient_mood === 'normal' && <span title="Patient feels normal" className="text-xl cursor-help">😐</span>}
+            {entry.patient_mood === 'great' && <span title="Patient is feeling great" className="text-xl cursor-help">😊</span>}
+          </div>
           <Link href={`/patients/${entry.patient_id}`} className="block text-sm font-medium text-neutral-900 hover:underline">
             {entry.patient_name ?? "Patient"}
           </Link>
@@ -85,9 +90,15 @@ function QueueCard({
           </Button>
         )}
         {entry.status === "now_serving" && (
-          <Button size="sm" disabled={loading} onClick={() => onAction("in_chair")}>
-            In chair
-          </Button>
+          <>
+            <Button size="sm" variant="outline" disabled={loading} onClick={() => onAction("announce")}>
+              <Megaphone className="h-3.5 w-3.5 mr-1.5" />
+              Announce
+            </Button>
+            <Button size="sm" disabled={loading} onClick={() => onAction("in_chair")}>
+              In chair
+            </Button>
+          </>
         )}
         {entry.status === "in_chair" && (
           <Button size="sm" variant="default" disabled={loading} onClick={() => onAction("served")}>
@@ -121,7 +132,8 @@ export default function QueuePage() {
   const [callingNext, setCallingNext] = React.useState(false)
   const [kioskUrl, setKioskUrl] = React.useState<string | null>(null)
   const [displayUrl, setDisplayUrl] = React.useState<string | null>(null)
-  const [generatingLink, setGeneratingLink] = React.useState<"kiosk" | "display" | null>(null)
+  const [portalUrl, setPortalUrl] = React.useState<string | null>(null)
+  const [generatingLink, setGeneratingLink] = React.useState<"kiosk" | "display" | "portal" | null>(null)
   const [copied, setCopied] = React.useState<string | null>(null)
   const [todayAppointments, setTodayAppointments] = React.useState<AppointmentRecord[]>([])
   const [apptCheckInId, setApptCheckInId] = React.useState<string | null>(null)
@@ -134,7 +146,7 @@ export default function QueuePage() {
   const siteOrigin = typeof window !== "undefined" ? window.location.origin : ""
   const today = toDateKey(new Date())
 
-  const handleGenerateLink = async (type: "kiosk" | "display") => {
+  const handleGenerateLink = async (type: "kiosk" | "display" | "portal") => {
     if (!activeBranch) return
     setGeneratingLink(type)
     const { data, error: err } = await generateBranchPublicToken(activeBranch.id, type)
@@ -146,6 +158,7 @@ export default function QueuePage() {
           ? `${siteOrigin}/display?token=${data.token}&theme=light&names=1&voice=1`
           : `${siteOrigin}/${type}?token=${data.token}`
       if (type === "kiosk") setKioskUrl(url)
+      else if (type === "portal") setPortalUrl(url)
       else setDisplayUrl(url)
     }
   }
@@ -223,10 +236,18 @@ export default function QueuePage() {
     return () => clearTimeout(t)
   }, [patientQuery, activeBranch])
 
-  const handleAction = async (entryId: string, status: QueueStatus) => {
+  const handleAction = async (entryId: string, status: QueueStatus | "announce") => {
     const entry = entries.find((e) => e.id === entryId)
     setActionId(entryId)
-    const { error: err } = await updateQueueStatus(entryId, status)
+    let err: string | null = null
+    if (status === "announce") {
+      const { recallQueuePatient } = await import("@/lib/queue/queue-service")
+      const res = await recallQueuePatient(entryId)
+      err = res.error
+    } else {
+      const res = await updateQueueStatus(entryId, status)
+      err = res.error
+    }
     setActionId(null)
     if (err) setError(err)
     else {
@@ -402,16 +423,6 @@ export default function QueuePage() {
 
           <MetricStrip items={metricItems} className={tab === "history" ? "lg:grid-cols-1" : undefined} />
 
-          {activeBranch && tab === "board" ? (
-            <div className="space-y-4">
-              <div className="grid gap-4 lg:grid-cols-2">
-                <QueueAnalyticsPanel branchId={activeBranch.id} />
-                <KioskAnalyticsPanel branchId={activeBranch.id} />
-              </div>
-              <DisplayAnalyticsPanel branchId={activeBranch.id} />
-            </div>
-          ) : null}
-
           <div className="flex flex-wrap gap-2">
             <Button variant={tab === "board" ? "default" : "outline"} size="sm" onClick={() => setTab("board")}>
               {t("queue.liveBoard", "Live board")}
@@ -496,84 +507,84 @@ export default function QueuePage() {
         )}
 
         {showCheckIn && (
-          <Card className="border-primary-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center justify-between">
-                Check in patient
-                <Button variant="ghost" size="icon" onClick={() => setShowCheckIn(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleCheckIn} className="space-y-3 max-w-md">
-                <div className="space-y-1 relative">
-                  <label className="text-xs font-medium">Search patient</label>
-                  <Input value={patientQuery} onChange={(e) => setPatientQuery(e.target.value)} placeholder="Name or phone…" />
-                  {patients.length > 0 && (
-                    <ul className="absolute z-10 left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-md shadow-lg divide-y max-h-48 overflow-y-auto">
-                      {patients.map((p) => (
-                        <li key={p.id}>
-                          <button
-                            type="button"
-                            className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-50 ${selectedPatientId === p.id ? "bg-primary-50" : ""}`}
-                            onClick={() => {
-                              setSelectedPatientId(p.id)
-                              setPatientQuery(`${p.first_name} ${p.last_name}`)
-                              setPatients([])
-                            }}
-                          >
-                            {p.first_name} {p.last_name}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">Notes</label>
-                  <Input value={checkInNotes} onChange={(e) => setCheckInNotes(e.target.value)} placeholder="Walk-in reason…" />
-                </div>
-                {consentOverridePending ? (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-900">
-                    <p>{t("queue.consentGate", "Patient has unsigned consents. Override is logged in audit.")}</p>
-                    {selectedPatientId ? (
-                      <Button variant="link" size="sm" className="mt-1 h-auto p-0 text-amber-900" asChild>
-                        <Link href={`/patients/${selectedPatientId}?tab=consents`}>
-                          {t("queue.openConsents", "Open consents")}
-                        </Link>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <Card className="w-full max-w-md bg-white border-primary-200 shadow-xl animate-fade-rise">
+              <CardHeader className="pb-2 border-b">
+                <CardTitle className="text-base flex items-center justify-between">
+                  Check in patient
+                  <Button variant="ghost" size="icon" onClick={() => setShowCheckIn(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <form onSubmit={handleCheckIn} className="space-y-4">
+                  <div className="space-y-1 relative">
+                    <label className="text-xs font-medium">Search patient</label>
+                    <Input value={patientQuery} onChange={(e) => setPatientQuery(e.target.value)} placeholder="Name or phone…" />
+                    {patients.length > 0 && (
+                      <ul className="absolute z-10 left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-md shadow-lg divide-y max-h-48 overflow-y-auto">
+                        {patients.map((p) => (
+                          <li key={p.id}>
+                            <button
+                              type="button"
+                              className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-50 ${selectedPatientId === p.id ? "bg-primary-50" : ""}`}
+                              onClick={() => {
+                                setSelectedPatientId(p.id)
+                                setPatientQuery(`${p.first_name} ${p.last_name}`)
+                                setPatients([])
+                              }}
+                            >
+                              {p.first_name} {p.last_name}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium">Notes</label>
+                    <Input value={checkInNotes} onChange={(e) => setCheckInNotes(e.target.value)} placeholder="Walk-in reason…" />
+                  </div>
+                  {consentOverridePending ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-900">
+                      <p>{t("queue.consentGate", "Patient has unsigned consents. Override is logged in audit.")}</p>
+                      {selectedPatientId ? (
+                        <Button variant="link" size="sm" className="mt-1 h-auto p-0 text-amber-900" asChild>
+                          <Link href={`/patients/${selectedPatientId}?tab=consents`}>
+                            {t("queue.openConsents", "Open consents")}
+                          </Link>
+                        </Button>
+                      ) : null}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        disabled={checkingIn}
+                        onClick={(e) => void handleCheckIn(e as unknown as React.FormEvent, true)}
+                      >
+                        {t("queue.consentOverride", "Check in anyway")}
                       </Button>
-                    ) : null}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      disabled={checkingIn}
-                      onClick={(e) => void handleCheckIn(e as unknown as React.FormEvent, true)}
-                    >
-                      {t("queue.consentOverride", "Check in anyway")}
+                    </div>
+                  ) : null}
+                  <div className="flex gap-2 pt-2 border-t">
+                    <Button type="submit" disabled={checkingIn || !selectedPatientId} className="w-full">
+                      {checkingIn ? "Checking in…" : "Check in"}
                     </Button>
                   </div>
-                ) : null}
-                <div className="flex gap-2">
-                  <Button type="submit" disabled={checkingIn || !selectedPatientId}>
-                    {checkingIn ? "Checking in…" : "Check in"}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => setShowCheckIn(false)}>
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {loading ? (
           <PageLoadingSkeleton variant="grid3" />
         ) : tab === "board" ? (
-          entries.length === 0 ? (
-            <div className="text-center py-16 text-neutral-500 border rounded-lg bg-neutral-50">
+          <div className="space-y-4">
+            {entries.length === 0 ? (
+              <div className="text-center py-16 text-neutral-500 border rounded-lg bg-neutral-50">
               <Users className="h-10 w-10 mx-auto mb-3 text-neutral-300" />
               <p>No patients in queue.</p>
               <Button variant="outline" className="mt-4 gap-2" onClick={() => setShowCheckIn(true)}>
@@ -607,8 +618,18 @@ export default function QueuePage() {
                 )
               })}
             </div>
-          )
-        ) : entries.length === 0 ? (
+          )}
+          {activeBranch ? (
+            <div className="space-y-4 mt-8">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <QueueAnalyticsPanel branchId={activeBranch.id} />
+                <KioskAnalyticsPanel branchId={activeBranch.id} />
+              </div>
+              <DisplayAnalyticsPanel branchId={activeBranch.id} />
+            </div>
+          ) : null}
+        </div>
+      ) : entries.length === 0 ? (
           <p className="text-center py-12 text-neutral-500">No completed queue entries today.</p>
         ) : (
           <Card>
@@ -656,12 +677,12 @@ export default function QueuePage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Link2 className="h-4 w-4" /> Kiosk & TV links
+              <Link2 className="h-4 w-4" /> Kiosk, TV & Portal links
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-neutral-500">
-              Generate links for the patient tablet (kiosk) and waiting room TV display.
+              Generate links for the patient tablet (kiosk), waiting room TV display, and online patient portal.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -680,6 +701,15 @@ export default function QueuePage() {
               >
                 {generatingLink === "display" ? "Generating…" : "Generate TV link"}
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                disabled={!activeBranch || generatingLink === "portal"}
+                onClick={() => handleGenerateLink("portal")}
+              >
+                {generatingLink === "portal" ? "Generating…" : "🌐 Generate portal link"}
+              </Button>
             </div>
             {kioskUrl && (
               <div className="flex items-center gap-2 text-sm bg-neutral-50 rounded-md px-3 py-2">
@@ -694,6 +724,14 @@ export default function QueuePage() {
                 <span className="truncate flex-1 font-mono text-xs">{displayUrl}</span>
                 <Button variant="ghost" size="icon" onClick={() => copyUrl(displayUrl, "display")}>
                   {copied === "display" ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+            )}
+            {portalUrl && (
+              <div className="flex items-center gap-2 text-sm bg-blue-50 rounded-md px-3 py-2 border border-blue-100">
+                <span className="truncate flex-1 font-mono text-xs text-blue-800">{portalUrl}</span>
+                <Button variant="ghost" size="icon" onClick={() => copyUrl(portalUrl, "portal")}>
+                  {copied === "portal" ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
             )}

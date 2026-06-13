@@ -7,6 +7,7 @@ import {
   CreditCard,
   FileCheck2,
   FlaskConical,
+  Globe,
   Home,
   ListOrdered,
   Monitor,
@@ -29,7 +30,7 @@ export type AppNavItem = {
   permission?: PermissionKey
   openInNewTab?: boolean
   /** Staff sidebar: generate branch token and open patient-facing device URL */
-  publicDevice?: "kiosk" | "display"
+  publicDevice?: "kiosk" | "display" | "portal"
   isActive?: (pathname: string) => boolean
 }
 
@@ -78,13 +79,6 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         href: "/reports/compliance",
         icon: Shield,
         permission: PERMISSIONS.COMPLIANCE_READ,
-      },
-      {
-        nameKey: "nav.chairTime",
-        fallback: "Chair Time AI",
-        href: "/reports/chair-time",
-        icon: Timer,
-        permission: PERMISSIONS.REPORTS_READ,
       },
     ],
   },
@@ -237,6 +231,15 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         icon: Tablet,
         openInNewTab: true,
         publicDevice: "kiosk",
+        permission: PERMISSIONS.QUEUE_MANAGE,
+      },
+      {
+        nameKey: "nav.portal",
+        fallback: "Patient Portal",
+        href: "/portal",
+        icon: Globe,
+        openInNewTab: true,
+        publicDevice: "portal",
         permission: PERMISSIONS.QUEUE_MANAGE,
       },
     ],

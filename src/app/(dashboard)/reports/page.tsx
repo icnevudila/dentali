@@ -36,6 +36,8 @@ import { OrthoAnalyticsPanel } from "@/components/analytics/OrthoAnalyticsPanel"
 import { BranchBenchmarkPanel } from "@/components/analytics/BranchBenchmarkPanel"
 import { FinanceSummaryPanel } from "@/components/analytics/FinanceSummaryPanel"
 import { HmoAnalyticsPanel } from "@/components/analytics/HmoAnalyticsPanel"
+import { ChairTimeAnalyticsPanel } from "@/components/analytics/ChairTimeAnalyticsPanel"
+import { Timer } from "lucide-react"
 
 const PERIOD_OPTIONS = [7, 30, 90] as const
 type PeriodDays = (typeof PERIOD_OPTIONS)[number]
@@ -254,6 +256,15 @@ export default function ReportsHubPage() {
               emptyLabel={t("dashboard.chartEmpty", "No activity in this period")}
             />
           </div>
+        </section>
+      ) : null}
+
+      {activeBranch ? (
+        <section className="space-y-3">
+          <SectionEyebrow icon={Timer}>
+            {t("chairtime.title", "Real-Time Chair Efficiency (Chair-Time Tracker)")}
+          </SectionEyebrow>
+          <ChairTimeAnalyticsPanel branchId={activeBranch.id} />
         </section>
       ) : null}
 

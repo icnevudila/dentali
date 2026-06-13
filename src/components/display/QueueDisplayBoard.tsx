@@ -414,7 +414,7 @@ export function QueueDisplayBoard({
             <div className="flex max-h-[min(52vh,520px)] flex-wrap content-start gap-3 overflow-y-auto hide-scrollbar">
               {waiting.map((item, index) => (
                 <WaitingTile
-                  key={item.display_code}
+                  key={`${item.display_code}-${index}`}
                   code={item.display_code}
                   maskedName={item.masked_name}
                   showNames={showNames}

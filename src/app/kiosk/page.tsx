@@ -9,11 +9,12 @@ import { useLocale } from "@/hooks/use-locale"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { KioskStepIndicator, kioskStepFromFlow } from "@/components/kiosk/KioskStepIndicator"
-import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react"
+import { CheckCircle2, AlertCircle, Loader2, Users } from "lucide-react"
+import { updateKioskMood, getKioskQueueStats } from "@/lib/kiosk/kiosk-service"
 
-type Step = "loading" | "welcome" | "form" | "success" | "error" | "intakeForm" | "intakeSuccess"
+type Step = "loading" | "welcome" | "form" | "mood" | "success" | "error" | "intakeForm" | "intakeSuccess"
 
-const AUTO_RESET_MS = 45_000
+const AUTO_RESET_MS = 8_000
 const FORM_IDLE_MS = 120_000
 
 function KioskContent() {
@@ -23,6 +24,7 @@ function KioskContent() {
 
   const [step, setStep] = React.useState<Step>("loading")
   const [branchName, setBranchName] = React.useState("")
+  const [branchId, setBranchId] = React.useState("")
   const [sessionId, setSessionId] = React.useState("")
   const [errorMsg, setErrorMsg] = React.useState("")
   const [phone, setPhone] = React.useState("")
@@ -30,7 +32,10 @@ function KioskContent() {
   const [firstName, setFirstName] = React.useState("")
   const [email, setEmail] = React.useState("")
   const [queueCode, setQueueCode] = React.useState("")
+  const [entryId, setEntryId] = React.useState("")
   const [submitting, setSubmitting] = React.useState(false)
+  const [isScreensaver, setIsScreensaver] = React.useState(false)
+  const [liveQueue, setLiveQueue] = React.useState<{ serving: string[]; waitCount: number } | null>(null)
 
   const resetToWelcome = React.useCallback(() => {
     setStep("welcome")
@@ -40,6 +45,7 @@ function KioskContent() {
     setEmail("")
     setErrorMsg("")
     setQueueCode("")
+    setEntryId("")
   }, [])
 
   React.useEffect(() => {
@@ -57,6 +63,7 @@ function KioskContent() {
       }
       setSessionId(data.session_id)
       setBranchName(data.branch_name)
+      setBranchId(data.branch_id)
       setStep("welcome")
     })
   }, [token, t])
@@ -73,6 +80,79 @@ function KioskContent() {
     return () => clearTimeout(id)
   }, [step, phone, lastName, firstName, email, resetToWelcome])
 
+  // Idle timer for screensaver
+  React.useEffect(() => {
+    if (step !== "welcome") {
+      setIsScreensaver(false)
+      return
+    }
+    const id = setTimeout(() => setIsScreensaver(true), 120_000) // 2 mins idle
+    return () => clearTimeout(id)
+  }, [step])
+
+  // Click anywhere to wake up screensaver
+  React.useEffect(() => {
+    if (!isScreensaver) return
+    const wakeUp = () => setIsScreensaver(false)
+    window.addEventListener("touchstart", wakeUp)
+    window.addEventListener("mousedown", wakeUp)
+    return () => {
+      window.removeEventListener("touchstart", wakeUp)
+      window.removeEventListener("mousedown", wakeUp)
+    }
+  }, [isScreensaver])
+
+  // Fetch live queue stats
+  React.useEffect(() => {
+    if (!branchId) return
+    const fetchQueue = () => {
+      getKioskQueueStats(branchId).then(({ data }) => {
+        if (data) setLiveQueue(data)
+      })
+    }
+    fetchQueue()
+    const id = setInterval(fetchQueue, 15_000)
+    return () => clearInterval(id)
+  }, [branchId])
+
+  const playSuccessSound = (speechText?: string) => {
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext
+      if (AudioContext) {
+        const ctx = new AudioContext()
+        const osc = ctx.createOscillator()
+        const gainNode = ctx.createGain()
+
+        osc.type = "sine"
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime) // C5
+        osc.frequency.exponentialRampToValueAtTime(1046.50, ctx.currentTime + 0.1) // C6
+
+        gainNode.gain.setValueAtTime(0, ctx.currentTime)
+        gainNode.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.05)
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5)
+
+        osc.connect(gainNode)
+        gainNode.connect(ctx.destination)
+
+        osc.start()
+        osc.stop(ctx.currentTime + 0.5)
+      }
+
+      if (speechText && "speechSynthesis" in window) {
+        setTimeout(() => {
+          // Cancel any ongoing speech
+          window.speechSynthesis.cancel()
+          const utterance = new SpeechSynthesisUtterance(speechText)
+          utterance.lang = "en-US"
+          utterance.rate = 0.95 // Slightly slower and clearer
+          window.speechSynthesis.speak(utterance)
+        }, 300)
+      }
+    } catch (e) {
+      // Ignore audio errors
+    }
+  }
+
   const handleCheckIn = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
@@ -84,7 +164,18 @@ function KioskContent() {
       return
     }
     setQueueCode(data.display_code)
+    if (data.entry_id) setEntryId(data.entry_id)
+    
+    // Go to mood step before success
+    setStep("mood")
+  }
+
+  const handleMoodSelect = async (mood: string) => {
+    if (entryId) {
+      await updateKioskMood(entryId, mood)
+    }
     setStep("success")
+    playSuccessSound(t("kiosk.speechCheckIn", `Check-in successful. Your queue number is ${queueCode.split('').join(' ')}`))
   }
 
   const handleIntakeSubmit = async (e: React.FormEvent) => {
@@ -103,86 +194,130 @@ function KioskContent() {
       return
     }
     setStep("intakeSuccess")
+    playSuccessSound(t("kiosk.speechIntake", "Registration received. Please wait for the front desk."))
   }
 
   const showSteps = step !== "loading" && step !== "error"
   const flowStep = kioskStepFromFlow(step)
 
-  return (
-    <div className="relative flex min-h-[100dvh] flex-col items-center justify-center bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(3.5rem,env(safe-area-inset-top))] text-neutral-900 overflow-hidden">
-      {/* Background decoration */}
-      <div className="landing-hero-bg absolute inset-0 pointer-events-none opacity-40" />
+  if (isScreensaver) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-teal-950 text-white cursor-pointer transition-opacity duration-1000 animate-in fade-in">
+        <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
+          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-teal-400 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-400 blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
+        </div>
+        <div className="z-10 flex flex-col items-center gap-6 animate-float">
+          <div className="h-24 w-24 rounded-full bg-white/10 p-4 backdrop-blur-md flex items-center justify-center border border-white/20">
+            <svg className="w-12 h-12 text-teal-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h1 className="text-4xl font-light tracking-wide text-teal-50">Welcome to <span className="font-semibold text-white">{branchName || "Our Clinic"}</span></h1>
+          <p className="mt-8 rounded-full border border-teal-500/30 bg-teal-900/50 px-6 py-2 text-teal-200 backdrop-blur-sm animate-pulse">
+            Tap anywhere to start
+          </p>
+        </div>
+      </div>
+    )
+  }
 
-      <p className="absolute left-0 right-0 top-5 text-center text-sm font-bold tracking-wider text-neutral-500 select-none">
+  return (
+    <div className="relative flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-primary-50 via-white to-primary-100 p-6 font-sans text-neutral-900 antialiased selection:bg-primary-100 selection:text-primary-900">
+      {/* Dynamic Background Elements */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -left-[10%] -top-[10%] h-[40%] w-[40%] rounded-full bg-primary-300/30 blur-[100px] sm:blur-[120px]" />
+        <div className="absolute -bottom-[10%] -right-[10%] h-[40%] w-[40%] rounded-full bg-primary-400/20 blur-[100px] sm:blur-[120px]" />
+      </div>
+
+      {/* Live Queue Widget */}
+      {step === "welcome" && liveQueue && (
+        <div className="absolute top-6 right-6 z-40 animate-fade-in">
+          <div className="flex items-center gap-3 rounded-full border border-white/60 bg-white/40 p-2 pr-4 shadow-sm backdrop-blur-md">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-500 text-white shadow-inner">
+              <Users className="h-5 w-5" />
+            </div>
+            <div className="flex flex-col text-sm">
+              <span className="font-medium text-neutral-800 leading-tight">
+                Currently Serving: {liveQueue.serving.length > 0 ? liveQueue.serving.join(", ") : "None"}
+              </span>
+              <span className="text-xs text-neutral-500 font-medium">
+                {liveQueue.waitCount} waiting
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <p className="absolute left-0 right-0 top-6 text-center text-sm font-bold tracking-widest text-neutral-400 select-none uppercase">
         dentali<span className="text-primary-600">.</span>
       </p>
 
-      <div className="relative z-10 w-full max-w-lg touch-manipulation">
+      <div className="relative z-10 w-full max-w-lg touch-manipulation transition-all duration-500 ease-out">
         {showSteps ? <KioskStepIndicator active={flowStep} /> : null}
 
         {step === "loading" && (
-          <div className="space-y-4 text-center py-12">
-            <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary-600" />
+          <div className="space-y-4 text-center py-12 animate-in fade-in zoom-in duration-500">
+            <Loader2 className="mx-auto h-14 w-14 animate-spin text-primary-500" />
             <p className="text-xl font-medium text-neutral-600">{t("kiosk.starting", "Starting kiosk…")}</p>
           </div>
         )}
 
         {step === "error" && (
-          <div className="space-y-6 rounded-3xl border border-neutral-100 bg-white/85 p-8 text-center shadow-xl backdrop-blur-md">
-            <AlertCircle className="mx-auto h-16 w-16 text-amber-500" />
-            <h1 className="text-2xl font-extrabold text-neutral-900">{t("kiosk.seeFrontDesk", "Please see the front desk")}</h1>
+          <div className="space-y-6 rounded-3xl border border-white bg-white/80 p-10 text-center shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-8 duration-500">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-100">
+              <AlertCircle className="h-10 w-10 text-red-500" />
+            </div>
+            <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight">{t("kiosk.seeFrontDesk", "Please see the front desk")}</h1>
             <p className="text-lg text-neutral-600 leading-relaxed">{errorMsg}</p>
-            <Link href="/login" className="inline-block mt-2 text-sm font-semibold text-primary-600 hover:text-primary-700 underline transition">
-              {t("kiosk.staffLogin", "Staff login")}
-            </Link>
           </div>
         )}
 
         {step === "welcome" && (
-          <div className="space-y-6 rounded-3xl border border-neutral-100 bg-white/85 p-8 text-center shadow-xl backdrop-blur-md">
-            <div className="inline-flex rounded-full border border-primary-200 bg-primary-50 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-primary-700">
+          <div className="space-y-8 rounded-[2rem] border border-white bg-white/70 p-10 text-center shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-4 duration-500">
+            <div className="inline-flex rounded-full border border-primary-200 bg-primary-50/80 px-5 py-2 text-xs font-bold uppercase tracking-widest text-primary-700 shadow-sm">
               {branchName || "dentali. clinic"}
             </div>
-            <div className="space-y-1">
-              <p className="text-xs font-bold uppercase tracking-widest text-primary-600">
+            <div className="space-y-3">
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary-600/80">
                 {t("kiosk.welcomeTo", "Welcome to")}
               </p>
-              <h1 className="text-3xl font-extrabold text-neutral-900">{branchName || "dentali."}</h1>
+              <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-neutral-900 bg-clip-text text-transparent bg-gradient-to-r from-neutral-900 to-neutral-600">
+                {branchName || "dentali."}
+              </h1>
             </div>
-            <p className="text-lg text-neutral-600 leading-relaxed">
+            <p className="text-lg text-neutral-600 leading-relaxed font-medium px-4">
               {t("kiosk.checkInPrompt", "Tap below to check in for your appointment.")}
             </p>
-            <div className="space-y-3 pt-2">
+            <div className="space-y-4 pt-4">
               <button 
                 onClick={() => setStep("form")}
-                className="w-full h-16 text-xl font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-2xl shadow-lg shadow-primary-500/20 transition duration-200 active:scale-98"
+                className="group relative w-full h-16 text-xl font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-2xl shadow-lg shadow-primary-500/30 transition-all duration-300 active:scale-[0.98] overflow-hidden"
               >
+                <div className="absolute inset-0 bg-white/20 translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-700 ease-in-out" />
                 {t("kiosk.checkInNow", "Check in now")}
               </button>
               <button
                 onClick={() => setStep("intakeForm")}
-                className="w-full h-14 text-lg font-bold text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl transition duration-200 active:scale-98"
+                className="w-full h-14 text-lg font-bold text-neutral-600 bg-white/80 border-2 border-transparent hover:border-primary-100 hover:bg-white rounded-xl shadow-sm transition-all duration-200 active:scale-[0.98]"
               >
                 {t("kiosk.newPatient", "New patient registration")}
               </button>
             </div>
-            <Link href="/login" className="block text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-primary-600 transition pt-2">
-              {t("kiosk.staffLogin", "Staff login")}
-            </Link>
           </div>
         )}
 
         {step === "form" && (
-          <div className="rounded-3xl border border-neutral-100 bg-white/85 p-8 shadow-xl backdrop-blur-md">
-            <div className="mb-6">
-              <h1 className="text-2xl font-extrabold text-neutral-900">{t("kiosk.checkInTitle", "Check in")}</h1>
-              <p className="text-sm text-neutral-500 mt-1">
+          <div className="rounded-[2rem] border border-white bg-white/70 p-10 shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-4 duration-500">
+            <div className="mb-8 text-center">
+              <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight">{t("kiosk.checkInTitle", "Check in")}</h1>
+              <p className="text-base text-neutral-500 mt-2">
                 {t("kiosk.checkInHint", "Enter the phone number and last name on your record.")}
               </p>
             </div>
-            <form onSubmit={handleCheckIn} className="space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+            <form onSubmit={handleCheckIn} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 ml-1">
                   {t("kiosk.mobileNumber", "Mobile number")}
                 </label>
                 <input
@@ -194,11 +329,11 @@ function KioskContent() {
                   onChange={(e) => setPhone(e.target.value)}
                   autoComplete="tel"
                   autoFocus
-                  className="w-full h-14 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-lg text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
+                  className="w-full h-16 rounded-2xl border-2 border-transparent bg-white/80 px-5 py-3 text-xl text-neutral-900 shadow-sm placeholder:text-neutral-300 outline-none transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 hover:bg-white"
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 ml-1">
                   {t("kiosk.lastName", "Last name")}
                 </label>
                 <input
@@ -207,49 +342,52 @@ function KioskContent() {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   autoComplete="family-name"
-                  className="w-full h-14 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-lg text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
+                  className="w-full h-16 rounded-2xl border-2 border-transparent bg-white/80 px-5 py-3 text-xl text-neutral-900 shadow-sm placeholder:text-neutral-300 outline-none transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 hover:bg-white"
                 />
               </div>
               {errorMsg ? (
-                <div className="rounded-xl bg-red-50 border border-red-100 p-3 text-center text-xs font-semibold text-red-600">
+                <div className="rounded-2xl bg-red-50/80 border border-red-100 p-4 text-center text-sm font-semibold text-red-600 animate-in fade-in slide-in-from-top-2">
                   {errorMsg}
                 </div>
               ) : null}
-              <button 
-                type="submit" 
-                disabled={submitting}
-                className="w-full h-14 text-lg font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-lg shadow-primary-500/10 transition duration-200 active:scale-98 disabled:opacity-50"
-              >
-                {submitting
-                  ? t("kiosk.checkingIn", "Checking in…")
-                  : t("kiosk.confirmCheckIn", "Confirm check-in")}
-              </button>
-              <button 
-                type="button" 
-                onClick={resetToWelcome}
-                className="w-full h-10 text-sm font-semibold text-neutral-500 hover:text-neutral-700 transition"
-              >
-                {t("kiosk.back", "Back")}
-              </button>
+              <div className="pt-2 space-y-4">
+                <button 
+                  type="submit" 
+                  disabled={submitting}
+                  className="group relative w-full h-16 text-xl font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-2xl shadow-lg shadow-primary-500/30 transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-white/20 translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-700 ease-in-out" />
+                  {submitting
+                    ? t("kiosk.checkingIn", "Checking in…")
+                    : t("kiosk.confirmCheckIn", "Confirm check-in")}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={resetToWelcome}
+                  className="w-full h-12 text-base font-bold text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100/50 rounded-xl transition-all active:scale-[0.98]"
+                >
+                  {t("kiosk.back", "Back")}
+                </button>
+              </div>
             </form>
           </div>
         )}
 
         {step === "intakeForm" && (
-          <div className="rounded-3xl border border-neutral-100 bg-white/85 p-8 shadow-xl backdrop-blur-md">
-            <div className="mb-6">
-              <h1 className="text-2xl font-extrabold text-neutral-900">{t("kiosk.intakeTitle", "Patient registration")}</h1>
-              <p className="text-sm text-neutral-500 mt-1">
+          <div className="rounded-[2rem] border border-white bg-white/70 p-10 shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-4 duration-500">
+            <div className="mb-8 text-center">
+              <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight">{t("kiosk.intakeTitle", "Patient registration")}</h1>
+              <p className="text-base text-neutral-500 mt-2">
                 {t(
                   "kiosk.intakeHint",
                   "Fill in your details. Front desk will review before creating your record."
                 )}
               </p>
             </div>
-            <form onSubmit={handleIntakeSubmit} className="space-y-4">
+            <form onSubmit={handleIntakeSubmit} className="space-y-5">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">{t("kiosk.firstName", "First name")}</label>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 ml-1">{t("kiosk.firstName", "First name")}</label>
                   <input
                     required
                     placeholder="Maria"
@@ -257,23 +395,23 @@ function KioskContent() {
                     onChange={(e) => setFirstName(e.target.value)}
                     autoComplete="given-name"
                     autoFocus
-                    className="w-full h-12 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
+                    className="w-full h-14 rounded-2xl border-2 border-transparent bg-white/80 px-5 py-3 text-lg text-neutral-900 shadow-sm placeholder:text-neutral-300 outline-none transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 hover:bg-white"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">{t("kiosk.lastName", "Last name")}</label>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 ml-1">{t("kiosk.lastName", "Last name")}</label>
                   <input
                     required
                     placeholder="Santos"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     autoComplete="family-name"
-                    className="w-full h-12 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
+                    className="w-full h-14 rounded-2xl border-2 border-transparent bg-white/80 px-5 py-3 text-lg text-neutral-900 shadow-sm placeholder:text-neutral-300 outline-none transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 hover:bg-white"
                   />
                 </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 ml-1">
                   {t("kiosk.mobileNumber", "Mobile number")}
                 </label>
                 <input
@@ -283,11 +421,11 @@ function KioskContent() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   autoComplete="tel"
-                  className="w-full h-12 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
+                  className="w-full h-14 rounded-2xl border-2 border-transparent bg-white/80 px-5 py-3 text-lg text-neutral-900 shadow-sm placeholder:text-neutral-300 outline-none transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 hover:bg-white"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">{t("kiosk.email", "Email")}</label>
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 ml-1">{t("kiosk.email", "Email")}</label>
                 <input
                   type="email"
                   inputMode="email"
@@ -295,52 +433,103 @@ function KioskContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
-                  className="w-full h-12 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
+                  className="w-full h-14 rounded-2xl border-2 border-transparent bg-white/80 px-5 py-3 text-lg text-neutral-900 shadow-sm placeholder:text-neutral-300 outline-none transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 hover:bg-white"
                 />
               </div>
               {errorMsg ? (
-                <div className="rounded-xl bg-red-50 border border-red-100 p-3 text-center text-xs font-semibold text-red-600">
+                <div className="rounded-2xl bg-red-50/80 border border-red-100 p-4 text-center text-sm font-semibold text-red-600 animate-in fade-in slide-in-from-top-2">
                   {errorMsg}
                 </div>
               ) : null}
-              <button 
-                type="submit" 
-                disabled={submitting}
-                className="w-full h-14 mt-2 text-lg font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-lg shadow-primary-500/10 transition duration-200 active:scale-98 disabled:opacity-50"
-              >
-                {submitting
-                  ? t("kiosk.submitting", "Submitting…")
-                  : t("kiosk.submitIntake", "Submit registration")}
-              </button>
-              <button 
-                type="button" 
-                onClick={resetToWelcome}
-                className="w-full h-10 text-sm font-semibold text-neutral-500 hover:text-neutral-700 transition"
-              >
-                {t("kiosk.back", "Back")}
-              </button>
+              <div className="pt-2 space-y-4">
+                <button 
+                  type="submit" 
+                  disabled={submitting}
+                  className="group relative w-full h-16 text-xl font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-2xl shadow-lg shadow-primary-500/30 transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-white/20 translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-700 ease-in-out" />
+                  {submitting
+                    ? t("kiosk.submitting", "Submitting…")
+                    : t("kiosk.submitIntake", "Submit registration")}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={resetToWelcome}
+                  className="w-full h-12 text-base font-bold text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100/50 rounded-xl transition-all active:scale-[0.98]"
+                >
+                  {t("kiosk.back", "Back")}
+                </button>
+              </div>
             </form>
           </div>
         )}
 
-        {step === "success" && (
-          <div className="space-y-6 rounded-3xl border border-neutral-100 bg-white/85 p-8 text-center shadow-xl backdrop-blur-md">
-            <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-500 animate-bounce" />
-            <h1 className="text-2xl font-extrabold text-neutral-900">{t("kiosk.checkedIn", "You're checked in!")}</h1>
-            <div className="rounded-2xl border border-primary-100 bg-primary-50/50 py-6">
-              <p className="mb-1 text-xs font-bold uppercase tracking-wider text-neutral-500">{t("kiosk.queueNumber", "Your queue number")}</p>
-              <p className="font-mono text-5xl font-extrabold text-primary-700">{queueCode}</p>
+        {step === "mood" && (
+          <div className="rounded-[2rem] border border-white bg-white/70 p-10 text-center shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-8 fade-in duration-500">
+            <h2 className="mb-2 text-3xl font-semibold tracking-tight text-neutral-900">
+              How are you feeling today?
+            </h2>
+            <p className="mb-8 text-neutral-500">Let your dentist know so we can make you comfortable.</p>
+
+            <div className="flex justify-center gap-6">
+              <button
+                onClick={() => handleMoodSelect('anxious')}
+                className="group flex flex-col items-center gap-3 rounded-2xl border border-neutral-100 bg-white p-6 shadow-sm transition-all hover:scale-105 hover:border-blue-200 hover:bg-blue-50 hover:shadow-md active:scale-95"
+              >
+                <span className="text-5xl group-hover:animate-bounce">😰</span>
+                <span className="font-medium text-neutral-600">A bit anxious</span>
+              </button>
+
+              <button
+                onClick={() => handleMoodSelect('normal')}
+                className="group flex flex-col items-center gap-3 rounded-2xl border border-neutral-100 bg-white p-6 shadow-sm transition-all hover:scale-105 hover:border-neutral-200 hover:bg-neutral-50 hover:shadow-md active:scale-95"
+              >
+                <span className="text-5xl group-hover:animate-bounce">😐</span>
+                <span className="font-medium text-neutral-600">Normal</span>
+              </button>
+
+              <button
+                onClick={() => handleMoodSelect('great')}
+                className="group flex flex-col items-center gap-3 rounded-2xl border border-neutral-100 bg-white p-6 shadow-sm transition-all hover:scale-105 hover:border-green-200 hover:bg-green-50 hover:shadow-md active:scale-95"
+              >
+                <span className="text-5xl group-hover:animate-bounce">😊</span>
+                <span className="font-medium text-neutral-600">Feeling great!</span>
+              </button>
             </div>
-            <p className="text-neutral-600 text-base leading-relaxed">
+            
+            <Button variant="ghost" className="mt-8 text-neutral-400 hover:text-neutral-600" onClick={() => handleMoodSelect('skipped')}>
+              Skip this step
+            </Button>
+          </div>
+        )}
+
+        {step === "success" && (
+          <div className="space-y-8 rounded-[2rem] border border-emerald-100 bg-white/80 p-12 text-center shadow-[0_16px_60px_rgb(16,185,129,0.15)] backdrop-blur-2xl animate-in zoom-in-95 duration-500">
+            <div className="relative mx-auto h-24 w-24">
+              <div className="absolute inset-0 rounded-full bg-emerald-100 animate-ping opacity-75" />
+              <div className="relative flex h-full w-full items-center justify-center rounded-full bg-gradient-to-tr from-emerald-400 to-emerald-500 shadow-xl shadow-emerald-500/30">
+                <CheckCircle2 className="h-12 w-12 text-white" />
+              </div>
+            </div>
+            
+            <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight">{t("kiosk.checkedIn", "You're checked in!")}</h1>
+            
+            <div className="rounded-[1.5rem] border border-primary-100 bg-gradient-to-br from-primary-50/80 to-white py-8 shadow-inner">
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-primary-500">{t("kiosk.queueNumber", "Your queue number")}</p>
+              <p className="font-mono text-6xl font-black tracking-tighter text-primary-700 drop-shadow-sm">{queueCode}</p>
+            </div>
+            
+            <p className="text-neutral-600 text-lg font-medium leading-relaxed px-4">
               {t("kiosk.waitMessage", "Please take a seat. We will call your number when ready.")}
             </p>
-            <div className="space-y-1 text-xs text-neutral-400 font-semibold border-t border-neutral-100 pt-4">
+            
+            <div className="space-y-1.5 text-xs text-neutral-400 font-semibold border-t border-neutral-100/50 pt-6">
               <p>{t("kiosk.autoResetHint", "This screen will reset automatically for the next patient.")}</p>
-              <p>{t("kiosk.idleResetHint", "Forms reset after 2 minutes of inactivity.")}</p>
             </div>
+            
             <button 
               onClick={resetToWelcome}
-              className="w-full h-12 font-bold text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl transition duration-200 active:scale-98"
+              className="w-full h-14 text-lg font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition duration-200 active:scale-98"
             >
               {t("kiosk.done", "Done")}
             </button>
@@ -348,19 +537,24 @@ function KioskContent() {
         )}
 
         {step === "intakeSuccess" && (
-          <div className="space-y-6 rounded-3xl border border-neutral-100 bg-white/85 p-8 text-center shadow-xl backdrop-blur-md">
-            <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-500 animate-bounce" />
-            <h1 className="text-2xl font-extrabold text-neutral-900">{t("kiosk.intakeSuccess", "Registration submitted!")}</h1>
-            <p className="text-neutral-600 text-base leading-relaxed">
-              {t("kiosk.intakeSuccessHint", "Please see the front desk to complete your file.")}
-            </p>
-            <div className="space-y-1 text-xs text-neutral-400 font-semibold border-t border-neutral-100 pt-4">
-              <p>{t("kiosk.autoResetHint", "This screen will reset automatically for the next patient.")}</p>
-              <p>{t("kiosk.idleResetHint", "Forms reset after 2 minutes of inactivity.")}</p>
+          <div className="space-y-8 rounded-[2rem] border border-emerald-100 bg-white/80 p-12 text-center shadow-[0_16px_60px_rgb(16,185,129,0.15)] backdrop-blur-2xl animate-in zoom-in-95 duration-500">
+            <div className="relative mx-auto h-24 w-24">
+              <div className="absolute inset-0 rounded-full bg-emerald-100 animate-ping opacity-75" />
+              <div className="relative flex h-full w-full items-center justify-center rounded-full bg-gradient-to-tr from-emerald-400 to-emerald-500 shadow-xl shadow-emerald-500/30">
+                <CheckCircle2 className="h-12 w-12 text-white" />
+              </div>
             </div>
+            
+            <div className="space-y-3">
+              <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight">{t("kiosk.registrationReceived", "Registration received")}</h1>
+              <p className="text-neutral-600 text-lg font-medium leading-relaxed px-4">
+                {t("kiosk.intakeSuccessDesc", "Please wait for the front desk to review your information and check you in.")}
+              </p>
+            </div>
+            
             <button 
               onClick={resetToWelcome}
-              className="w-full h-12 font-bold text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl transition duration-200 active:scale-98"
+              className="w-full h-14 text-lg font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition duration-200 active:scale-[0.98]"
             >
               {t("kiosk.done", "Done")}
             </button>

@@ -71,7 +71,7 @@ function DisplayContent() {
       fetchPublicQueueDisplay(token).then(({ data: d, error: err }) => {
         if (err) setError(err)
         else {
-          const servingKey = (d?.now_serving ?? []).map((i) => i.display_code).join("|")
+          const servingKey = (d?.now_serving ?? []).map((i) => `${i.display_code}_${(i as any).called_at ?? ""}`).join("|")
           if (servingKey && servingKey !== prevServingRef.current) {
             setPulseGen((g) => g + 1)
             prevServingRef.current = servingKey

@@ -88,32 +88,29 @@ export function PatientOdontogramSummary({
         </Button>
       </div>
 
-      {/* Mobile / compact: mini SVG summary */}
-      <div className={compact ? "block" : "block lg:hidden"}>
-        <div className="flex flex-col items-center gap-4 rounded-xl border border-neutral-200 bg-neutral-50/80 px-4 py-6">
-          <MiniOdontogram findings={findings} size="md" />
-          <p className="text-center text-xs text-neutral-500 max-w-xs">
-            Tap full chart to record or update tooth conditions on the anatomical SVG.
-          </p>
-          <Button size="sm" asChild>
-            <Link href={chartHref}>Chart teeth</Link>
+      {/* Preview Section */}
+      <div 
+        className="relative cursor-pointer overflow-hidden rounded-xl border border-neutral-200 bg-white p-4 transition-all hover:border-primary-300 hover:shadow-md group"
+        onClick={() => router.push(chartHref)}
+      >
+        <div className="pointer-events-none mx-auto min-w-0 max-w-full opacity-90 transition-opacity group-hover:opacity-100">
+          <AnatomicOdontogramChart
+            findings={findings}
+            selectedTooth={null}
+            onToothClick={() => {}}
+            showAnatomy={false}
+            interactive={false}
+          />
+        </div>
+        
+        {/* Overlay edit button that appears on hover */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/40 opacity-0 backdrop-blur-[1px] transition-opacity group-hover:opacity-100">
+          <Button variant="default" className="shadow-lg gap-2 pointer-events-none">
+            <ExternalLink className="h-4 w-4" />
+            {stats.total > 0 ? "Edit dental chart" : "Start dental charting"}
           </Button>
         </div>
       </div>
-
-      {/* Tablet / desktop: real SVG from /public/odontogram */}
-      {!compact ? (
-        <div className="hidden lg:block rounded-xl border border-neutral-200 bg-white p-4 overflow-x-auto">
-          <div className="min-w-0 max-w-full mx-auto">
-            <AnatomicOdontogramChart
-              findings={findings}
-              selectedTooth={null}
-              onToothClick={(tooth) => router.push(`${chartHref}?tooth=${tooth}`)}
-              showAnatomy={false}
-            />
-          </div>
-        </div>
-      ) : null}
 
       <div className="flex flex-wrap gap-4 justify-center text-xs text-neutral-600">
         <span className="inline-flex items-center gap-1.5">

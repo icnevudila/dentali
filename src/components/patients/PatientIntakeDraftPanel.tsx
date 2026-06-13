@@ -53,9 +53,33 @@ export function PatientIntakeDraftPanel({
   const handleDownload = async (draft: KioskIntakeDraft) => {
     setDownloadingId(draft.id)
     setDownloadError(null)
-    const { error } = await downloadIntakePdf(draft.id)
+    try {
+      const p = draft.payload as any
+      const content = [
+        `PATIENT INTAKE FORM`,
+        `Submitted: ${new Date(draft.created_at).toLocaleString()}`,
+        `---`,
+        `Name: ${p.first_name || ""} ${p.last_name || ""}`,
+        `Phone: ${p.phone || ""}`,
+        `Email: ${p.email || ""}`,
+        `Date of Birth: ${p.date_of_birth || ""}`,
+        `Gender: ${p.gender || ""}`,
+        `Address: ${p.address_line1 || ""} ${p.city || ""}`,
+        `Emergency Contact: ${p.emergency_contact_name || ""} (${p.emergency_contact_phone || ""})`,
+        `Medical Alerts: ${p.medical_alerts || "None"}`
+      ].join("\n")
+      
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `intake-${draft.id.slice(0, 8)}.txt`
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      setDownloadError(err.message || "Failed to download")
+    }
     setDownloadingId(null)
-    if (error) setDownloadError(error)
   }
 
   if (loading || drafts.length === 0) return null

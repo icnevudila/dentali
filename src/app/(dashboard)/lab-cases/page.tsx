@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useLocale } from "@/hooks/use-locale"
-import { useBranchContext } from "@/lib/context/BranchContext"
+import { useBranch } from "@/hooks/use-branch"
 import { fetchActiveLabCases, updateLabCaseStatus, type PatientWithLabCase } from "@/lib/clinical/lab-service"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageHeader } from "@/components/layout/PageHeader"
@@ -17,19 +17,19 @@ import { formatCurrency } from "@/lib/i18n/translate"
 import { toast } from "sonner"
 
 export default function LabCasesPage() {
-  const { t } = useLocale()
-  const branchId = useBranchContext()
+  const { t, locale } = useLocale()
+  const { activeBranch } = useBranch()
   const [cases, setCases] = React.useState<PatientWithLabCase[]>([])
   const [loading, setLoading] = React.useState(true)
   const [dialogOpen, setDialogOpen] = React.useState(false)
 
   const loadCases = React.useCallback(async () => {
-    if (!branchId) return
+    if (!activeBranch?.id) return
     setLoading(true)
-    const { data } = await fetchActiveLabCases(branchId)
+    const { data } = await fetchActiveLabCases(activeBranch.id)
     if (data) setCases(data)
     setLoading(false)
-  }, [branchId])
+  }, [activeBranch?.id])
 
   React.useEffect(() => {
     loadCases()
@@ -111,7 +111,7 @@ export default function LabCasesPage() {
                     </div>
                     <div>
                       <p className="text-neutral-400 font-medium">Cost</p>
-                      <p className="text-neutral-700">{formatCurrency(c.cost, "PHP")}</p>
+                      <p className="text-neutral-700">{formatCurrency(locale, c.cost)}</p>
                     </div>
                     <div>
                       <p className="text-neutral-400 font-medium">Sent</p>

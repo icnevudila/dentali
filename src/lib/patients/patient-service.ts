@@ -20,6 +20,7 @@ export interface PatientRecord {
   status: string
   last_visit_at?: string | null
   intake_pct?: number
+  profile_photo_url?: string | null
 }
 
 export type PatientSearchOptions = {

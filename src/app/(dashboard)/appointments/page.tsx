@@ -19,6 +19,7 @@ import {
   updateAppointmentStatus,
   markAppointmentNoShow,
   updateAppointmentDetails,
+  type AppointmentRecord,
 } from "@/lib/appointments/appointment-service"
 import { toast } from "sonner"
 import {

@@ -33,7 +33,9 @@ function buildAnnouncement(
 function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
   if (typeof window === "undefined" || !window.speechSynthesis) return undefined
   const voices = window.speechSynthesis.getVoices()
-  const prefer = lang.startsWith("fil") ? ["fil", "tl"] : ["en-PH", "en-US", "en-GB", "en"]
+  let prefer = ["en-PH", "en-US", "en-GB", "en"]
+  if (lang.startsWith("fil")) prefer = ["fil", "tl"]
+
   for (const prefix of prefer) {
     const match = voices.find((v) => v.lang.toLowerCase().startsWith(prefix.toLowerCase()))
     if (match) return match
@@ -75,7 +77,9 @@ export function useQueueVoiceAnnounce({
 
     if (typeof window === "undefined" || !window.speechSynthesis) return
 
-    const lang = locale.startsWith("fil") ? "fil-PH" : "en-PH"
+    let lang = "en-PH"
+    if (locale.startsWith("fil")) lang = "fil-PH"
+
     const utterance = new SpeechSynthesisUtterance(buildAnnouncement(primary, locale, t))
     utterance.lang = lang
     utterance.rate = 0.9

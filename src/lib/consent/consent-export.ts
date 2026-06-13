@@ -49,14 +49,8 @@ function slugifyFilename(name: string): string {
 }
 
 export function printConsentDocument(elementId = "consent-print-document") {
-  const el = document.getElementById(elementId)
-  if (!el) {
-    const { printCurrentPage } = require("@/lib/utils/print")
-    printCurrentPage()
-    return
-  }
-  const { printDomNode } = require("@/lib/utils/print")
-  printDomNode(el)
+  const { printCurrentPage } = require("@/lib/utils/print")
+  printCurrentPage()
 }
 
 export async function downloadConsentDocx(

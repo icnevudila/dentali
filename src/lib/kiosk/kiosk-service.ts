@@ -21,7 +21,7 @@ export async function submitKioskCheckin(
   sessionId: string,
   phone: string,
   lastName: string
-): Promise<{ data: { display_code: string } | null; error: string | null }> {
+): Promise<{ data: { display_code: string; entry_id: string } | null; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("submit_kiosk_checkin", {
     p_session_id: sessionId,
@@ -30,8 +30,32 @@ export async function submitKioskCheckin(
   })
 
   if (error) return { data: null, error: error.message }
-  const result = data as { display_code: string }
-  return { data: { display_code: result.display_code }, error: null }
+  const result = data as { display_code: string; entry_id: string }
+  return { data: { display_code: result.display_code, entry_id: result.entry_id }, error: null }
+}
+
+export async function updateKioskMood(
+  entryId: string,
+  mood: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase.rpc("update_queue_entry_mood", {
+    p_entry_id: entryId,
+    p_mood: mood,
+  })
+  return { error: error ? error.message : null }
+}
+
+export async function getKioskQueueStats(
+  branchId: string
+): Promise<{ data: { serving: string[]; waitCount: number } | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("get_kiosk_queue_stats", {
+    p_branch_id: branchId,
+  })
+
+  if (error) return { data: null, error: error.message }
+  return { data: data as { serving: string[]; waitCount: number }, error: null }
 }
 
 export type KioskIntakePayload = {
@@ -66,7 +90,7 @@ export async function submitKioskIntake(
 
 export async function generateBranchPublicToken(
   branchId: string,
-  tokenType: "kiosk" | "display",
+  tokenType: "kiosk" | "display" | "portal",
   label?: string
 ): Promise<{ data: { token: string } | null; error: string | null }> {
   const supabase = createClient()
@@ -82,7 +106,7 @@ export async function generateBranchPublicToken(
 }
 
 export function buildPublicDeviceUrl(
-  type: "kiosk" | "display",
+  type: "kiosk" | "display" | "portal",
   token: string,
   origin = typeof window !== "undefined" ? window.location.origin : ""
 ): string {
@@ -91,7 +115,7 @@ export function buildPublicDeviceUrl(
 
 export async function openPublicDevice(
   branchId: string,
-  type: "kiosk" | "display"
+  type: "kiosk" | "display" | "portal"
 ): Promise<{ error: string | null }> {
   const { data, error } = await generateBranchPublicToken(branchId, type)
   if (error || !data?.token) {
@@ -101,4 +125,28 @@ export async function openPublicDevice(
   const url = buildPublicDeviceUrl(type, data.token)
   window.open(url, "_blank", "noopener,noreferrer")
   return { error: null }
+}
+
+export async function submitPortalAppointment(params: {
+  sessionId: string
+  phone: string
+  lastName: string
+  providerId: string
+  date: string
+  time: string
+}): Promise<{ data: { appointment_id: string } | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("submit_portal_appointment", {
+    p_session_id: params.sessionId,
+    p_phone: params.phone,
+    p_last_name: params.lastName,
+    p_provider_id: params.providerId,
+    p_date: params.date,
+    p_time: params.time,
+  })
+
+  if (error) return { data: null, error: error.message }
+  const result = data as { appointment_id: string }
+  if (!result?.appointment_id) return { data: null, error: "Invalid response from portal booking" }
+  return { data: { appointment_id: result.appointment_id }, error: null }
 }
