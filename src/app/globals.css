@@ -73,6 +73,46 @@
   }
 }
 
+@media print {
+  @page {
+    size: auto;
+    margin: 10mm;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  /* Hide sidebar, topbar, floating buttons, etc. */
+  aside, nav, header, footer, 
+  [data-sidebar], 
+  [role="navigation"],
+  .no-print {
+    display: none !important;
+  }
+
+  /* Reset layout constraints so content flows naturally for printing */
+  main, .content-panel, [role="main"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  /* Ensure the overarching flex layout doesn't hide overflowing print pages */
+  #root, #__next, body, html {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+}
+
 /* Subtle motion — golden-page reference (respects reduced motion below) */
 @keyframes fade-rise {
   from {

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Download, Printer, RefreshCw, Save, Wallet } from "lucide-react"
+import { printCurrentPage } from "@/lib/utils/print"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
@@ -67,7 +68,7 @@ export default function DailyCloseoutPage() {
   }
 
   const handlePrint = () => {
-    window.print()
+    printCurrentPage({ title: `Closeout Report — ${data?.date ?? ""}` })
   }
 
   const handleExport = () => {

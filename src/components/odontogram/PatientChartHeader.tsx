@@ -4,6 +4,7 @@ import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Printer, Save, AlertCircle, History, Download } from "lucide-react"
+import { printCurrentPage } from "@/lib/utils/print"
 
 interface PatientChartHeaderProps {
   patientName: string
@@ -64,7 +65,7 @@ export function PatientChartHeader({
             <History className="w-4 h-4" /> History
           </Button>
         )}
-        <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-2">
+        <Button variant="outline" size="sm" onClick={() => printCurrentPage({ title: `Dental Chart — ${patientName}` })} className="gap-2">
           <Printer className="w-4 h-4" /> Print
         </Button>
         {onExportPng && (

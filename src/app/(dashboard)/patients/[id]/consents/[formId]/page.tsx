@@ -262,7 +262,7 @@ export default function ConsentFormPage() {
           </Button>
         }
       >
-        <Card className="flex min-h-0 flex-col max-h-[80vh]">
+        <Card className="flex flex-col">
           <CardHeader className="shrink-0 border-b border-neutral-100 bg-neutral-50 rounded-t-xl">
             <CardTitle className="text-lg flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-primary-600" />
@@ -274,7 +274,7 @@ export default function ConsentFormPage() {
 
           <CardContent
             ref={scrollRef}
-            className="relative min-h-0 flex-1 overflow-y-auto p-6 space-y-4 text-sm text-neutral-700 leading-relaxed consent-document-scroll"
+            className="relative overflow-y-auto p-6 space-y-4 text-sm text-neutral-700 leading-relaxed consent-document-scroll h-[50vh] min-h-[350px]"
             onScroll={handleScroll}
           >
             <ConsentScrollProgress progress={scrollProgress} visible={needsScroll && !hasReachedEnd} />

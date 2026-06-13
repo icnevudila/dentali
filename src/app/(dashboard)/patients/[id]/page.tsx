@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users } from "lucide-react"
+import { printCurrentPage } from "@/lib/utils/print"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
@@ -287,7 +288,7 @@ export default function PatientProfilePage() {
               <FileText className="h-4 w-4" /> Consents
             </Link>
           </Button>
-          <Button variant="outline" className="gap-2" onClick={() => window.print()}>
+          <Button variant="outline" className="gap-2" onClick={() => printCurrentPage({ title: `Patient — ${patient.first_name} ${patient.last_name}` })}>
             <Printer className="h-4 w-4"/> Print
           </Button>
           <Button variant="outline" className="gap-2" asChild>

@@ -53,7 +53,7 @@ export function ModulePageShell({
   )
 
   return (
-    <DirectionalTransition className={cn("mx-auto w-full", maxWidth, className)}>
+    <DirectionalTransition className={cn("mx-auto w-full", maxWidth, className)} data-print-content="true">
       <div className="space-y-6">
         <SectionEyebrow icon={icon}>{eyebrow}</SectionEyebrow>
 

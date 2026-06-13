@@ -48,14 +48,15 @@ function slugifyFilename(name: string): string {
     .replace(/^-|-$/g, "")
 }
 
-/** Opens browser print dialog — user chooses Save as PDF. */
 export function printConsentDocument(elementId = "consent-print-document") {
   const el = document.getElementById(elementId)
   if (!el) {
-    window.print()
+    const { printCurrentPage } = require("@/lib/utils/print")
+    printCurrentPage()
     return
   }
-  window.print()
+  const { printDomNode } = require("@/lib/utils/print")
+  printDomNode(el)
 }
 
 export async function downloadConsentDocx(
