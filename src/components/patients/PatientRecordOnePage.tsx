@@ -200,7 +200,7 @@ export function PatientRecordOnePage({
   const signedConsents = consents.filter((c) => c.status === "signed").length
 
   return (
-    <div className="flex gap-8">
+    <div className="flex flex-col xl:flex-row gap-6 xl:gap-8">
       <SectionNav activeId={activeSection} />
 
       <div className="min-w-0 flex-1 space-y-10 pb-8">
