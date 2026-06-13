@@ -41,11 +41,10 @@ export function MultiDeviceSection() {
           
           {/* Tablet View */}
           <ScrollReveal direction="left" delay={100} className="space-y-4 text-center">
-            <div className="relative mx-auto max-w-[280px] sm:max-w-[320px] aspect-[3/4] rounded-[32px] border-8 border-neutral-800 bg-neutral-900 p-2 shadow-2xl overflow-hidden">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-4 bg-neutral-800 rounded-b-xl z-20" />
-              <div className="relative w-full h-full rounded-[20px] overflow-hidden bg-white">
+            <div className="relative mx-auto max-w-[280px] sm:max-w-[360px] aspect-[4/3] rounded-[24px] border-8 border-neutral-800 bg-neutral-900 p-2 shadow-2xl overflow-hidden">
+              <div className="relative w-full h-full rounded-[14px] overflow-hidden bg-white">
                 <Image
-                  src="/screenshots/all-pages/appointments/tablet.png"
+                  src="/screenshots/all-pages/kiosk/desktop.png"
                   alt="Tablet App View"
                   fill
                   className="object-cover object-top"

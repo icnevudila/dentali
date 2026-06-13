@@ -223,7 +223,7 @@ export const TIMELINE_STEPS: TimelineStep[] = [
     time: "8:00",
     title: t("Patient checks in at kiosk", "Hasta kiosk'tan kayıt yaptırır"),
     description: t("Walk-in or appointed — the patient taps their name on the tablet and gets a queue number.", "Randevulu veya randevusuz — hasta tablette ismini seçer ve sıra numarası alır."),
-    screenshot: "queue/tablet.png",
+    screenshot: "kiosk/desktop.png",
     device: "tablet",
   },
   {
