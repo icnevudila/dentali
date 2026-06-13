@@ -206,11 +206,11 @@ export function printInvoice(params: {
 }): void {
   const html = buildInvoicePrintHtml(params)
   const win = window.open("", "_blank", "noopener,noreferrer,width=860,height=960")
-  if (!win) return
+  win.document.open()
   win.document.write(html)
   win.document.close()
-  win.focus()
-  win.onload = () => {
+  setTimeout(() => {
+    win.focus()
     win.print()
-  }
+  }, 300)
 }
