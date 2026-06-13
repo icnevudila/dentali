@@ -116,9 +116,11 @@ export function buildInvoicePrintHtml(params: {
     .totals div { display: flex; justify-content: space-between; padding: 6px 0; }
     .totals .balance { font-weight: 700; font-size: 1.125rem; border-top: 2px solid #0f172a; padding-top: 10px; margin-top: 4px; }
     .footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 0.75rem; color: #94a3b8; line-height: 1.5; }
+    .print-btn { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 20px; padding: 8px 20px; background: #0f172a; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .print-btn:hover { background: #1e293b; }
     @media print {
       body { padding: 20px 24px; }
-      .no-print { display: none; }
+      .no-print { display: none !important; }
     }
     .watermark {
       position: fixed;
@@ -142,6 +144,9 @@ export function buildInvoicePrintHtml(params: {
 </head>
 <body>
   <div class="watermark">SAMPLE - NOT A VALID INVOICE</div>
+  <div class="no-print" style="margin-bottom:16px">
+    <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+  </div>
   <div class="header">
     <div>
       <div class="clinic">${escapeHtml(clinicName)}</div>
@@ -191,14 +196,6 @@ export function buildInvoicePrintHtml(params: {
     Generated ${new Date().toLocaleString("en-PH")} · Official receipt for clinic records.<br />
     Use <strong>Print → Save as PDF</strong> to download a copy.
   </p>
-  
-  <script>
-    window.onload = function() {
-      setTimeout(function() {
-        window.print();
-      }, 300);
-    };
-  </script>
 </body>
 </html>`
 }
@@ -213,7 +210,28 @@ export function printInvoice(params: {
   branchName?: string | null
 }): void {
   const html = buildInvoicePrintHtml(params)
-  const base64Html = btoa(unescape(encodeURIComponent(html)))
-  const dataUri = `data:text/html;charset=utf-8;base64,${base64Html}`
-  window.open(dataUri, "_blank", "noopener,noreferrer,width=860,height=960")
+  // Use Blob URL — data: URIs are blocked by modern browsers
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" })
+  const url = URL.createObjectURL(blob)
+  const win = window.open(url, "_blank")
+  if (!win) {
+    // Fallback: inject iframe
+    const iframe = document.createElement("iframe")
+    iframe.style.cssText = "position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:99999;border:none;background:#fff"
+    iframe.src = url
+    document.body.appendChild(iframe)
+    const closeBtn = document.createElement("button")
+    closeBtn.textContent = "✕ Close"
+    closeBtn.style.cssText = "position:fixed;top:12px;right:12px;z-index:100000;padding:8px 16px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600"
+    closeBtn.onclick = () => {
+      document.body.removeChild(iframe)
+      document.body.removeChild(closeBtn)
+      URL.revokeObjectURL(url)
+    }
+    document.body.appendChild(closeBtn)
+    return
+  }
+  win.addEventListener("load", () => {
+    setTimeout(() => URL.revokeObjectURL(url), 5000)
+  })
 }

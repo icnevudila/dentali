@@ -2,6 +2,40 @@ import { createClient } from "@/lib/supabase/client"
 import { getInvoice } from "./invoice-service"
 import { buildInvoicePrintHtml } from "./invoice-print"
 
+/**
+ * Opens the invoice as a printable HTML page using a Blob URL.
+ * Blob URLs are NOT blocked by popup blockers (unlike data: URIs).
+ */
+function openHtmlInNewTab(html: string): boolean {
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" })
+  const url = URL.createObjectURL(blob)
+  const win = window.open(url, "_blank")
+  if (!win) {
+    // If popup was blocked, try an alternative: inject into an iframe
+    const iframe = document.createElement("iframe")
+    iframe.style.cssText = "position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:99999;border:none;background:#fff"
+    iframe.src = url
+    document.body.appendChild(iframe)
+    // Add a close button
+    const closeBtn = document.createElement("button")
+    closeBtn.textContent = "✕ Close"
+    closeBtn.style.cssText = "position:fixed;top:12px;right:12px;z-index:100000;padding:8px 16px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600"
+    closeBtn.onclick = () => {
+      document.body.removeChild(iframe)
+      document.body.removeChild(closeBtn)
+      URL.revokeObjectURL(url)
+    }
+    document.body.appendChild(closeBtn)
+    return true
+  }
+  // Revoke the blob URL after the window loads to free memory
+  win.addEventListener("load", () => {
+    // Small delay so the page has time to render
+    setTimeout(() => URL.revokeObjectURL(url), 5000)
+  })
+  return true
+}
+
 export async function downloadInvoicePdf(
   invoiceId: string
 ): Promise<{ error: string | null }> {
@@ -49,13 +83,10 @@ export async function downloadInvoicePdf(
     lineItems: lineItems || [],
   })
 
-  // Encode HTML document to Base64 to bypass popup blocker limitations on empty frames
-  const base64Html = btoa(unescape(encodeURIComponent(html)))
-  const dataUri = `data:text/html;charset=utf-8;base64,${base64Html}`
-  
-  const win = window.open(dataUri, "_blank", "noopener,noreferrer,width=860,height=960")
-  if (!win) {
-    return { error: "Popup window was blocked. Please allow popups to print/save this invoice." }
+  // Use Blob URL instead of data: URI — data: URIs are blocked by modern browsers
+  const opened = openHtmlInNewTab(html)
+  if (!opened) {
+    return { error: "Could not open invoice preview. Please check your popup blocker settings." }
   }
 
   return { error: null }
