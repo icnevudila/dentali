@@ -64,8 +64,12 @@ export async function downloadInvoicePdf(
   win.document.open()
   win.document.write(html)
   win.document.close()
-  win.focus()
-  win.print()
+  
+  // A small timeout allows the browser layout engine to paint the HTML content before opening the print dialog
+  setTimeout(() => {
+    win.focus()
+    win.print()
+  }, 300)
 
   return { error: null }
 }
