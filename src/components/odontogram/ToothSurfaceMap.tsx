@@ -22,9 +22,12 @@ export function ToothSurfaceMap({
 }: ToothSurfaceMapProps) {
   
   const isMissing = finding?.condition === "missing_caries" || finding?.condition === "missing_other" || finding?.surgery_type === "extraction_caries" || finding?.surgery_type === "extraction_other"
-  
+  const isImplant = finding?.restoration_type === "implant"
+  const isCrown = finding?.restoration_type === "jacket_crown"
+  const isRootFragment = finding?.condition === "root_fragment"
+
   const getSurfaceColor = (surface: ToothSurface) => {
-    if (isMissing) return "#fef3c7" // amber-100 base for missing
+    if (isMissing && !isImplant) return "#fef3c7" // amber-100 base for missing
     const hasSurface = finding?.surfaces?.includes(surface)
     if (!hasSurface) return "#ffffff"
     if (finding?.condition === "decayed") return "#dc2626" 
@@ -33,7 +36,7 @@ export function ToothSurfaceMap({
   }
 
   const getStrokeColor = (surface: ToothSurface) => {
-    if (isMissing) return "#d97706" 
+    if (isMissing && !isImplant) return "#d97706" 
     const hasSurface = finding?.surfaces?.includes(surface)
     if (!hasSurface) return "#94a3b8" 
     if (finding?.condition === "decayed") return "#991b1b" 
@@ -109,16 +112,42 @@ export function ToothSurfaceMap({
         className={`transition-all ${isSelected && !isInteractive ? 'drop-shadow-lg' : 'drop-shadow-sm'}`}
       >
         <g style={{ transformOrigin: 'center', transform: isInteractive ? 'scale(1)' : scaleTransform }}>
+          {/* Base surface paths */}
           <path d={paths.top} fill={getSurfaceColor('top')} stroke={getStrokeColor('top')} strokeWidth="3" strokeLinejoin="round" className={baseStyle} onClick={(e) => handleInteraction('top', e)} />
           <path d={paths.bottom} fill={getSurfaceColor('bottom')} stroke={getStrokeColor('bottom')} strokeWidth="3" strokeLinejoin="round" className={baseStyle} onClick={(e) => handleInteraction('bottom', e)} />
           <path d={paths.left} fill={getSurfaceColor('left')} stroke={getStrokeColor('left')} strokeWidth="3" strokeLinejoin="round" className={baseStyle} onClick={(e) => handleInteraction('left', e)} />
           <path d={paths.right} fill={getSurfaceColor('right')} stroke={getStrokeColor('right')} strokeWidth="3" strokeLinejoin="round" className={baseStyle} onClick={(e) => handleInteraction('right', e)} />
           <path d={paths.center} fill={getSurfaceColor('center')} stroke={getStrokeColor('center')} strokeWidth="3" strokeLinejoin="round" className={baseStyle} onClick={(e) => handleInteraction('center', e)} />
+
+          {/* Root Canal / Fragment vertical line visualization */}
+          {isRootFragment && (
+            <line x1="50" y1="10" x2="50" y2="90" stroke="#dc2626" strokeWidth="6" strokeLinecap="round" opacity="0.85" />
+          )}
+
+          {/* Jacket Crown golden border visualization */}
+          {isCrown && (
+            <rect x="12" y="12" width="76" height="76" rx="16" fill="none" stroke="#d97706" strokeWidth="5" strokeDasharray="6 4" />
+          )}
+
+          {/* Implant screw visualization */}
+          {isImplant && (
+            <g transform="translate(30, 25) scale(0.4)" stroke="#64748b" strokeWidth="4" fill="none" strokeLinecap="round">
+              {/* Screw head */}
+              <rect x="20" y="5" width="60" height="20" rx="5" fill="#cbd5e1" strokeWidth="6" />
+              {/* Screw threads */}
+              <line x1="30" y1="35" x2="70" y2="35" strokeWidth="8" />
+              <line x1="35" y1="50" x2="65" y2="50" strokeWidth="8" />
+              <line x1="38" y1="65" x2="62" y2="65" strokeWidth="8" />
+              <line x1="42" y1="80" x2="58" y2="80" strokeWidth="8" />
+              {/* Screw body */}
+              <line x1="50" y1="20" x2="50" y2="95" strokeWidth="10" />
+            </g>
+          )}
         </g>
       </svg>
       
-      {/* Overlay X for missing teeth */}
-      {isMissing && (
+      {/* Overlay X for missing teeth (but not implants) */}
+      {isMissing && !isImplant && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
            <svg width={size} height={size} viewBox="0 0 100 100" className="opacity-90 drop-shadow-md">
              <line x1="20" y1="20" x2="80" y2="80" stroke="#ea580c" strokeWidth="8" strokeLinecap="round" />
