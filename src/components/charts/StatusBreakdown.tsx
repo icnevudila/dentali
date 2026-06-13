@@ -29,7 +29,7 @@ export function StatusBreakdown({ slices, emptyLabel = "No appointments", classN
           />
         ))}
       </div>
-      <ul className="grid gap-2 sm:grid-cols-2">
+      <ul className="grid gap-2 grid-cols-1">
         {slices.map((slice) => (
           <li key={slice.status} className="flex items-center justify-between gap-2 text-sm">
             <span className="flex min-w-0 items-center gap-2">

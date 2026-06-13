@@ -539,7 +539,41 @@ function AppointmentsPageContent() {
                   ) : !date || !selectedProviderId ? (
                     <p className="text-xs text-neutral-500">Select provider and date.</p>
                   ) : slots.length === 0 ? (
-                    <p className="text-xs text-amber-700">No slots — provider may be closed this day.</p>
+                    <div className="space-y-2">
+                      <p className="text-xs text-amber-700">No slots — provider may be closed this day or has no active clinic hours.</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="text-xs h-8 gap-1.5 border-amber-300 hover:bg-amber-50"
+                        onClick={async () => {
+                          setSlotsLoading(true)
+                          setError(null)
+                          try {
+                            const supabase = (await import("@/lib/supabase/client")).createClient()
+                            // Triggers branch clinic hour provisioning & ensures provider defaults are set
+                            const { error: err } = await supabase.rpc("ensure_provider_availability_defaults", {
+                              p_branch_id: activeBranch!.id,
+                              p_provider_id: selectedProviderId
+                            })
+                            if (err) throw err
+                            
+                            // Re-fetch slots
+                            const { data: newSlots } = await fetchAvailableAppointmentSlots({
+                              branchId: activeBranch!.id,
+                              providerId: selectedProviderId,
+                              date
+                            })
+                            setSlots(newSlots)
+                          } catch (err: any) {
+                            setError(err?.message || "Failed to configure slots")
+                          } finally {
+                            setSlotsLoading(false)
+                          }
+                        }}
+                      >
+                        ⚙️ Configure Working Hours & Slots Automatically
+                      </Button>
+                    </div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {slots.map((slot) => (

@@ -37,9 +37,20 @@ export async function downloadInvoicePdf(
     // Fall back to client side printing
   }
 
+  // Open the window synchronously *before* the async await fetches to avoid browser popup blockers
+  const win = window.open("", "_blank", "noopener,noreferrer,width=860,height=960")
+  if (!win) {
+    return { error: "Popup window was blocked. Please allow popups to print/save this invoice." }
+  }
+
+  // Show a loading text in the popup while fetching the data
+  win.document.write("<html><head><title>Loading Invoice...</title></head><body style='font-family:sans-serif;padding:40px;color:#64748b;'>Preparing invoice details...</body></html>")
+  win.document.close()
+
   // Fallback to client-side print layout that allows "Save as PDF"
   const { data: inv, payments, lineItems } = await getInvoice(invoiceId)
   if (!inv) {
+    win.close()
     return { error: "Invoice not found for printing" }
   }
 
@@ -49,10 +60,8 @@ export async function downloadInvoicePdf(
     lineItems: lineItems || [],
   })
 
-  const win = window.open("", "_blank", "noopener,noreferrer,width=860,height=960")
-  if (!win) {
-    return { error: "Popup window was blocked. Please allow popups to print/save this invoice." }
-  }
+  // Clear loading state and replace with final printed HTML
+  win.document.open()
   win.document.write(html)
   win.document.close()
   win.focus()
