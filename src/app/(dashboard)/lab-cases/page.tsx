@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useLocale } from "@/lib/providers/locale-provider"
+import { useLocale } from "@/hooks/use-locale"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
