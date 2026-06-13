@@ -19,7 +19,9 @@ import { useAuth } from "@/hooks/use-auth"
 import { useBranch } from "@/hooks/use-branch"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { getPatient } from "@/lib/patients/patient-service"
+import { getMedicalRiskFlags } from "@/lib/patients/medical-history-service"
 import { fetchProcedures } from "@/lib/billing/procedure-service"
+import { AlertCircle } from "lucide-react"
 import {
   createTreatmentPlan,
   getTreatmentPlan,
@@ -57,6 +59,7 @@ function TreatmentPlanContent() {
   const [stockWarnings, setStockWarnings] = React.useState<
     { name: string; quantity_on_hand: number; min_stock_level: number }[]
   >([])
+  const [riskFlags, setRiskFlags] = React.useState<string[]>([])
 
   const loadPlan = React.useCallback(async (id: string) => {
     const result = await getTreatmentPlan(id)
@@ -72,6 +75,9 @@ function TreatmentPlanContent() {
   React.useEffect(() => {
     getPatient(patientId).then(({ data }) => {
       if (data) setPatientName(`${data.first_name} ${data.last_name}`)
+    })
+    getMedicalRiskFlags(patientId).then(({ data }) => {
+      if (data) setRiskFlags(data)
     })
     fetchProcedures(activeBranch?.id).then(({ data }) => setProcedures(data))
     if (planId) loadPlan(planId)
@@ -247,7 +253,19 @@ function TreatmentPlanContent() {
             </Card>
 
             {planStatus !== "approved" ? (
-              <ChartFindingSuggestionsCard
+              <>
+                {riskFlags.length > 0 && (
+                  <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 mb-4 animate-fade-rise flex gap-3">
+                    <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
+                    <div>
+                      <h4 className="text-sm font-semibold text-red-900">DİKKAT: Klinik Güvenlik Riski</h4>
+                      <p className="mt-1 text-sm text-red-800">
+                        Hastanın tıbbi geçmişinde kritik uyarılar bulunmaktadır: <strong>{riskFlags.join(", ")}</strong>. Cerrahi işlem planlamadan önce lütfen tıbbi geçmişini detaylı inceleyiniz.
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <ChartFindingSuggestionsCard
                 patientId={patientId}
                 branchId={activeBranch?.id ?? null}
                 procedures={procedures}

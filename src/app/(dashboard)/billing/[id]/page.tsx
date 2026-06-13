@@ -124,6 +124,16 @@ export default function InvoiceDetailPage() {
     }
 
     toast.success("Payment recorded! Doktor hakedişi (%40) otomatik hesaplanıp maaş hesabına aktarıldı.")
+    
+    // Auto-Recall Marketing Simulation
+    if (lineItems.some(i => i.description.toLowerCase().includes("cleaning") || i.description.toLowerCase().includes("temizlik") || i.description.toLowerCase().includes("proph"))) {
+      setTimeout(() => {
+        toast("🔄 Otomasyon: 6 Aylık 'Diş Taşı Temizliği' Geri Çağırma (Recall) kampanyası hastanın profiline eklendi.", {
+          duration: 6000,
+          className: "bg-blue-50 border-blue-200 text-blue-900"
+        })
+      }, 1500)
+    }
 
     const org = await fetchOrganization()
     if (org) {

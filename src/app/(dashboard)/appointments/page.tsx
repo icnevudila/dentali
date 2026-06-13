@@ -656,7 +656,7 @@ function AppointmentsPageContent() {
                   <Input required value={purpose} onChange={(e) => setPurpose(e.target.value)} />
                 </div>
                 <div className="sm:col-span-2 flex flex-wrap gap-2">
-                  <Button type="submit" disabled={booking || !selectedPatientId}>
+                  <Button type="submit" disabled={booking || !selectedPatientId || !time || slots.length === 0}>
                     {booking
                       ? t("appointments.booking", "Booking…")
                       : t("appointments.confirmBooking", "Confirm Booking")}
