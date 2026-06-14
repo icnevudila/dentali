@@ -5,7 +5,7 @@ language plpgsql
 volatile
 security definer
 set search_path = public
-as 
+as $$
 declare
   v_org_id uuid;
   v_categories jsonb;
@@ -71,4 +71,4 @@ begin
     'procedures', v_procedures
   );
 end;
-;
+$$;
