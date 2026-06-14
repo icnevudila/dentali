@@ -23,15 +23,6 @@ const CARD_THEMES = [
   "border-rose-100 bg-rose-50/40",
 ]
 
-const ICON_THEMES = [
-  "bg-blue-100 text-blue-600",
-  "bg-teal-100 text-teal-600",
-  "bg-purple-100 text-purple-600",
-  "bg-amber-100 text-amber-600",
-  "bg-emerald-100 text-emerald-600",
-  "bg-rose-100 text-rose-600",
-]
-
 function UspPreviewPanel({ card, locale }: { card: UspCard; locale: string }) {
   if (!card.preview) return null
 
@@ -125,17 +116,13 @@ export function WhyDifferentSection() {
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {USP_CARDS.map((card, idx) => {
-            const Icon = card.icon
             const hasPreview = Boolean(card.preview)
             const isOpen = openIdx === idx
 
             const inner = (
               <>
-                <div className="flex items-start justify-between gap-3">
-                  <div className={cn("inline-flex w-fit rounded-xl p-2.5", ICON_THEMES[idx])}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  {hasPreview ? (
+                {hasPreview ? (
+                  <div className="flex justify-end">
                     <span
                       className={cn(
                         "inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-700 ring-1 ring-primary-100",
@@ -145,9 +132,11 @@ export function WhyDifferentSection() {
                       {seeProduct}
                       <ChevronDown className={cn("h-3 w-3 transition-transform", isOpen && "rotate-180")} />
                     </span>
-                  ) : null}
-                </div>
-                <h3 className="mt-4 text-lg font-bold text-neutral-900">{lt(card.title, locale)}</h3>
+                  </div>
+                ) : null}
+                <h3 className={cn("text-lg font-bold text-neutral-900", hasPreview && "mt-3")}>
+                  {lt(card.title, locale)}
+                </h3>
                 <p className="mt-2 text-sm leading-relaxed text-neutral-600">{lt(card.description, locale)}</p>
 
                 {isOpen && hasPreview ? (
