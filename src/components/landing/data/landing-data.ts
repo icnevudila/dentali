@@ -468,8 +468,56 @@ export const TESTIMONIALS: Testimonial[] = [
     color: "#06b6d4",
     rating: 5,
     quote: t(
-      "The queue display on our waiting room TV is a game changer. Patients are calmer and we get fewer 'how long?' questions.",
-      "Bekleme odası TV'sindeki sıra ekranı oyun değiştirici. Hastalar daha sakin ve 'ne kadar sürecek?' soruları azaldı."
+      "The queue display on our waiting room TV helped a lot. Patients are calmer and we get fewer 'how long?' questions.",
+      "Bekleme odası TV'sindeki sıra ekranı işleri kolaylaştırdı. Hastalar daha sakin, 'ne kadar sürecek?' sorusu da azaldı."
+    ),
+  },
+  {
+    name: "Dr. Patricia Lim",
+    role: "Owner Dentist",
+    clinic: "Lim Dental Makati",
+    initials: "PL",
+    color: "#8b5cf6",
+    rating: 5,
+    quote: t(
+      "We added a second branch without another software bill. Everyone picks their location at login and only sees what they need.",
+      "İkinci şubeyi açtık, ek yazılım lisansı almadık. Personel girişte şubesini seçiyor, sadece kendi verisini görüyor."
+    ),
+  },
+  {
+    name: "Carla Mendoza",
+    role: "Dental Assistant",
+    clinic: "BrightSmile Cebu",
+    initials: "CM",
+    color: "#10b981",
+    rating: 5,
+    quote: t(
+      "Charting on the tablet chairside actually works. Findings stay on the tooth chart instead of scattered notes on paper.",
+      "Tablet üzerinde koltuk başı şema işe yarıyor. Bulgular kağıt notlara dağılmıyor, diş şemasında kalıyor."
+    ),
+  },
+  {
+    name: "James Ong",
+    role: "Billing Officer",
+    clinic: "Ong Family Dental",
+    initials: "JO",
+    color: "#3b82f6",
+    rating: 5,
+    quote: t(
+      "Before closing I check collections and unpaid invoices in one place. I used to reconcile three spreadsheets every night.",
+      "Kapanışta tahsilat ve ödenmemiş faturaları tek ekrandan kontrol ediyorum. Eskiden her akşam üç Excel dosyası uğraşırdım."
+    ),
+  },
+  {
+    name: "Rosa Dizon",
+    role: "Receptionist",
+    clinic: "Dizon Dental Taguig",
+    initials: "RD",
+    color: "#ec4899",
+    rating: 5,
+    quote: t(
+      "Morning check-in is quieter now. Patients register on the kiosk and sign consent on the tablet — less paper at the front desk.",
+      "Sabah kayıtları daha sakin. Hastalar kiosk'tan giriş yapıyor, onamı tabletten imzalıyor — resepsiyonda daha az kağıt."
     ),
   },
 ]
@@ -599,9 +647,12 @@ export const LANDING_HEADINGS = {
     mobileLabel: t("Doctor's Companion", "Doktor Mobil"),
   },
   testimonials: {
-    eyebrow: t("Wall of Love", "Sevgi Duvarı"),
-    title: t("Loved by clinics worldwide", "Dünya genelindeki klinikler tarafından seviliyor"),
-    subtitle: t("Hear directly from dental clinic owners, doctors, and staff.", "Doğrudan klinik sahiplerinden, diş hekimlerinden ve personelden dinleyin."),
+    eyebrow: t("From the clinic floor", "Klinikten"),
+    title: t("What teams notice after switching", "Geçişten sonra ekiplerin fark ettikleri"),
+    subtitle: t(
+      "Short notes from managers, front desk, and chairside staff — specific problems, not slogans.",
+      "Yöneticilerden, resepsiyondan ve koltuk başından kısa notlar — somut işler, slogan değil."
+    ),
   },
   faq: {
     eyebrow: t("Support", "Destek"),
