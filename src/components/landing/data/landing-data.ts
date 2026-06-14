@@ -188,10 +188,16 @@ export const CLINIC_EXPERIENCE_ITEMS: ClinicExperienceItem[] = [
    USP / Why Different
    ═══════════════════════════════════════════════ */
 
+export type UspPreview =
+  | { kind: "image"; src: string; alt: LandingText }
+  | { kind: "devices" }
+
 export interface UspCard {
   icon: LucideIcon
   title: LandingText
   description: LandingText
+  preview?: UspPreview
+  featureId?: string
 }
 
 export const USP_CARDS: UspCard[] = [
@@ -202,6 +208,12 @@ export const USP_CARDS: UspCard[] = [
       "Every branch sees its own data. Owners see everything. No per-branch license tricks.",
       "Her şube kendi verisini görür. Sahipler her şeyi görür. Şube başına lisans oyunu yok."
     ),
+    preview: {
+      kind: "image",
+      src: asset("/landing/feature-staff.png"),
+      alt: t("Branch settings", "Şube ayarları"),
+    },
+    featureId: "staff",
   },
   {
     icon: Smartphone,
@@ -210,6 +222,8 @@ export const USP_CARDS: UspCard[] = [
       "Desktop admin, tablet kiosk, mobile lookup, waiting-room TV — same data, optimized layouts.",
       "Masaüstü yönetim, tablet kiosk, mobil arama, bekleme odası TV — aynı veri, optimize görünüm."
     ),
+    preview: { kind: "devices" },
+    featureId: "queue",
   },
   {
     icon: FileText,
@@ -218,6 +232,12 @@ export const USP_CARDS: UspCard[] = [
       "Design custom intake and treatment consents. Patients sign digitally on tablets or phones — instantly saved to history.",
       "Özel kabul ve tedavi onam formları tasarlayın. Hastalar tablet veya telefondan dijital imza atsın — anında geçmişe kaydedilsin."
     ),
+    preview: {
+      kind: "image",
+      src: asset("/landing/feature-treatment.png"),
+      alt: t("Digital consent forms", "Dijital onam formları"),
+    },
+    featureId: "treatment",
   },
   {
     icon: BarChart3,
@@ -226,6 +246,12 @@ export const USP_CARDS: UspCard[] = [
       "Consolidated revenues, active patient count, and appointment performance across all clinics in real time.",
       "Tüm kliniklerinizdeki konsolide gelirleri, aktif hasta sayısını ve randevu performansını gerçek zamanlı takip edin."
     ),
+    preview: {
+      kind: "image",
+      src: asset("/landing/feature-reports.png"),
+      alt: t("Reports and analytics", "Raporlar ve analitik"),
+    },
+    featureId: "reports",
   },
   {
     icon: Globe,
@@ -234,6 +260,12 @@ export const USP_CARDS: UspCard[] = [
       "Access your data securely from anywhere. Fast page loads and a workflow built for busy clinic days.",
       "Verilerinize her yerden güvenle erişin. Hızlı sayfa yüklemeleri ve yoğun klinik günleri için tasarlanmış iş akışı."
     ),
+    preview: {
+      kind: "image",
+      src: asset("/landing/feature-appointments.png"),
+      alt: t("Appointments in the browser", "Tarayıcıda randevular"),
+    },
+    featureId: "appointments",
   },
   {
     icon: Zap,

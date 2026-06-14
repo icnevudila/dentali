@@ -1,8 +1,6 @@
-/** Public paths under /landing — sourced from landing-ready crops */
-
-const LANDING_ASSET_V = "3"
+/** Public paths under /landing — plain paths (query strings break next/image). */
 export function landingAsset(path: string) {
-  return `${path}?v=${LANDING_ASSET_V}`
+  return path
 }
 const v = landingAsset
 

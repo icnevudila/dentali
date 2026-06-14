@@ -50,8 +50,28 @@ export function FeaturesShowcase() {
     const isDesktop = window.innerWidth >= 1024
     if (isDesktop && refs.current[idx]) {
       refs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "center" })
+    } else if (refs.current[idx]) {
+      refs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "start" })
     }
   }
+
+  React.useEffect(() => {
+    const syncFromHash = () => {
+      const hash = window.location.hash
+      if (!hash.startsWith("#features-")) return
+      const id = hash.replace("#features-", "")
+      const idx = FEATURES.findIndex((f) => f.id === id)
+      if (idx >= 0) {
+        setActiveTab(idx)
+        requestAnimationFrame(() => {
+          refs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "start" })
+        })
+      }
+    }
+    syncFromHash()
+    window.addEventListener("hashchange", syncFromHash)
+    return () => window.removeEventListener("hashchange", syncFromHash)
+  }, [])
 
   return (
     <section className="relative overflow-hidden bg-white py-16 sm:py-24" id="features">
@@ -83,6 +103,7 @@ export function FeaturesShowcase() {
               return (
                 <div
                   key={feature.id}
+                  id={`features-${feature.id}`}
                   ref={(el) => { refs.current[idx] = el }}
                   data-index={idx}
                   onClick={() => handleTabClick(idx)}

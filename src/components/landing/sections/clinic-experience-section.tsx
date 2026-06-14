@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import Image from "next/image"
-import Link from "next/link"
 import { Check } from "lucide-react"
 import { useLocale } from "@/hooks/use-locale"
 import {
@@ -14,14 +13,16 @@ import {
 import { LANDING_VIDEOS } from "@/components/landing/data/landing-assets"
 import { LandingVideo } from "@/components/landing/ui/landing-video"
 import { ScrollReveal } from "@/components/landing/ui/scroll-reveal"
+import { cn } from "@/lib/utils"
 
 function lt(text: LandingText, locale: string) {
   return locale === "tr" ? text.tr : text.en
 }
 
+/** Tüm kartlarda medya aynı kutuda, ortada */
 function MediaSlot({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto flex h-[260px] w-full max-w-[280px] items-center justify-center sm:h-[280px] sm:max-w-[300px]">
+    <div className="mx-auto flex min-h-[220px] w-full max-w-[300px] items-center justify-center sm:min-h-[240px]">
       {children}
     </div>
   )
@@ -33,9 +34,14 @@ function ExperienceMedia({ item, locale }: { item: ClinicExperienceItem; locale:
   if (item.id === "kiosk" && video) {
     return (
       <MediaSlot>
-        <div className="landing-zoom-hover-target h-full max-h-full w-auto overflow-hidden rounded-[20px] border-[6px] border-neutral-800 bg-neutral-900 p-1.5 shadow-lg [transform:none]">
-          <div className="landing-video-safe landing-zoom-clip relative h-full aspect-[4/3] overflow-hidden rounded-xl bg-white">
-            <LandingVideo src={video.src} poster={video.poster} label={video.alt} />
+        <div className="landing-zoom-hover-target mx-auto w-full max-w-[300px] overflow-hidden rounded-[20px] border-[6px] border-neutral-800 bg-neutral-900 p-1.5 shadow-lg [transform:none]">
+          <div className="landing-video-safe landing-zoom-clip relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-white">
+            <LandingVideo
+              src={video.src}
+              poster={video.poster}
+              label={video.alt}
+              className="object-center"
+            />
           </div>
         </div>
       </MediaSlot>
@@ -45,13 +51,32 @@ function ExperienceMedia({ item, locale }: { item: ClinicExperienceItem; locale:
   if (item.id === "portal" && video) {
     return (
       <MediaSlot>
-        <div className="landing-zoom-hover-target relative h-full max-h-full w-auto overflow-hidden rounded-[1.75rem] border-[6px] border-neutral-800 bg-neutral-900 p-1.5 shadow-lg [transform:none]">
+        <div className="landing-zoom-hover-target relative mx-auto h-[220px] w-auto overflow-hidden rounded-[1.75rem] border-[6px] border-neutral-800 bg-neutral-900 p-1.5 shadow-lg sm:h-[240px] [transform:none]">
           <div
             className="pointer-events-none absolute top-2 left-1/2 z-10 h-2.5 w-12 -translate-x-1/2 rounded-full bg-neutral-900"
             aria-hidden
           />
           <div className="landing-video-safe landing-zoom-clip relative h-full aspect-[9/19] overflow-hidden rounded-[1.15rem] bg-white">
-            <LandingVideo src={video.src} poster={video.poster} label={video.alt} />
+            <LandingVideo src={video.src} poster={video.poster} label={video.alt} className="object-center" />
+          </div>
+        </div>
+      </MediaSlot>
+    )
+  }
+
+  if (item.id === "queue-tv" && item.image) {
+    return (
+      <MediaSlot>
+        <div className="landing-zoom-hover-target mx-auto w-full max-w-[300px] overflow-hidden rounded-xl border-[6px] border-neutral-800 bg-neutral-900 p-1.5 shadow-lg [transform:none]">
+          <div className="landing-zoom-clip relative aspect-[16/10] w-full overflow-hidden rounded-lg bg-neutral-950">
+            <Image
+              src={item.image}
+              alt={lt(item.title, locale)}
+              fill
+              className="object-cover object-center"
+              sizes="300px"
+              priority={false}
+            />
           </div>
         </div>
       </MediaSlot>
@@ -61,18 +86,16 @@ function ExperienceMedia({ item, locale }: { item: ClinicExperienceItem; locale:
   if (item.image) {
     return (
       <MediaSlot>
-        <div className="landing-zoom-hover-target h-full w-full max-w-full overflow-hidden rounded-xl border-[6px] border-neutral-800 bg-neutral-900 p-1.5 shadow-lg">
-          <div className="landing-zoom-clip relative h-full w-full overflow-hidden rounded-lg bg-neutral-950">
-            <div className="landing-zoom-breathe-md absolute inset-0">
-              <Image
-                src={item.image}
-                alt={lt(item.title, locale)}
-                fill
-                className="object-cover object-center"
-                sizes="(max-width: 640px) 300px, 280px"
-                priority={false}
-              />
-            </div>
+        <div className="landing-zoom-hover-target mx-auto w-full max-w-[300px] overflow-hidden rounded-xl border-[6px] border-neutral-800 bg-neutral-900 p-1.5 shadow-lg">
+          <div className="landing-zoom-clip relative aspect-[16/10] w-full overflow-hidden rounded-lg bg-neutral-950">
+            <Image
+              src={item.image}
+              alt={lt(item.title, locale)}
+              fill
+              className="object-cover object-center"
+              sizes="300px"
+              priority={false}
+            />
           </div>
         </div>
       </MediaSlot>
@@ -109,14 +132,14 @@ export function ClinicExperienceSection() {
           </ScrollReveal>
         </div>
 
-        {/* Mobilde yatay kaydırma — masaüstünde 3 sütun */}
         <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 snap-x snap-mandatory scroll-px-4 md:mx-0 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:px-0 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {CLINIC_EXPERIENCE_ITEMS.map((item, idx) => (
             <article
               key={item.id}
-              className="landing-zoom-hover w-[min(88vw,320px)] shrink-0 snap-center md:w-auto flex h-full flex-col rounded-2xl border border-neutral-200/80 bg-neutral-50/40 p-4 sm:p-5"
+              className={cn(
+                "landing-zoom-hover flex h-full w-[min(88vw,320px)] shrink-0 snap-center flex-col rounded-2xl border border-neutral-200/80 bg-neutral-50/40 p-4 sm:p-5 md:w-auto"
+              )}
             >
-              {/* Video dışında transform yok — iOS Safari poster takılmasını önler */}
               <div className="mb-4 sm:mb-5">
                 <ExperienceMedia item={item} locale={locale} />
               </div>
