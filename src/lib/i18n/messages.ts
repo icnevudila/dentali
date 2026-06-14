@@ -466,6 +466,8 @@ export const messagesEnPh: MessageTree = {
     checkIn: "Check in",
     liveBoard: "Live board",
     history: "History",
+    scheduledAppt: "Scheduled",
+    walkIn: "Walk-in",
   },
   waitlist: {
     title: "Waitlist",
@@ -1149,6 +1151,8 @@ export const messagesTr: MessageTree = {
     checkIn: "Giriş yap",
     liveBoard: "Canlı pano",
     history: "Geçmiş",
+    scheduledAppt: "Randevulu",
+    walkIn: "Randevusuz / Ayaktan",
   },
   waitlist: {
     title: "Bekleme Listesi",
@@ -1683,6 +1687,8 @@ export const messagesFil: MessageTree = {
     checkIn: "Mag-check in",
     liveBoard: "Live board",
     history: "History",
+    scheduledAppt: "May Appointment",
+    walkIn: "Walk-in",
   },
   waitlist: {
     title: "Waitlist",

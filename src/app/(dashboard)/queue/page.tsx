@@ -58,6 +58,7 @@ function QueueCard({
   loading: boolean
 }) {
   const mins = waitMinutes(entry.checked_in_at)
+  const { t } = useLocale()
 
   return (
     <div className="rounded-lg border border-neutral-200 bg-white p-3 shadow-sm">
@@ -68,6 +69,15 @@ function QueueCard({
             {entry.patient_mood === 'anxious' && <span title="Patient is a bit anxious" className="text-xl cursor-help animate-pulse">😰</span>}
             {entry.patient_mood === 'normal' && <span title="Patient feels normal" className="text-xl cursor-help">😐</span>}
             {entry.patient_mood === 'great' && <span title="Patient is feeling great" className="text-xl cursor-help">😊</span>}
+            {entry.appointment_id ? (
+              <Badge variant="outline" className="text-[10px] border-blue-200 bg-blue-50 text-blue-700 font-semibold">
+                {t("queue.scheduledAppt", "Scheduled")}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-[10px] border-neutral-200 bg-neutral-50 text-neutral-500 font-medium">
+                {t("queue.walkIn", "Walk-in")}
+              </Badge>
+            )}
           </div>
           <Link href={`/patients/${entry.patient_id}`} className="block text-sm font-medium text-neutral-900 hover:underline">
             {entry.patient_name ?? "Patient"}
@@ -173,7 +183,15 @@ export default function QueuePage() {
     if (!activeBranch) return
     setLoading(true)
     fetchQueueEntries(activeBranch.id, tab === "board").then(({ data, error: err }) => {
-      setEntries(data)
+      // Prioritize scheduled appointments (appointment_id is not null) over walk-ins
+      const sorted = [...data].sort((a, b) => {
+        const aHasAppt = !!a.appointment_id
+        const bHasAppt = !!b.appointment_id
+        if (aHasAppt && !bHasAppt) return -1
+        if (!aHasAppt && bHasAppt) return 1
+        return new Date(a.checked_in_at).getTime() - new Date(b.checked_in_at).getTime()
+      })
+      setEntries(sorted)
       setError(err)
       setLoading(false)
     })
