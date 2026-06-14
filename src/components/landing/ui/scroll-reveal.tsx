@@ -7,6 +7,8 @@ interface ScrollRevealProps {
   children: React.ReactNode
   className?: string
   direction?: "up" | "left" | "right" | "scale"
+  /** Opacity only — required for ancestors of HTML5 video on iOS Safari */
+  fadeOnly?: boolean
   delay?: number
   threshold?: number
 }
@@ -15,6 +17,7 @@ export function ScrollReveal({
   children,
   className,
   direction = "up",
+  fadeOnly = false,
   delay = 0,
   threshold = 0.15,
 }: ScrollRevealProps) {
@@ -46,8 +49,9 @@ export function ScrollReveal({
     return () => observer.disconnect()
   }, [threshold])
 
-  const dirClass =
-    direction === "left"
+  const dirClass = fadeOnly
+    ? "landing-reveal-fade"
+    : direction === "left"
       ? "landing-reveal-left"
       : direction === "right"
         ? "landing-reveal-right"

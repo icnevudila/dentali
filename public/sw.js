@@ -1,6 +1,6 @@
 /* dentali. PWA service worker stub — cache shell only, network-first for navigations */
 
-const CACHE_NAME = "dentali-shell-v1"
+const CACHE_NAME = "dentali-shell-v3"
 const SHELL = ["/", "/login", "/manifest.webmanifest"]
 
 self.addEventListener("install", (event) => {

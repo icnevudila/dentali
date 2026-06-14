@@ -16,6 +16,16 @@
   transform: translateY(0);
 }
 
+/* Opacity-only reveal — iOS Safari won't paint <video> inside transformed ancestors */
+.landing-reveal-fade {
+  opacity: 0;
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.landing-reveal-fade.revealed {
+  opacity: 1;
+}
+
 /* Staggered children */
 .landing-reveal-stagger > .landing-reveal {
   --stagger: 0;
@@ -257,6 +267,35 @@
 
 .landing-zoom-hover:hover .landing-zoom-hover-target {
   transform: scale(1.04);
+}
+
+/* iOS Safari: video fails inside CSS transform animations */
+.landing-video-safe .landing-zoom-breathe,
+.landing-video-safe.landing-zoom-breathe {
+  animation: none !important;
+  transform: none !important;
+}
+
+.landing-zoom-breathe-md {
+  transform: none;
+}
+
+@media (min-width: 768px) {
+  .landing-zoom-breathe-md {
+    animation: landing-zoom-breathe 7s ease-in-out infinite;
+    transform-origin: center center;
+    will-change: transform;
+  }
+}
+
+@media (max-width: 767px) {
+  .landing-zoom-hover:hover .landing-zoom-hover-target {
+    transform: none;
+  }
+
+  #clinic-experience .landing-zoom-hover:hover .landing-zoom-hover-target {
+    transform: none !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -622,7 +661,8 @@
   .landing-reveal,
   .landing-reveal-left,
   .landing-reveal-right,
-  .landing-reveal-scale {
+  .landing-reveal-scale,
+  .landing-reveal-fade {
     opacity: 1;
     transform: none;
     transition: none;

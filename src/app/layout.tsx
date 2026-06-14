@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
+import { CookieConsentBanner } from "@/components/marketing/CookieConsentBanner";
 import { LocaleBootstrap } from "@/components/i18n/LocaleBootstrap";
 import { getSiteUrl } from "@/lib/site-url";
 import { Toaster } from "sonner";
@@ -48,6 +49,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <LocaleBootstrap />
         <ServiceWorkerRegister />
+        <CookieConsentBanner />
         {children}
         <Toaster position="bottom-right" richColors closeButton />
       </body>
