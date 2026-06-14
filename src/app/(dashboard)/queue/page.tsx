@@ -26,7 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Megaphone, Plus, Users, X, Link2, Copy, Check, UserCheck, Calendar, MapPin, Clock, FileText } from "lucide-react"
+import { Megaphone, Plus, Users, X, Link2, Copy, Check, UserCheck, Calendar, MapPin, Clock, FileText, User } from "lucide-react"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { generateBranchPublicToken } from "@/lib/kiosk/kiosk-service"
 import { PageHeader } from "@/components/layout/PageHeader"
@@ -159,6 +159,24 @@ export default function QueuePage() {
 
   const siteOrigin = typeof window !== "undefined" ? window.location.origin : ""
   const today = toDateKey(new Date())
+
+  const openCheckInModal = () => {
+    setPatientQuery("")
+    setPatients([])
+    setSelectedPatientId("")
+    setCheckInNotes("")
+    setConsentOverridePending(false)
+    setShowCheckIn(true)
+  }
+
+  const closeCheckInModal = () => {
+    setPatientQuery("")
+    setPatients([])
+    setSelectedPatientId("")
+    setCheckInNotes("")
+    setConsentOverridePending(false)
+    setShowCheckIn(false)
+  }
 
   const handleGenerateLink = async (type: "kiosk" | "display" | "portal") => {
     if (!activeBranch) return
@@ -300,11 +318,7 @@ export default function QueuePage() {
       }
       setError(err)
     } else {
-      setConsentOverridePending(false)
-      setShowCheckIn(false)
-      setSelectedPatientId("")
-      setPatientQuery("")
-      setCheckInNotes("")
+      closeCheckInModal()
       load()
     }
   }
@@ -422,7 +436,7 @@ export default function QueuePage() {
                 >
                   <Megaphone className="h-4 w-4" /> {t("queue.callNext", "Call next")}
                 </Button>
-                <Button className="gap-2 shadow-sm" onClick={() => setShowCheckIn(true)}>
+                <Button className="gap-2 shadow-sm" onClick={openCheckInModal}>
                   <Plus className="h-4 w-4" /> {t("queue.checkIn", "Check in")}
                 </Button>
               </>
@@ -534,7 +548,7 @@ export default function QueuePage() {
               <CardHeader className="pb-2 border-b">
                 <CardTitle className="text-base flex items-center justify-between">
                   Check in patient
-                  <Button variant="ghost" size="icon" onClick={() => setShowCheckIn(false)}>
+                  <Button variant="ghost" size="icon" onClick={closeCheckInModal}>
                     <X className="h-4 w-4" />
                   </Button>
                 </CardTitle>
@@ -543,25 +557,55 @@ export default function QueuePage() {
                 <form onSubmit={handleCheckIn} className="space-y-4">
                   <div className="space-y-1 relative">
                     <label className="text-xs font-medium">Search patient</label>
-                    <Input value={patientQuery} onChange={(e) => setPatientQuery(e.target.value)} placeholder="Name or phone…" />
-                    {patients.length > 0 && (
-                      <ul className="absolute z-10 left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-md shadow-lg divide-y max-h-48 overflow-y-auto">
-                        {patients.map((p) => (
-                          <li key={p.id}>
-                            <button
-                              type="button"
-                              className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-50 ${selectedPatientId === p.id ? "bg-primary-50" : ""}`}
-                              onClick={() => {
-                                setSelectedPatientId(p.id)
-                                setPatientQuery(`${p.first_name} ${p.last_name}`)
-                                setPatients([])
-                              }}
-                            >
-                              {p.first_name} {p.last_name}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
+                    {selectedPatientId ? (
+                      <div className="flex items-center justify-between rounded-md border border-primary-200 bg-primary-50/50 px-3 py-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-primary-600" />
+                          <span className="font-medium text-primary-900">{patientQuery}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto p-1 text-neutral-500 hover:text-neutral-700 hover:bg-transparent"
+                          onClick={() => {
+                            setSelectedPatientId("")
+                            setPatientQuery("")
+                            setPatients([])
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <Input
+                          value={patientQuery}
+                          onChange={(e) => setPatientQuery(e.target.value)}
+                          placeholder="Name or phone…"
+                          autoFocus
+                        />
+                        {patients.length > 0 && (
+                          <ul className="absolute z-50 left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-md shadow-lg divide-y max-h-48 overflow-y-auto">
+                            {patients.map((p) => (
+                              <li key={p.id}>
+                                <button
+                                  type="button"
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-50"
+                                  onClick={() => {
+                                    setSelectedPatientId(p.id)
+                                    setPatientQuery(`${p.first_name} ${p.last_name}`)
+                                    setPatients([])
+                                  }}
+                                >
+                                  <div className="font-medium">{p.first_name} {p.last_name}</div>
+                                  {p.phone && <div className="text-xs text-neutral-500">{p.phone}</div>}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
                     )}
                   </div>
                   <div className="space-y-1">
@@ -609,7 +653,7 @@ export default function QueuePage() {
               <div className="text-center py-16 text-neutral-500 border rounded-lg bg-neutral-50">
               <Users className="h-10 w-10 mx-auto mb-3 text-neutral-300" />
               <p>No patients in queue.</p>
-              <Button variant="outline" className="mt-4 gap-2" onClick={() => setShowCheckIn(true)}>
+              <Button variant="outline" className="mt-4 gap-2" onClick={openCheckInModal}>
                 <Plus className="h-4 w-4" /> Check in first patient
               </Button>
             </div>
