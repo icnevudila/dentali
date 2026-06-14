@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-14T18:39:32.292Z",
-  "note": "Viewport crops from full-page screenshots. Header/name kept. focalY scrolls to key UI.",
+  "generatedAt": "2026-06-14T20:45:05.684Z",
+  "note": "Viewport crops from full-page screenshots. Staff UI crops topbar (no user/branch chip). focalY scrolls to key UI.",
   "items": [
     {
       "out": "hero-dashboard.png",

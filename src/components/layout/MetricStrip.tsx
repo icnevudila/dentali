@@ -10,6 +10,7 @@ export type MetricItem = {
   icon?: LucideIcon
   variant?: "default" | "warning" | "success"
   href?: string
+  onClick?: () => void
 }
 
 export function MetricStrip({ items, className }: { items: MetricItem[]; className?: string }) {
@@ -28,7 +29,7 @@ export function MetricStrip({ items, className }: { items: MetricItem[]; classNa
               item.variant === "success" && "border-emerald-200/90 bg-emerald-50/50",
               (!item.variant || item.variant === "default") &&
                 "border-neutral-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)] hover:shadow-[0_2px_8px_rgba(15,23,42,0.05)]",
-              item.href &&
+              (item.href || item.onClick) &&
                 "hover:border-primary-200 hover:bg-primary-50/20 active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30"
             )}
             style={{ "--stagger-index": index } as CSSProperties}
@@ -66,26 +67,34 @@ export function MetricStrip({ items, className }: { items: MetricItem[]; classNa
             </p>
             {item.hint ? (
               <p className="mt-1 text-xs text-neutral-500">
-                {item.href ? (
-                  <span className="text-primary-600 group-hover:underline">{item.hint}</span>
-                ) : (
-                  item.hint
-                )}
-              </p>
-            ) : null}
-          </div>
+                {              (item.href || item.onClick) ? (
+                <span className="text-primary-600 group-hover:underline">{item.hint}</span>
+              ) : (
+                item.hint
+              )}
+            </p>
+          ) : null}
+        </div>
+      )
+
+      if (item.onClick) {
+        return (
+          <button key={item.label} onClick={item.onClick} className="block w-full text-left rounded-xl focus:outline-none">
+            {inner}
+          </button>
         )
+      }
 
-        if (item.href) {
-          return (
-            <Link key={item.label} href={item.href} className="block rounded-xl">
-              {inner}
-            </Link>
-          )
-        }
+      if (item.href) {
+        return (
+          <Link key={item.label} href={item.href} className="block rounded-xl">
+            {inner}
+          </Link>
+        )
+      }
 
-        return <div key={item.label}>{inner}</div>
-      })}
-    </div>
+      return <div key={item.label}>{inner}</div>
+    })}
+  </div>
   )
 }

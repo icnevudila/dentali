@@ -1,4 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="dentali">
-  <rect width="512" height="512" rx="96" fill="#2563eb"/>
-  <text x="256" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="180" font-weight="700" fill="#ffffff">d</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="dentQL">
+  <rect width="512" height="512" rx="96" fill="#0EA5E9"/>
+  <g transform="translate(156, 96) scale(2)">
+    <path d="M 280 250 C 260 120, 360 120, 400 180 C 440 120, 540 120, 520 250 C 500 350, 460 380, 450 420 C 400 390, 400 390, 350 420 C 340 380, 300 350, 280 250 Z" fill="rgba(255,255,255,0.12)" stroke="#FFFFFF" stroke-width="8"/>
+    <path d="M 340 280 C 340 220, 380 220, 400 250 C 420 220, 460 220, 460 280 C 460 350, 440 380, 430 420 C 440 550, 450 680, 445 720 L 435 720 C 440 680, 430 580, 430 580 C 425 480, 375 480, 370 580 C 375 680, 365 720, 365 720 L 355 720 C 350 680, 360 550, 370 420 C 360 380, 340 350, 340 280 Z" fill="rgba(255,255,255,0.25)" stroke="#E0F2FE" stroke-width="6"/>
+    <path d="M 400 260 Q 420 300 415 350 T 435 480 T 440 720" stroke="#E0F2FE" stroke-width="6" fill="none" stroke-linecap="round"/>
+  </g>
 </svg>

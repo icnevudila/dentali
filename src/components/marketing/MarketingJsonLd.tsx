@@ -1,3 +1,4 @@
+import { BRAND_NAME } from "@/lib/brand"
 import { getSiteUrl } from "@/lib/site-url"
 
 /** Organization + SoftwareApplication schema for public marketing pages. */
@@ -9,14 +10,14 @@ export function MarketingJsonLd() {
     "@graph": [
       {
         "@type": "Organization",
-        name: "dentali.",
+        name: BRAND_NAME,
         url: siteUrl,
         description:
           "Clinical operating system for Philippine dental clinics — patients, chart, queue, billing, and consent.",
       },
       {
         "@type": "SoftwareApplication",
-        name: "dentali.",
+        name: BRAND_NAME,
         applicationCategory: "BusinessApplication",
         operatingSystem: "Web",
         offers: {

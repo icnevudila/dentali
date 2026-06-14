@@ -1,7 +1,7 @@
 "use client"
 
-import Link from "next/link"
-import { Building2, CalendarDays, Tv, Check } from "lucide-react"
+import { Building2, CalendarDays, Check, Tv } from "lucide-react"
+import { DentQLLogo } from "@/components/brand/dentql-logo"
 import { useLocale } from "@/hooks/use-locale"
 
 const BULLETS = {
@@ -46,9 +46,7 @@ export function AuthMarketingPanel({ variant }: AuthMarketingPanelProps) {
       <div className="landing-hero-orb landing-hero-orb-b pointer-events-none absolute opacity-30" />
 
       <div className="relative z-10">
-        <Link href="/welcome" className="inline-flex items-center gap-1 text-2xl font-black tracking-tight text-white">
-          dentali<span className="text-emerald-200">.</span>
-        </Link>
+        <DentQLLogo href="/welcome" invert size="md" />
       </div>
 
       <div className="relative z-10 max-w-md space-y-8">

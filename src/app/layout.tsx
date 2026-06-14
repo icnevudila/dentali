@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { CookieConsentBanner } from "@/components/marketing/CookieConsentBanner";
 import { LocaleBootstrap } from "@/components/i18n/LocaleBootstrap";
+import { BRAND_NAME, BRAND_TITLE, BRAND_TITLE_TEMPLATE } from "@/lib/brand";
 import { getSiteUrl } from "@/lib/site-url";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -13,28 +14,28 @@ const siteUrl = getSiteUrl();
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "dentali. | Clinic OS",
-    template: "%s | dentali.",
+    default: BRAND_TITLE,
+    template: BRAND_TITLE_TEMPLATE,
   },
   description:
     "Branch-aware dental clinic operating system for Philippine clinics — patients, charting, billing, queue, HMO, and consent.",
-  applicationName: "dentali.",
+  applicationName: BRAND_NAME,
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "dentali.",
+    title: BRAND_NAME,
     statusBarStyle: "default",
   },
   openGraph: {
     type: "website",
-    siteName: "dentali.",
+    siteName: BRAND_NAME,
     locale: "en_PH",
     alternateLocale: ["en_US", "tr_TR", "fil_PH"],
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#2563eb",
+  themeColor: "#0EA5E9",
   width: "device-width",
   initialScale: 1,
 };

@@ -183,7 +183,7 @@ export function ConsentFormsPanel({
         </p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
         {catalog.map((template) => {
           const status = resolveFormStatus(template.slug, consents)
           const badge = STATUS_BADGE[status]

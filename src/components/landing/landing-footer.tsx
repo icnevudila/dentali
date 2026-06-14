@@ -3,6 +3,8 @@
 import * as React from "react"
 import Link from "next/link"
 import { useLocale } from "@/hooks/use-locale"
+import { DentQLLogo } from "@/components/brand/dentql-logo"
+import { BRAND_NAME } from "@/lib/brand"
 import { LANDING_HEADINGS, type LandingText } from "@/components/landing/data/landing-data"
 
 function lt(text: LandingText, locale: string) {
@@ -20,11 +22,7 @@ export function LandingFooter() {
           
           {/* Logo & Slogan Column */}
           <div className="md:col-span-5 space-y-4">
-            <Link href="/" className="flex items-center gap-1.5">
-              <span className="text-2xl font-black tracking-tight text-neutral-900">
-                dentali<span className="text-primary-600">.</span>
-              </span>
-            </Link>
+            <DentQLLogo href="/" size="md" />
             <p className="text-sm text-neutral-500 max-w-sm">
               {lt(LANDING_HEADINGS.footer.slogan, locale)}
             </p>
@@ -125,7 +123,7 @@ export function LandingFooter() {
 
         {/* Bottom Bar */}
         <div className="flex flex-col items-center justify-between gap-3 border-t border-neutral-100 pt-8 text-xs text-neutral-500 sm:flex-row">
-          <p>© {currentYear} dentali. All rights reserved.</p>
+          <p>© {currentYear} {BRAND_NAME}. All rights reserved.</p>
           <p>{lt(LANDING_HEADINGS.footer.tagline, locale)}</p>
         </div>
 

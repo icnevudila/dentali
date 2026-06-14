@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { useLocale } from "@/hooks/use-locale"
 import { openPublicDevice } from "@/lib/kiosk/kiosk-service"
 import { Button } from "@/components/ui/button"
+import { DentQLLogo } from "@/components/brand/dentql-logo"
 import {
   APP_NAV_GROUPS,
   defaultNavActive,
@@ -169,7 +170,7 @@ function MobileNavDrawer({ open, onClose }: { open: boolean; onClose: () => void
       />
       <aside className="relative flex h-full w-72 max-w-[85vw] flex-col bg-white shadow-xl">
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-neutral-200 px-4">
-          <span className="text-xl font-bold text-primary-600">dentali.</span>
+          <DentQLLogo href="/" size="sm" />
           <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Close menu">
             <X className="h-5 w-5" />
           </Button>
@@ -187,7 +188,7 @@ export function Sidebar() {
       style={{ viewTransitionName: "app-sidebar" } as React.CSSProperties}
     >
       <div className="flex h-16 shrink-0 items-center border-b border-neutral-200 px-6">
-        <span className="text-xl font-bold text-primary-600">dentali.</span>
+        <DentQLLogo href="/" size="sm" />
       </div>
       <SidebarNav />
     </aside>

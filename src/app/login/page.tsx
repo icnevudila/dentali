@@ -10,6 +10,7 @@ import {
   fetchStaffProfile,
   logSessionEvent,
 } from "@/lib/auth/auth-service"
+import { DentQLLogo } from "@/components/brand/dentql-logo"
 import { AuthMarketingPanel } from "@/components/auth/auth-marketing-panel"
 import { LocaleSwitcher } from "@/components/i18n/LocaleSwitcher"
 import { useLocale } from "@/hooks/use-locale"
@@ -91,9 +92,7 @@ export default function LoginPage() {
         <div className="landing-hero-bg pointer-events-none absolute inset-0 opacity-30" />
 
         <header className="relative z-10 mx-auto flex w-full max-w-xl items-center justify-between px-6 py-5 lg:max-w-lg">
-          <Link href="/welcome" className="text-xl font-bold tracking-tight text-neutral-900 lg:hidden">
-            dentali<span className="text-primary-600">.</span>
-          </Link>
+          <DentQLLogo href="/welcome" size="sm" className="lg:hidden" />
           <div className="ml-auto">
             <LocaleSwitcher />
           </div>

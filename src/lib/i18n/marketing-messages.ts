@@ -25,7 +25,7 @@ export const marketingMessagesEn: MessageTree = {
     ctaBottomSubtitle:
       "Start a free trial, request a quote for multi-branch groups, or sign in with your staff account.",
     viewPricing: "View pricing",
-    alreadyUsing: "Already using dentali.?",
+    alreadyUsing: "Already using dentQL?",
     kioskCheckIn: "Kiosk check-in",
     deviceWebAdmin: "Web admin",
     deviceTabletKiosk: "Tablet kiosk",

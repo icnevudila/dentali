@@ -73,6 +73,19 @@ export default function PatientProfilePage() {
     },
     [patientId, router, searchParams]
   )
+
+  const handleTabChangeAndScroll = React.useCallback(
+    (tabId: PatientTabId) => {
+      setActiveTab(tabId)
+      setTimeout(() => {
+        const element = document.getElementById("patient-profile-tabs")
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "start" })
+        }
+      }, 50)
+    },
+    [setActiveTab]
+  )
   const [patient, setPatient] = React.useState<PatientWithContacts | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [loadError, setLoadError] = React.useState<string | null>(null)
@@ -221,6 +234,7 @@ export default function PatientProfilePage() {
       value: upcomingAppointments,
       hint: `${appointments.length} total on record`,
       icon: Calendar,
+      onClick: () => handleTabChangeAndScroll("appointments"),
     },
     {
       label: "Treatment plans",
@@ -229,6 +243,7 @@ export default function PatientProfilePage() {
         ? `${treatmentPlans.filter((p) => p.status === "proposed").length} proposed`
         : "Clinical planning",
       icon: FileText,
+      onClick: () => handleTabChangeAndScroll("treatment-plans"),
     },
     {
       label: "Balance",
@@ -242,7 +257,7 @@ export default function PatientProfilePage() {
       value: pendingConsents,
       hint: pendingConsents > 0 ? "Awaiting signature" : `${consents.length} on file`,
       variant: pendingConsents > 0 ? ("warning" as const) : ("success" as const),
-      href: `/patients/${patientId}?tab=consents`,
+      onClick: () => handleTabChangeAndScroll("consents"),
     },
   ]
 
@@ -285,10 +300,13 @@ export default function PatientProfilePage() {
               <Activity className="h-4 w-4" /> Chart
             </Link>
           </Button>
-          <Button variant="outline" size="sm" className="gap-2" asChild>
-            <Link href={`/patients/${patientId}?tab=consents`} transitionTypes={NAV_FORWARD_TRANSITION}>
-              <FileText className="h-4 w-4" /> Consents
-            </Link>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-2" 
+            onClick={() => handleTabChangeAndScroll("consents")}
+          >
+            <FileText className="h-4 w-4" /> Consents
           </Button>
           <PermissionGate permission={PERMISSIONS.BILLING_WRITE}>
             <Button variant="outline" size="sm" className="gap-2" asChild>
@@ -357,7 +375,7 @@ export default function PatientProfilePage() {
       />
 
       {/* TWO-COLUMN SIDEBAR & CONTENT LAYOUT */}
-      <div className="flex flex-col md:flex-row gap-6 items-start mt-4">
+      <div id="patient-profile-tabs" className="flex flex-col md:flex-row gap-6 items-start mt-4">
         {/* SIDEBAR TABS NAVIGATION */}
         <aside className="w-full md:w-60 shrink-0">
           {/* Mobile dropdown selector */}

@@ -1,6 +1,6 @@
 /**
  * Full-page screenshots → landing-ready viewport crops for public/landing.
- * Keeps app header (name/branch). Extracts 16:10 (desktop), 4:3 (tablet), 9:19 (mobile).
+ * Crops app topbar (user name + branch chip) from staff UI shots.
  */
 import fs from "node:fs"
 import path from "node:path"
@@ -13,16 +13,16 @@ const OUT = path.resolve("public/landing")
 const ASSETS = [
   // Hero slideshow (desktop 16:10)
   { out: "hero-dashboard.png", file: "dashboard full web.png", aspect: 16 / 10, focalY: 0 },
-  { out: "hero-dental-chart.png", file: "dental chart web.png", aspect: 16 / 10, focalY: 520 },
-  { out: "hero-appointments.png", file: "appointmens web 2.png", aspect: 16 / 10, focalY: 0 },
+  { out: "hero-dental-chart.png", file: "dental chart.png", aspect: 16 / 10, focalY: 0, skipTopCrop: true },
+  { out: "hero-appointments.png", file: "appointmens web 2.png", aspect: 16 / 10, focalY: 560 },
   { out: "hero-queue.png", file: "QueQue web.png", aspect: 16 / 10, focalY: 0 },
 
   // Features (reuse hero crops)
   { out: "feature-dashboard.png", file: "dashboard full web.png", aspect: 16 / 10, focalY: 0 },
-  { out: "feature-patients.png", file: "patinets full web.png", aspect: 16 / 10, focalY: 0 },
-  { out: "feature-dental-chart.png", file: "dental chart web.png", aspect: 16 / 10, focalY: 520 },
+  { out: "feature-patients.png", file: "patinets full web.png", aspect: 16 / 7, focalY: 0 },
+  { out: "feature-dental-chart.png", file: "dental chart.png", aspect: 16 / 10, focalY: 0, skipTopCrop: true },
   { out: "feature-treatment.png", file: "patient detail web.png", aspect: 16 / 10, focalY: 0 },
-  { out: "feature-appointments.png", file: "appointmens web 2.png", aspect: 16 / 10, focalY: 0 },
+  { out: "feature-appointments.png", file: "appointmens web 2.png", aspect: 16 / 10, focalY: 560 },
   { out: "feature-queue.png", file: "QueQue web.png", aspect: 16 / 10, focalY: 0 },
   { out: "feature-billing.png", file: "invoices detail.png", aspect: 16 / 10, focalY: 0 },
   { out: "feature-inventory.png", file: "inventory web.png", aspect: 16 / 10, focalY: 0 },
@@ -55,9 +55,13 @@ function shouldSkipTopCrop(filename) {
 
 function topCropPx(width, filename, skipTopCrop) {
   if (skipTopCrop || shouldSkipTopCrop(filename)) return 0
-  if (width < 500) return 0 // keep mobile header
-  if (width < 1000) return 0
-  return 0 // user OK with name/branch visible on landing
+  const topbarAt1440 = 88
+  let crop = Math.round(topbarAt1440 * (width / 1440))
+  // Phone captures include a taller header row (menu, branch, avatar)
+  if (width < 600 || /mobile/i.test(filename)) {
+    crop = Math.max(crop, Math.round(96 * (width / 430)))
+  }
+  return crop
 }
 
 async function cropViewport(srcPath, { aspect, focalY = 0, skipTopCrop = false }) {
@@ -126,7 +130,7 @@ async function main() {
     JSON.stringify(
       {
         generatedAt: new Date().toISOString(),
-        note: "Viewport crops from full-page screenshots. Header/name kept. focalY scrolls to key UI.",
+        note: "Viewport crops from full-page screenshots. Staff UI crops topbar (no user/branch chip). focalY scrolls to key UI.",
         items: manifest,
       },
       null,

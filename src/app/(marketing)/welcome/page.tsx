@@ -4,6 +4,7 @@ import { LandingContent } from "@/components/landing/landing-content"
 import { LandingFooter } from "@/components/landing/landing-footer"
 import { MarketingJsonLd } from "@/components/marketing/MarketingJsonLd"
 import { loadShowcaseData } from "@/lib/showcase/load-showcase-data"
+import { BRAND_NAME } from "@/lib/brand"
 import { getSiteUrl } from "@/lib/site-url"
 export const dynamic = "force-dynamic"
 const siteUrl = getSiteUrl()
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
     canonical: `${siteUrl}/welcome`,
   },
   openGraph: {
-    title: "dentali. — Philippine dental clinic OS",
+    title: `${BRAND_NAME} — Philippine dental clinic OS`,
     description:
       "Patients, appointments, charting, billing, queue, and HMO — branch-aware from the first login.",
     url: `${siteUrl}/welcome`,

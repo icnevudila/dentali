@@ -19,11 +19,10 @@ export const LANDING_VIDEOS = {
 
 export type LandingVideoKey = keyof typeof LANDING_VIDEOS
 
+export const LANDING_HERO_IMAGE = v("/landing/dental-chart.png")
+
 export const LANDING_HERO_SLIDES = [
-  { src: v("/landing/hero-dashboard.png"), alt: "dentali dashboard" },
-  { src: v("/landing/hero-dental-chart.png"), alt: "dentali dental chart" },
-  { src: v("/landing/hero-appointments.png"), alt: "dentali scheduler" },
-  { src: v("/landing/hero-queue.png"), alt: "dentali queue" },
+  { src: LANDING_HERO_IMAGE, alt: "dentQL dental chart" },
 ] as const
 
 export const LANDING_PROBLEM_SCREENSHOT = v("/landing/problem-dashboard.png")
@@ -48,7 +47,7 @@ export const LANDING_HERO_PAGES = [
   {
     id: "chart",
     label: { en: "Dental chart", tr: "Diş şeması" },
-    desktop: v("/landing/hero-dental-chart.png"),
+    desktop: v("/landing/dental-chart.png"),
     tablet: v("/landing/device-tablet-kiosk.png"),
     mobile: v("/landing/device-mobile-appointments.png"),
   },

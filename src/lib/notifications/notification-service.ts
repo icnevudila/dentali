@@ -241,6 +241,35 @@ export async function sendSms(params: {
   }
 }
 
+export async function sendEmail(params: {
+  to: string
+  subject: string
+  html: string
+  branchId: string
+}): Promise<{
+  data: { id: string } | null
+  error: string | null
+}> {
+  const supabase = createClient()
+  const { data, error } = await supabase.functions.invoke("send-email", {
+    body: {
+      to: params.to,
+      subject: params.subject,
+      html: params.html,
+      branch_id: params.branchId,
+    },
+  })
+
+  if (error) return { data: null, error: error.message }
+  if (data?.error) return { data: null, error: String(data.error) }
+  return {
+    data: {
+      id: String(data.id),
+    },
+    error: null,
+  }
+}
+
 export async function seedNotificationTemplates(
   organizationId: string
 ): Promise<{ error: string | null }> {

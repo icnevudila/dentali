@@ -692,3 +692,17 @@
     transform: none;
   }
 }
+
+/* ═══════════════════════════════════════════════
+   Mobile sticky CTA — bottom safe area + content padding
+   ═══════════════════════════════════════════════ */
+
+.landing-sticky-cta {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 767px) {
+  body.landing-sticky-cta-active .landing-page-root {
+    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom));
+  }
+}

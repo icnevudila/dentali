@@ -6,6 +6,8 @@ import { LocaleSwitcher } from "@/components/i18n/LocaleSwitcher"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/hooks/use-locale"
+import { DentQLLogo } from "@/components/brand/dentql-logo"
+import { BRAND_NAME } from "@/lib/brand"
 
 const NAV_ITEMS = [
   { href: "/welcome#features", labelKey: "marketing.navProduct", fallback: "Product" },
@@ -32,9 +34,7 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen flex-col bg-white">
       <header className="sticky top-0 z-40 border-b border-neutral-200/90 bg-white/95 backdrop-blur-sm">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Link href="/welcome" className="shrink-0 text-lg font-bold tracking-tight text-neutral-950">
-            dentali<span className="text-primary-600">.</span>
-          </Link>
+          <DentQLLogo href="/welcome" size="sm" />
 
           <nav className="hidden items-center gap-1 md:flex" aria-label="Marketing">
             {NAV_ITEMS.map((item) => {
@@ -94,7 +94,7 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
       <footer className="border-t border-neutral-200 bg-neutral-50/50">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
           <p className="text-xs text-neutral-500">
-            dentali. — {t("marketing.footerTagline", "clinical operating system for Philippine clinics")}
+            {BRAND_NAME} — {t("marketing.footerTagline", "clinical operating system for Philippine clinics")}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-neutral-600">
             <Link href="/welcome" className="hover:text-primary-700">

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Menu, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/hooks/use-locale"
+import { DentQLLogo } from "@/components/brand/dentql-logo"
 import { LANDING_HEADINGS, type LandingText } from "@/components/landing/data/landing-data"
 
 function lt(text: LandingText, locale: string) {
@@ -48,13 +49,7 @@ export function LandingHeader() {
       >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           {/* Logo */}
-          <Link
-            href="/welcome"
-            className="shrink-0 text-xl font-bold tracking-tight text-neutral-950"
-          >
-            <span className="text-primary-600">dentali</span>
-            <span className="text-neutral-950">.</span>
-          </Link>
+          <DentQLLogo href="/welcome" size="sm" />
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-1 md:flex" aria-label="Marketing">

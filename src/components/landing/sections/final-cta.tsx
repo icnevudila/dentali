@@ -14,7 +14,10 @@ export function FinalCta() {
   const { locale } = useLocale()
 
   return (
-    <section className="relative overflow-hidden border-t border-primary-500/20 bg-gradient-to-br from-primary-600 via-teal-600 to-emerald-600 py-20 text-white">
+    <section
+      data-landing-conversion-zone
+      className="relative overflow-hidden border-t border-primary-500/20 bg-gradient-to-br from-primary-600 via-teal-600 to-emerald-600 py-20 text-white"
+    >
       <div className="landing-hero-grid pointer-events-none absolute inset-0 opacity-20" />
       <div className="landing-hero-orb landing-hero-orb-a pointer-events-none absolute -right-20 top-0 opacity-30" />
       <div className="landing-hero-orb landing-hero-orb-b pointer-events-none absolute -left-16 bottom-0 opacity-25" />

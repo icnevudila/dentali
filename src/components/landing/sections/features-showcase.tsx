@@ -11,6 +11,12 @@ function lt(text: LandingText, locale: string) {
   return locale === "tr" ? text.tr : text.en
 }
 
+function featureImageClass(featureId: string) {
+  return featureId === "chart"
+    ? "object-contain object-center bg-white"
+    : "object-cover object-top"
+}
+
 export function FeaturesShowcase() {
   const { locale } = useLocale()
   const [activeTab, setActiveTab] = React.useState(0)
@@ -139,7 +145,7 @@ export function FeaturesShowcase() {
                           src={feature.screenshot}
                           alt={lt(feature.title, locale)}
                           fill
-                          className="object-cover object-top"
+                          className={featureImageClass(feature.id)}
                           priority
                         />
                       </div>
@@ -172,7 +178,7 @@ export function FeaturesShowcase() {
                       src={feature.screenshot}
                       alt={lt(feature.title, locale)}
                       fill
-                      className="object-cover object-top"
+                      className={featureImageClass(feature.id)}
                       priority={idx === 0}
                     />
                   </div>

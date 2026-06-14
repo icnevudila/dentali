@@ -44,8 +44,8 @@ export const SOCIAL_HIGHLIGHTS: SocialHighlight[] = [
     detail: t("Multi-site from day one", "İlk günden çok lokasyon"),
   },
   {
-    label: t("Free trial", "Ücretsiz deneme"),
-    detail: t("No credit card needed", "Kredi kartı gerekmez"),
+    label: t("PH-ready", "Filipinler'e hazır"),
+    detail: t("HMO & local workflow", "HMO ve yerel iş akışı"),
   },
 ]
 
@@ -309,7 +309,7 @@ export const FEATURES: FeatureItem[] = [
     icon: ClipboardList,
     title: t("Dental Chart", "Diş Şeması"),
     description: t("Interactive FDI odontogram with findings, notes, and treatment history.", "Bulgular, notlar ve tedavi geçmişi ile interaktif FDI odontogram."),
-    screenshot: asset("/landing/feature-dental-chart.png"),
+    screenshot: asset("/landing/dental-chart.png"),
   },
   {
     id: "treatment",
@@ -577,8 +577,8 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: t("Do I need to install anything?", "Bir şey yüklemem gerekiyor mu?"),
     answer: t(
-      "No. dentali. runs entirely in the browser — Chrome, Safari, Edge, Firefox. You can also install it as a PWA on tablets and phones for an app-like experience.",
-      "Hayır. dentali. tamamen tarayıcıda çalışır — Chrome, Safari, Edge, Firefox. Ayrıca tablet ve telefonlara uygulama deneyimi için PWA olarak yükleyebilirsiniz."
+      "No. dentQL runs entirely in the browser — Chrome, Safari, Edge, Firefox. You can also install it as a PWA on tablets and phones for an app-like experience.",
+      "Hayır. dentQL tamamen tarayıcıda çalışır — Chrome, Safari, Edge, Firefox. Ayrıca tablet ve telefonlara uygulama deneyimi için PWA olarak yükleyebilirsiniz."
     ),
   },
 ]
@@ -597,14 +597,17 @@ export const LANDING_HEADINGS = {
     ),
     ctaPrimary: t("Start free trial →", "Ücretsiz denemeyi başlat →"),
     ctaSecondary: t("Get a quote", "Teklif alın"),
-    trustLine: t("Free trial · No credit card · Set up in under an hour", "Ücretsiz deneme · Kredi kartı yok · Bir saatten kısa kurulum"),
+    trustLine: t(
+      "Free trial · No credit card · Set up in under an hour",
+      "Ücretsiz deneme · Kredi kartı yok · Bir saatten kısa kurulum"
+    ),
   },
   problem: {
     eyebrow: t("Operations Chaos", "Operasyonel Kaos"),
     title: t("Sound familiar?", "Tanıdık geldi mi?"),
     subtitle: t("Running a clinic is hard. Running it with five disconnected tools is harder.", "Klinik yönetmek zordur. Beş farklı kopuk araçla yönetmek daha da zordur."),
     transition: t("There's a better way.", "Daha iyi bir yol var."),
-    solutionLabel: t("With dentali.", "dentali. ile"),
+    solutionLabel: t("With dentQL", "dentQL ile"),
   },
   clinicExperience: {
     eyebrow: t("Your clinic, your brand", "Kliniğiniz, markanız"),
@@ -615,7 +618,7 @@ export const LANDING_HEADINGS = {
     ),
   },
   whyDifferent: {
-    eyebrow: t("Why dentali.", "Neden dentali."),
+    eyebrow: t("Why dentQL", "Neden dentQL"),
     title: t("Built different. Built for you.", "Farklı düşünüldü. Sizin için tasarlandı."),
     subtitle: t("We design systems around the daily workflows of doctors and clinic staff.", "Sistemlerimizi doktorların ve klinik personelinin günlük iş akışlarına göre tasarlıyoruz."),
   },
@@ -631,8 +634,8 @@ export const LANDING_HEADINGS = {
     eyebrow: t("Product tour", "Ürün turu"),
     title: t("A day in your clinic", "Kliniğinizde bir gün"),
     subtitle: t(
-      "See how dentali. fits into your daily workflow — from morning to closeout.",
-      "dentali.'nin günlük iş akışınıza nasıl uyduğunu görün — sabahtan kapanışa."
+      "See how dentQL fits into your daily workflow — from morning to closeout.",
+      "dentQL'nin günlük iş akışınıza nasıl uyduğunu görün — sabahtan kapanışa."
     ),
   },
   multiDevice: {
@@ -657,17 +660,31 @@ export const LANDING_HEADINGS = {
   faq: {
     eyebrow: t("Support", "Destek"),
     title: t("Questions? We've got answers.", "Sorularınız mı var? Cevaplarımız hazır."),
-    subtitle: t("Everything you need to know about setting up and using dentali.", "dentali. kurulumu ve kullanımı hakkında bilmeniz gereken her şey."),
+    subtitle: t("Everything you need to know about setting up and using dentQL.", "dentQL kurulumu ve kullanımı hakkında bilmeniz gereken her şey."),
+  },
+  pricingSummary: {
+    eyebrow: t("Pricing", "Fiyatlandırma"),
+    title: t("Plans that scale with your clinic", "Kliniğinizle büyüyen planlar"),
+    subtitle: t(
+      "Start on one branch, add sites when you grow. Full clinical workflow on every tier.",
+      "Tek şubeden başlayın, büyüdükçe şube ekleyin. Her planda tam klinik iş akışı."
+    ),
+    pricePlaceholder: t("Pricing coming soon", "Fiyatlar yakında"),
+    viewAll: t("See plan details →", "Plan detayları →"),
+  },
+  stickyCta: {
+    trial: t("Start free trial", "Ücretsiz dene"),
+    pricing: t("Pricing", "Fiyatlar"),
   },
   finalCta: {
     title: t("Ready for a calmer clinic day?", "Daha sakin bir klinik gününe hazır mısınız?"),
     subtitle: t(
-      "Start your free trial and see how dentali. fits your front desk, chairs, and waiting room.",
-      "Ücretsiz denemenizi başlatın; dentali.'nin resepsiyon, koltuk ve bekleme odanıza nasıl uyduğunu görün."
+      "Start your free trial and see how dentQL fits your front desk, chairs, and waiting room.",
+      "Ücretsiz denemenizi başlatın; dentQL'nin resepsiyon, koltuk ve bekleme odanıza nasıl uyduğunu görün."
     ),
     ctaPrimary: t("Start free trial →", "Ücretsiz denemeyi başlat →"),
     ctaSecondary: t("Get a quote", "Teklif alın"),
-    loginPrefix: t("Already using dentali.?", "Zaten dentali. kullanıyor musunuz?"),
+    loginPrefix: t("Already using dentQL?", "Zaten dentQL kullanıyor musunuz?"),
     loginLink: t("Sign in", "Giriş yap"),
     kioskLink: t("Kiosk check-in", "Kiosk giriş"),
   },

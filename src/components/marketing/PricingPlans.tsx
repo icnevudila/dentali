@@ -13,8 +13,6 @@ export function PricingPlans({ className }: { className?: string }) {
     {
       id: "starter",
       name: t("pricingTiers.starterName", "Starter"),
-      price: "₱4,990",
-      period: t("pricingTiers.perMonth", "/ month"),
       description: t("pricingTiers.starterDesc", "Single branch, up to 5 staff seats. Core clinical workflow."),
       features: [
         t("pricingTiers.starterF1", "Patient registry & dental chart"),
@@ -29,8 +27,6 @@ export function PricingPlans({ className }: { className?: string }) {
     {
       id: "growth",
       name: t("pricingTiers.growthName", "Growth"),
-      price: "₱9,990",
-      period: t("pricingTiers.perMonth", "/ month"),
       description: t("pricingTiers.growthDesc", "Multi-branch clinics with HMO and inventory."),
       features: [
         t("pricingTiers.growthF1", "Everything in Starter"),
@@ -45,8 +41,6 @@ export function PricingPlans({ className }: { className?: string }) {
     {
       id: "enterprise",
       name: t("pricingTiers.enterpriseName", "Enterprise"),
-      price: t("pricingTiers.custom", "Custom"),
-      period: "",
       description: t(
         "pricingTiers.enterpriseDesc",
         "Large groups, custom integrations, and dedicated onboarding."
@@ -81,9 +75,8 @@ export function PricingPlans({ className }: { className?: string }) {
             <div className="mb-3 h-4" aria-hidden />
           )}
           <h3 className="text-lg font-semibold text-neutral-950">{tier.name}</h3>
-          <p className="mt-2 flex items-baseline gap-1">
-            <span className="text-3xl font-bold tracking-tight text-neutral-950">{tier.price}</span>
-            {tier.period ? <span className="text-sm text-neutral-500">{tier.period}</span> : null}
+          <p className="mt-2 text-sm font-medium text-neutral-500">
+            {t("pricingTiers.priceComingSoon", "Pricing coming soon")}
           </p>
           <p className="mt-3 text-sm leading-relaxed text-neutral-600">{tier.description}</p>
           <ul className="mt-6 flex-1 space-y-2.5">
