@@ -275,7 +275,7 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
           )}
 
           {loading ? (
-            <PageLoadingSkeleton variant="grid" />
+            <PageLoadingSkeleton variant="grid3" />
           ) : images.length === 0 ? (
             <div className="text-center py-12 border rounded-lg bg-neutral-50">
               <ImageIcon className="h-12 w-12 text-neutral-300 mx-auto mb-3" />
