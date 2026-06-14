@@ -61,7 +61,11 @@ function QueueCard({
   const { t } = useLocale()
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-3 shadow-sm">
+    <div className={`rounded-lg border bg-white p-3 shadow-sm border-l-4 transition-all ${
+      entry.appointment_id 
+        ? "border-l-blue-500 border-y-neutral-200 border-r-neutral-200 bg-blue-50/10 hover:bg-blue-50/20" 
+        : "border-l-neutral-400 border-y-neutral-200 border-r-neutral-200 hover:bg-neutral-50/50"
+    }`}>
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="flex items-center gap-2">
