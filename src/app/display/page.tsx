@@ -154,7 +154,7 @@ function DisplayContent() {
         },
         () => load(true)
       )
-      .subscribe((status) => {
+      .subscribe((status: any) => {
         setLiveConnected(status === "SUBSCRIBED")
       })
 

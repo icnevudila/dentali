@@ -28,7 +28,8 @@ export default function LoginPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then((res: any) => {
+      const session = res.data?.session
       if (session) router.replace("/")
       setCheckingSession(false)
     })

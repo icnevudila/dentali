@@ -27,7 +27,8 @@ export default function SignupPage() {
   const [emailSent, setEmailSent] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then((res: any) => {
+      const session = res.data?.session
       if (session) router.replace("/onboarding")
       setCheckingSession(false)
     })
