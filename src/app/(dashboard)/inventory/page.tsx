@@ -17,6 +17,7 @@ import {
   fetchLowStockAlerts,
   stockLevel,
   suggestedReorderQty,
+  updateInventoryItem,
   type InventoryItem,
   type LowStockAlert,
 } from "@/lib/inventory/inventory-service"
@@ -25,7 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Plus, Package, MapPin, AlertTriangle } from "lucide-react"
+import { Plus, Package, MapPin, AlertTriangle, Edit } from "lucide-react"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
@@ -54,9 +55,11 @@ function InventoryPageContent() {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [showAdd, setShowAdd] = React.useState(false)
+  const [editingItem, setEditingItem] = React.useState<InventoryItem | null>(null)
   const [name, setName] = React.useState("")
   const [sku, setSku] = React.useState("")
   const [category, setCategory] = React.useState("")
+  const [unit, setUnit] = React.useState("pc")
   const [minStock, setMinStock] = React.useState("5")
   const [initialQty, setInitialQty] = React.useState("0")
   const [expiry, setExpiry] = React.useState("")
@@ -66,6 +69,49 @@ function InventoryPageContent() {
   const [saving, setSaving] = React.useState(false)
   const [adjustId, setAdjustId] = React.useState<string | null>(null)
   const [adjustQty, setAdjustQty] = React.useState("")
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image file size should be less than 2MB")
+      return
+    }
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") {
+        setBrand(reader.result)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const resetForm = () => {
+    setName("")
+    setSku("")
+    setCategory("")
+    setUnit("pc")
+    setMinStock("5")
+    setInitialQty("0")
+    setExpiry("")
+    setSupplier("")
+    setBrand("")
+    setUnitCost("")
+  }
+
+  const handleEditClick = (item: InventoryItem) => {
+    setEditingItem(item)
+    setName(item.name || "")
+    setSku(item.sku || "")
+    setCategory(item.category || "")
+    setUnit(item.unit || "pc")
+    setMinStock(String(item.min_stock_level))
+    setExpiry(item.expiry_date || "")
+    setSupplier(item.supplier || "")
+    setBrand(item.brand || "")
+    setUnitCost(String(item.unit_cost || ""))
+  }
+
 
   const load = React.useCallback(() => {
     if (!activeBranch) return
@@ -93,27 +139,61 @@ function InventoryPageContent() {
     : items
   const lowCount = alerts.length
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user || !activeBranch || !name.trim()) return
     setSaving(true)
     const org = await fetchOrganization()
     if (!org) { setError("Organization not found"); setSaving(false); return }
-    const { error: err } = await createInventoryItem({
-      organizationId: org.id, branchId: activeBranch.id, name: name.trim(),
-      sku: sku || undefined, category: category || undefined,
-      minStockLevel: parseFloat(minStock) || 0, expiryDate: expiry || undefined,
-      initialQty: parseFloat(initialQty) || 0, userId: user.id,
-      supplier: supplier || undefined, brand: brand || undefined,
-      unitCost: parseFloat(unitCost) || 0,
-    })
-    setSaving(false)
-    if (err) {
-      toast.error(err)
-      setError(err)
+
+    if (editingItem) {
+      const { error: err } = await updateInventoryItem(editingItem.id, {
+        name: name.trim(),
+        sku: sku || undefined,
+        category: category || undefined,
+        unit: unit || undefined,
+        minStockLevel: parseFloat(minStock) || 0,
+        expiryDate: expiry || null,
+        supplier: supplier || undefined,
+        brand: brand || null,
+        unitCost: parseFloat(unitCost) || 0,
+      })
+      setSaving(false)
+      if (err) {
+        toast.error(err)
+        setError(err)
+      } else {
+        toast.success("Item updated successfully")
+        setEditingItem(null)
+        resetForm()
+        load()
+      }
     } else {
-      toast.success("Item added successfully")
-      setShowAdd(false); setName(""); load()
+      const { error: err } = await createInventoryItem({
+        organizationId: org.id,
+        branchId: activeBranch.id,
+        name: name.trim(),
+        sku: sku || undefined,
+        category: category || undefined,
+        unit: unit || undefined,
+        minStockLevel: parseFloat(minStock) || 0,
+        expiryDate: expiry || undefined,
+        initialQty: parseFloat(initialQty) || 0,
+        userId: user.id,
+        supplier: supplier || undefined,
+        brand: brand || undefined,
+        unitCost: parseFloat(unitCost) || 0,
+      })
+      setSaving(false)
+      if (err) {
+        toast.error(err)
+        setError(err)
+      } else {
+        toast.success("Item added successfully")
+        setShowAdd(false)
+        resetForm()
+        load()
+      }
     }
   }
 
@@ -228,32 +308,88 @@ function InventoryPageContent() {
           </div>
         )}
 
-        {showAdd && createPortal(
+        {(showAdd || editingItem) && createPortal(
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-md rounded-xl bg-white shadow-xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
               <div className="p-6 overflow-y-auto">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-semibold text-neutral-900">{t("inventory.newItem", "New inventory item")}</h2>
+                  <h2 className="text-lg font-semibold text-neutral-900">
+                    {editingItem ? "Edit inventory item" : t("inventory.newItem", "New inventory item")}
+                  </h2>
                 </div>
-                <form onSubmit={handleAdd} className="grid gap-3 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <label className="text-xs text-neutral-500 font-medium">Image URL</label>
-                    <Input placeholder="https://..." value={brand} onChange={(e) => setBrand(e.target.value)} />
-                    <p className="text-[10px] text-neutral-400 mt-0.5">For the demo, paste an image URL here.</p>
+                <form onSubmit={handleSave} className="grid gap-3 sm:grid-cols-2">
+                  <div className="sm:col-span-2 space-y-2">
+                    <label className="text-xs text-neutral-500 font-medium">Product Image</label>
+                    <div className="flex items-center gap-3">
+                      {brand && (brand.startsWith("http") || brand.startsWith("data:image/")) ? (
+                        <div className="relative w-16 h-16 rounded-md border overflow-hidden shrink-0 group">
+                          <img src={brand} alt="Preview" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            className="absolute inset-0 bg-black/50 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => setBrand("")}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="w-16 h-16 bg-neutral-50 border border-dashed rounded-md flex items-center justify-center text-neutral-400 shrink-0">
+                          <Package className="w-6 h-6" />
+                        </div>
+                      )}
+                      <div className="flex-1 space-y-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                          id="image-file-input"
+                        />
+                        <label
+                          htmlFor="image-file-input"
+                          className="inline-flex items-center justify-center rounded-md text-xs font-medium border border-neutral-200 bg-white px-3 py-2 text-neutral-700 shadow-sm hover:bg-neutral-50 cursor-pointer w-full text-center"
+                        >
+                          Upload File
+                        </label>
+                        <div className="text-[10px] text-neutral-400 text-center">or enter image URL below:</div>
+                      </div>
+                    </div>
+                    <Input
+                      placeholder="https://..."
+                      value={brand && brand.startsWith("data:image/") ? "" : brand}
+                      onChange={(e) => setBrand(e.target.value)}
+                    />
                   </div>
                   <div className="sm:col-span-2">
                     <Input placeholder="Item name *" required value={name} onChange={(e) => setName(e.target.value)} />
                   </div>
                   <Input placeholder="SKU" value={sku} onChange={(e) => setSku(e.target.value)} />
                   <Input placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
+                  <Input placeholder="Unit (e.g. pc, box, syringe)" value={unit} onChange={(e) => setUnit(e.target.value)} />
                   <Input placeholder="Supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} />
                   <Input type="number" step="0.01" placeholder="Unit Cost (₱)" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} />
                   <Input type="number" placeholder="Min stock" value={minStock} onChange={(e) => setMinStock(e.target.value)} />
-                  <Input type="number" placeholder="Initial qty" value={initialQty} onChange={(e) => setInitialQty(e.target.value)} />
-                  <Input type="date" placeholder="Expiry" value={expiry} onChange={(e) => setExpiry(e.target.value)} />
+                  {!editingItem && (
+                    <Input type="number" placeholder="Initial qty" value={initialQty} onChange={(e) => setInitialQty(e.target.value)} />
+                  )}
+                  <div className={editingItem ? "sm:col-span-2" : ""}>
+                    <Input type="date" placeholder="Expiry" value={expiry} onChange={(e) => setExpiry(e.target.value)} />
+                  </div>
                   <div className="sm:col-span-2 flex justify-end gap-2 mt-2 pt-2 border-t">
-                    <Button type="button" variant="ghost" onClick={() => setShowAdd(false)}>{t("common.cancel", "Cancel")}</Button>
-                    <Button type="submit" disabled={saving}>{t("common.save", "Save")}</Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setShowAdd(false)
+                        setEditingItem(null)
+                        resetForm()
+                      }}
+                    >
+                      {t("common.cancel", "Cancel")}
+                    </Button>
+                    <Button type="submit" disabled={saving}>
+                      {t("common.save", "Save")}
+                    </Button>
                   </div>
                 </form>
               </div>
@@ -295,6 +431,7 @@ function InventoryPageContent() {
                       <th className="pb-2 text-left">{t("inventory.expiry", "Expiry")}</th>
                       <th className="pb-2 text-right">{t("inventory.reorderSuggest", "Reorder")}</th>
                       <th className="pb-2 text-right">{t("inventory.stockIn", "Stock in")}</th>
+                      <th className="pb-2 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -305,7 +442,7 @@ function InventoryPageContent() {
                         <tr key={item.id} className={level === "critical" || level === "expired" ? "border-l-4 border-l-red-500" : level === "low" ? "border-l-4 border-l-amber-400" : ""}>
                           <td className="py-2 font-medium">
                             <div className="flex items-center gap-3">
-                              {item.brand && item.brand.startsWith("http") ? (
+                              {item.brand && (item.brand.startsWith("http") || item.brand.startsWith("data:image/")) ? (
                                 <img src={item.brand} alt={item.name} className="w-10 h-10 object-cover rounded-md border border-neutral-200 shrink-0" />
                               ) : (
                                 <div className="w-10 h-10 bg-neutral-100 border border-neutral-200 rounded-md flex items-center justify-center text-neutral-400 shrink-0">
@@ -319,8 +456,8 @@ function InventoryPageContent() {
                             </div>
                           </td>
                           <td className="py-2 text-xs text-neutral-500">
-                            {(!item.brand || !item.brand.startsWith("http")) && item.brand ? <span className="font-semibold">{item.brand}</span> : null}
-                            {(!item.brand || !item.brand.startsWith("http")) && item.brand && item.category ? " / " : ""}
+                            {(!item.brand || (!item.brand.startsWith("http") && !item.brand.startsWith("data:image/"))) && item.brand ? <span className="font-semibold">{item.brand}</span> : null}
+                            {(!item.brand || (!item.brand.startsWith("http") && !item.brand.startsWith("data:image/"))) && item.brand && item.category ? " / " : ""}
                             {item.category}
                           </td>
                           <td className="py-2 text-right">{item.quantity_on_hand} {item.unit}</td>
@@ -348,6 +485,11 @@ function InventoryPageContent() {
                               <Input className="w-16 h-8 text-xs" type="number" placeholder="Qty" value={adjustId === item.id ? adjustQty : ""} onFocus={() => setAdjustId(item.id)} onChange={(e) => setAdjustQty(e.target.value)} />
                               <Button size="sm" variant="outline" disabled={adjustId === item.id && !adjustQty} onClick={() => handleStockIn(item.id)}>+</Button>
                             </div>
+                          </td>
+                          <td className="py-2 text-right">
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleEditClick(item)}>
+                              <Edit className="h-4 w-4 text-neutral-500 hover:text-neutral-700" />
+                            </Button>
                           </td>
                         </tr>
                       )

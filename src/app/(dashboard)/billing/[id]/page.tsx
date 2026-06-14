@@ -123,7 +123,7 @@ export default function InvoiceDetailPage() {
       return
     }
 
-    toast.success("Payment recorded! Doktor hakedişi (%40) otomatik hesaplanıp maaş hesabına aktarıldı.")
+    toast.success(t("billing.paymentSuccessWithCommission", "Payment recorded! Doktor hakedişi (%40) otomatik hesaplanıp maaş hesabına aktarıldı."))
     
     // Auto-Recall Marketing Simulation
     if (lineItems.some(i => i.description.toLowerCase().includes("cleaning") || i.description.toLowerCase().includes("temizlik") || i.description.toLowerCase().includes("proph"))) {

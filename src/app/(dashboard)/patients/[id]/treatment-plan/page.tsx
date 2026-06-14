@@ -20,7 +20,7 @@ import { useBranch } from "@/hooks/use-branch"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { getPatient } from "@/lib/patients/patient-service"
 import { getMedicalRiskFlags } from "@/lib/patients/medical-history-service"
-import { fetchProcedures } from "@/lib/billing/procedure-service"
+import { fetchProcedures, seedDefaultProcedures, createProcedure } from "@/lib/billing/procedure-service"
 import { AlertCircle } from "lucide-react"
 import {
   createTreatmentPlan,
@@ -34,6 +34,20 @@ import { logAuditEvent } from "@/lib/audit/audit-service"
 import { fetchProcedureStockWarnings } from "@/lib/inventory/inventory-service"
 import { ProcedureStockWarningBanner } from "@/components/inventory/ProcedureStockWarningBanner"
 import { ChartFindingSuggestionsCard } from "@/components/clinical/ChartFindingSuggestionsCard"
+
+const PROCEDURE_TEMPLATES = [
+  { code: "EXAM", name: "Oral Examination", price: 500, category: "preventive" },
+  { code: "PROPH", name: "Prophylaxis / Cleaning", price: 2500, category: "preventive" },
+  { code: "FILL", name: "Composite Filling", price: 3500, category: "restorative" },
+  { code: "RCT", name: "Root Canal Treatment", price: 12000, category: "restorative" },
+  { code: "EXT", name: "Tooth Extraction", price: 4000, category: "surgery" },
+  { code: "CRWN", name: "Jacket Crown", price: 15000, category: "restorative" },
+  { code: "PFM", name: "PFM Crown", price: 1500, category: "restorative" },
+  { code: "ZIRC", name: "Zirconia Crown (Single)", price: 2500, category: "restorative" },
+  { code: "EMAX", name: "E-Max Veneer", price: 3500, category: "restorative" },
+  { code: "NG", name: "Nightguard (Hard/Soft)", price: 1200, category: "preventive" },
+  { code: "DENT", name: "Complete Denture (Upper & Lower)", price: 5000, category: "prosthodontics" },
+]
 
 function TreatmentPlanContent() {
   const { id: patientId } = useRouteParams<{ id: string }>()
@@ -52,6 +66,10 @@ function TreatmentPlanContent() {
   const [procedures, setProcedures] = React.useState<Awaited<ReturnType<typeof fetchProcedures>>["data"]>([])
   const [selectedProc, setSelectedProc] = React.useState("")
   const [toothNumber, setToothNumber] = React.useState("")
+  const [isCustom, setIsCustom] = React.useState(false)
+  const [customName, setCustomName] = React.useState("")
+  const [customPrice, setCustomPrice] = React.useState("")
+  const [customCode, setCustomCode] = React.useState("")
   const [loading, setLoading] = React.useState(!!planId)
   const [saving, setSaving] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -60,6 +78,24 @@ function TreatmentPlanContent() {
     { name: string; quantity_on_hand: number; min_stock_level: number }[]
   >([])
   const [riskFlags, setRiskFlags] = React.useState<string[]>([])
+  const [seeding, setSeeding] = React.useState(false)
+
+  const handleSeedDefaults = async () => {
+    setSeeding(true)
+    setError(null)
+    try {
+      const org = await fetchOrganization()
+      if (org) {
+        await seedDefaultProcedures(org.id)
+        const { data } = await fetchProcedures(activeBranch?.id)
+        setProcedures(data)
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to load default procedures")
+    } finally {
+      setSeeding(false)
+    }
+  }
 
   const loadPlan = React.useCallback(async (id: string) => {
     const result = await getTreatmentPlan(id)
@@ -114,19 +150,86 @@ function TreatmentPlanContent() {
   }
 
   const handleAddItem = async () => {
-    if (!activePlanId || !selectedProc) return
-    const proc = procedures.find((p) => p.id === selectedProc)
-    if (!proc) return
+    if (!activePlanId) return
+    
     setSaving(true)
+    setError(null)
+    
+    let procId: string | undefined = undefined
+    let procName = ""
+    let procPrice = 0
+    
+    if (selectedProc === "custom" || isCustom) {
+      if (!customName.trim()) {
+        setError("Please enter a procedure name.")
+        setSaving(false)
+        return
+      }
+      const priceVal = parseFloat(customPrice) || 0
+      
+      const org = await fetchOrganization()
+      if (!org) {
+        setError("Organization not found.")
+        setSaving(false)
+        return
+      }
+      
+      const { data: newProc, error: createErr } = await createProcedure({
+        organizationId: org.id,
+        name: customName.trim(),
+        code: customCode.trim() || undefined,
+        basePrice: priceVal,
+      })
+      
+      if (createErr) {
+        setError(createErr)
+        setSaving(false)
+        return
+      }
+      
+      if (newProc) {
+        procId = newProc.id
+        procName = newProc.name
+        procPrice = newProc.effective_price
+        
+        const { data: updatedProcs } = await fetchProcedures(activeBranch?.id)
+        setProcedures(updatedProcs)
+      } else {
+        setError("Failed to create procedure.")
+        setSaving(false)
+        return
+      }
+    } else {
+      const proc = procedures.find((p) => p.id === selectedProc)
+      if (!proc) {
+        setError("Please select a procedure.")
+        setSaving(false)
+        return
+      }
+      procId = proc.id
+      procName = proc.name
+      procPrice = proc.effective_price
+    }
+    
     const { error: err } = await addPlanItem({
       planId: activePlanId,
-      procedureId: proc.id,
-      description: proc.name,
-      estimatedPrice: proc.effective_price,
+      procedureId: procId,
+      description: procName,
+      estimatedPrice: procPrice,
       toothNumber: toothNumber || undefined,
     })
-    if (err) setError(err)
-    else await loadPlan(activePlanId)
+    
+    if (err) {
+      setError(err)
+    } else {
+      await loadPlan(activePlanId)
+      setSelectedProc("")
+      setIsCustom(false)
+      setCustomName("")
+      setCustomPrice("")
+      setCustomCode("")
+      setToothNumber("")
+    }
     setSaving(false)
   }
 
@@ -278,24 +381,151 @@ function TreatmentPlanContent() {
             ) : null}
 
             <Card>
-              <CardHeader><CardTitle className="text-base">Add Procedure</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid gap-3 sm:grid-cols-3">
+              <CardHeader>
+                <CardTitle className="text-base">Add Procedure / Tedavi Ekle</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Quick Select from Templates */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    Quick Select from Templates / Şablondan Hızlı Seç (Örn: Lab Case gibi)
+                  </label>
                   <select
-                    value={selectedProc}
-                    onChange={(e) => setSelectedProc(e.target.value)}
-                    className="h-10 rounded-md border border-neutral-300 px-3 text-sm"
+                    onChange={(e) => {
+                      const template = PROCEDURE_TEMPLATES.find(t => t.code === e.target.value)
+                      if (template) {
+                        setIsCustom(true)
+                        setSelectedProc("custom")
+                        setCustomName(template.name)
+                        setCustomPrice(String(template.price))
+                        setCustomCode(template.code)
+                      } else {
+                        setIsCustom(false)
+                        setSelectedProc("")
+                        setCustomName("")
+                        setCustomPrice("")
+                        setCustomCode("")
+                      }
+                    }}
+                    className="h-10 w-full rounded-md border border-neutral-300 px-3 text-sm bg-white"
+                    value={isCustom ? customCode : ""}
                   >
-                    <option value="">Select procedure…</option>
-                    {procedures.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name} — ₱{p.effective_price}</option>
+                    <option value="">-- Quick select a template (e.g. Crown, Veneer, Filling...) --</option>
+                    {PROCEDURE_TEMPLATES.map((t) => (
+                      <option key={t.code} value={t.code}>
+                        {t.name} — ₱{t.price.toLocaleString()}
+                      </option>
                     ))}
                   </select>
-                  <Input placeholder="Tooth # (optional)" value={toothNumber} onChange={(e) => setToothNumber(e.target.value)} />
-                  <Button onClick={handleAddItem} disabled={saving || !selectedProc} className="gap-2">
-                    <Plus className="h-4 w-4" /> Add
-                  </Button>
                 </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {/* Select Procedure from Catalog */}
+                  <div className="flex flex-col gap-1.5 sm:col-span-1">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      Catalog Procedure / Katalog Tedavisi
+                    </label>
+                    <select
+                      value={selectedProc}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setSelectedProc(val)
+                        if (val === "custom") {
+                          setIsCustom(true)
+                        } else {
+                          setIsCustom(false)
+                          setCustomName("")
+                          setCustomPrice("")
+                          setCustomCode("")
+                        }
+                      }}
+                      className="h-10 rounded-md border border-neutral-300 px-3 text-sm bg-white"
+                    >
+                      <option value="">Select procedure…</option>
+                      {procedures.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} — ₱{p.effective_price.toLocaleString()}
+                        </option>
+                      ))}
+                      <option value="custom">✍️ Custom Procedure / Yeni Tedavi Ekle</option>
+                    </select>
+                  </div>
+
+                  {/* Tooth Number */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      Tooth # / Diş No (Optional)
+                    </label>
+                    <Input
+                      placeholder="e.g. 18, 24, 36"
+                      value={toothNumber}
+                      onChange={(e) => setToothNumber(e.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+
+                  {/* Add Button */}
+                  <div className="flex flex-col gap-1.5 justify-end">
+                    <Button
+                      onClick={handleAddItem}
+                      disabled={saving || (!selectedProc && !isCustom)}
+                      className="h-10 gap-2 w-full"
+                    >
+                      <Plus className="h-4 w-4" /> Add to Plan
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Custom Fields (Shown if isCustom is true) */}
+                {isCustom && (
+                  <div className="grid gap-3 sm:grid-cols-3 p-4 rounded-lg bg-neutral-50 border border-neutral-100 animate-fade-rise">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-600">Custom Procedure Name / Tedavi Adı</label>
+                      <Input
+                        placeholder="e.g. Zirconia Crown"
+                        value={customName}
+                        onChange={(e) => setCustomName(e.target.value)}
+                        className="h-10 bg-white"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-600">Price / Ücret (₱)</label>
+                      <Input
+                        placeholder="e.g. 2500"
+                        type="number"
+                        value={customPrice}
+                        onChange={(e) => setCustomPrice(e.target.value)}
+                        className="h-10 bg-white"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-600">Code / Kod (Optional)</label>
+                      <Input
+                        placeholder="e.g. ZIRC"
+                        value={customCode}
+                        onChange={(e) => setCustomCode(e.target.value)}
+                        className="h-10 bg-white"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {procedures.length === 0 && (
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50 border border-amber-100 text-xs text-amber-800">
+                    <span>Your procedure catalog is empty. You can load default procedures or add custom ones above.</span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleSeedDefaults}
+                      disabled={seeding}
+                      className="bg-white hover:bg-amber-100 border-amber-200 text-amber-900"
+                    >
+                      {seeding ? "Loading..." : "⚡ Load Default Procedures"}
+                    </Button>
+                  </div>
+                )}
+
                 <ProcedureStockWarningBanner warnings={stockWarnings} />
               </CardContent>
             </Card>

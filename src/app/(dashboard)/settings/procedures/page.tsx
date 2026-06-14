@@ -25,6 +25,20 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { ProcedureBomEditor } from "@/components/settings/ProcedureBomEditor"
 import { ListOrdered } from "lucide-react"
 
+const PROCEDURE_TEMPLATES = [
+  { code: "EXAM", name: "Oral Examination", price: "500", category: "preventive" },
+  { code: "PROPH", name: "Prophylaxis / Cleaning", price: "2500", category: "preventive" },
+  { code: "FILL", name: "Composite Filling", price: "3500", category: "restorative" },
+  { code: "RCT", name: "Root Canal Treatment", price: "12000", category: "restorative" },
+  { code: "EXT", name: "Tooth Extraction", price: "4000", category: "surgery" },
+  { code: "CRWN", name: "Jacket Crown", price: "15000", category: "restorative" },
+  { code: "PFM", name: "PFM Crown", price: "1500", category: "restorative" },
+  { code: "ZIRC", name: "Zirconia Crown (Single)", price: "2500", category: "restorative" },
+  { code: "EMAX", name: "E-Max Veneer", price: "3500", category: "restorative" },
+  { code: "NG", name: "Nightguard (Hard/Soft)", price: "1200", category: "preventive" },
+  { code: "DENT", name: "Complete Denture (Upper & Lower)", price: "5000", category: "prosthodontics" },
+]
+
 export default function ProceduresSettingsPage() {
   const { activeBranch, availableBranches } = useBranch()
   const { user } = useAuth()
@@ -303,13 +317,39 @@ export default function ProceduresSettingsPage() {
 
         {showForm && (
           <Card>
-            <CardContent className="pt-6 grid gap-3 sm:grid-cols-4">
-              <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-              <Input placeholder="Code" value={code} onChange={(e) => setCode(e.target.value)} />
-              <Input placeholder="Base price (PHP)" type="number" value={price} onChange={(e) => setPrice(e.target.value)} />
-              <Button onClick={handleCreate} disabled={creating}>
-                Save
-              </Button>
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  Quick Select from Templates / Şablondan Hızlı Seç
+                </label>
+                <select
+                  onChange={(e) => {
+                    const template = PROCEDURE_TEMPLATES.find(t => t.code === e.target.value)
+                    if (template) {
+                      setName(template.name)
+                      setCode(template.code)
+                      setPrice(template.price)
+                    }
+                  }}
+                  className="h-10 w-full rounded-md border border-neutral-300 px-3 text-sm bg-white"
+                  defaultValue=""
+                >
+                  <option value="">-- Select a predefined procedure template --</option>
+                  {PROCEDURE_TEMPLATES.map((t) => (
+                    <option key={t.code} value={t.code}>
+                      {t.name} — ₱{t.price} ({t.category})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-4">
+                <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+                <Input placeholder="Code" value={code} onChange={(e) => setCode(e.target.value)} />
+                <Input placeholder="Base price (PHP)" type="number" value={price} onChange={(e) => setPrice(e.target.value)} />
+                <Button onClick={handleCreate} disabled={creating}>
+                  Save
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

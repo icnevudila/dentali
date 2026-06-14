@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users } from "lucide-react"
+import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users, Plus, Receipt } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { MetricStrip } from "@/components/layout/MetricStrip"
@@ -288,6 +288,13 @@ export default function PatientProfilePage() {
               <FileText className="h-4 w-4" /> Consents
             </Link>
           </Button>
+          <PermissionGate permission={PERMISSIONS.BILLING_WRITE}>
+            <Button variant="outline" size="sm" className="gap-2" asChild>
+              <Link href={`/billing?patient=${patientId}&create=true`} transitionTypes={NAV_FORWARD_TRANSITION}>
+                <Plus className="h-4 w-4" /> New Invoice
+              </Link>
+            </Button>
+          </PermissionGate>
           <Button variant="outline" className="gap-2" onClick={() => printCurrentPage({ title: `Patient — ${patient.first_name} ${patient.last_name}` })}>
             <Printer className="h-4 w-4"/> Print
           </Button>

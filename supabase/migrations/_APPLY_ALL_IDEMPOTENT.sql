@@ -1962,7 +1962,7 @@ create table if not exists public.branch_public_tokens (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete cascade,
   branch_id uuid not null references public.branches(id) on delete cascade,
-  token text not null unique default encode(gen_random_bytes(24), 'hex'),
+  token text not null unique default replace(gen_random_uuid()::text, '-', ''),
   token_type text not null check (token_type in ('kiosk', 'display')),
   label text,
   is_active boolean not null default true,
@@ -7131,7 +7131,7 @@ begin
     raise exception 'Permission denied';
   end if;
 
-  v_token := encode(gen_random_bytes(24), 'hex');
+  v_token := replace(gen_random_uuid()::text, '-', '');
 
   insert into public.consent_signing_tokens (
     patient_consent_id, token, channel, expires_at, created_by
@@ -15645,6 +15645,60 @@ update public.consent_templates
 set 
   name = replace(name, 'Ã¢â‚¬â€œ', '-'),
   body = replace(body, 'Ã¢â‚¬â€œ', '-');
+
+-- 6. Fix create_consent_signing_token RPC
+create or replace function public.create_consent_signing_token(
+  p_consent_id uuid,
+  p_channel text default 'qr',
+  p_ttl_hours int default 72
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_consent record;
+  v_token text;
+begin
+  select * into v_consent
+  from public.patient_consents
+  where id = p_consent_id
+    and organization_id = public.current_user_org_id();
+
+  if v_consent.id is null then
+    raise exception 'Consent not found';
+  end if;
+
+  if v_consent.status <> 'pending' then
+    raise exception 'Consent is not pending';
+  end if;
+
+  if not public.has_permission('consents.manage', coalesce(v_consent.branch_id, (
+    select sba.branch_id from public.staff_branch_assignments sba
+    where sba.profile_id = auth.uid() limit 1
+  ))) then
+    raise exception 'Permission denied';
+  end if;
+
+  v_token := replace(gen_random_uuid()::text, '-', '');
+
+  insert into public.consent_signing_tokens (
+    patient_consent_id, token, channel, expires_at, created_by
+  ) values (
+    p_consent_id,
+    v_token,
+    coalesce(nullif(trim(p_channel), ''), 'qr'),
+    now() + make_interval(hours => greatest(p_ttl_hours, 1)),
+    auth.uid()
+  );
+
+  return jsonb_build_object(
+    'token', v_token,
+    'expires_at', (now() + make_interval(hours => greatest(p_ttl_hours, 1)))::text
+  );
+end;
+$$;
 
 
 -- ===== 20260613270000_kiosk_enhancements.sql =====

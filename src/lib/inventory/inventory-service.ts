@@ -240,3 +240,36 @@ export async function fetchProcedureStockWarnings(
 
   return { data: warnings, error: null }
 }
+
+export async function updateInventoryItem(
+  itemId: string,
+  params: {
+    name: string
+    sku?: string
+    category?: string
+    unit?: string
+    minStockLevel: number
+    expiryDate?: string | null
+    supplier?: string
+    brand?: string | null
+    unitCost?: number
+  }
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from("inventory_items")
+    .update({
+      name: params.name,
+      sku: params.sku ?? null,
+      category: params.category ?? null,
+      unit: params.unit ?? "pc",
+      min_stock_level: params.minStockLevel,
+      expiry_date: params.expiryDate ?? null,
+      supplier: params.supplier ?? null,
+      brand: params.brand ?? null,
+      unit_cost: params.unitCost ?? 0,
+    })
+    .eq("id", itemId)
+  return { error: error?.message ?? null }
+}
+

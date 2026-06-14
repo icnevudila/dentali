@@ -277,10 +277,27 @@ export async function addStaffMemberDirectly(params: {
 }): Promise<{ error: string | null; profileId?: string }> {
   const supabase = createClient()
   const newProfileId = crypto.randomUUID()
+
+  // Fetch current user's organization_id to associate with the new profile
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "User not authenticated" }
+
+  const { data: currentUserProfile } = await supabase
+    .from("profiles")
+    .select("organization_id")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (!currentUserProfile?.organization_id) {
+    return { error: "Organization not found for the current user" }
+  }
+
+  const orgId = currentUserProfile.organization_id
   
   // 1. Insert into profiles
   const { error: profileError } = await supabase.from("profiles").insert({
     id: newProfileId,
+    organization_id: orgId,
     full_name: params.fullName,
     email: params.email
   })

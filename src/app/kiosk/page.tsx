@@ -12,7 +12,7 @@ import { KioskStepIndicator, kioskStepFromFlow } from "@/components/kiosk/KioskS
 import { CheckCircle2, AlertCircle, Loader2, Users } from "lucide-react"
 import { updateKioskMood, getKioskQueueStats } from "@/lib/kiosk/kiosk-service"
 
-type Step = "loading" | "welcome" | "form" | "mood" | "success" | "error" | "intakeForm" | "intakeSuccess"
+type Step = "loading" | "welcome" | "form" | "mood" | "success" | "error" | "intakeForm" | "intakeSuccess" | "pending_approval"
 
 const AUTO_RESET_MS = 8_000
 const FORM_IDLE_MS = 120_000
@@ -69,7 +69,7 @@ function KioskContent() {
   }, [token, t])
 
   React.useEffect(() => {
-    if (step !== "success" && step !== "intakeSuccess") return
+    if (step !== "success" && step !== "intakeSuccess" && step !== "pending_approval") return
     const id = setTimeout(resetToWelcome, AUTO_RESET_MS)
     return () => clearTimeout(id)
   }, [step, resetToWelcome])
@@ -160,7 +160,14 @@ function KioskContent() {
     const { data, error } = await submitKioskCheckin(sessionId, phone, lastName)
     setSubmitting(false)
     if (error || !data) {
-      setErrorMsg(error ?? t("kiosk.checkInFailed", "Check-in failed. Please see the front desk."))
+      if (error && error.includes("REGISTRATION_PENDING")) {
+        setStep("pending_approval")
+        playPendingSound(
+          t("kiosk.speechPending", "Your registration has been received but is pending approval at the front desk. Kaydınız alınmıştır ancak henüz banko tarafından onaylanmamıştır.")
+        )
+      } else {
+        setErrorMsg(error ?? t("kiosk.checkInFailed", "Check-in failed. Please see the front desk."))
+      }
       return
     }
     setQueueCode(data.display_code)
@@ -168,6 +175,43 @@ function KioskContent() {
     
     // Go to mood step before success
     setStep("mood")
+  }
+
+  const playPendingSound = (speechText: string) => {
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext
+      if (AudioContext) {
+        const ctx = new AudioContext()
+        const osc = ctx.createOscillator()
+        const gainNode = ctx.createGain()
+
+        osc.type = "triangle"
+        osc.frequency.setValueAtTime(440, ctx.currentTime) // A4
+        osc.frequency.setValueAtTime(554.37, ctx.currentTime + 0.15) // C#5
+
+        gainNode.gain.setValueAtTime(0, ctx.currentTime)
+        gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05)
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6)
+
+        osc.connect(gainNode)
+        gainNode.connect(ctx.destination)
+
+        osc.start()
+        osc.stop(ctx.currentTime + 0.6)
+      }
+
+      if ("speechSynthesis" in window) {
+        setTimeout(() => {
+          window.speechSynthesis.cancel()
+          const utterance = new SpeechSynthesisUtterance(speechText)
+          utterance.lang = "tr-TR" // Or dynamic based on text
+          utterance.rate = 0.9
+          window.speechSynthesis.speak(utterance)
+        }, 400)
+      }
+    } catch (e) {
+      // Ignore
+    }
   }
 
   const handleMoodSelect = async (mood: string) => {
@@ -558,6 +602,38 @@ function KioskContent() {
             >
               {t("kiosk.done", "Done")}
             </button>
+          </div>
+        )}
+
+        {step === "pending_approval" && (
+          <div className="space-y-8 rounded-[2rem] border border-amber-200 bg-white/85 p-10 text-center shadow-[0_16px_50px_rgba(245,158,11,0.15)] backdrop-blur-3xl animate-in zoom-in-95 duration-500">
+            <div className="relative mx-auto h-24 w-24">
+              <div className="absolute inset-0 rounded-full bg-amber-100 animate-ping opacity-75" />
+              <div className="relative flex h-full w-full items-center justify-center rounded-full bg-gradient-to-tr from-amber-400 to-amber-500 shadow-xl shadow-amber-500/30">
+                <AlertCircle className="h-12 w-12 text-white" />
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <h1 className="text-3xl font-black text-amber-800 tracking-tight">
+                {t("kiosk.pendingTitle", "Registration Pending Approval")}
+              </h1>
+              <p className="text-xl font-bold text-neutral-800 leading-snug px-2">
+                Kaydınız Alınmıştır, Banko Onayı Bekleniyor!
+              </p>
+              <p className="text-neutral-500 text-base leading-relaxed px-4">
+                Your online registration has been received but must be approved by the receptionist before you can check in. Please proceed to the front desk.
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <button 
+                onClick={resetToWelcome}
+                className="w-full h-16 text-xl font-bold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-2xl transition-all active:scale-[0.98]"
+              >
+                {t("kiosk.done", "Return to Main Page")}
+              </button>
+            </div>
           </div>
         )}
       </div>

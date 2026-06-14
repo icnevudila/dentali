@@ -86,6 +86,7 @@ export async function createManualInvoice(params: {
   dueDate?: string
   userId: string
   series?: string
+  invoiceNumber?: string
 }): Promise<{ data: { id: string } | null; error: string | null }> {
   if (params.totalAmount <= 0) {
     return { data: null, error: "Amount must be greater than zero" }
@@ -93,7 +94,7 @@ export async function createManualInvoice(params: {
 
   const supabase = createClient()
   const series = params.series || "INV"
-  const invoiceNumber = `${series}-${Date.now().toString(36).toUpperCase()}`
+  const invoiceNumber = params.invoiceNumber?.trim() || `${series}-${Date.now().toString(36).toUpperCase()}`
 
   const { data, error } = await supabase
     .from("invoices")

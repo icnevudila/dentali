@@ -20,6 +20,7 @@ import {
 } from "@/lib/appointments/week-calendar"
 import { cn } from "@/lib/utils"
 import type { StaffMember } from "@/lib/staff/staff-service"
+import { useLocale } from "@/hooks/use-locale"
 
 const DRAG_MIME = "application/x-dentali-appointment"
 
@@ -60,7 +61,24 @@ export function AppointmentWeekCalendar({
   dragHint,
   providers,
 }: AppointmentWeekCalendarProps) {
-  const [viewMode, setViewMode] = React.useState<"month" | "week" | "day">("week")
+  const { t } = useLocale()
+  const [viewMode, setViewMode] = React.useState<"month" | "week" | "day">(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("dentali-calendar-viewmode")
+      if (saved === "month" || saved === "week" || saved === "day") {
+        return saved
+      }
+    }
+    return "month"
+  })
+
+  const handleViewModeChange = (mode: "month" | "week" | "day") => {
+    setViewMode(mode)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("dentali-calendar-viewmode", mode)
+    }
+  }
+
   const [filterProviderId, setFilterProviderId] = React.useState<string>("all")
   const [dropTarget, setDropTarget] = React.useState<string | null>(null)
   
@@ -215,7 +233,7 @@ export function AppointmentWeekCalendar({
           {(["month", "week", "day"] as const).map((mode) => (
             <button
               key={mode}
-              onClick={() => setViewMode(mode)}
+              onClick={() => handleViewModeChange(mode)}
               className={cn(
                 "px-3 py-1 text-xs font-semibold rounded-md transition-all uppercase tracking-wider",
                 viewMode === mode
@@ -658,7 +676,12 @@ export function AppointmentWeekCalendar({
           )}
           
           {canReschedule && dragHint && (
-            <p className="mt-4 text-xs text-neutral-400">{dragHint}</p>
+            <div className="mt-4 flex flex-col gap-1.5 border-t border-neutral-100 pt-3">
+              <p className="text-xs text-neutral-400">{dragHint}</p>
+              <p className="text-xs text-primary-500 font-semibold flex items-center gap-1">
+                💡 {t("appointments.monthDragRecommendation", "Note: For the best drag-and-drop rescheduling experience, please switch to the Month view. / En iyi sürükle-bırak deneyimi için Aylık (Month) görünümü kullanabilirsiniz.")}
+              </p>
+            </div>
           )}
         </div>
       )}

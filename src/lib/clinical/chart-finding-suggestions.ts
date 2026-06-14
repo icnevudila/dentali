@@ -29,20 +29,47 @@ export function matchProcedureForFinding(
   procedures: ProcedureLike[]
 ): { procedureId: string | null; description: string; estimatedPrice: number } {
   const name = (p: ProcedureLike) => p.name.toLowerCase()
+  const code = (p: any) => (p.code || "").toLowerCase()
 
   const matched = procedures.find((p) => {
     const n = name(p)
-    if (
-      (finding.condition === "decayed" || finding.condition === "missing_caries") &&
-      n.includes("filling")
-    ) {
-      return true
+    const c = code(p)
+    
+    // Decayed / caries -> Fillings
+    if (finding.condition === "decayed" || finding.condition === "missing_caries") {
+      if (
+        n.includes("filling") ||
+        n.includes("fill") ||
+        n.includes("dolgu") ||
+        c.includes("fill") ||
+        c.includes("comp")
+      ) {
+        return true
+      }
     }
-    if (finding.condition === "indicated_extraction" && n.includes("extraction")) {
-      return true
+    // Extraction
+    if (finding.condition === "indicated_extraction") {
+      if (
+        n.includes("extraction") ||
+        n.includes("extract") ||
+        n.includes("çekim") ||
+        n.includes("cekim") ||
+        c.includes("ext")
+      ) {
+        return true
+      }
     }
-    if (finding.restoration_type === "jacket_crown" && n.includes("crown")) {
-      return true
+    // Crown
+    if (finding.restoration_type === "jacket_crown") {
+      if (
+        n.includes("crown") ||
+        n.includes("jacket") ||
+        n.includes("kron") ||
+        n.includes("kaplama") ||
+        c.includes("crwn")
+      ) {
+        return true
+      }
     }
     return false
   })

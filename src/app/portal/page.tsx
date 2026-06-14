@@ -36,6 +36,7 @@ type Step =
   | "intakeSuccess"
   | "success" 
   | "error"
+  | "pending_approval"
 
 export default function PortalPage() {
   return (
@@ -116,7 +117,14 @@ function PortalPageContent() {
     const { error: verifyError } = await verifyPortalPatient(sessionId, phone, lastName)
     if (verifyError) {
       setSubmitting(false)
-      setErrorMsg("No record found. Please check your information or create a New Patient Registration.")
+      if (verifyError.includes("REGISTRATION_PENDING")) {
+        setStep("pending_approval")
+        playPendingSound(
+          "Your registration has been received but is pending approval at the front desk. Kaydınız alınmıştır ancak henüz banko tarafından onaylanmamıştır."
+        )
+      } else {
+        setErrorMsg("No record found. Please check your information or create a New Patient Registration.")
+      }
       return
     }
 
@@ -125,6 +133,43 @@ function PortalPageContent() {
     const uniqueProviders = Array.from(new Map(data.map(p => [p.provider_id, p])).values())
     setProviders(uniqueProviders.map(p => ({ id: p.provider_id, name: p.provider_name })))
     setStep("provider")
+  }
+
+  const playPendingSound = (speechText: string) => {
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext
+      if (AudioContext) {
+        const ctx = new AudioContext()
+        const osc = ctx.createOscillator()
+        const gainNode = ctx.createGain()
+
+        osc.type = "triangle"
+        osc.frequency.setValueAtTime(440, ctx.currentTime) // A4
+        osc.frequency.setValueAtTime(554.37, ctx.currentTime + 0.15) // C#5
+
+        gainNode.gain.setValueAtTime(0, ctx.currentTime)
+        gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05)
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6)
+
+        osc.connect(gainNode)
+        gainNode.connect(ctx.destination)
+
+        osc.start()
+        osc.stop(ctx.currentTime + 0.6)
+      }
+
+      if ("speechSynthesis" in window) {
+        setTimeout(() => {
+          window.speechSynthesis.cancel()
+          const utterance = new SpeechSynthesisUtterance(speechText)
+          utterance.lang = "tr-TR"
+          utterance.rate = 0.9
+          window.speechSynthesis.speak(utterance)
+        }, 400)
+      }
+    } catch (e) {
+      // Ignore
+    }
   }
 
   const handleNewPatientSubmit = async (e: React.FormEvent) => {
@@ -630,6 +675,38 @@ function PortalPageContent() {
             <Button variant="outline" className="w-full rounded-xl h-12" onClick={() => setStep("welcome")}>
               Return to Main Page
             </Button>
+          </div>
+        )}
+
+        {step === "pending_approval" && (
+          <div className="space-y-8 rounded-[2.5rem] border border-amber-200 bg-white/85 p-10 text-center shadow-[0_16px_50px_rgba(245,158,11,0.15)] backdrop-blur-3xl animate-in zoom-in-95 duration-500">
+            <div className="relative mx-auto h-24 w-24">
+              <div className="absolute inset-0 rounded-full bg-amber-100 animate-ping opacity-75" />
+              <div className="relative flex h-full w-full items-center justify-center rounded-full bg-gradient-to-tr from-amber-400 to-amber-500 shadow-xl shadow-amber-500/30">
+                <AlertCircle className="h-12 w-12 text-white" />
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <h1 className="text-3xl font-black text-amber-800 tracking-tight">
+                Registration Pending Approval
+              </h1>
+              <p className="text-xl font-bold text-neutral-800 leading-snug px-2">
+                Kaydınız Alınmıştır, Banko Onayı Bekleniyor!
+              </p>
+              <p className="text-neutral-500 text-sm leading-relaxed px-4">
+                Your online registration has been received but must be approved by the clinic receptionist before you can schedule an appointment. Please wait for confirmation or check with the front desk.
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <Button 
+                onClick={() => setStep("welcome")}
+                className="w-full h-14 text-lg font-bold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-2xl transition-all active:scale-[0.98]"
+              >
+                Return to Main Page
+              </Button>
+            </div>
           </div>
         )}
 

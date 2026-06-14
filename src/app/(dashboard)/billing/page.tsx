@@ -10,7 +10,7 @@ import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
 import { useAuth } from "@/hooks/use-auth"
 import { fetchOrganization } from "@/lib/auth/auth-service"
-import { searchPatients } from "@/lib/patients/patient-service"
+import { searchPatients, getPatient } from "@/lib/patients/patient-service"
 import {
   createManualInvoice,
   fetchInvoices,
@@ -54,6 +54,7 @@ function BillingPageContent() {
   const [selectedPatientId, setSelectedPatientId] = React.useState("")
   const [amount, setAmount] = React.useState("")
   const [dueDate, setDueDate] = React.useState("")
+  const [customInvoiceNumber, setCustomInvoiceNumber] = React.useState("")
   const [creating, setCreating] = React.useState(false)
   const [series, setSeries] = React.useState("INV")
 
@@ -76,12 +77,30 @@ function BillingPageContent() {
       setPatients([])
       return
     }
+    // Prevent overriding if patientFilter is already loaded
+    if (patientFilter && selectedPatientId === patientFilter && patientQuery !== "") {
+      return
+    }
     const timer = setTimeout(
       () => searchPatients(patientQuery, activeBranch.id).then(({ data }) => setPatients(data)),
       300
     )
     return () => clearTimeout(timer)
-  }, [patientQuery, activeBranch])
+  }, [patientQuery, activeBranch, patientFilter, selectedPatientId])
+
+  React.useEffect(() => {
+    if (patientFilter) {
+      setSelectedPatientId(patientFilter)
+      getPatient(patientFilter).then(({ data }) => {
+        if (data) {
+          setPatientQuery(`${data.first_name} ${data.last_name}`)
+        }
+      })
+      if (searchParams.get("create") === "true") {
+        setShowCreate(true)
+      }
+    }
+  }, [patientFilter, searchParams])
 
   const scopedInvoices = React.useMemo(
     () => (patientFilter ? invoices.filter((inv) => inv.patient_id === patientFilter) : invoices),
@@ -126,6 +145,16 @@ function BillingPageContent() {
     const totalAmount = parseFloat(amount)
     if (!totalAmount || totalAmount <= 0) return
 
+    let finalInvoiceNumber = customInvoiceNumber.trim()
+    if (!finalInvoiceNumber) {
+      const generated = `${series}-${Date.now().toString(36).toUpperCase()}`
+      const confirmed = window.confirm(
+        `Fatura numarası boş bırakıldı. Sistem tarafından otomatik olarak "${generated}" şeklinde oluşturulacaktır. Onaylıyor musunuz?\n\n(The invoice number is blank. It will be auto-generated as "${generated}". Do you approve?)`
+      )
+      if (!confirmed) return
+      finalInvoiceNumber = generated
+    }
+
     setCreating(true)
     setError(null)
     const org = await fetchOrganization()
@@ -143,6 +172,7 @@ function BillingPageContent() {
       dueDate: dueDate || undefined,
       userId: user.id,
       series: series,
+      invoiceNumber: finalInvoiceNumber,
     })
 
     setCreating(false)
@@ -156,6 +186,7 @@ function BillingPageContent() {
       setDueDate("")
       setPatientQuery("")
       setSelectedPatientId("")
+      setCustomInvoiceNumber("")
       setSeries("INV")
       load()
       if (data?.id) window.location.href = `/billing/${data.id}`
@@ -312,6 +343,20 @@ function BillingPageContent() {
 
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      Invoice Number (Optional)
+                    </label>
+                    <Input
+                      placeholder="e.g. INV-00201"
+                      value={customInvoiceNumber}
+                      onChange={(e) => setCustomInvoiceNumber(e.target.value)}
+                    />
+                    <p className="text-[10px] text-neutral-400">
+                      Leave blank to auto-generate based on series. / Fatura numarası girilmezse seriye göre otomatik oluşturulacaktır.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                       {t("billing.invoiceAmountLabel", "Invoice Amount (PHP)")}
                     </label>
                     <Input
@@ -422,7 +467,21 @@ function BillingPageContent() {
                           {label}
                         </span>
                       }
-                      secondary={inv.patient_name ?? t("billing.patient", "Patient")}
+                      secondary={
+                        inv.patient_id ? (
+                          <Link
+                            href={`/patients/${inv.patient_id}`}
+                            className="text-primary-600 hover:underline relative z-10"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                            }}
+                          >
+                            {inv.patient_name ?? t("billing.patient", "Patient")}
+                          </Link>
+                        ) : (
+                          inv.patient_name ?? t("billing.patient", "Patient")
+                        )
+                      }
                       meta={
                         <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500">
                           <span className="tabular-nums">
