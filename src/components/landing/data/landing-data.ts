@@ -234,8 +234,8 @@ export const USP_CARDS: UspCard[] = [
     ),
     preview: {
       kind: "image",
-      src: asset("/landing/feature-treatment.png"),
-      alt: t("Digital consent forms", "Dijital onam formları"),
+      src: asset("/landing/usp-consent-sign.png"),
+      alt: t("Digital consent with signature", "İmzalı dijital onam formu"),
     },
     featureId: "treatment",
   },
