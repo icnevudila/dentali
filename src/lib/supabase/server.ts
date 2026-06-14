@@ -2,11 +2,28 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function createClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!url || !key) {
+    // Return a dummy proxy object so static prerendering doesn't crash during build
+    return new Proxy({} as any, {
+      get(_, prop) {
+        if (prop === 'auth') {
+          return new Proxy({} as any, {
+            get() { return () => {} }
+          })
+        }
+        return () => {}
+      }
+    })
+  }
+
   const cookieStore = await cookies()
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    key,
     {
       cookies: {
         getAll() {
