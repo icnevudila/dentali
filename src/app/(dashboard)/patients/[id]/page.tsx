@@ -254,20 +254,20 @@ export default function PatientProfilePage() {
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div className="flex items-start gap-4">
-          <Button variant="ghost" size="icon" asChild className="mt-1">
+          <Button variant="ghost" size="icon" asChild className="mt-1 print:hidden">
             <Link href="/patients" transitionTypes={NAV_BACK_TRANSITION}>
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <PatientAvatar patientId={patientId} initials={initials} editable size="lg" />
+          <PatientAvatar patientId={patientId} initials={initials} editable size="lg" className="print:hidden" />
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold tracking-tight text-neutral-950">{fullName}</h1>
               <Badge variant={patient.status === "active" ? "success" : "default"}>{patient.status}</Badge>
               {balance && balance.open_balance > 0 && (
                 <Link href={`/billing?patient=${patientId}`}>
-                  <Badge variant="warning" className="gap-1 cursor-pointer">
-                    <Wallet className="h-3 w-3 inline" />
+                  <Badge variant="warning" className="gap-1 cursor-pointer print:border print:border-amber-500 print:text-amber-800">
+                    <Wallet className="h-3 w-3 inline print:hidden" />
                     ₱{balance.open_balance.toLocaleString()} due
                   </Badge>
                 </Link>
@@ -279,7 +279,7 @@ export default function PatientProfilePage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
           <Button variant="outline" size="sm" className="gap-2" asChild>
             <Link href={`/patients/${patientId}/chart`} transitionTypes={NAV_FORWARD_TRANSITION}>
               <Activity className="h-4 w-4" /> Chart

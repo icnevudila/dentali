@@ -355,12 +355,19 @@
 }
 
 @media print {
-  body * {
+  /* Only hide other elements if a specific print document is present on the page */
+  body:has(#consent-print-document) *,
+  body:has(#patient-print-document) *,
+  body:has(#chart-print-document) * {
     visibility: hidden;
   }
 
-  #consent-print-document,
-  #consent-print-document * {
+  body:has(#consent-print-document) #consent-print-document,
+  body:has(#consent-print-document) #consent-print-document *,
+  body:has(#patient-print-document) #patient-print-document,
+  body:has(#patient-print-document) #patient-print-document *,
+  body:has(#chart-print-document) #chart-print-document,
+  body:has(#chart-print-document) #chart-print-document * {
     visibility: visible;
   }
 
@@ -373,15 +380,6 @@
     width: 100%;
     border: none !important;
     box-shadow: none !important;
-  }
-
-  #consent-print-document,
-  #consent-print-document *,
-  #patient-print-document,
-  #patient-print-document *,
-  #chart-print-document,
-  #chart-print-document * {
-    visibility: visible;
   }
 
   #chart-print-document {

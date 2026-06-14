@@ -19,7 +19,7 @@ export function PageHeader({ title, description, eyebrow, actions, className }: 
         <h1 className="text-2xl font-bold tracking-tight text-neutral-950">{title}</h1>
         {description ? <div className="text-sm text-neutral-500">{description}</div> : null}
       </div>
-      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2 print:hidden">{actions}</div> : null}
     </div>
   )
 }
