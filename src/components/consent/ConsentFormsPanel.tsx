@@ -60,6 +60,7 @@ export function ConsentFormsPanel({
   const [error, setError] = React.useState<string | null>(null)
   const [busySlug, setBusySlug] = React.useState<string | null>(null)
   const [linkCopiedSlug, setLinkCopiedSlug] = React.useState<string | null>(null)
+  const [activeLinks, setActiveLinks] = React.useState<Record<string, string>>({})
 
   React.useEffect(() => {
     fetchConsentCatalog().then(({ data, error: err }) => {
@@ -118,6 +119,7 @@ export function ConsentFormsPanel({
     const url = `${window.location.origin}/sign/${token}`
     await navigator.clipboard.writeText(url)
     setLinkCopiedSlug(template.slug)
+    setActiveLinks((prev) => ({ ...prev, [template.slug]: url }))
     toast.success("Link copied! You can send it via WhatsApp or SMS.")
     setTimeout(() => setLinkCopiedSlug(null), 2500)
   }
@@ -242,39 +244,62 @@ export function ConsentFormsPanel({
                 ) : null}
               </div>
 
-              <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                {status === "signed" ? (
-                  <Button size="sm" variant="outline" className="gap-1 w-full" asChild>
-                    <Link
-                      href={`/patients/${patientId}/consents/${template.slug}/view`}
-                      transitionTypes={NAV_FORWARD_TRANSITION}
-                    >
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                      View & export (PDF / Word)
-                    </Link>
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      size="sm"
-                      className="gap-1 flex-1"
-                      disabled={isBusy}
-                      onClick={() => void handleFillNow(template)}
-                    >
-                      <PenLine className="h-3.5 w-3.5" />
-                      Fill now
+              <div className="mt-auto flex flex-col gap-2 pt-4">
+                <div className="flex flex-wrap gap-2">
+                  {status === "signed" ? (
+                    <Button size="sm" variant="outline" className="gap-1 w-full" asChild>
+                      <Link
+                        href={`/patients/${patientId}/consents/${template.slug}/view`}
+                        transitionTypes={NAV_FORWARD_TRANSITION}
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        View & export (PDF / Word)
+                      </Link>
                     </Button>
+                  ) : (
+                    <>
+                      <Button
+                        size="sm"
+                        className="gap-1 flex-1"
+                        disabled={isBusy}
+                        onClick={() => void handleFillNow(template)}
+                      >
+                        <PenLine className="h-3.5 w-3.5" />
+                        Fill now
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1 flex-1"
+                        disabled={isBusy}
+                        onClick={() => void handlePatientLink(template)}
+                      >
+                        <Link2 className="h-3.5 w-3.5" />
+                        {linkCopiedSlug === template.slug ? "Copied!" : "Patient link"}
+                      </Button>
+                    </>
+                  )}
+                </div>
+
+                {activeLinks[template.slug] && (
+                  <div className="mt-1 p-2 bg-neutral-50 rounded-lg border border-neutral-200 flex items-center justify-between gap-2 text-xs">
+                    <span className="font-mono truncate text-neutral-600 flex-1 select-all">
+                      {activeLinks[template.slug]}
+                    </span>
                     <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1 flex-1"
-                      disabled={isBusy}
-                      onClick={() => void handlePatientLink(template)}
+                      variant="ghost"
+                      className="h-6 px-2 text-xs text-primary-600 hover:text-primary-700 hover:bg-primary-50 shrink-0"
+                      onClick={async (e) => {
+                        e.stopPropagation()
+                        await navigator.clipboard.writeText(activeLinks[template.slug])
+                        setLinkCopiedSlug(template.slug)
+                        toast.success("Link copied!")
+                        setTimeout(() => setLinkCopiedSlug(null), 2000)
+                      }}
                     >
-                      <Link2 className="h-3.5 w-3.5" />
-                      {linkCopiedSlug === template.slug ? "Copied!" : "Patient link"}
+                      {linkCopiedSlug === template.slug ? "Copied!" : "Copy"}
                     </Button>
-                  </>
+                  </div>
                 )}
               </div>
             </article>
@@ -296,15 +321,41 @@ export function ConsentFormsPanel({
                   className="flex items-center justify-between gap-2 text-sm text-neutral-700"
                 >
                   <span>{c.template_name}</span>
-                  <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" asChild>
-                    <Link
-                      href={`/patients/${patientId}/consents/${c.template_slug}`}
-                      transitionTypes={NAV_FORWARD_TRANSITION}
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 gap-1 text-xs text-neutral-600 hover:text-neutral-900"
+                      onClick={async () => {
+                        const { token, error: linkErr } = await createConsentSigningToken({
+                          consentId: c.id,
+                          channel: "qr",
+                        })
+                        if (linkErr || !token) {
+                          toast.error(linkErr ?? "Could not create patient link")
+                          return
+                        }
+                        const url = `${window.location.origin}/sign/${token}`
+                        await navigator.clipboard.writeText(url)
+                        setActiveLinks((prev) => ({ ...prev, [c.template_slug]: url }))
+                        setLinkCopiedSlug(c.template_slug)
+                        toast.success("Link copied!")
+                        setTimeout(() => setLinkCopiedSlug(null), 2000)
+                      }}
                     >
-                      Continue
-                      <ExternalLink className="h-3 w-3" />
-                    </Link>
-                  </Button>
+                      <Link2 className="h-3 w-3" />
+                      {linkCopiedSlug === c.template_slug ? "Copied!" : "Patient link"}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" asChild>
+                      <Link
+                        href={`/patients/${patientId}/consents/${c.template_slug}`}
+                        transitionTypes={NAV_FORWARD_TRANSITION}
+                      >
+                        Continue
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </Button>
+                  </div>
                 </li>
               ))}
           </ul>

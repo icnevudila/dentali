@@ -27,6 +27,7 @@ import { fetchPatientTreatmentPlans, type TreatmentPlanSummary } from "@/lib/cli
 import { BookAppointmentDialog } from "@/components/appointments/BookAppointmentDialog"
 import { MedicalAlertBanner } from "@/components/patients/MedicalAlertBanner"
 import { PatientDocumentsPanel } from "@/components/patients/PatientDocumentsPanel"
+import { PatientRadiologyPanel } from "@/components/patients/PatientRadiologyPanel"
 import { PatientRecordOnePage } from "@/components/patients/PatientRecordOnePage"
 import { OrthoRecordSummary } from "@/components/patients/OrthoRecordSummary"
 import { fetchPatientTimeline, type TimelineEvent } from "@/lib/clinical/clinical-notes-service"
@@ -48,6 +49,7 @@ const PATIENT_TABS = [
   { id: "orthodontics", label: "Orthodontics" },
   { id: "appointments", label: "Appointments" },
   { id: "consents", label: "Consents & Forms" },
+  { id: "radiology", label: "Radiology & Imaging" },
   { id: "documents", label: "Documents" },
 ] as const
 
@@ -434,6 +436,7 @@ export default function PatientProfilePage() {
           )}
 
           {activeTab === "documents" && <PatientDocumentsPanel patientId={patientId} />}
+          {activeTab === "radiology" && <PatientRadiologyPanel patientId={patientId} />}
 
           {/* MEDICAL HISTORY TAB */}
           {activeTab === "medical-history" && (
