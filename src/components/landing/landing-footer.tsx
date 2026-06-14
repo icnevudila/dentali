@@ -124,15 +124,9 @@ export function LandingFooter() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-neutral-100 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-neutral-500">
-          <p>
-            © {currentYear} dentali. All rights reserved.
-          </p>
-          <div className="flex gap-4">
-            <span className="inline-flex items-center gap-1">
-              <span>Made with ❤️ for Philippine Dentists</span>
-            </span>
-          </div>
+        <div className="flex flex-col items-center justify-between gap-3 border-t border-neutral-100 pt-8 text-xs text-neutral-500 sm:flex-row">
+          <p>© {currentYear} dentali. All rights reserved.</p>
+          <p>{lt(LANDING_HEADINGS.footer.tagline, locale)}</p>
         </div>
 
       </div>

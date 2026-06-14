@@ -12,13 +12,13 @@ function lt(text: LandingText, locale: string) {
 
 export function WallOfLove() {
   const { locale } = useLocale()
+  const lang = locale === "tr" ? "tr" : "en"
+  const loop = [...TESTIMONIALS, ...TESTIMONIALS]
 
   return (
     <section className="relative overflow-hidden bg-neutral-50/30 py-16 sm:py-24 border-y border-neutral-100" id="testimonials">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        
-        {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+        <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
           <ScrollReveal direction="up" delay={100}>
             <span className="text-sm font-semibold tracking-wider uppercase text-primary-600">
               {lt(LANDING_HEADINGS.testimonials.eyebrow, locale)}
@@ -36,15 +36,23 @@ export function WallOfLove() {
           </ScrollReveal>
         </div>
 
-        {/* Masonry Grid layout using custom CSS class 'landing-masonry' */}
-        <ScrollReveal direction="up" delay={200} className="landing-masonry gap-6">
-          {TESTIMONIALS.map((testimonial, idx) => (
-            <div key={idx} className="break-inside-avoid mb-6">
-              <TestimonialCard testimonial={testimonial} locale={locale === "tr" ? "tr" : "en"} />
-            </div>
-          ))}
-        </ScrollReveal>
+        <ScrollReveal direction="up" delay={200}>
+          <div className="landing-testimonial-marquee relative">
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-neutral-50/95 to-transparent sm:w-24" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-neutral-50/95 to-transparent sm:w-24" />
 
+            <div className="landing-testimonial-track">
+              {loop.map((testimonial, idx) => (
+                <TestimonialCard
+                  key={`${testimonial.name}-${idx}`}
+                  testimonial={testimonial}
+                  locale={lang}
+                  className="landing-testimonial-card w-[min(100%,22rem)] shrink-0 sm:w-[24rem]"
+                />
+              ))}
+            </div>
+          </div>
+        </ScrollReveal>
       </div>
     </section>
   )

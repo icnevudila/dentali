@@ -88,6 +88,198 @@
   transform: perspective(1200px) rotateY(-1deg) rotateX(0.5deg);
 }
 
+/* Hero stage — first-load impact */
+.landing-hero-stage {
+  isolation: isolate;
+}
+
+.landing-hero-grid {
+  background-image:
+    linear-gradient(to right, rgba(20, 184, 166, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(20, 184, 166, 0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black, transparent);
+}
+
+.landing-hero-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.55;
+}
+
+.landing-hero-orb-a {
+  width: 420px;
+  height: 420px;
+  top: -80px;
+  right: 10%;
+  background: radial-gradient(circle, var(--color-primary-300) 0%, transparent 70%);
+  animation: landing-orb-drift-a 14s ease-in-out infinite;
+}
+
+.landing-hero-orb-b {
+  width: 360px;
+  height: 360px;
+  bottom: 0;
+  left: 5%;
+  background: radial-gradient(circle, rgba(45, 212, 191, 0.45) 0%, transparent 70%);
+  animation: landing-orb-drift-b 18s ease-in-out infinite;
+}
+
+@keyframes landing-orb-drift-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-24px, 16px) scale(1.08); }
+}
+
+@keyframes landing-orb-drift-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(20px, -12px) scale(1.05); }
+}
+
+.landing-hero-shine {
+  background-size: 200% auto;
+  animation: landing-hero-shine 6s ease-in-out infinite;
+}
+
+@keyframes landing-hero-shine {
+  0%, 100% { background-position: 0% center; }
+  50% { background-position: 100% center; }
+}
+
+.landing-hero-enter {
+  opacity: 0;
+  transform: translateY(18px);
+  animation: landing-hero-enter 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.landing-hero-enter-1 { animation-delay: 0.05s; }
+.landing-hero-enter-2 { animation-delay: 0.15s; }
+.landing-hero-enter-3 { animation-delay: 0.28s; }
+.landing-hero-enter-4 { animation-delay: 0.4s; }
+.landing-hero-enter-5 { animation-delay: 0.52s; }
+
+@keyframes landing-hero-enter {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-hero-float-a {
+  animation: landing-float-a 5s ease-in-out infinite;
+}
+
+.landing-hero-float-b {
+  animation: landing-float-b 6s ease-in-out infinite;
+}
+
+@keyframes landing-float-a {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes landing-float-b {
+  0%, 100% { transform: translateY(0) rotate(2deg); }
+  50% { transform: translateY(6px) rotate(-1deg); }
+}
+
+.landing-hero-video-glow {
+  animation: landing-glow-pulse 4s ease-in-out infinite;
+}
+
+@keyframes landing-glow-pulse {
+  0%, 100% { opacity: 0.65; }
+  50% { opacity: 1; }
+}
+
+.landing-hero-device figure {
+  width: 100%;
+}
+
+.landing-problem-glow {
+  background:
+    radial-gradient(ellipse 60% 50% at 80% 50%, rgba(20, 184, 166, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 20% 80%, rgba(239, 68, 68, 0.08) 0%, transparent 55%);
+}
+
+.landing-bento-video {
+  min-height: 100%;
+}
+
+/* ═══════════════════════════════════════════════
+   2b. Subtle zoom (Ken Burns & breathe)
+   ═══════════════════════════════════════════════ */
+
+.landing-zoom-clip {
+  overflow: hidden;
+}
+
+.landing-zoom-ken-burns {
+  animation: landing-ken-burns 5s ease-out forwards;
+  transform-origin: center top;
+  will-change: transform;
+}
+
+.landing-zoom-ken-burns-slow {
+  animation: landing-ken-burns 9s ease-in-out forwards;
+  transform-origin: center top;
+  will-change: transform;
+}
+
+@keyframes landing-ken-burns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+
+.landing-zoom-breathe {
+  animation: landing-zoom-breathe 7s ease-in-out infinite;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+@keyframes landing-zoom-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.035);
+  }
+}
+
+.landing-zoom-hover .landing-zoom-hover-target {
+  transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.landing-zoom-hover:hover .landing-zoom-hover-target {
+  transform: scale(1.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero-orb-a,
+  .landing-hero-orb-b,
+  .landing-hero-shine,
+  .landing-hero-float-a,
+  .landing-hero-float-b,
+  .landing-hero-video-glow,
+  .landing-hero-enter {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .landing-zoom-ken-burns,
+  .landing-zoom-ken-burns-slow,
+  .landing-zoom-breathe {
+    animation: none;
+    transform: none;
+  }
+}
+
 /* ═══════════════════════════════════════════════
    3. Problem Card Shake
    ═══════════════════════════════════════════════ */
@@ -242,9 +434,55 @@
 }
 
 /* ═══════════════════════════════════════════════
-   7. Wall of Love Masonry
+   7. Testimonials marquee
    ═══════════════════════════════════════════════ */
 
+.landing-testimonial-marquee {
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
+
+.landing-testimonial-track {
+  display: flex;
+  width: max-content;
+  gap: 1.25rem;
+  padding-block: 0.25rem;
+  animation: landing-testimonial-scroll 36s linear infinite;
+}
+
+.landing-testimonial-marquee:hover .landing-testimonial-track {
+  animation-play-state: paused;
+}
+
+@keyframes landing-testimonial-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-testimonial-marquee {
+    mask-image: none;
+  }
+
+  .landing-testimonial-track {
+    animation: none;
+    width: 100%;
+    max-width: 48rem;
+    margin-inline: auto;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .landing-testimonial-card {
+    width: 100% !important;
+  }
+}
+
+/* Legacy masonry (unused) */
 .landing-masonry {
   column-count: 3;
   column-gap: 1rem;
@@ -407,6 +645,10 @@
   }
 
   .landing-hero-screenshot:hover {
+    transform: none;
+  }
+
+  .landing-zoom-hover:hover .landing-zoom-hover-target {
     transform: none;
   }
 }

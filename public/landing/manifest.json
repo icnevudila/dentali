@@ -1,0 +1,188 @@
+{
+  "generatedAt": "2026-06-14T18:39:32.292Z",
+  "note": "Viewport crops from full-page screenshots. Header/name kept. focalY scrolls to key UI.",
+  "items": [
+    {
+      "out": "hero-dashboard.png",
+      "source": "dashboard full web.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x1832"
+    },
+    {
+      "out": "hero-dental-chart.png",
+      "source": "dental chart web.png",
+      "aspect": 1.6,
+      "focalY": 520,
+      "outputSize": "1851x1914"
+    },
+    {
+      "out": "hero-appointments.png",
+      "source": "appointmens web 2.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x1544"
+    },
+    {
+      "out": "hero-queue.png",
+      "source": "QueQue web.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x1757"
+    },
+    {
+      "out": "feature-dashboard.png",
+      "source": "dashboard full web.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x1832"
+    },
+    {
+      "out": "feature-patients.png",
+      "source": "patinets full web.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x3844"
+    },
+    {
+      "out": "feature-dental-chart.png",
+      "source": "dental chart web.png",
+      "aspect": 1.6,
+      "focalY": 520,
+      "outputSize": "1851x1914"
+    },
+    {
+      "out": "feature-treatment.png",
+      "source": "patient detail web.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x5232"
+    },
+    {
+      "out": "feature-appointments.png",
+      "source": "appointmens web 2.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x1544"
+    },
+    {
+      "out": "feature-queue.png",
+      "source": "QueQue web.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x1757"
+    },
+    {
+      "out": "feature-billing.png",
+      "source": "invoices detail.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x1264"
+    },
+    {
+      "out": "feature-inventory.png",
+      "source": "inventory web.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x1922"
+    },
+    {
+      "out": "feature-reports.png",
+      "source": "reports full web.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x3653"
+    },
+    {
+      "out": "feature-staff.png",
+      "source": "settings sample.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x1074"
+    },
+    {
+      "out": "problem-dashboard.png",
+      "source": "dashboard full web.png",
+      "aspect": 1.6,
+      "focalY": 120,
+      "outputSize": "1851x1832"
+    },
+    {
+      "out": "device-desktop-dashboard.png",
+      "source": "dashboard full web.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x1832"
+    },
+    {
+      "out": "device-tablet-kiosk.png",
+      "source": "kiosk web.png",
+      "aspect": 1.3333333333333333,
+      "focalY": 0,
+      "outputSize": "1866x912"
+    },
+    {
+      "out": "device-mobile-appointments.png",
+      "source": "appointments mobile.png",
+      "aspect": 0.47368421052631576,
+      "focalY": 0,
+      "outputSize": "430x2053"
+    },
+    {
+      "out": "timeline-dashboard.png",
+      "source": "dashboard full web.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x1832"
+    },
+    {
+      "out": "timeline-kiosk.png",
+      "source": "kiosk web.png",
+      "aspect": 1.3333333333333333,
+      "focalY": 0,
+      "outputSize": "1866x912"
+    },
+    {
+      "out": "timeline-patient.png",
+      "source": "patient detail web.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x5232"
+    },
+    {
+      "out": "timeline-chart.png",
+      "source": "dental chart web.png",
+      "aspect": 1.6,
+      "focalY": 520,
+      "outputSize": "1851x1914"
+    },
+    {
+      "out": "timeline-tv-queue.png",
+      "source": "queque web external screen.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1866x912"
+    },
+    {
+      "out": "timeline-billing.png",
+      "source": "invoices detail.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x1264"
+    },
+    {
+      "out": "timeline-inventory.png",
+      "source": "inventory web.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x1922"
+    },
+    {
+      "out": "timeline-reports.png",
+      "source": "reports full web.png",
+      "aspect": 1.6,
+      "focalY": 0,
+      "outputSize": "1851x3653"
+    }
+  ]
+}

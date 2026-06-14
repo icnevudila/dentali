@@ -73,13 +73,15 @@ export function DayInClinic() {
                       </p>
 
                       {step.screenshot && (
-                        <div className="relative rounded-xl border border-neutral-100 overflow-hidden shadow-inner max-w-full aspect-[16/10] bg-neutral-50">
-                          <Image
-                            src={`/screenshots/all-pages/${step.screenshot}`}
-                            alt={lt(step.title, locale)}
-                            fill
-                            className="object-cover object-top hover:scale-105 transition duration-500"
-                          />
+                        <div className="landing-zoom-hover landing-zoom-clip relative aspect-[16/10] max-w-full overflow-hidden rounded-xl border border-neutral-100 bg-neutral-50 shadow-inner">
+                          <div className="landing-zoom-hover-target absolute inset-0">
+                            <Image
+                              src={step.screenshot}
+                              alt={lt(step.title, locale)}
+                              fill
+                              className="object-cover object-top"
+                            />
+                          </div>
                         </div>
                       )}
                     </ScrollReveal>

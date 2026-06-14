@@ -3,6 +3,7 @@
 import * as React from "react"
 import Image from "next/image"
 import { useLocale } from "@/hooks/use-locale"
+import { LANDING_DEVICES } from "@/components/landing/data/landing-assets"
 import { LANDING_HEADINGS, type LandingText } from "@/components/landing/data/landing-data"
 import { ScrollReveal } from "@/components/landing/ui/scroll-reveal"
 
@@ -44,7 +45,7 @@ export function MultiDeviceSection() {
             <div className="relative mx-auto max-w-[280px] sm:max-w-[360px] aspect-[4/3] rounded-[24px] border-8 border-neutral-800 bg-neutral-900 p-2 shadow-2xl overflow-hidden">
               <div className="relative w-full h-full rounded-[14px] overflow-hidden bg-white">
                 <Image
-                  src="/screenshots/all-pages/kiosk/desktop.png"
+                  src={LANDING_DEVICES.tablet}
                   alt="Tablet App View"
                   fill
                   className="object-cover object-top"
@@ -64,7 +65,7 @@ export function MultiDeviceSection() {
             <div className="relative mx-auto max-w-[580px] rounded-2xl border-4 border-neutral-800 bg-neutral-900 p-1.5 shadow-2xl overflow-hidden aspect-[16/10]">
               <div className="relative w-full h-full rounded-lg overflow-hidden bg-white">
                 <Image
-                  src="/screenshots/all-pages/dashboard/desktop.png"
+                  src={LANDING_DEVICES.desktop}
                   alt="Desktop App View"
                   fill
                   className="object-cover object-top"
@@ -89,7 +90,7 @@ export function MultiDeviceSection() {
               </div>
               <div className="relative w-full h-full rounded-[24px] overflow-hidden bg-white">
                 <Image
-                  src="/screenshots/all-pages/patients/mobile.png"
+                  src={LANDING_DEVICES.mobile}
                   alt="Mobile App View"
                   fill
                   className="object-cover object-top"
