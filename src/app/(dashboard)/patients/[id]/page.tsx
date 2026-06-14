@@ -300,6 +300,20 @@ export default function PatientProfilePage() {
         </div>
       </div>
 
+      {balance && balance.open_balance > 0 && (
+        <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50/50 p-4 text-red-900 shadow-sm animate-in slide-in-from-top-4 duration-300">
+          <AlertTriangle className="h-6 w-6 text-red-600 shrink-0" />
+          <div className="flex-1 text-sm font-medium">
+            <span className="font-bold">Outstanding Balance Warning:</span> This patient has an outstanding balance of <span className="font-bold">₱{balance.open_balance.toLocaleString()}</span>. Please settle outstanding invoices before proceeding with new appointments or treatments.
+          </div>
+          <Button size="sm" variant="destructive" asChild className="shrink-0 bg-red-600 hover:bg-red-700">
+            <Link href={`/billing?patient=${patientId}`}>
+              Settle Balance
+            </Link>
+          </Button>
+        </div>
+      )}
+
       <MetricStrip items={profileMetrics} />
 
       <ClinicalVisitJourneyPanel journey={visitJourney} />

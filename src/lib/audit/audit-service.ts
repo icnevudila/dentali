@@ -14,6 +14,8 @@ export type AuditAction =
   | "staff.invite"
   | "staff.invite.revoke"
   | "invoice.payment"
+  | "invoice.void"
+  | "invoice.payment_delete"
 
 export async function logAuditEvent(params: {
   organizationId: string

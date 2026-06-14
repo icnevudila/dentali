@@ -18,5 +18,10 @@ export function createClient() {
     })
   }
 
-  return createBrowserClient(url, key)
+  return createBrowserClient(url, key, {
+    auth: {
+      persistSession: true,
+      storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
+    },
+  })
 }

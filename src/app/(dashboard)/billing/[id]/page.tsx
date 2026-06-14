@@ -212,6 +212,20 @@ export default function InvoiceDetailPage() {
       return
     }
     toast.success("Invoice voided")
+    
+    // Audit Logging
+    const org = await fetchOrganization()
+    if (org) {
+      await logAuditEvent({
+        organizationId: org.id,
+        branchId: activeBranch?.id,
+        action: "invoice.void",
+        entityType: "invoice",
+        entityId: invoiceId,
+        metadata: { reason: voidReason.trim(), invoiceNumber: invoice?.invoice_number },
+      })
+    }
+
     if (data && invoice) {
       setInvoice({ ...invoice, status: data.status })
       setVoidReason("")
@@ -663,8 +677,22 @@ export default function InvoiceDetailPage() {
                           if (!confirm("Are you sure you want to delete this payment record? The invoice paid amount and status will be recalculated.")) return
                           setError(null)
                           const { error: delErr } = await deleteInvoicePayment(p.id, invoiceId)
-                          if (delErr) setError(delErr)
-                          else await load()
+                          if (delErr) {
+                            setError(delErr)
+                          } else {
+                            const org = await fetchOrganization()
+                            if (org) {
+                              await logAuditEvent({
+                                organizationId: org.id,
+                                branchId: activeBranch?.id,
+                                action: "invoice.payment_delete",
+                                entityType: "invoice",
+                                entityId: invoiceId,
+                                metadata: { paymentId: p.id, amount: p.amount, method: p.payment_method, invoiceNumber: invoice?.invoice_number },
+                              })
+                            }
+                            await load()
+                          }
                         }}
                         title="Delete Payment"
                       >

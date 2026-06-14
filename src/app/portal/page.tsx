@@ -41,8 +41,8 @@ export default function PortalPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-blue-50">
-          <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+        <div className="flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-primary-50 via-white to-primary-100">
+          <Loader2 className="h-10 w-10 animate-spin text-primary-500" />
         </div>
       }
     >
@@ -243,14 +243,14 @@ function PortalPageContent() {
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
                   idx <= activeIdx 
-                    ? "bg-blue-600 text-white shadow-[0_0_12px_rgba(37,99,235,0.3)] ring-2 ring-blue-500/20" 
+                    ? "bg-primary-600 text-white shadow-[0_0_12px_rgba(13,148,136,0.3)] ring-2 ring-primary-500/20" 
                     : "bg-neutral-100 text-neutral-400 border border-neutral-200"
                 }`}
               >
                 {idx + 1}
               </div>
               <span className={`text-[10px] font-semibold tracking-wide uppercase transition-colors duration-300 ${
-                idx === activeIdx ? "text-blue-600 font-bold" : idx < activeIdx ? "text-neutral-500" : "text-neutral-400"
+                idx === activeIdx ? "text-primary-600 font-bold" : idx < activeIdx ? "text-neutral-500" : "text-neutral-400"
               }`}>
                 {s.label}
               </span>
@@ -258,7 +258,7 @@ function PortalPageContent() {
             {idx < steps.length - 1 && (
               <div
                 className={`h-0.5 flex-1 mx-2 -mt-5 rounded-full transition-all duration-500 ${
-                  idx < activeIdx ? "bg-blue-500" : "bg-neutral-100 border-t border-neutral-200"
+                  idx < activeIdx ? "bg-primary-500" : "bg-neutral-100 border-t border-neutral-200"
                 }`}
               />
             )}
@@ -269,15 +269,15 @@ function PortalPageContent() {
   }
 
   return (
-    <div className="relative flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-blue-50 p-4 sm:p-6 font-sans text-neutral-900 antialiased selection:bg-blue-100 selection:text-blue-900">
+    <div className="relative flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-primary-50 via-white to-primary-100 p-4 sm:p-6 font-sans text-neutral-900 antialiased selection:bg-primary-100 selection:text-primary-900">
       {/* Background blobs */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-[10%] -top-[10%] h-[50%] w-[50%] rounded-full bg-blue-200/30 blur-[120px]" />
-        <div className="absolute -bottom-[10%] -right-[10%] h-[50%] w-[50%] rounded-full bg-indigo-200/30 blur-[120px]" />
+        <div className="absolute -left-[10%] -top-[10%] h-[50%] w-[50%] rounded-full bg-primary-200/30 blur-[120px]" />
+        <div className="absolute -bottom-[10%] -right-[10%] h-[50%] w-[50%] rounded-full bg-primary-300/20 blur-[120px]" />
       </div>
 
       <p className="absolute left-0 right-0 top-6 text-center text-sm font-bold tracking-widest text-neutral-400 select-none uppercase">
-        dentali<span className="text-blue-500">.</span> portal
+        dentali<span className="text-primary-600">.</span> portal
       </p>
 
       <div className="relative z-10 w-full max-w-[440px] my-12">
@@ -285,13 +285,13 @@ function PortalPageContent() {
 
         {step === "loading" && (
           <div className="flex flex-col items-center justify-center space-y-4 py-20 text-neutral-400">
-            <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+            <Loader2 className="h-10 w-10 animate-spin text-primary-500" />
             <p className="text-sm font-medium tracking-wide">Connecting...</p>
           </div>
         )}
 
         {step === "error" && (
-          <div className="rounded-3xl border border-red-100 bg-white/80 p-8 text-center shadow-xl backdrop-blur-xl">
+          <div className="rounded-3xl border border-red-100 bg-white/80 p-8 text-center shadow-xl backdrop-blur-xl animate-in slide-in-from-bottom-6 duration-300">
             <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
             <h2 className="text-xl font-semibold text-neutral-900 mb-2">Error</h2>
             <p className="text-neutral-500">{errorMsg}</p>
@@ -301,25 +301,25 @@ function PortalPageContent() {
         {step === "welcome" && (
           <div className="rounded-[2.5rem] border border-white bg-white/70 p-6 sm:p-8 shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-8 fade-in duration-500">
             <div className="mb-8 text-center">
-              <div className="mx-auto mb-4 inline-flex items-center rounded-full border border-blue-200/50 bg-blue-50/50 px-4 py-1.5 text-xs font-semibold tracking-wide text-blue-700">
+              <div className="mx-auto mb-4 inline-flex items-center rounded-full border border-primary-200/50 bg-primary-50/50 px-4 py-1.5 text-xs font-bold tracking-wider text-primary-700 uppercase">
                 ONLINE APPOINTMENT SYSTEM
               </div>
-              <h1 className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl">
+              <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900 sm:text-4xl bg-clip-text text-transparent bg-gradient-to-r from-neutral-900 to-neutral-700">
                 {branchName}
               </h1>
-              <p className="mt-2 text-neutral-500">Please choose your status to continue.</p>
+              <p className="mt-2 text-neutral-500 font-medium">Please choose your status to continue.</p>
             </div>
 
             <div className="space-y-4">
               <button
                 onClick={() => setStep("identity")}
-                className="flex w-full items-center gap-4 rounded-2xl border border-neutral-100 bg-white p-5 shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50/50 hover:shadow-md group text-left"
+                className="flex w-full items-center gap-4 rounded-2xl border border-neutral-100/80 bg-white p-5 shadow-sm transition-all duration-300 hover:border-primary-200 hover:bg-primary-50/30 hover:shadow-md hover:shadow-primary-500/5 group text-left cursor-pointer active:scale-[0.99]"
               >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-50 border border-primary-100 text-primary-600 transition-colors group-hover:bg-primary-100">
                   <UserCheck className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-neutral-800">I am a Registered Patient</h3>
+                  <h3 className="text-lg font-bold text-neutral-800">I am a Registered Patient</h3>
                   <p className="text-xs text-neutral-500 mt-0.5">If you have visited our clinic before, book your appointment quickly.</p>
                 </div>
                 <ChevronRight className="ml-auto h-5 w-5 text-neutral-400 group-hover:translate-x-1 transition-transform" />
@@ -327,13 +327,13 @@ function PortalPageContent() {
 
               <button
                 onClick={() => setStep("intakeForm")}
-                className="flex w-full items-center gap-4 rounded-2xl border border-neutral-100 bg-white p-5 shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50/50 hover:shadow-md group text-left"
+                className="flex w-full items-center gap-4 rounded-2xl border border-neutral-100/80 bg-white p-5 shadow-sm transition-all duration-300 hover:border-primary-200 hover:bg-primary-50/30 hover:shadow-md hover:shadow-primary-500/5 group text-left cursor-pointer active:scale-[0.99]"
               >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-50 border border-teal-100 text-teal-600 transition-colors group-hover:bg-teal-100">
                   <UserPlus className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-neutral-800">I am a New Patient</h3>
+                  <h3 className="text-lg font-bold text-neutral-800">I am a New Patient</h3>
                   <p className="text-xs text-neutral-500 mt-0.5">Create an online registration if this is your first appointment at our clinic.</p>
                 </div>
                 <ChevronRight className="ml-auto h-5 w-5 text-neutral-400 group-hover:translate-x-1 transition-transform" />
@@ -346,19 +346,19 @@ function PortalPageContent() {
           <div className="rounded-[2.5rem] border border-white bg-white/70 p-6 sm:p-8 shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-8 fade-in duration-500">
             <button 
               onClick={() => setStep("welcome")}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-neutral-800 mb-6 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500 hover:text-neutral-800 mb-6 transition-colors uppercase tracking-wider"
             >
               <ArrowLeft className="h-3.5 w-3.5" /> Go Back
             </button>
 
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-neutral-900">Identity Verification</h2>
+              <h2 className="text-2xl font-extrabold text-neutral-900 tracking-tight">Identity Verification</h2>
               <p className="text-sm text-neutral-500 mt-1">Enter your registered information to continue.</p>
             </div>
 
             <form onSubmit={handleIdentitySubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="pl-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                <label className="pl-1 text-xs font-bold uppercase tracking-widest text-neutral-500">
                   Phone Number
                 </label>
                 <div className="relative">
@@ -368,14 +368,14 @@ function PortalPageContent() {
                     placeholder="09XXXXXXXXX"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="h-14 rounded-2xl border-neutral-200/80 bg-white/50 pl-12 pr-5 text-lg shadow-sm transition-all focus:border-blue-500 focus:bg-white focus:ring-blue-500/20"
+                    className="h-14 rounded-2xl border-2 border-transparent bg-white/80 pl-12 pr-5 text-lg shadow-sm transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
                     required
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="pl-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                <label className="pl-1 text-xs font-bold uppercase tracking-widest text-neutral-500">
                   Last Name
                 </label>
                 <div className="relative">
@@ -385,7 +385,7 @@ function PortalPageContent() {
                     placeholder="Enter your last name"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="h-14 rounded-2xl border-neutral-200/80 bg-white/50 pl-12 pr-5 text-lg shadow-sm transition-all focus:border-blue-500 focus:bg-white focus:ring-blue-500/20"
+                    className="h-14 rounded-2xl border-2 border-transparent bg-white/80 pl-12 pr-5 text-lg shadow-sm transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
                     required
                   />
                 </div>
@@ -394,14 +394,14 @@ function PortalPageContent() {
               {errorMsg && (
                 <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 flex gap-2 text-sm text-red-900 shadow-sm animate-in fade-in slide-in-from-top-2">
                   <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
-                  <p>{errorMsg}</p>
+                  <p className="font-medium">{errorMsg}</p>
                 </div>
               )}
 
               <Button
                 type="submit"
                 disabled={submitting}
-                className="group mt-2 h-14 w-full rounded-2xl bg-blue-600 text-lg font-medium shadow-md transition-all hover:bg-blue-700 hover:shadow-lg active:scale-[0.98]"
+                className="group mt-2 h-14 w-full rounded-2xl bg-primary-600 text-lg font-bold text-white shadow-lg shadow-primary-500/20 transition-all duration-300 hover:bg-primary-700 hover:shadow-xl active:scale-[0.98]"
               >
                 {submitting ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -417,44 +417,44 @@ function PortalPageContent() {
           <div className="rounded-[2.5rem] border border-white bg-white/70 p-6 sm:p-8 shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-8 fade-in duration-500">
             <button 
               onClick={() => setStep("welcome")}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-neutral-800 mb-6 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500 hover:text-neutral-800 mb-6 transition-colors uppercase tracking-wider"
             >
               <ArrowLeft className="h-3.5 w-3.5" /> Go Back
             </button>
 
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-neutral-900">New Patient Registration</h2>
+              <h2 className="text-2xl font-extrabold text-neutral-900 tracking-tight">New Patient Registration</h2>
               <p className="text-sm text-neutral-500 mt-1">Please fill out the form below completely.</p>
             </div>
 
             <form onSubmit={handleNewPatientSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="pl-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">First Name</label>
+                  <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">First Name</label>
                   <Input
                     type="text"
                     placeholder="First name"
                     value={newFirstName}
                     onChange={(e) => setNewFirstName(e.target.value)}
-                    className="h-12 rounded-xl border-neutral-200 bg-white/50 px-4 shadow-sm"
+                    className="h-12 rounded-xl border-2 border-transparent bg-white/80 px-4 shadow-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="pl-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">Last Name</label>
+                  <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Last Name</label>
                   <Input
                     type="text"
                     placeholder="Last name"
                     value={newLastName}
                     onChange={(e) => setNewLastName(e.target.value)}
-                    className="h-12 rounded-xl border-neutral-200 bg-white/50 px-4 shadow-sm"
+                    className="h-12 rounded-xl border-2 border-transparent bg-white/80 px-4 shadow-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
                     required
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="pl-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">Phone Number</label>
+                <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Phone Number</label>
                 <div className="relative">
                   <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
                   <Input
@@ -462,14 +462,14 @@ function PortalPageContent() {
                     placeholder="Phone number"
                     value={newPhone}
                     onChange={(e) => setNewPhone(e.target.value)}
-                    className="h-12 rounded-xl border-neutral-200 bg-white/50 pl-10 pr-4 shadow-sm"
+                    className="h-12 rounded-xl border-2 border-transparent bg-white/80 pl-10 pr-4 shadow-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
                     required
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="pl-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">Email Address</label>
+                <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Email Address</label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
                   <Input
@@ -477,30 +477,30 @@ function PortalPageContent() {
                     placeholder="email@example.com"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
-                    className="h-12 rounded-xl border-neutral-200 bg-white/50 pl-10 pr-4 shadow-sm"
+                    className="h-12 rounded-xl border-2 border-transparent bg-white/80 pl-10 pr-4 shadow-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="pl-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">Date of Birth</label>
+                  <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Date of Birth</label>
                   <div className="relative">
                     <CalendarDays className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
                     <Input
                       type="date"
                       value={newDob}
                       onChange={(e) => setNewDob(e.target.value)}
-                      className="h-12 rounded-xl border-neutral-200 bg-white/50 pl-10 pr-4 shadow-sm text-sm"
+                      className="h-12 rounded-xl border-2 border-transparent bg-white/80 pl-10 pr-4 shadow-sm text-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 text-neutral-700 outline-none"
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="pl-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">Gender</label>
+                  <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Gender</label>
                   <select
                     value={newGender}
                     onChange={(e) => setNewGender(e.target.value)}
-                    className="h-12 w-full rounded-xl border border-neutral-200 bg-white/50 px-3 shadow-sm text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
+                    className="h-12 w-full rounded-xl border-2 border-transparent bg-white/80 px-3 shadow-sm text-sm outline-none focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 text-neutral-700"
                   >
                     <option value="male">Male</option>
                     <option value="female">Female</option>
@@ -511,7 +511,7 @@ function PortalPageContent() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="pl-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">Address</label>
+                  <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Address</label>
                   <div className="relative">
                     <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
                     <Input
@@ -519,18 +519,18 @@ function PortalPageContent() {
                       placeholder="Street, Block"
                       value={newAddress}
                       onChange={(e) => setNewAddress(e.target.value)}
-                      className="h-12 rounded-xl border-neutral-200 bg-white/50 pl-10 pr-4 shadow-sm"
+                      className="h-12 rounded-xl border-2 border-transparent bg-white/80 pl-10 pr-4 shadow-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="pl-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">City</label>
+                  <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">City</label>
                   <Input
                     type="text"
                     placeholder="City"
                     value={newCity}
                     onChange={(e) => setNewCity(e.target.value)}
-                    className="h-12 rounded-xl border-neutral-200 bg-white/50 px-4 shadow-sm"
+                    className="h-12 rounded-xl border-2 border-transparent bg-white/80 px-4 shadow-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
                   />
                 </div>
               </div>
@@ -539,37 +539,37 @@ function PortalPageContent() {
                 <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Emergency Contact Info</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="pl-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">Contact Name</label>
+                    <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Contact Name</label>
                     <Input
                       type="text"
                       placeholder="Contact Name"
                       value={newEmergencyName}
                       onChange={(e) => setNewEmergencyName(e.target.value)}
-                      className="h-12 rounded-xl border-neutral-200 bg-white/50 px-4 shadow-sm"
+                      className="h-12 rounded-xl border-2 border-transparent bg-white/80 px-4 shadow-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="pl-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">Phone Number</label>
+                    <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Phone Number</label>
                     <Input
                       type="tel"
                       placeholder="Phone Number"
                       value={newEmergencyPhone}
                       onChange={(e) => setNewEmergencyPhone(e.target.value)}
-                      className="h-12 rounded-xl border-neutral-200 bg-white/50 px-4 shadow-sm"
+                      className="h-12 rounded-xl border-2 border-transparent bg-white/80 px-4 shadow-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
                     />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-1.5 border-t border-neutral-100 pt-4">
-                <label className="pl-1 text-xs font-semibold uppercase tracking-wider text-neutral-500 flex items-center gap-1">
+                <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500 flex items-center gap-1">
                   <ShieldAlert className="h-3.5 w-3.5 text-amber-500" /> Medical History / Allergies
                 </label>
                 <textarea
                   placeholder="Any chronic diseases, medications, or allergies..."
                   value={newMedicalAlerts}
                   onChange={(e) => setNewMedicalAlerts(e.target.value)}
-                  className="w-full min-h-[80px] rounded-xl border border-neutral-200 bg-white/50 p-3 text-sm shadow-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full min-h-[80px] rounded-xl border-2 border-transparent bg-white/80 p-3 text-sm shadow-sm outline-none focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 text-neutral-700"
                 />
               </div>
 
@@ -583,7 +583,7 @@ function PortalPageContent() {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="group h-12 w-full rounded-xl bg-blue-600 font-medium shadow-md transition-all hover:bg-blue-700 active:scale-[0.98]"
+                className="group h-12 w-full rounded-xl bg-primary-600 font-bold text-white shadow-lg shadow-primary-500/20 transition-all hover:bg-primary-700 hover:shadow-xl active:scale-[0.98]"
               >
                 {submitting ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -596,11 +596,11 @@ function PortalPageContent() {
         )}
 
         {step === "intakeSuccess" && (
-          <div className="space-y-6 rounded-[2.5rem] border border-indigo-100 bg-white/80 p-10 text-center shadow-[0_16px_60px_rgb(99,102,241,0.15)] backdrop-blur-2xl animate-in zoom-in-95 duration-500">
+          <div className="space-y-6 rounded-[2.5rem] border border-primary-100 bg-white/85 p-10 text-center shadow-[0_16px_60px_rgb(13,148,136,0.12)] backdrop-blur-2xl animate-in zoom-in-95 duration-500">
             <div className="relative mx-auto h-24 w-24">
-              <div className="absolute inset-0 rounded-full bg-indigo-100 animate-ping opacity-20" />
-              <div className="relative flex h-full w-full items-center justify-center rounded-full bg-indigo-50 border-[6px] border-white shadow-xl">
-                <HeartHandshake className="h-12 w-12 text-indigo-500" />
+              <div className="absolute inset-0 rounded-full bg-primary-100 animate-ping opacity-20" />
+              <div className="relative flex h-full w-full items-center justify-center rounded-full bg-primary-50 border-[6px] border-white shadow-xl">
+                <HeartHandshake className="h-12 w-12 text-primary-500" />
               </div>
             </div>
             
@@ -621,13 +621,13 @@ function PortalPageContent() {
           <div className="rounded-[2.5rem] border border-white bg-white/70 p-6 sm:p-8 shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-right-8 fade-in duration-500">
             <button 
               onClick={() => setStep("identity")}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-neutral-800 mb-6 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500 hover:text-neutral-800 mb-6 transition-colors uppercase tracking-wider"
             >
               <ArrowLeft className="h-3.5 w-3.5" /> Go Back
             </button>
 
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-neutral-900">Doctor Selection</h2>
+              <h2 className="text-2xl font-extrabold text-neutral-900 tracking-tight">Doctor Selection</h2>
               <p className="text-sm text-neutral-500 mt-1">Select the doctor you wish to see.</p>
             </div>
 
@@ -636,12 +636,12 @@ function PortalPageContent() {
                 <button
                   key={p.id}
                   onClick={() => handleProviderSelect(p.id)}
-                  className="flex w-full items-center gap-4 rounded-2xl border border-neutral-100 bg-white p-4 shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50/50 hover:shadow-md group text-left"
+                  className="flex w-full items-center gap-4 rounded-2xl border border-neutral-100/80 bg-white p-4 shadow-sm transition-all duration-300 hover:border-primary-200 hover:bg-primary-50/30 hover:shadow-md hover:shadow-primary-500/5 group text-left cursor-pointer active:scale-[0.99]"
                 >
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-50 border border-primary-100 text-primary-600 group-hover:bg-primary-100 transition-colors">
                     <User className="h-6 w-6" />
                   </div>
-                  <span className="text-lg font-semibold text-neutral-800">{p.name}</span>
+                  <span className="text-lg font-bold text-neutral-800">{p.name}</span>
                   <ChevronRight className="ml-auto h-5 w-5 text-neutral-400 group-hover:translate-x-1 transition-transform" />
                 </button>
               ))}
@@ -656,13 +656,13 @@ function PortalPageContent() {
           <div className="rounded-[2.5rem] border border-white bg-white/70 p-6 sm:p-8 shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-right-8 fade-in duration-500">
             <button 
               onClick={() => setStep("provider")}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-neutral-800 mb-6 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500 hover:text-neutral-800 mb-6 transition-colors uppercase tracking-wider"
             >
               <ArrowLeft className="h-3.5 w-3.5" /> Go Back
             </button>
 
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-neutral-900">Date and Time Selection</h2>
+              <h2 className="text-2xl font-extrabold text-neutral-900 tracking-tight">Date and Time Selection</h2>
               <p className="text-sm text-neutral-500 mt-1">Choose the time slot that suits you best.</p>
             </div>
 
@@ -676,12 +676,14 @@ function PortalPageContent() {
                   <button
                     key={d}
                     onClick={() => handleDateSelect(d)}
-                    className={`flex flex-col items-center justify-center min-w-[4.2rem] rounded-xl border p-3 transition-all ${
-                      isSelected ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white text-neutral-600 border-neutral-200 hover:border-blue-300"
+                    className={`flex flex-col items-center justify-center min-w-[4.2rem] rounded-2xl border-2 p-3 transition-all cursor-pointer ${
+                      isSelected 
+                        ? "bg-primary-600 text-white border-primary-600 shadow-md shadow-primary-500/20" 
+                        : "bg-white text-neutral-600 border-transparent hover:border-primary-100 hover:bg-neutral-50"
                     }`}
                   >
-                    <span className="text-xs uppercase font-semibold">{dayStr}</span>
-                    <span className="text-xl font-bold mt-0.5">{numStr}</span>
+                    <span className="text-xs uppercase font-bold tracking-wider">{dayStr}</span>
+                    <span className="text-xl font-extrabold mt-0.5">{numStr}</span>
                   </button>
                 )
               })}
@@ -697,9 +699,9 @@ function PortalPageContent() {
                     key={s.time}
                     disabled={!s.available}
                     onClick={() => setSelectedTime(s.time)}
-                    className={`rounded-xl py-2.5 text-sm font-semibold transition-all ${
-                      !s.available ? "bg-neutral-100 text-neutral-400 opacity-50 cursor-not-allowed" : 
-                      isSelected ? "bg-blue-600 text-white shadow-md" : "bg-white border border-neutral-200 text-neutral-700 hover:border-blue-300"
+                    className={`rounded-xl py-2.5 text-sm font-bold transition-all cursor-pointer ${
+                      !s.available ? "bg-neutral-100 text-neutral-400 opacity-50 cursor-not-allowed border-transparent" : 
+                      isSelected ? "bg-primary-600 text-white shadow-md shadow-primary-500/20 border-transparent" : "bg-white border-2 border-transparent text-neutral-700 hover:border-primary-100 hover:bg-neutral-50"
                     }`}
                   >
                     {s.time}
@@ -717,7 +719,7 @@ function PortalPageContent() {
             <Button
               onClick={handleBook}
               disabled={!selectedTime || submitting}
-              className="group h-14 w-full rounded-2xl bg-blue-600 text-lg font-medium shadow-md transition-all hover:bg-blue-700"
+              className="group h-14 w-full rounded-2xl bg-primary-600 text-lg font-bold text-white shadow-lg shadow-primary-500/20 transition-all duration-300 hover:bg-primary-700 hover:shadow-xl"
             >
               {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Confirm Appointment"}
             </Button>
@@ -725,11 +727,11 @@ function PortalPageContent() {
         )}
 
         {step === "success" && (
-          <div className="space-y-6 rounded-[2.5rem] border border-blue-100 bg-white/80 p-10 text-center shadow-[0_16px_60px_rgb(59,130,246,0.15)] backdrop-blur-2xl animate-in zoom-in-95 duration-500">
+          <div className="space-y-6 rounded-[2.5rem] border border-primary-100 bg-white/85 p-10 text-center shadow-[0_16px_60px_rgb(13,148,136,0.12)] backdrop-blur-2xl animate-in zoom-in-95 duration-500">
             <div className="relative mx-auto h-24 w-24">
-              <div className="absolute inset-0 rounded-full bg-blue-100 animate-ping opacity-20" />
-              <div className="relative flex h-full w-full items-center justify-center rounded-full bg-blue-50 border-[6px] border-white shadow-xl">
-                <CheckCircle2 className="h-12 w-12 text-blue-500" />
+              <div className="absolute inset-0 rounded-full bg-primary-100 animate-ping opacity-20" />
+              <div className="relative flex h-full w-full items-center justify-center rounded-full bg-primary-50 border-[6px] border-white shadow-xl">
+                <CheckCircle2 className="h-12 w-12 text-primary-500" />
               </div>
             </div>
             
@@ -739,13 +741,13 @@ function PortalPageContent() {
             </div>
 
             <div className="rounded-2xl border border-neutral-100 bg-neutral-50 p-4 space-y-2">
-              <div className="flex items-center justify-center gap-2 text-neutral-700">
-                <CalendarIcon className="h-4 w-4 text-blue-500" />
-                <span className="font-semibold">{new Date(selectedDate).toLocaleDateString("en-US", { dateStyle: "long" })}</span>
+              <div className="flex items-center justify-center gap-2 text-neutral-700 font-semibold text-sm">
+                <CalendarIcon className="h-4 w-4 text-primary-500" />
+                <span>{new Date(selectedDate).toLocaleDateString("en-US", { dateStyle: "long" })}</span>
               </div>
-              <div className="flex items-center justify-center gap-2 text-neutral-700">
-                <Clock className="h-4 w-4 text-blue-500" />
-                <span className="font-semibold">{selectedTime}</span>
+              <div className="flex items-center justify-center gap-2 text-neutral-700 font-semibold text-sm">
+                <Clock className="h-4 w-4 text-primary-500" />
+                <span>{selectedTime}</span>
               </div>
             </div>
 
