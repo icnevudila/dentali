@@ -207,20 +207,62 @@ function PortalPageContent() {
   })
 
   // Stepper helper
-  const renderStepper = (current: number, total: number) => {
+  const renderStepper = () => {
+    if (step === "loading" || step === "error") return null;
+
+    const steps = step === "intakeForm" || step === "intakeSuccess"
+      ? [
+          { key: "welcome", label: "Start" },
+          { key: "intakeForm", label: "Register" },
+          { key: "intakeSuccess", label: "Done" }
+        ]
+      : [
+          { key: "welcome", label: "Start" },
+          { key: "identity", label: "Verify" },
+          { key: "provider", label: "Doctor" },
+          { key: "datetime", label: "Time" },
+          { key: "success", label: "Done" }
+        ]
+
+    const getActiveIdx = () => {
+      if (step === "welcome") return 0;
+      if (step === "intakeForm" || step === "identity") return 1;
+      if (step === "intakeSuccess" || step === "provider") return 2;
+      if (step === "datetime") return 3;
+      if (step === "success") return 4;
+      return 0;
+    }
+
+    const activeIdx = getActiveIdx();
+
     return (
-      <div className="flex items-center justify-center gap-1.5 mb-6">
-        {Array.from({ length: total }).map((_, i) => (
-          <div 
-            key={i} 
-            className={`h-1.5 rounded-full transition-all duration-300 ${
-              i + 1 === current 
-                ? "w-8 bg-blue-600" 
-                : i + 1 < current 
-                  ? "w-2 bg-blue-400" 
-                  : "w-2 bg-neutral-200"
-            }`}
-          />
+      <div className="mb-8 flex items-center justify-between w-full px-2 select-none">
+        {steps.map((s, idx) => (
+          <React.Fragment key={s.key}>
+            <div className="flex flex-col items-center gap-1.5">
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
+                  idx <= activeIdx 
+                    ? "bg-blue-600 text-white shadow-[0_0_12px_rgba(37,99,235,0.3)] ring-2 ring-blue-500/20" 
+                    : "bg-neutral-100 text-neutral-400 border border-neutral-200"
+                }`}
+              >
+                {idx + 1}
+              </div>
+              <span className={`text-[10px] font-semibold tracking-wide uppercase transition-colors duration-300 ${
+                idx === activeIdx ? "text-blue-600 font-bold" : idx < activeIdx ? "text-neutral-500" : "text-neutral-400"
+              }`}>
+                {s.label}
+              </span>
+            </div>
+            {idx < steps.length - 1 && (
+              <div
+                className={`h-0.5 flex-1 mx-2 -mt-5 rounded-full transition-all duration-500 ${
+                  idx < activeIdx ? "bg-blue-500" : "bg-neutral-100 border-t border-neutral-200"
+                }`}
+              />
+            )}
+          </React.Fragment>
         ))}
       </div>
     )
@@ -239,6 +281,8 @@ function PortalPageContent() {
       </p>
 
       <div className="relative z-10 w-full max-w-[440px] my-12">
+        {renderStepper()}
+
         {step === "loading" && (
           <div className="flex flex-col items-center justify-center space-y-4 py-20 text-neutral-400">
             <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
@@ -306,8 +350,6 @@ function PortalPageContent() {
             >
               <ArrowLeft className="h-3.5 w-3.5" /> Go Back
             </button>
-
-            {renderStepper(1, 4)}
 
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-neutral-900">Identity Verification</h2>
@@ -584,8 +626,6 @@ function PortalPageContent() {
               <ArrowLeft className="h-3.5 w-3.5" /> Go Back
             </button>
 
-            {renderStepper(2, 4)}
-
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-neutral-900">Doctor Selection</h2>
               <p className="text-sm text-neutral-500 mt-1">Select the doctor you wish to see.</p>
@@ -620,8 +660,6 @@ function PortalPageContent() {
             >
               <ArrowLeft className="h-3.5 w-3.5" /> Go Back
             </button>
-
-            {renderStepper(3, 4)}
 
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-neutral-900">Date and Time Selection</h2>
