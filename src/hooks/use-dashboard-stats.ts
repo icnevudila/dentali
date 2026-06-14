@@ -105,7 +105,7 @@ export function useDashboardStats() {
       )
     }
 
-    channel.subscribe((status) => {
+    channel.subscribe((status: any) => {
       setLive(status === "SUBSCRIBED")
     })
 

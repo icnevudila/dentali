@@ -40,7 +40,7 @@ export function QuoteRequestForm() {
       clinic_name: clinicName.trim() || undefined,
       branch_count: Number(branchCount) || undefined,
       message: message.trim() || undefined,
-    })
+    }) as any
 
     setLoading(false)
 

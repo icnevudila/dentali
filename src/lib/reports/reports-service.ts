@@ -140,8 +140,8 @@ export async function fetchReportsSummary(
 
   const dailyCollections = bucketAmountsByDate(
     payments,
-    (p) => (p.created_at as string).slice(0, 10),
-    (p) => Number(p.amount),
+    (p: any) => (p.created_at as string).slice(0, 10),
+    (p: any) => Number(p.amount),
     periodDays,
     locale
   )
