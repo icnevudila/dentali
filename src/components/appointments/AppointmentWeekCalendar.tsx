@@ -505,9 +505,81 @@ export function AppointmentWeekCalendar({
                         </div>
                       </div>
 
-                      <Badge className={cn("border select-none", getStatusColor(appt.status))}>
-                        {appt.status}
-                      </Badge>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <Badge className={cn("border select-none", getStatusColor(appt.status))}>
+                          {appt.status}
+                        </Badge>
+                        
+                        {(appt.status === "scheduled" || appt.status === "confirmed") && onStatusChange && (
+                          <div className="flex items-center gap-1">
+                            {onEdit && (
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={() => onEdit(appt)}
+                                title={t("appointments.editAppointment", "Edit / Reschedule")}
+                              >
+                                <Calendar className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {onRemind && (
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 text-neutral-500 hover:text-neutral-700"
+                                disabled={remindingId === appt.id}
+                                onClick={() => onRemind(appt.id)}
+                                title="Send Reminder"
+                              >
+                                <Bell className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {onCheckIn && (
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 text-neutral-500 hover:text-neutral-700"
+                                disabled={checkingInId === appt.id}
+                                onClick={() => onCheckIn(appt.id)}
+                                title="Check In Patient"
+                              >
+                                <UserCheck className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                              disabled={updatingId === appt.id}
+                              onClick={() => onStatusChange(appt.id, "completed")}
+                              title="Mark Done"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              disabled={updatingId === appt.id}
+                              onClick={() => onStatusChange(appt.id, "no_show")}
+                              title="Mark No-Show"
+                            >
+                              <UserX className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              disabled={updatingId === appt.id}
+                              onClick={() => onStatusChange(appt.id, "cancelled")}
+                              title="Cancel Appointment"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )
                 })}
