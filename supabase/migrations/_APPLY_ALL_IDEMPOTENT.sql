@@ -15349,9 +15349,9 @@ grant execute on function public.ensure_branch_clinic_hours(uuid) to authenticat
 
 -- Inventory enhancements
 ALTER TABLE inventory_items 
-add column if not existsIF NOT EXISTS supplier text,
-add column if not existsIF NOT EXISTS brand text,
-add column if not existsIF NOT EXISTS unit_cost numeric DEFAULT 0;
+ADD COLUMN IF NOT EXISTS supplier text,
+ADD COLUMN IF NOT EXISTS brand text,
+ADD COLUMN IF NOT EXISTS unit_cost numeric DEFAULT 0;
 
 -- Lab Cases Module
 CREATE TABLE IF NOT EXISTS lab_cases (
@@ -15384,7 +15384,7 @@ CREATE TABLE IF NOT EXISTS procedure_inventory_links (
 
 -- Doctor Commissions
 ALTER TABLE staff_profiles
-add column if not existsIF NOT EXISTS commission_rate numeric DEFAULT 0;
+ADD COLUMN IF NOT EXISTS commission_rate numeric DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS provider_commissions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
