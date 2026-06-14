@@ -152,6 +152,7 @@ export async function submitPortalAppointment(params: {
   providerId: string
   date: string
   time: string
+  purpose?: string
 }): Promise<{ data: { appointment_id: string } | null; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("submit_portal_appointment", {
@@ -161,6 +162,7 @@ export async function submitPortalAppointment(params: {
     p_provider_id: params.providerId,
     p_date: params.date,
     p_time: params.time,
+    p_purpose: params.purpose,
   })
 
   if (error) return { data: null, error: error.message }

@@ -612,6 +612,17 @@ export function AppointmentWeekCalendar({
                       
                       {isActive && onStatusChange && (
                         <div className="flex items-center gap-1">
+                          {onEdit && (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => onEdit(appt)}
+                              title={t("appointments.editAppointment", "Edit / Reschedule")}
+                            >
+                              <Calendar className="h-4 w-4" />
+                            </Button>
+                          )}
                           {onRemind && (
                             <Button
                               variant="outline"
