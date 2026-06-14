@@ -409,6 +409,14 @@ function PortalPageContent() {
                   <>Continue <ChevronRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" /></>
                 )}
               </Button>
+
+              <button 
+                type="button" 
+                onClick={() => setStep("welcome")}
+                className="w-full h-12 text-sm font-bold text-neutral-500 hover:text-neutral-850 hover:bg-neutral-100/50 rounded-2xl transition-all active:scale-[0.98]"
+              >
+                Cancel & Go Back
+              </button>
             </form>
           </div>
         )}
@@ -591,6 +599,14 @@ function PortalPageContent() {
                   <>Submit Registration Request <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" /></>
                 )}
               </Button>
+
+              <button 
+                type="button" 
+                onClick={() => setStep("welcome")}
+                className="w-full h-12 text-sm font-bold text-neutral-500 hover:text-neutral-855 hover:bg-neutral-100/50 rounded-xl transition-all active:scale-[0.98]"
+              >
+                Cancel & Go Back
+              </button>
             </form>
           </div>
         )}
@@ -649,6 +665,14 @@ function PortalPageContent() {
                 <p className="text-center text-sm text-neutral-500 py-4">No doctor is currently available.</p>
               )}
             </div>
+
+            <button 
+              type="button" 
+              onClick={() => setStep("identity")}
+              className="w-full h-12 mt-4 text-sm font-bold text-neutral-500 hover:text-neutral-850 hover:bg-neutral-100/50 rounded-2xl transition-all active:scale-[0.98]"
+            >
+              Go Back
+            </button>
           </div>
         )}
 
@@ -723,6 +747,14 @@ function PortalPageContent() {
             >
               {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Confirm Appointment"}
             </Button>
+
+            <button 
+              type="button" 
+              onClick={() => setStep("provider")}
+              className="w-full h-12 mt-2 text-sm font-bold text-neutral-500 hover:text-neutral-850 hover:bg-neutral-100/50 rounded-2xl transition-all active:scale-[0.98]"
+            >
+              Go Back
+            </button>
           </div>
         )}
 
