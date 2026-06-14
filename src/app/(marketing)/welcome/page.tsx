@@ -5,7 +5,7 @@ import { LandingFooter } from "@/components/landing/landing-footer"
 import { MarketingJsonLd } from "@/components/marketing/MarketingJsonLd"
 import { loadShowcaseData } from "@/lib/showcase/load-showcase-data"
 import { getSiteUrl } from "@/lib/site-url"
-
+export const dynamic = "force-dynamic"
 const siteUrl = getSiteUrl()
 
 export const metadata: Metadata = {
