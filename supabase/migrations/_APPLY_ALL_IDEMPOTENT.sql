@@ -1,4 +1,4 @@
-﻿-- AUTO-GENERATED IDEMPOTENT BUNDLE: 123 migration dosyasi
+-- AUTO-GENERATED IDEMPOTENT BUNDLE: 123 migration dosyasi
 -- Supabase Dashboard > SQL Editor > Run (TEK SEFERDE â€” ayri repair script gerekmez)
 -- Tekrar calistirmak guvenli: preflight drops + policy/index/column cakismalari onlenir.
 -- Tercih: npm run db:push
@@ -20881,7 +20881,6 @@ declare
   v_branch_name text;
   v_now_serving jsonb;
   v_waiting jsonb;
-  v_today date;
 begin
   select * into v_t
   from public.branch_public_tokens
@@ -20894,10 +20893,9 @@ begin
     raise exception 'Invalid display link';
   end if;
 
-  v_today := cast(now() at time zone 'Asia/Manila' as date);
-
   select name into v_branch_name from public.branches where id = v_t.branch_id;
 
+  -- Select most recent now_serving/in_chair entry per display_code
   select coalesce(
     jsonb_agg(
       jsonb_build_object(
@@ -20910,11 +20908,16 @@ begin
     '[]'::jsonb
   )
   into v_now_serving
-  from public.queue_entries qe
-  left join public.patients p on p.id = qe.patient_id
-  where qe.branch_id = v_t.branch_id
-    and qe.status in ('now_serving', 'in_chair');
+  from (
+    select distinct on (display_code) *
+    from public.queue_entries
+    where branch_id = v_t.branch_id
+      and status in ('now_serving', 'in_chair')
+    order by display_code, called_at desc nulls last
+  ) qe
+  left join public.patients p on p.id = qe.patient_id;
 
+  -- Select most recent waiting/ready entry per display_code
   select coalesce(
     jsonb_agg(
       jsonb_build_object(

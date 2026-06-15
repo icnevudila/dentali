@@ -225,18 +225,39 @@ export function QueueDisplayBoard({
 
   const [activeAnnounce, setActiveAnnounce] = React.useState<QueueDisplayItem | null>(null)
   const prevTriggerRef = React.useRef("")
+  const announceTimerRef = React.useRef<any>(null)
 
   React.useEffect(() => {
-    if (nowServing.length === 0) return
+    if (nowServing.length === 0) {
+      setActiveAnnounce(null)
+      if (announceTimerRef.current) {
+        clearTimeout(announceTimerRef.current)
+        announceTimerRef.current = null
+      }
+      return
+    }
     const top = nowServing[0]
     const key = `${top.display_code}-${pulseGen}`
     if (key !== prevTriggerRef.current) {
       prevTriggerRef.current = key
       setActiveAnnounce(top)
-      const timer = setTimeout(() => setActiveAnnounce(null), 3800)
-      return () => clearTimeout(timer)
+      if (announceTimerRef.current) {
+        clearTimeout(announceTimerRef.current)
+      }
+      announceTimerRef.current = setTimeout(() => {
+        setActiveAnnounce(null)
+        announceTimerRef.current = null
+      }, 3800)
     }
   }, [nowServing, pulseGen])
+
+  React.useEffect(() => {
+    return () => {
+      if (announceTimerRef.current) {
+        clearTimeout(announceTimerRef.current)
+      }
+    }
+  }, [])
 
   const dateLabel = liveClock.toLocaleDateString(locale, {
     weekday: "long",
@@ -563,15 +584,15 @@ export function QueueDisplayBoard({
 
       {/* Premium glassmorphism overlay popup when a patient is called */}
       {activeAnnounce ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md transition-all duration-300">
+        <div className="fixed bottom-24 right-6 z-50 flex items-end justify-end pointer-events-none transition-all duration-300">
           <div className={cn(
-            "relative w-[90%] max-w-2xl overflow-hidden rounded-[2.5rem] p-10 text-center shadow-2xl border animate-serve-enter",
+            "pointer-events-auto relative w-full max-w-md overflow-hidden rounded-[2rem] p-8 text-center shadow-2xl border animate-serve-enter",
             isLight
               ? "bg-white/95 border-primary-200 text-neutral-900 shadow-primary-600/10"
               : "bg-neutral-900/95 border-primary-900/40 text-white shadow-black/80"
           )}>
-            <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-primary-500/10 blur-3xl" />
-            <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-primary-600/10 blur-3xl" />
+            <div className="absolute -top-10 -left-10 h-32 w-32 rounded-full bg-primary-500/10 blur-3xl" />
+            <div className="absolute -bottom-10 -right-10 h-32 w-32 rounded-full bg-primary-600/10 blur-3xl" />
             
             <div className="relative flex flex-col items-center">
               <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400">

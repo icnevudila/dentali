@@ -356,6 +356,9 @@ function PortalPageContent() {
 
         {step === "welcome" && (
           <div className="rounded-[2.5rem] border border-white bg-white/70 p-6 sm:p-8 shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-8 fade-in duration-500">
+            <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-white p-4 shadow-sm border border-neutral-100">
+              <img src="/icons/icon.svg" alt="dentQL Logo" className="h-full w-full object-contain" />
+            </div>
             <div className="mb-8 text-center">
               <div className="mx-auto mb-4 inline-flex items-center rounded-full border border-primary-200/50 bg-primary-50/50 px-4 py-1.5 text-xs font-bold tracking-wider text-primary-700 uppercase">
                 ONLINE APPOINTMENT SYSTEM

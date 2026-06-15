@@ -1,0 +1,312 @@
+{
+  "generatedAt": "2026-06-14T18:32:15.108Z",
+  "source": "C:\\Users\\TP2\\Documents\\2026 yeni dişçi\\yeni screenshoot ve mp4",
+  "output": "C:\\Users\\TP2\\Documents\\2026 yeni dişçi\\yeni screenshoot ve mp4\\landing-ready",
+  "note": "Top crop removes dashboard topbar (name/initials). Kiosk, TV external, printouts skipped.",
+  "items": [
+    {
+      "file": "appointmens web 2.png",
+      "bucket": "web",
+      "crop": 72,
+      "size": "1851x1544"
+    },
+    {
+      "file": "appointments mobile.png",
+      "bucket": "mobile",
+      "crop": 58,
+      "size": "430x2053"
+    },
+    {
+      "file": "appointments monthly web.png",
+      "bucket": "web",
+      "crop": 72,
+      "size": "1851x1339"
+    },
+    {
+      "file": "appointments tablet.png",
+      "bucket": "tablet",
+      "crop": 58,
+      "size": "497x2033"
+    },
+    {
+      "file": "audit full web.png",
+      "bucket": "web",
+      "crop": 72,
+      "size": "1851x5705"
+    },
+    {
+      "file": "Claims Data.jpeg",
+      "bucket": "tablet",
+      "crop": 0,
+      "size": "570x236"
+    },
+    {
+      "file": "concent forms.png",
+      "bucket": "web",
+      "crop": 72,
+      "size": "1866x912"
+    },
+    {
+      "file": "Concent Sample.png",
+      "bucket": "web",
+      "crop": 0,
+      "size": "1851x1558"
+    },
+    {
+      "file": "dashboard full mobil.png",
+      "bucket": "mobile",
+      "crop": 58,
+      "size": "430x3778"
+    },
+    {
+      "file": "dashboard full tablet.png",
+      "bucket": "tablet",
+      "crop": 58,
+      "size": "497x3732"
+    },
+    {
+      "file": "dashboard full web.png",
+      "bucket": "web",
+      "crop": 72,
+      "size": "1851x1832"
+    },
+    {
+      "file": "dental chart web.png",
+      "bucket": "web",
+      "crop": 72,
+      "size": "1851x1914"
+    },
+    {
+      "file": "dental mobile.png",
+      "bucket": "mobile",
+      "crop": 58,
+      "size": "430x2846"
+    },
+    {
+      "file": "dental tablet.png",
+      "bucket": "tablet",
+      "crop": 62,
+      "size": "512x2846"
+    },
+    {
+      "file": "inventory mobile.png",
+      "bucket": "mobile",
+      "crop": 58,
+      "size": "390x2736"
+    },
+    {
+      "file": "inventory web.png",
+      "bucket": "web",
+      "crop": 72,
+      "size": "1851x1922"
+    },
+    {
+      "file": "invoice detail printout.png",
+      "bucket": "tablet",
+      "crop": 0,
+      "size": "625x878"
+    },
+    {
+      "file": "invoices detail mobile.png",
+      "bucket": "mobile",
+      "crop": 58,
+      "size": "390x1690"
+    },
+    {
+      "file": "invoices detail.png",
+      "bucket": "web",
+      "crop": 72,
+      "size": "1851x1264"
+    },
+    {
+      "file": "kiosk mobile 1.png",
+      "bucket": "mobile",
+      "crop": 0,
+      "size": "378x819"
+    },
+    {
+      "file": "kiosk mobile 2.png",
+      "bucket": "mobile",
+      "crop": 0,
+      "size": "378x819"
+    },
+    {
+      "file": "kiosk mobile.png",
+      "bucket": "mobile",
+      "crop": 0,
+      "size": "390x844"
+    },
+    {
+      "file": "kiosk web 1.png",
+      "bucket": "web",
+      "crop": 0,
+      "size": "1866x912"
+    },
+    {
+      "file": "kiosk web.png",
+      "bucket": "web",
+      "crop": 0,
+      "size": "1866x912"
+    },
+    {
+      "file": "kiosk web2.png",
+      "bucket": "web",
+      "crop": 0,
+      "size": "1866x912"
+    },
+    {
+      "file": "patient detail mobile.png",
+      "bucket": "mobile",
+      "crop": 58,
+      "size": "430x7813"
+    },
+    {
+      "file": "patient detail tablet.png",
+      "bucket": "tablet",
+      "crop": 62,
+      "size": "512x7590"
+    },
+    {
+      "file": "patient detail web.png",
+      "bucket": "web",
+      "crop": 72,
+      "size": "1851x5232"
+    },
+    {
+      "file": "patient full mobile.png",
+      "bucket": "mobile",
+      "crop": 58,
+      "size": "430x5929"
+    },
+    {
+      "file": "patient full tablet.png",
+      "bucket": "tablet",
+      "crop": 62,
+      "size": "512x5613"
+    },
+    {
+      "file": "patient mobile 2.png",
+      "bucket": "mobile",
+      "crop": 58,
+      "size": "369x814"
+    },
+    {
+      "file": "patient mobile.png",
+      "bucket": "mobile",
+      "crop": 58,
+      "size": "378x777"
+    },
+    {
+      "file": "patient register web.png",
+      "bucket": "web",
+      "crop": 72,
+      "size": "1851x1074"
+    },
+    {
+      "file": "patient tablet.png",
+      "bucket": "tablet",
+      "crop": 62,
+      "size": "527x738"
+    },
+    {
+      "file": "patient web.png",
+      "bucket": "web",
+      "crop": 72,
+      "size": "1819x852"
+    },
+    {
+      "file": "patinets full web.png",
+      "bucket": "web",
+      "crop": 72,
+      "size": "1851x3844"
+    },
+    {
+      "file": "queque mobile external screen.png",
+      "bucket": "mobile",
+      "crop": 0,
+      "size": "430x1060"
+    },
+    {
+      "file": "queque mobile.png",
+      "bucket": "mobile",
+      "crop": 58,
+      "size": "430x3714"
+    },
+    {
+      "file": "queque tablet.png",
+      "bucket": "tablet",
+      "crop": 62,
+      "size": "512x3650"
+    },
+    {
+      "file": "queque tabletexternal screen.png",
+      "bucket": "tablet",
+      "crop": 0,
+      "size": "497x1000"
+    },
+    {
+      "file": "queque web external screen.png",
+      "bucket": "web",
+      "crop": 0,
+      "size": "1866x912"
+    },
+    {
+      "file": "QueQue web.png",
+      "bucket": "web",
+      "crop": 72,
+      "size": "1851x1757"
+    },
+    {
+      "file": "report full mobile.png",
+      "bucket": "mobile",
+      "crop": 58,
+      "size": "430x6850"
+    },
+    {
+      "file": "reports full table.png",
+      "bucket": "tablet",
+      "crop": 62,
+      "size": "512x6781"
+    },
+    {
+      "file": "reports full web.png",
+      "bucket": "web",
+      "crop": 72,
+      "size": "1851x3653"
+    },
+    {
+      "file": "settings sample.png",
+      "bucket": "web",
+      "crop": 72,
+      "size": "1851x1074"
+    },
+    {
+      "file": "waitlist mobile.png",
+      "bucket": "mobile",
+      "crop": 58,
+      "size": "430x1993"
+    },
+    {
+      "file": "waitlist tablet.png",
+      "bucket": "tablet",
+      "crop": 62,
+      "size": "512x1883"
+    },
+    {
+      "file": "waitlist web.png",
+      "bucket": "web",
+      "crop": 72,
+      "size": "1851x1281"
+    },
+    {
+      "file": "kiosk video.mp4",
+      "bucket": "videos",
+      "crop": 0
+    },
+    {
+      "file": "patient portal video.mp4",
+      "bucket": "videos",
+      "crop": 0
+    }
+  ]
+}

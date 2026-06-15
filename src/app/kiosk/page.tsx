@@ -252,10 +252,8 @@ function KioskContent() {
           <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-400 blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
         </div>
         <div className="z-10 flex flex-col items-center gap-6 animate-float">
-          <div className="h-24 w-24 rounded-full bg-white/10 p-4 backdrop-blur-md flex items-center justify-center border border-white/20">
-            <svg className="w-12 h-12 text-teal-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+          <div className="h-24 w-24 rounded-3xl bg-white p-4 shadow-xl flex items-center justify-center border border-white/40 ring-4 ring-white/10">
+            <img src="/icons/icon.svg" alt="dentQL Logo" className="h-full w-full object-contain" />
           </div>
           <h1 className="text-4xl font-light tracking-wide text-teal-50">Welcome to <span className="font-semibold text-white">{branchName || "Our Clinic"}</span></h1>
           <p className="mt-8 rounded-full border border-teal-500/30 bg-teal-900/50 px-6 py-2 text-teal-200 backdrop-blur-sm animate-pulse">
@@ -319,6 +317,9 @@ function KioskContent() {
 
         {step === "welcome" && (
           <div className="space-y-8 rounded-[2rem] border border-white bg-white/70 p-10 text-center shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-4 duration-500">
+            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-[2rem] bg-white p-4 shadow-sm border border-neutral-100">
+              <img src="/icons/icon.svg" alt="dentQL Logo" className="h-full w-full object-contain" />
+            </div>
             <div className="inline-flex rounded-full border border-primary-200 bg-primary-50/80 px-5 py-2 text-xs font-bold uppercase tracking-widest text-primary-700 shadow-sm">
               {branchName || "dentali. clinic"}
             </div>

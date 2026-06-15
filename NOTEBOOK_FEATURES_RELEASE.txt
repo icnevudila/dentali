@@ -4,19 +4,20 @@ Commit: 6f63a82
 Branch: main (pushed to origin/main)
 Repo: https://github.com/icnevudila/dentali.git
 DB migration: 20260615230000_notebook_features.sql (USER RAN SUCCESSFULLY)
+Also in repo: 20260615220000_portal_slots_clinical_rpc.sql
 
 ------------------------------------------
 BILLING & DISCOUNTS
 ------------------------------------------
 - Line-item + invoice-level discounts on billing detail page
-- Discount on print view + PDF edge function
+- Discount rows on print view + PDF edge function
 - RPCs: update_invoice_discount, updated add/update_invoice_line_item
 
 ------------------------------------------
 ORTHODONTICS
 ------------------------------------------
-- Invoice balance button -> draft invoice from ortho balance
-- Return button per visit row (revert adjustment)
+- "Invoice balance" button → draft invoice from remaining balance
+- "Return" per visit row (revert adjustment)
 - Bullet/long-text: Procedure, Next procedure, Notes
 - RPCs: create_invoice_from_ortho_case, revert_ortho_adjustment
 
@@ -32,7 +33,7 @@ PRESCRIPTIONS (NEW)
 ------------------------------------------
 - Patient tab + full page: draft, sign, void, history
 - Dental formulary shortcuts, allergy banner on print
-- Professional Rx print (header, meds table, void stamp)
+- Professional Rx print (clinic header, meds table, void stamp)
 - RPCs: upsert_prescription_draft, sign_prescription, void_prescription
 - Permissions: prescriptions.read, prescriptions.write
 
@@ -41,7 +42,7 @@ CONSENT
 ------------------------------------------
 - Upload scanned PDF/photo on consent panel
 - RPC: register_scanned_consent
-- Digital templates: 20260610120000_clinic_paper_consent_templates.sql
+- Digital templates: 20260610120000_clinic_paper_consent_templates.sql (DRG/PDA)
 
 ------------------------------------------
 DENTAL CHART
@@ -49,7 +50,7 @@ DENTAL CHART
 - Periodontal section collapsed by default (expand on demand)
 
 ------------------------------------------
-ORG SETTINGS
+ORGANIZATION SETTINGS
 ------------------------------------------
 - Per-branch procedure pricing toggle
 - Show/hide price for custom free-text procedures
@@ -58,14 +59,9 @@ ORG SETTINGS
 ------------------------------------------
 CLOSEOUT / MIGRATION FIX
 ------------------------------------------
-- Backfill in single DO block (no set_config false — was hanging)
+- Backfill wrapped in DO block (no set_config false — was hanging in Supabase)
 - Derived totals bypass closeout; real billing edits still blocked on closed days
-
-------------------------------------------
-ALSO IN PUSH
-------------------------------------------
-- 20260615220000_portal_slots_clinical_rpc.sql
-- Invoice PDF discount in generate-invoice-pdf
+- assert_invoice_closeout_editable for user-facing invoice mutations
 
 ------------------------------------------
 NOT IN THIS RELEASE
@@ -76,24 +72,28 @@ NOT IN THIS RELEASE
 ------------------------------------------
 SMOKE TEST CHECKLIST
 ------------------------------------------
-[ ] Patient -> Prescriptions -> sign -> print
-[ ] Patient -> Ortho -> log visit (bullets) -> Invoice balance
-[ ] Billing -> discount -> print / PDF
-[ ] Chart -> expand periodontal panel
-[ ] Consent -> upload scan
-[ ] Settings -> Organization -> billing preferences toggles
+[ ] Patient → Prescriptions → sign → print
+[ ] Patient → Ortho → log visit (bullets) → Invoice balance
+[ ] Billing → discount → print / PDF
+[ ] Chart → expand periodontal panel
+[ ] Consent → upload scan
+[ ] Settings → Organization → billing preferences toggles
 
 ------------------------------------------
-KEY FILES
+KEY NEW FILES
 ------------------------------------------
-supabase/migrations/20260615230000_notebook_features.sql
 src/app/(dashboard)/patients/[id]/prescriptions/page.tsx
 src/lib/clinical/prescription-service.ts
 src/lib/clinical/prescription-print.ts
-src/app/(dashboard)/patients/[id]/ortho/page.tsx
-src/app/(dashboard)/billing/[id]/page.tsx
+src/components/ui/BulletTextarea.tsx
+src/components/ui/BulletTextList.tsx
+src/components/consent/ConsentScanUploadButton.tsx
+src/lib/settings/org-preferences-service.ts
+supabase/migrations/20260615230000_notebook_features.sql
 
-NOT COMMITTED (untracked):
+------------------------------------------
+NOT COMMITTED (intentional)
+------------------------------------------
 scripts/debug-danica.js
 supabase/functions/send-email/
 yeni screenshoot ve mp4/

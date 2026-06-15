@@ -101,6 +101,9 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-1 items-center justify-center px-4 pb-10">
           <div className="w-full max-w-[440px] space-y-8 rounded-3xl border border-neutral-100 bg-white/90 p-8 shadow-xl shadow-neutral-200/50 backdrop-blur-md">
             <div className="space-y-2 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white p-2.5 shadow-sm border border-neutral-100">
+                <img src="/icons/icon.svg" alt="dentQL Logo" className="h-full w-full object-contain" />
+              </div>
               <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900">
                 {t("login.signIn", "Sign in")}
               </h1>
