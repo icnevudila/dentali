@@ -6,7 +6,7 @@ import { useLocale } from "@/hooks/use-locale"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Loader2, X } from "lucide-react"
-import { toast } from "sonner"
+import { notify } from "@/lib/ui/notify"
 import {
   rescheduleAppointment,
   updateAppointmentDetails,
@@ -19,7 +19,7 @@ import {
 import {
   fetchPreparedAppointmentSlots,
   manilaScheduledAtIso,
-  withCurrentAppointmentSlot,
+  pickDefaultSlotTime,
 } from "@/lib/appointments/appointment-slots"
 import { appointmentDateKey } from "@/lib/appointments/week-calendar"
 import { AppointmentSlotButtons } from "@/components/appointments/AppointmentSlotButtons"
@@ -36,7 +36,7 @@ export function AppointmentEditDialog({
   onFreedSlot,
 }: {
   open: boolean
-  onOpenChange: (open: boolean) => void
+  onOpenChange: (isOpen: boolean) => void
   appointment: AppointmentRecord | null
   providers: ProviderOption[]
   branchId: string
@@ -54,7 +54,6 @@ export function AppointmentEditDialog({
   const [time, setTime] = React.useState("")
   const [slots, setSlots] = React.useState<AppointmentSlot[]>([])
   const [slotsLoading, setSlotsLoading] = React.useState(false)
-  const [slotsError, setSlotsError] = React.useState<string | null>(null)
   const [configuringSlots, setConfiguringSlots] = React.useState(false)
 
   const PRESET_PURPOSES = React.useMemo(
@@ -118,18 +117,15 @@ export function AppointmentEditDialog({
     }
     setDate(appointmentDateKey(appointment.scheduled_at))
     setTime(extract24HourTime(appointment.scheduled_at))
-    setSlotsError(null)
   }, [open, appointment, providers, extract24HourTime, PRESET_PURPOSES])
 
   const loadSlots = React.useCallback(async () => {
     if (!open || !branchId || !providerId || !date || !appointment) {
       setSlots([])
-      setSlotsError(null)
       return
     }
 
     setSlotsLoading(true)
-    setSlotsError(null)
 
     const { data, error } = await fetchPreparedAppointmentSlots({
       branchId,
@@ -138,20 +134,16 @@ export function AppointmentEditDialog({
       excludeAppointmentId: appointment.id,
     })
 
-    const merged = withCurrentAppointmentSlot(
-      data,
-      originalDate === date ? originalTime : undefined
-    )
-
-    setSlots(merged)
-    setSlotsError(error)
+    setSlots(data)
     setSlotsLoading(false)
+    if (error) notify.error(error)
 
-    if (merged.length > 0 && !merged.some((slot) => slot.time === time)) {
-      const firstOpen = merged.find((slot) => slot.available)
-      if (firstOpen) setTime(firstOpen.time)
-    }
-  }, [open, branchId, providerId, date, appointment, originalDate, originalTime, time])
+    const preferred =
+      originalDate === date ? originalTime : undefined
+    setTime((prev) =>
+      pickDefaultSlotTime(data, preferred ?? prev, originalDate === date ? originalTime : undefined)
+    )
+  }, [open, branchId, providerId, date, appointment, originalDate, originalTime])
 
   React.useEffect(() => {
     void loadSlots()
@@ -160,27 +152,33 @@ export function AppointmentEditDialog({
   const handleConfigureSlots = async () => {
     if (!branchId || !providerId) return
     setConfiguringSlots(true)
-    setSlotsError(null)
     const { error } = await ensureProviderAvailabilityDefaults(branchId, providerId)
     if (error) {
-      setSlotsError(error)
+      notify.error(error)
       setConfiguringSlots(false)
       return
     }
     await loadSlots()
     setConfiguringSlots(false)
+    notify.success(t("appointments.slotsConfigured", "Working hours configured for this dentist."))
   }
 
   if (!open || !mounted || !appointment) return null
 
+  const selectedSlot = slots.find((slot) => slot.time === time)
+  const canPickTime =
+    Boolean(time) &&
+    Boolean(selectedSlot?.available || (date === originalDate && time === originalTime))
+  const scheduleUnchanged = date === originalDate && time === originalTime
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!providerId) {
-      toast.error(t("appointments.selectDentistAndDate", "Select dentist and date."))
+      notify.error(t("appointments.selectDentistAndDate", "Select dentist and date."))
       return
     }
-    if (!time) {
-      toast.error(t("appointments.pickTime", "Pick a time for the appointment."))
+    if (!canPickTime && !scheduleUnchanged) {
+      notify.error(t("appointments.pickOpenSlot", "Pick an open slot for the appointment."))
       return
     }
 
@@ -188,7 +186,7 @@ export function AppointmentEditDialog({
 
     const finalPurpose = selectedPurposeOption === "Other" ? customPurpose.trim() : selectedPurposeOption
     if (!finalPurpose) {
-      toast.error("Please specify a purpose for the appointment")
+      notify.error("Please specify a purpose for the appointment")
       setSaving(false)
       return
     }
@@ -199,7 +197,7 @@ export function AppointmentEditDialog({
     })
 
     if (err1) {
-      toast.error(err1)
+      notify.error(err1)
       setSaving(false)
       return
     }
@@ -209,14 +207,14 @@ export function AppointmentEditDialog({
       scheduledAt = manilaScheduledAtIso(date, time)
       const { error: err2 } = await rescheduleAppointment(appointment.id, scheduledAt)
       if (err2) {
-        toast.error(err2)
+        notify.error(err2)
         setSaving(false)
         return
       }
       onFreedSlot?.(appointment.scheduled_at)
     }
 
-    toast.success(t("appointments.updateSuccess", "Appointment updated successfully"))
+    notify.success(t("appointments.updateSuccess", "Appointment updated successfully"))
     onSaved({
       ...appointment,
       provider_id: providerId || null,
@@ -297,49 +295,27 @@ export function AppointmentEditDialog({
                   currentTime={originalDate === date ? originalTime : undefined}
                   loading={slotsLoading}
                 />
-                {slotsError ? (
-                  <p className="text-xs text-red-600">{slotsError}</p>
-                ) : null}
                 {!slotsLoading && slots.length === 0 ? (
-                  <div className="space-y-2">
-                    <p className="text-xs text-amber-700">
-                      {t(
-                        "appointments.noSlotsEdit",
-                        "No slots — dentist may be closed this day or has no active clinic hours."
-                      )}
-                    </p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="text-xs h-8 gap-1.5 border-amber-300 hover:bg-amber-50"
-                      disabled={configuringSlots}
-                      onClick={() => void handleConfigureSlots()}
-                    >
-                      {configuringSlots ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          {t("common.loading", "Loading…")}
-                        </>
-                      ) : (
-                        t("appointments.configureSlots", "Configure working hours & slots")
-                      )}
-                    </Button>
-                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8 gap-1.5"
+                    disabled={configuringSlots}
+                    onClick={() => void handleConfigureSlots()}
+                  >
+                    {configuringSlots ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        {t("common.loading", "Loading…")}
+                      </>
+                    ) : (
+                      t("appointments.configureSlots", "Configure working hours & slots")
+                    )}
+                  </Button>
                 ) : null}
               </>
             )}
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-medium">{t("appointments.timeManual", "Or pick time")}</label>
-            <Input
-              type="time"
-              required
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="max-w-[10rem]"
-            />
           </div>
 
           <div className="space-y-1.5">
@@ -367,7 +343,10 @@ export function AppointmentEditDialog({
           </div>
 
           <div className="flex flex-wrap gap-2 pt-2 border-t border-neutral-100">
-            <Button type="submit" disabled={saving || !time || !providerId}>
+            <Button
+              type="submit"
+              disabled={saving || !providerId || (!canPickTime && !scheduleUnchanged)}
+            >
               {saving ? t("common.saving", "Saving…") : t("common.save", "Save")}
             </Button>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -28,6 +28,7 @@ import { fetchMyBranches, fetchOrganization } from "@/lib/auth/auth-service"
 import { logAuditEvent } from "@/lib/audit/audit-service"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
+import { notify } from "@/lib/ui/notify"
 import { createClient } from "@/lib/supabase/client"
 
 export default function BranchDetailPage() {
@@ -133,12 +134,12 @@ export default function BranchDetailPage() {
       return
     }
     if (
-      !confirm(
+      !(await notify.confirm(
         t(
           "settings.deactivateConfirm",
           "Deactivate this branch? Staff will lose branch access and kiosk/display links will be revoked."
         )
-      )
+      ))
     ) {
       return
     }

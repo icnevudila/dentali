@@ -14,12 +14,13 @@ import { useLocale } from "@/hooks/use-locale"
 import {
   fetchPreparedAppointmentSlots,
   manilaScheduledAtIso,
+  pickDefaultSlotTime,
 } from "@/lib/appointments/appointment-slots"
 import type { AppointmentSlot } from "@/lib/appointments/provider-availability-service"
 import { AppointmentSlotButtons } from "@/components/appointments/AppointmentSlotButtons"
 import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
 import { PatientBillingGateBanner } from "@/components/billing/PatientBillingGateBanner"
-import { toast } from "sonner"
+import { notify } from "@/lib/ui/notify"
 
 interface BookAppointmentDialogProps {
   patientId: string
@@ -42,7 +43,6 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
   const [billingGate, setBillingGate] = React.useState<PatientBillingGate | null>(null)
   const [forceBillingOverride, setForceBillingOverride] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     setMounted(true)
@@ -85,9 +85,8 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
     }).then(({ data, error: slotError }) => {
       setSlots(data)
       setSlotsLoading(false)
-      if (slotError) setError(slotError)
-      const firstOpen = data.find((s) => s.available)
-      if (firstOpen) setTime(firstOpen.time)
+      if (slotError) notify.error(slotError)
+      setTime((prev) => pickDefaultSlotTime(data, prev))
     })
   }, [open, activeBranch, providerId, date])
 
@@ -98,15 +97,14 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
     e.preventDefault()
     if (!user || !activeBranch || !date || !providerId || !time) return
     if (billingBlocked) {
-      setError(t("billing.gateBlocked", "Resolve billing before booking or use override."))
+      notify.error(t("billing.gateBlocked", "Resolve billing before booking or use override."))
       return
     }
     setSaving(true)
-    setError(null)
 
     const org = await fetchOrganization()
     if (!org) {
-      setError(t("common.orgNotFound", "Organization not found"))
+      notify.error(t("common.orgNotFound", "Organization not found"))
       setSaving(false)
       return
     }
@@ -126,15 +124,10 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
 
     setSaving(false)
     if (createError) {
-      if (createError.includes("Billing clearance")) {
-        setError(createError)
-      } else {
-        toast.error(createError)
-        setError(createError)
-      }
+      notify.error(createError)
       return
     }
-    toast.success(t("appointments.bookingSuccess", "Appointment created successfully"))
+    notify.success(t("appointments.bookingSuccess", "Appointment created successfully"))
     setOpen(false)
     setPurpose("")
     setDate("")
@@ -223,7 +216,6 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
               required
             />
           </div>
-          {error ? <p className="text-xs text-red-600">{error}</p> : null}
           <div className="flex gap-2 pt-1">
             <Button type="submit" disabled={saving || !time || billingBlocked}>
               {saving ? (

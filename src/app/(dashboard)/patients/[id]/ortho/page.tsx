@@ -33,6 +33,7 @@ import {
   type OrthoCase,
 } from "@/lib/clinical/ortho-service"
 import { OrthoCaseTimelinePanel } from "@/components/clinical/OrthoCaseTimelinePanel"
+import { notify } from "@/lib/ui/notify"
 
 export default function OrthoRecordPage() {
   const { id: patientId } = useRouteParams<{ id: string }>()
@@ -149,7 +150,7 @@ export default function OrthoRecordPage() {
   }
 
   const handleCloseCase = async () => {
-    if (!orthoCase || !confirm("Close this orthodontic case?")) return
+    if (!orthoCase || !(await notify.confirm("Close this orthodontic case?"))) return
     setSaving(true)
     const { error: err } = await closeOrthoCase(orthoCase.id)
     setSaving(false)
@@ -158,7 +159,7 @@ export default function OrthoRecordPage() {
   }
 
   const handleRevertAdjustment = async (adjustmentId: string) => {
-    if (!confirm("Remove this visit row? Balance will be recalculated.")) return
+    if (!(await notify.confirm("Remove this visit row? Balance will be recalculated."))) return
     setSaving(true)
     const { error: err } = await revertOrthoAdjustment(adjustmentId)
     setSaving(false)

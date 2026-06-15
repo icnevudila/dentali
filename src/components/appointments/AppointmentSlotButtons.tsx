@@ -1,9 +1,10 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
 import { useLocale } from "@/hooks/use-locale"
 import type { AppointmentSlot } from "@/lib/appointments/provider-availability-service"
+import { cn } from "@/lib/utils"
 
+/** Portal-style slot grid: shows open + full slots; only open slots are selectable. */
 export function AppointmentSlotButtons({
   slots,
   selectedTime,
@@ -27,34 +28,44 @@ export function AppointmentSlotButtons({
 
   if (slots.length === 0) {
     return (
-      <p className="text-xs text-amber-700">
-        {emptyMessage ?? t("appointments.noSlotsEdit", "No slots available for this day.")}
+      <p className="text-xs text-neutral-500">
+        {emptyMessage ?? t("appointments.noSlotsBook", "No available times on the selected date.")}
       </p>
     )
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
       {slots.map((slot) => {
         const isCurrent = currentTime === slot.time
         const selectable = slot.available || isCurrent
+        const isSelected = selectedTime === slot.time
+
         return (
-          <Button
+          <button
             key={slot.time}
             type="button"
-            size="sm"
-            variant={selectedTime === slot.time ? "default" : "outline"}
             disabled={!selectable}
             onClick={() => onSelect(slot.time)}
-            className={!slot.available && !isCurrent ? "opacity-60" : undefined}
+            className={cn(
+              "rounded-xl py-2.5 text-sm font-bold transition-all",
+              !selectable &&
+                "cursor-not-allowed border border-transparent bg-neutral-100 text-neutral-400 opacity-50",
+              selectable &&
+                !isSelected &&
+                "cursor-pointer border-2 border-transparent bg-white text-neutral-700 hover:border-primary-100 hover:bg-neutral-50",
+              selectable &&
+                isSelected &&
+                "border-transparent bg-primary-600 text-white shadow-md shadow-primary-500/20"
+            )}
           >
             {slot.time}
             {!slot.available && !isCurrent ? (
-              <span className="ml-1 text-[10px] font-normal opacity-80">
+              <span className="ml-1 text-[10px] font-normal opacity-70">
                 ({t("appointments.slotFull", "Full")})
               </span>
             ) : null}
-          </Button>
+          </button>
         )
       })}
     </div>

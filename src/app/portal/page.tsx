@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { useLocale } from "@/hooks/use-locale"
 import { PORTAL_VISIT_REASONS, type PortalVisitReasonId } from "@/lib/portal/visit-reasons"
 import { PublicChannelBrand } from "@/components/brand/public-channel-brand"
+import { notify } from "@/lib/ui/notify"
 import { 
   Calendar as CalendarIcon, 
   Clock, 
@@ -93,16 +94,21 @@ function PortalPageContent() {
   const [providers, setProviders] = React.useState<{ id: string; name: string }[]>([])
   const [slots, setSlots] = React.useState<{ time: string; available: boolean }[]>([])
 
+  const portalError = React.useCallback((msg: string) => {
+    setErrorMsg(msg)
+    notify.error(msg)
+  }, [])
+
   React.useEffect(() => {
     if (!token) {
-      setErrorMsg("Portal connection token is missing.")
+      portalError("Portal connection token is missing.")
       setStep("error")
       return
     }
 
     createKioskSession(token).then(({ data, error }) => {
       if (error || !data) {
-        setErrorMsg(error ?? "Connection is invalid or has expired.")
+        portalError(error ?? "Connection is invalid or has expired.")
         setStep("error")
         return
       }
@@ -111,7 +117,7 @@ function PortalPageContent() {
       setBranchName(data.branch_name)
       setStep("welcome")
     })
-  }, [token])
+  }, [token, portalError])
 
   const handleIdentitySubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -129,7 +135,7 @@ function PortalPageContent() {
           "Your registration has been received but is pending approval at the front desk. Kaydınız alınmıştır ancak henüz banko tarafından onaylanmamıştır."
         )
       } else {
-        setErrorMsg("No record found. Please check your information or create a New Patient Registration.")
+        portalError("No record found. Please check your information or create a New Patient Registration.")
       }
       return
     }
@@ -181,7 +187,7 @@ function PortalPageContent() {
   const handleNewPatientSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newFirstName || !newLastName || !newPhone) {
-      setErrorMsg("First name, last name, and phone number are required.")
+      portalError("First name, last name, and phone number are required.")
       return
     }
 
@@ -205,7 +211,7 @@ function PortalPageContent() {
     setSubmitting(false)
 
     if (error) {
-      setErrorMsg(error ?? "An error occurred while creating the registration.")
+      portalError(error ?? "An error occurred while creating the registration.")
     } else {
       setStep("intakeSuccess")
     }
@@ -250,7 +256,7 @@ function PortalPageContent() {
     setSubmitting(false)
 
     if (error || !data) {
-      setErrorMsg(error ?? "An error occurred while booking the appointment.")
+      portalError(error ?? "An error occurred while booking the appointment.")
     } else {
       setStep("success")
     }
@@ -447,13 +453,6 @@ function PortalPageContent() {
                 </div>
               </div>
 
-              {errorMsg && (
-                <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 flex gap-2 text-sm text-red-900 shadow-sm animate-in fade-in slide-in-from-top-2">
-                  <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
-                  <p className="font-medium">{errorMsg}</p>
-                </div>
-              )}
-
               <Button
                 type="submit"
                 disabled={submitting}
@@ -636,13 +635,6 @@ function PortalPageContent() {
                   className="w-full min-h-[80px] rounded-xl border-2 border-transparent bg-white/80 p-3 text-sm shadow-sm outline-none focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 text-neutral-700"
                 />
               </div>
-
-              {errorMsg && (
-                <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 flex gap-2 text-sm text-red-900 shadow-sm">
-                  <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
-                  <p>{errorMsg}</p>
-                </div>
-              )}
 
               <Button
                 type="submit"
@@ -857,12 +849,6 @@ function PortalPageContent() {
                 </div>
               )}
             </div>
-
-            {errorMsg && (
-              <div className="mb-4 rounded-xl border border-red-200 bg-red-50/80 p-3 text-sm text-red-900">
-                <p>{errorMsg}</p>
-              </div>
-            )}
 
             <Button
               onClick={handleBook}

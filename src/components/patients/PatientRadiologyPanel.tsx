@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { notify } from "@/lib/ui/notify"
 import { Badge } from "@/components/ui/badge"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { PermissionGate } from "@/components/auth/PermissionGate"
@@ -162,7 +163,7 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
 
   const handleDelete = async (doc: PatientDocument, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
-    if (!confirm(t("patients.docDeleteConfirm", "Delete {name}?").replace("{name}", doc.file_name))) return
+    if (!(await notify.confirm(t("patients.docDeleteConfirm", "Delete {name}?").replace("{name}", doc.file_name)))) return
     
     const { error: err } = await deletePatientDocument({
       documentId: doc.id,

@@ -30,7 +30,7 @@ import { Megaphone, Plus, Users, X, Link2, Copy, Check, UserCheck, Calendar, Map
 import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { generateBranchPublicToken } from "@/lib/kiosk/kiosk-service"
-import { toast } from "sonner"
+import { notify } from "@/lib/ui/notify"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { MetricStrip } from "@/components/layout/MetricStrip"
@@ -121,7 +121,7 @@ export default function QueuePage() {
     if (err) setError(err)
     else if (data) {
       if (data.revokedPrevious > 0) {
-        toast.info(
+        notify.info(
           t("display.replacedPreviousLinks", "{n} previous link(s) closed automatically.").replace(
             "{n}",
             String(data.revokedPrevious)
@@ -250,7 +250,7 @@ export default function QueuePage() {
     if (err) {
       setEntries(entriesSnapshot)
       setError(err)
-      toast.error(err)
+      notify.error(err)
     } else {
       if (status === "served" && entry?.patient_id) {
         const { data: billingGate } = await getPatientBillingGate(entry.patient_id)
@@ -280,7 +280,7 @@ export default function QueuePage() {
         cancelled: t("queue.statusCancelled", "Entry cancelled"),
         announce: t("queue.statusAnnounced", "Patient recalled"),
       }
-      toast.success(statusLabels[status] ?? t("queue.statusUpdated", "Queue updated"))
+      notify.success(statusLabels[status] ?? t("queue.statusUpdated", "Queue updated"))
       void load(true)
     }
   }
@@ -309,10 +309,10 @@ export default function QueuePage() {
         setBillingOverridePending(true)
       }
       setError(err)
-      toast.error(err)
+      notify.error(err)
     } else {
       closeCheckInModal()
-      toast.success(t("queue.walkInCheckInSuccess", "Patient added to queue"))
+      notify.success(t("queue.walkInCheckInSuccess", "Patient added to queue"))
       void load(true)
     }
   }
@@ -324,11 +324,11 @@ export default function QueuePage() {
     setCallingNext(false)
     if (err) {
       setError(err)
-      toast.error(err)
+      notify.error(err)
     } else if (!data) {
-      toast.message(t("queue.emptyQueue", "No patients waiting in queue"))
+      notify.info(t("queue.emptyQueue", "No patients waiting in queue"))
     } else {
-      toast.success(t("queue.calledNext", "Called next patient"))
+      notify.success(t("queue.calledNext", "Called next patient"))
       void load(true)
     }
   }
@@ -347,7 +347,7 @@ export default function QueuePage() {
     setApptCheckInId(null)
     if (err) {
       if (!forceCheckin && err.includes("Pending consents")) {
-        const ok = window.confirm(
+        const ok = await notify.confirm(
           t(
             "queue.consentOverrideConfirm",
             "Required consents are unsigned. Check in anyway? This will be logged in audit."
@@ -356,7 +356,7 @@ export default function QueuePage() {
         if (ok) return handleAppointmentCheckIn(appointmentId, forceBillingOverride, true)
       }
       if (!forceBillingOverride && err.includes("Billing clearance")) {
-        const ok = window.confirm(
+        const ok = await notify.confirm(
           t(
             "billing.gateConfirmCheckIn",
             "Patient has outstanding billing. Check in anyway? This will be logged in audit."
@@ -365,9 +365,9 @@ export default function QueuePage() {
         if (ok) return handleAppointmentCheckIn(appointmentId, true, forceCheckin)
       }
       setError(err)
-      toast.error(err)
+      notify.error(err)
     } else if (data) {
-      toast.success(
+      notify.success(
         t("queue.checkInSuccess", "Checked in — queue #{code}").replace("{code}", data.display_code)
       )
       void load(true)
@@ -731,10 +731,10 @@ export default function QueuePage() {
                     onAction={handleAction}
                     onReorderError={(msg) => {
                       setError(msg)
-                      toast.error(msg)
+                      notify.error(msg)
                     }}
                     onReorderSuccess={() => {
-                      toast.success(t("queue.reordered", "Queue order updated"))
+                      notify.success(t("queue.reordered", "Queue order updated"))
                       void load(true)
                     }}
                   />

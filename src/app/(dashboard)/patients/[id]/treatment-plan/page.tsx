@@ -41,7 +41,7 @@ import {
   type PatientBillingGate,
 } from "@/lib/billing/invoice-service"
 import { PatientBillingGateBanner } from "@/components/billing/PatientBillingGateBanner"
-import { toast } from "sonner"
+import { notify } from "@/lib/ui/notify"
 import { fetchProcedureStockWarnings } from "@/lib/inventory/inventory-service"
 import { ProcedureStockWarningBanner } from "@/components/inventory/ProcedureStockWarningBanner"
 import { ChartFindingSuggestionsCard } from "@/components/clinical/ChartFindingSuggestionsCard"
@@ -265,11 +265,11 @@ function TreatmentPlanContent() {
     
     if (err) {
       setError(err)
-      toast.error(err)
+      notify.error(err)
     } else {
       await loadPlan(activePlanId)
       await syncInvoiceIfNeeded()
-      toast.success(t("treatmentPlan.itemAdded", "Procedure added"))
+      notify.success(t("treatmentPlan.itemAdded", "Procedure added"))
       setSelectedProc("")
       setIsCustom(false)
       setCustomName("")
@@ -287,13 +287,13 @@ function TreatmentPlanContent() {
     const { data, error: err } = await bulkAddChartFindingsToPlan(activePlanId)
     if (err) {
       setError(err)
-      toast.error(err)
+      notify.error(err)
     } else if (data && data.added === 0) {
       const msg = "No chart findings matched procedures for this plan."
       setError(msg)
-      toast.message(msg)
+      notify.info(msg)
     } else if (data && data.added > 0) {
-      toast.success(t("treatmentPlan.itemsFromChart", "Added {count} procedure(s) from chart").replace("{count}", String(data.added)))
+      notify.success(t("treatmentPlan.itemsFromChart", "Added {count} procedure(s) from chart").replace("{count}", String(data.added)))
     }
     await loadPlan(activePlanId)
     await syncInvoiceIfNeeded()
@@ -316,11 +316,11 @@ function TreatmentPlanContent() {
     })
     if (err) {
       setError(err)
-      toast.error(err)
+      notify.error(err)
     } else {
       await loadPlan(activePlanId)
       await syncInvoiceIfNeeded()
-      toast.success(t("treatmentPlan.itemUpdated", "Procedure updated"))
+      notify.success(t("treatmentPlan.itemUpdated", "Procedure updated"))
     }
     setSaving(false)
   }
@@ -332,11 +332,11 @@ function TreatmentPlanContent() {
     const { error: err } = await deletePlanItem(itemId, activePlanId)
     if (err) {
       setError(err)
-      toast.error(err)
+      notify.error(err)
     } else {
       await loadPlan(activePlanId)
       await syncInvoiceIfNeeded()
-      toast.success(t("treatmentPlan.itemRemoved", "Procedure removed"))
+      notify.success(t("treatmentPlan.itemRemoved", "Procedure removed"))
     }
     setSaving(false)
   }
@@ -348,12 +348,12 @@ function TreatmentPlanContent() {
     const { data, error: err } = await approveTreatmentPlan(activePlanId)
     if (err) {
       setError(err)
-      toast.error(err)
+      notify.error(err)
     } else if (data) {
       setPlanStatus(data.status)
       setTotal(data.total_estimated)
       setAutoInvoiceId(data.invoice_id)
-      toast.success(t("treatmentPlan.approved", "Treatment plan approved"))
+      notify.success(t("treatmentPlan.approved", "Treatment plan approved"))
     }
     await loadPlan(activePlanId)
     setSaving(false)
@@ -361,7 +361,7 @@ function TreatmentPlanContent() {
 
   const handleUnapprove = async () => {
     if (!activePlanId) return
-    const confirmed = window.confirm(
+    const confirmed = await notify.confirm(
       t(
         "treatmentPlan.unapproveConfirm",
         "Unapprove this plan? The linked draft invoice will be voided and you can edit procedures again."
@@ -373,11 +373,11 @@ function TreatmentPlanContent() {
     const { data, error: err } = await unapproveTreatmentPlan(activePlanId)
     if (err) {
       setError(err)
-      toast.error(err)
+      notify.error(err)
     } else if (data) {
       setPlanStatus(data.status)
       setAutoInvoiceId(null)
-      toast.success(t("treatmentPlan.unapproved", "Plan approval removed — you can edit procedures again"))
+      notify.success(t("treatmentPlan.unapproved", "Plan approval removed — you can edit procedures again"))
     }
     await loadPlan(activePlanId)
     setSaving(false)
@@ -393,11 +393,11 @@ function TreatmentPlanContent() {
     })
     if (err) {
       setError(err)
-      toast.error(err)
+      notify.error(err)
     } else if (data && data.created > 0) {
       const { data: linked } = await getLinkedInvoiceForPlan(activePlanId!)
       if (linked) setAutoInvoiceId(linked.id)
-      toast.success(
+      notify.success(
         t("billing.gateBackfillDone", "Created {count} draft invoice(s).").replace(
           "{count}",
           String(data.created)
@@ -406,7 +406,7 @@ function TreatmentPlanContent() {
     } else {
       const msg = t("treatmentPlan.noInvoiceBackfill", "No missing invoices to create.")
       setError(msg)
-      toast.message(msg)
+      notify.info(msg)
     }
     setSaving(false)
   }

@@ -19,7 +19,7 @@ import {
   type PaymentIntent,
 } from "@/lib/billing/payment-gateway-service"
 import { AuditHistoryPanel } from "@/components/audit/AuditHistoryPanel"
-import { toast } from "sonner"
+import { notify } from "@/lib/ui/notify"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { useBranch } from "@/hooks/use-branch"
 import { usePermission } from "@/hooks/use-permission"
@@ -83,10 +83,10 @@ export default function InvoiceDetailPage() {
     })
     setAddingLine(false)
     if (addErr) {
-      toast.error(addErr)
+      notify.error(addErr)
       setError(addErr)
     } else {
-      toast.success(t("billing.lineItemAdded", "Line item added"))
+      notify.success(t("billing.lineItemAdded", "Line item added"))
       setNewDesc("")
       setNewPrice("")
       setNewQty("1")
@@ -110,10 +110,10 @@ export default function InvoiceDetailPage() {
     })
     setSaving(false)
     if (updateErr) {
-      toast.error(updateErr)
+      notify.error(updateErr)
       setError(updateErr)
     } else {
-      toast.success("Line item updated")
+      notify.success("Line item updated")
       setEditingLineId(null)
       await load()
     }
@@ -149,10 +149,10 @@ export default function InvoiceDetailPage() {
     const { error: discErr } = await updateInvoiceDiscount(invoiceId, discount)
     setSavingDiscount(false)
     if (discErr) {
-      toast.error(discErr)
+      notify.error(discErr)
       setError(discErr)
     } else {
-      toast.success(t("billing.discountSaved", "Discount applied"))
+      notify.success(t("billing.discountSaved", "Discount applied"))
       await load()
     }
   }
@@ -171,21 +171,20 @@ export default function InvoiceDetailPage() {
     })
 
     if (err) {
-      toast.error(err)
+      notify.error(err)
       setError(err)
       setSaving(false)
       return
     }
 
-    toast.success(t("billing.paymentSuccessWithCommission", "Payment recorded! Doktor hakedişi (%40) otomatik hesaplanıp maaş hesabına aktarıldı."))
+    notify.success(t("billing.paymentSuccessWithCommission", "Payment recorded! Doktor hakedişi (%40) otomatik hesaplanıp maaş hesabına aktarıldı."))
     
     // Auto-Recall Marketing Simulation
     if (lineItems.some(i => i.description.toLowerCase().includes("cleaning") || i.description.toLowerCase().includes("temizlik") || i.description.toLowerCase().includes("proph"))) {
       setTimeout(() => {
-        toast("🔄 Otomasyon: 6 Aylık 'Diş Taşı Temizliği' Geri Çağırma (Recall) kampanyası hastanın profiline eklendi.", {
-          duration: 6000,
-          className: "bg-blue-50 border-blue-200 text-blue-900"
-        })
+        notify.info(
+          "🔄 Otomasyon: 6 Aylık 'Diş Taşı Temizliği' Geri Çağırma (Recall) kampanyası hastanın profiline eklendi."
+        )
       }, 1500)
     }
 
@@ -211,11 +210,11 @@ export default function InvoiceDetailPage() {
     })
     setGatewayLoading(null)
     if (err) {
-      toast.error(err)
+      notify.error(err)
       setError(err)
       return
     }
-    toast.success("Payment intent created")
+    notify.success("Payment intent created")
     if (data) {
       setPendingIntents((prev) => [data, ...prev])
       setGatewayDryRun(dryRun === true)
@@ -228,11 +227,11 @@ export default function InvoiceDetailPage() {
     const { data, error: err } = await completePaymentIntent(intentId)
     setGatewayLoading(null)
     if (err) {
-      toast.error(err)
+      notify.error(err)
       setError(err)
       return
     }
-    toast.success("Payment intent completed")
+    notify.success("Payment intent completed")
     if (data && invoice) {
       setInvoice({ ...invoice, paid_amount: data.paid_amount, status: data.status })
       const newBalance = invoice.total_amount - data.paid_amount
@@ -243,17 +242,17 @@ export default function InvoiceDetailPage() {
 
   const handleVoid = async () => {
     if (!voidReason.trim()) return
-    if (!confirm("Void this invoice? This cannot be undone.")) return
+    if (!(await notify.confirm("Void this invoice? This cannot be undone."))) return
     setVoiding(true)
     setError(null)
     const { data, error: err } = await voidInvoice(invoiceId, voidReason.trim())
     setVoiding(false)
     if (err) {
-      toast.error(err)
+      notify.error(err)
       setError(err)
       return
     }
-    toast.success("Invoice voided")
+    notify.success("Invoice voided")
 
     if (data && invoice) {
       setInvoice({ ...invoice, status: data.status })
@@ -778,14 +777,14 @@ export default function InvoiceDetailPage() {
                         size="icon"
                         className="h-7 w-7 text-red-500 hover:text-red-700"
                         onClick={async () => {
-                          if (!confirm("Are you sure you want to delete this payment record? The invoice paid amount and status will be recalculated.")) return
+                          if (!(await notify.confirm("Are you sure you want to delete this payment record? The invoice paid amount and status will be recalculated."))) return
                           setError(null)
                           const { error: delErr } = await deleteInvoicePayment(p.id, invoiceId)
                           if (delErr) {
                             setError(delErr)
-                            toast.error(delErr)
+                            notify.error(delErr)
                           } else {
-                            toast.success(t("billing.paymentDeleted", "Payment record removed"))
+                            notify.success(t("billing.paymentDeleted", "Payment record removed"))
                             await load()
                           }
                         }}

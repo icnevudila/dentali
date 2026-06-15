@@ -5,6 +5,7 @@ import Link from "next/link"
 import { AlertTriangle, CheckCircle2, GitMerge } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { notify } from "@/lib/ui/notify"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { mergePatients, searchPatients } from "@/lib/patients/patient-service"
@@ -55,7 +56,7 @@ export function MergePatientPanel({ masterPatientId, masterName, onMerged }: Mer
   const handleMerge = async () => {
     if (!selectedId || !activeBranch) return
     const label = selected ? `${selected.first_name} ${selected.last_name}` : selectedId.slice(0, 8)
-    if (!confirm(`Merge "${label}" into "${masterName}"? The duplicate record will be archived.`)) return
+    if (!(await notify.confirm(`Merge "${label}" into "${masterName}"? The duplicate record will be archived.`))) return
 
     setMerging(true)
     setError(null)

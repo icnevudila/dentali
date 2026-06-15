@@ -6,6 +6,7 @@ import { LocaleBootstrap } from "@/components/i18n/LocaleBootstrap";
 import { BRAND_NAME, BRAND_TITLE, BRAND_TITLE_TEMPLATE } from "@/lib/brand";
 import { getSiteUrl } from "@/lib/site-url";
 import { Toaster } from "sonner";
+import { TOASTER_OPTIONS } from "@/lib/ui/notify";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -52,7 +53,7 @@ export default function RootLayout({
         <ServiceWorkerRegister />
         <CookieConsentBanner />
         {children}
-        <Toaster position="bottom-right" richColors closeButton />
+        <Toaster {...TOASTER_OPTIONS} />
       </body>
     </html>
   );

@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/layout/PageHeader"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { MetricStrip, type MetricItem } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
-import { Button } from "@/components/ui/button"
+import { PageErrorNotifier } from "@/components/ui/PageErrorNotifier"
 import { cn } from "@/lib/utils"
 
 type ModulePageShellProps = {
@@ -65,16 +65,7 @@ export function ModulePageShell({
           <MetricStrip items={metrics} className={metricsClassName} />
         ) : null}
 
-        {error ? (
-          <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 animate-fade-rise">
-            <p className="text-sm text-red-700">{error}</p>
-            {onRetry ? (
-              <Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>
-                {retryLabel}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
+        <PageErrorNotifier error={error} onRetry={onRetry} />
 
         {content}
       </div>

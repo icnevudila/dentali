@@ -31,6 +31,7 @@ import {
   type ProviderAvailabilityRow,
 } from "@/lib/appointments/provider-availability-service"
 import { usePermission } from "@/hooks/use-permission"
+import { notify } from "@/lib/ui/notify"
 
 const ROLE_LABELS: Record<string, string> = {
   owner: "Owner",
@@ -96,7 +97,7 @@ export default function StaffSettingsPage() {
   }, [activeBranchId])
 
   const handleRevokeInvite = async (inv: StaffInvitation) => {
-    if (!confirm(`Revoke invitation for ${inv.email}?`)) return
+    if (!(await notify.confirm(`Revoke invitation for ${inv.email}?`))) return
     setActionId(inv.id)
     const { error: revokeError } = await revokeStaffInvitation(inv.id)
     if (revokeError) {

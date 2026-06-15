@@ -41,7 +41,7 @@ import {
   type PrescriptionRecord,
 } from "@/lib/clinical/prescription-service"
 import { buildPrescriptionPrintHtml, printPrescription } from "@/lib/clinical/prescription-print"
-import { toast } from "sonner"
+import { notify } from "@/lib/ui/notify"
 
 function formatPatientGender(gender: string | null | undefined): string | null {
   if (!gender || gender === "prefer_not_to_say") return null
@@ -184,12 +184,12 @@ export default function PrescriptionsPage() {
         setError(signErr)
         return
       }
-      toast.success("Prescription signed")
+      notify.success("Prescription signed")
       resetDraft()
       await loadHistory()
     } else {
       setSaving(false)
-      toast.success("Draft saved")
+      notify.success("Draft saved")
       await loadHistory()
     }
   }
@@ -218,11 +218,12 @@ export default function PrescriptionsPage() {
   }
 
   const handleVoid = async (rxId: string) => {
-    if (!confirm("Void this prescription?")) return
+    const ok = await notify.confirm("Void this prescription?")
+    if (!ok) return
     const { error: err } = await voidPrescription(rxId, "Voided by clinician")
-    if (err) setError(err)
+    if (err) notify.error(err)
     else {
-      toast.success("Prescription voided")
+      notify.success("Prescription voided")
       if (viewRxId === rxId) setViewRxId(null)
       await loadHistory()
     }
@@ -251,19 +252,16 @@ export default function PrescriptionsPage() {
   }
 
   const handleUnsign = async (rxId: string) => {
-    if (
-      !confirm(
-        "Remove approval from this prescription? It will return to draft so you can edit medications again."
-      )
-    ) {
-      return
-    }
+    const ok = await notify.confirm(
+      "Remove approval from this prescription? It will return to draft so you can edit medications again."
+    )
+    if (!ok) return
     const { error: err } = await unsignPrescription(rxId)
     if (err) {
-      setError(err)
+      notify.error(err)
       return
     }
-    toast.success("Prescription unlocked for editing")
+    notify.success("Prescription unlocked for editing")
     await loadHistory()
     if (viewRxId === rxId) {
       const { data } = await getPrescription(rxId)

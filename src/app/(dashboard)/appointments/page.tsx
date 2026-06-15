@@ -20,10 +20,12 @@ import {
   markAppointmentNoShow,
   type AppointmentRecord,
 } from "@/lib/appointments/appointment-service"
-import { toast } from "sonner"
+import { notify } from "@/lib/ui/notify"
+import { PageErrorNotifier } from "@/components/ui/PageErrorNotifier"
 import {
   fetchPreparedAppointmentSlots,
   manilaScheduledAtIso,
+  pickDefaultSlotTime,
 } from "@/lib/appointments/appointment-slots"
 import {
   fetchBranchProviderAvailability,
@@ -186,11 +188,11 @@ function AppointmentsPageContent() {
       branchId: activeBranch.id,
       providerId: selectedProviderId,
       date,
-    }).then(({ data }) => {
+    }).then(({ data, error: slotError }) => {
       setSlots(data)
       setSlotsLoading(false)
-      const firstOpen = data.find((s) => s.available)
-      if (firstOpen) setTime(firstOpen.time)
+      if (slotError) notify.error(slotError)
+      setTime((prev) => pickDefaultSlotTime(data, prev))
     })
   }, [activeBranch, selectedProviderId, date])
 
@@ -273,10 +275,10 @@ function AppointmentsPageContent() {
     })
     setBooking(false)
     if (err) {
-      toast.error(err)
+      notify.error(err)
       setError(err)
     } else {
-      toast.success(t("appointments.bookingSuccess", "Appointment created successfully"))
+      notify.success(t("appointments.bookingSuccess", "Appointment created successfully"))
       setShowBook(false)
       setSelectedPatientId("")
       setPurpose("")
@@ -306,9 +308,9 @@ function AppointmentsPageContent() {
     const { error: err } = await rescheduleAppointment(id, scheduledAt)
     setReschedulingId(null)
     if (err) {
-      toast.error(err)
+      notify.error(err)
     } else {
-      toast.success(
+      notify.success(
         t("appointments.rescheduleSuccess", "Appointment rescheduled successfully") +
           ` · ${targetDateKey}`
       )
@@ -333,10 +335,10 @@ function AppointmentsPageContent() {
       const { data, error: err } = await markAppointmentNoShow(id)
       setUpdatingId(null)
       if (err) {
-        toast.error(err)
+        notify.error(err)
         if (appt) patchAppointment(id, { status: appt.status })
       } else {
-        toast.success(t("appointments.noShowMarked", "Appointment marked as no-show"))
+        notify.success(t("appointments.noShowMarked", "Appointment marked as no-show"))
         const slotAt = data?.scheduled_at ?? appt?.scheduled_at
         if (slotAt) void tryNotifyWaitlist(slotAt)
       }
@@ -346,10 +348,10 @@ function AppointmentsPageContent() {
     const { error: err } = await updateAppointmentStatus(id, status)
     setUpdatingId(null)
     if (err) {
-      toast.error(err)
+      notify.error(err)
       if (appt) patchAppointment(id, { status: appt.status })
     } else {
-      toast.success(t("appointments.statusUpdated", "Appointment status updated"))
+      notify.success(t("appointments.statusUpdated", "Appointment status updated"))
       if (status === "cancelled" && appt?.scheduled_at) {
         void tryNotifyWaitlist(appt.scheduled_at)
       }
@@ -371,7 +373,7 @@ function AppointmentsPageContent() {
     setCheckingInId(null)
     if (err) {
       if (err.includes("Pending consents") && !forceCheckin) {
-        const ok = window.confirm(
+        const ok = await notify.confirm(
           t(
             "queue.consentOverrideConfirm",
             "Required consents are unsigned. Check in anyway? This will be logged in audit."
@@ -380,7 +382,7 @@ function AppointmentsPageContent() {
         if (ok) return handleCheckIn(appointmentId, forceBillingOverride, true)
       }
       if (err.includes("Billing clearance") && !forceBillingOverride) {
-        const ok = window.confirm(
+        const ok = await notify.confirm(
           t(
             "billing.gateConfirmCheckIn",
             "Patient has outstanding billing. Check in anyway? This will be logged in audit."
@@ -388,9 +390,9 @@ function AppointmentsPageContent() {
         )
         if (ok) return handleCheckIn(appointmentId, true, forceCheckin)
       }
-      toast.error(err)
+      notify.error(err)
     } else if (data) {
-      toast.success(t("appointments.checkInSuccess", "Patient checked in and added to queue"))
+      notify.success(t("appointments.checkInSuccess", "Patient checked in and added to queue"))
       patchAppointment(appointmentId, { status: "checked_in" })
       setCheckInQueueNotice(true)
     }
@@ -543,14 +545,7 @@ function AppointmentsPageContent() {
 
           <MetricStrip items={metricItems} />
 
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 animate-fade-rise">
-            <p className="text-sm text-red-700">{error}</p>
-            <Button variant="outline" size="sm" className="mt-3" onClick={reload}>
-              {t("common.retry", "Retry")}
-            </Button>
-          </div>
-        )}
+        {error ? <PageErrorNotifier error={error} onRetry={reload} /> : null}
         {checkInQueueNotice ? (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900 animate-fade-rise">
             {t("appointments.checkInSuccess", "Patient checked in and added to the queue.")}{" "}
@@ -741,8 +736,12 @@ function AppointmentsPageContent() {
                               date,
                             })
                             setSlots(newSlots)
-                          } catch (err: any) {
-                            setError(err?.message || "Failed to configure slots")
+                            setTime((prev) => pickDefaultSlotTime(newSlots, prev))
+                            notify.success(t("appointments.slotsConfigured", "Working hours configured."))
+                          } catch (err: unknown) {
+                            notify.error(
+                              err instanceof Error ? err.message : "Failed to configure slots"
+                            )
                           } finally {
                             setSlotsLoading(false)
                           }

@@ -16,6 +16,7 @@ import {
   type CloseoutSnapshot,
   type DailyCloseout,
 } from "@/lib/analytics/analytics-service"
+import { PageErrorNotifier } from "@/components/ui/PageErrorNotifier"
 import { Button } from "@/components/ui/button"
 import { CompareBar } from "@/components/charts/ChartKit"
 import { CloseoutPrintDocument } from "@/components/reports/CloseoutPrintDocument"
@@ -200,9 +201,8 @@ export default function DailyCloseoutPage() {
         </div>
       }
     >
-      {error ? (
-        <p className="text-sm text-red-600">{error}</p>
-      ) : (
+      <PageErrorNotifier error={error} onRetry={reload} />
+      {error ? null : (
         <div className="space-y-6">
           <MetricStrip items={metrics} className="lg:grid-cols-3" />
 

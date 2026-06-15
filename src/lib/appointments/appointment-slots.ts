@@ -4,16 +4,6 @@ import {
   type AppointmentSlot,
 } from "@/lib/appointments/provider-availability-service"
 
-export function withCurrentAppointmentSlot(
-  slots: AppointmentSlot[],
-  currentTime?: string
-): AppointmentSlot[] {
-  if (!currentTime || slots.some((slot) => slot.time === currentTime)) return slots
-  return [...slots, { time: currentTime, available: true }].sort((a, b) =>
-    a.time.localeCompare(b.time)
-  )
-}
-
 export async function fetchPreparedAppointmentSlots(params: {
   branchId: string
   providerId: string
@@ -28,17 +18,24 @@ export async function fetchPreparedAppointmentSlots(params: {
     return { data: [], error: ensureError }
   }
 
-  const { data, error } = await fetchAvailableAppointmentSlots(params)
-  if (error) {
-    return { data: [], error }
-  }
+  return fetchAvailableAppointmentSlots(params)
+}
 
-  if (data.length > 0) {
-    return { data, error: null }
+export function pickDefaultSlotTime(
+  slots: AppointmentSlot[],
+  preferred?: string,
+  currentEditable?: string
+): string {
+  if (
+    preferred &&
+    slots.some(
+      (slot) =>
+        slot.time === preferred && (slot.available || slot.time === currentEditable)
+    )
+  ) {
+    return preferred
   }
-
-  const retry = await fetchAvailableAppointmentSlots(params)
-  return { data: retry.data, error: retry.error }
+  return slots.find((slot) => slot.available)?.time ?? ""
 }
 
 export function manilaScheduledAtIso(date: string, time: string): string {

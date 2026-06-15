@@ -10,7 +10,7 @@ import { useLocale } from "@/hooks/use-locale"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { searchPatients } from "@/lib/patients/patient-service"
 import { createManualInvoice } from "@/lib/billing/invoice-service"
-import { toast } from "sonner"
+import { notify } from "@/lib/ui/notify"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -95,7 +95,7 @@ export function ManualInvoiceDrawer({
     let finalInvoiceNumber = customInvoiceNumber.trim()
     if (!finalInvoiceNumber) {
       const generated = `${series}-${Date.now().toString(36).toUpperCase()}`
-      const confirmed = window.confirm(
+      const confirmed = await notify.confirm(
         `No invoice number entered. Auto-generate as "${generated}"?`
       )
       if (!confirmed) return
@@ -124,12 +124,12 @@ export function ManualInvoiceDrawer({
 
     setCreating(false)
     if (err) {
-      toast.error(err)
+      notify.error(err)
       setError(err)
       return
     }
 
-    toast.success("Invoice created successfully")
+    notify.success("Invoice created successfully")
     close()
     if (data?.id) {
       onCreated?.(data.id)

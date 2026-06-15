@@ -5,6 +5,7 @@ import { Upload, Download, Trash2, FileText, ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { notify } from "@/lib/ui/notify"
 import { Badge } from "@/components/ui/badge"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { PermissionGate } from "@/components/auth/PermissionGate"
@@ -118,7 +119,7 @@ export function PatientDocumentsPanel({ patientId }: { patientId: string }) {
   }
 
   const handleDelete = async (doc: PatientDocument) => {
-    if (!confirm(t("patients.docDeleteConfirm", "Delete {name}?").replace("{name}", doc.file_name))) return
+    if (!(await notify.confirm(t("patients.docDeleteConfirm", "Delete {name}?").replace("{name}", doc.file_name)))) return
     const { error: err } = await deletePatientDocument({
       documentId: doc.id,
       storagePath: doc.storage_path,

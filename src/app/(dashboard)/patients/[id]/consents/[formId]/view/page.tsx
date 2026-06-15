@@ -5,6 +5,7 @@ import { Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { notify } from "@/lib/ui/notify"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
@@ -103,7 +104,7 @@ export default function ConsentViewPage() {
 
   const handleVoid = async () => {
     if (!consentId || !voidReason.trim()) return
-    if (!confirm("Void this signed consent? Patient will need to sign again.")) return
+    if (!(await notify.confirm("Void this signed consent? Patient will need to sign again."))) return
     setVoiding(true)
     setError(null)
     const { error: err } = await voidPatientConsent({ consentId, reason: voidReason.trim() })
