@@ -32,7 +32,7 @@ export async function fetchActiveLabCases(branchId: string): Promise<{ data: Pat
     .from("lab_cases")
     .select(`
       *,
-      patients:patient_id (
+      patients (
         id,
         first_name,
         last_name
@@ -55,7 +55,7 @@ export async function fetchPatientLabCases(
     .from("lab_cases")
     .select(`
       *,
-      patients:patient_id (
+      patients (
         id,
         first_name,
         last_name
@@ -95,7 +95,7 @@ export async function createLabCase(
     })
     .select(`
       *,
-      patients:patient_id (
+      patients (
         id,
         first_name,
         last_name

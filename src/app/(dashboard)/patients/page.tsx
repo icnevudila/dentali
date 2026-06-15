@@ -27,13 +27,33 @@ import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import Link from "next/link"
-import { ClipboardList, MapPin, Plus, Users } from "lucide-react"
+import { ClipboardList, Globe, MapPin, Monitor, Plus, Users } from "lucide-react"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
 import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 import { PatientsAnalyticsPanel } from "@/components/analytics/PatientsAnalyticsPanel"
+import type { IntakeDraftCounts } from "@/lib/patients/intake-draft-review"
 
 const PAGE_SIZE = 20
+
+type IntakeSourceFilter = "all" | "kiosk" | "portal" | "unknown"
+
+function formatIntakeBreakdown(
+  counts: IntakeDraftCounts,
+  t: (key: string, fallback: string) => string
+): string {
+  const parts: string[] = []
+  if (counts.kiosk > 0) {
+    parts.push(`${counts.kiosk} ${t("patients.sourceKioskShort", "kiosk")}`)
+  }
+  if (counts.portal > 0) {
+    parts.push(`${counts.portal} ${t("patients.sourcePortalShort", "portal")}`)
+  }
+  if (counts.unknown > 0) {
+    parts.push(`${counts.unknown} ${t("patients.sourceUnknownShort", "other")}`)
+  }
+  return parts.join(" · ")
+}
 
 function useDebouncedValue<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = React.useState(value)
@@ -66,6 +86,13 @@ function PatientsPageContent() {
   const urlQuery = searchParams.get("q") ?? ""
   const urlPage = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1)
   const attentionConsents = searchParams.get("attention") === "consents"
+  const intakeSourceParam = searchParams.get("intakeSource")
+  const intakeSourceFilter: IntakeSourceFilter =
+    intakeSourceParam === "kiosk" ||
+    intakeSourceParam === "portal" ||
+    intakeSourceParam === "unknown"
+      ? intakeSourceParam
+      : "all"
   const [query, setQuery] = React.useState(urlQuery)
   const debouncedQuery = useDebouncedValue(query, 300)
   const [page, setPage] = React.useState(urlPage)
@@ -77,6 +104,12 @@ function PatientsPageContent() {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [pendingIntakeCount, setPendingIntakeCount] = React.useState(0)
+  const [intakeCounts, setIntakeCounts] = React.useState<IntakeDraftCounts>({
+    total: 0,
+    kiosk: 0,
+    portal: 0,
+    unknown: 0,
+  })
   const [chartFindingsByPatient, setChartFindingsByPatient] = React.useState<
     Record<string, ToothFinding[]>
   >({})
@@ -161,6 +194,24 @@ function PatientsPageContent() {
     return () => window.removeEventListener("keydown", onKey)
   }, [])
 
+  const scrollToIntakePanel = React.useCallback((filter: IntakeSourceFilter = "all") => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (filter === "all") params.delete("intakeSource")
+    else params.set("intakeSource", filter)
+    const qs = params.toString()
+    router.replace(qs ? `/patients?${qs}` : "/patients", { scroll: false })
+    requestAnimationFrame(() => {
+      document.getElementById("pending-intake-panel")?.scrollIntoView({ behavior: "smooth", block: "start" })
+    })
+  }, [router, searchParams])
+
+  const handleIntakeCountsChange = React.useCallback((counts: IntakeDraftCounts) => {
+    setIntakeCounts(counts)
+    setPendingIntakeCount(counts.total)
+  }, [])
+
+  const intakeBreakdown = formatIntakeBreakdown(intakeCounts, t)
+
   const metricItems = [
     {
       label: t("patients.metricTotal", "Patients in registry"),
@@ -178,12 +229,39 @@ function PatientsPageContent() {
     ...(pendingIntakeCount > 0
       ? [
           {
-            label: t("patients.metricPendingIntake", "Pending intake"),
+            label: t("patients.metricPendingIntake", "Pending registrations"),
             value: pendingIntakeCount,
-            hint: t("patients.metricPendingIntakeHint", "Kiosk drafts to review"),
+            hint: intakeBreakdown
+              ? `${intakeBreakdown} — ${t("patients.intakeMetricTap", "Tap to review")}`
+              : t("patients.metricPendingIntakeHint", "Kiosk & portal drafts to review"),
             icon: ClipboardList,
             variant: "warning" as const,
+            onClick: () => scrollToIntakePanel("all"),
           },
+          ...(intakeCounts.kiosk > 0
+            ? [
+                {
+                  label: t("patients.metricKioskIntake", "Kiosk intake"),
+                  value: intakeCounts.kiosk,
+                  hint: t("patients.metricKioskIntakeHint", "Tablet registrations — tap to filter"),
+                  icon: Monitor,
+                  variant: "warning" as const,
+                  onClick: () => scrollToIntakePanel("kiosk"),
+                },
+              ]
+            : []),
+          ...(intakeCounts.portal > 0
+            ? [
+                {
+                  label: t("patients.metricPortalIntake", "Portal intake"),
+                  value: intakeCounts.portal,
+                  hint: t("patients.metricPortalIntakeHint", "Online new patients — tap to filter"),
+                  icon: Globe,
+                  variant: "warning" as const,
+                  onClick: () => scrollToIntakePanel("portal"),
+                },
+              ]
+            : []),
         ]
       : []),
   ]
@@ -266,14 +344,16 @@ function PatientsPageContent() {
             </div>
           ) : null}
 
-          <MetricStrip items={metricItems} className="lg:grid-cols-3" />
+          <MetricStrip items={metricItems} className="lg:grid-cols-3 xl:grid-cols-4" />
 
           {activeBranch ? <PatientsAnalyticsPanel branchId={activeBranch.id} /> : null}
 
           {activeBranch ? (
             <PatientIntakeDraftPanel
               branchId={activeBranch.id}
-              onCountChange={setPendingIntakeCount}
+              sourceFilter={intakeSourceFilter}
+              onSourceFilterChange={(filter) => scrollToIntakePanel(filter)}
+              onCountsChange={handleIntakeCountsChange}
             />
           ) : null}
 

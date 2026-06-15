@@ -183,3 +183,13 @@ export async function voidPrescription(
   })
   return { error: error?.message ?? null }
 }
+
+export async function unsignPrescription(
+  prescriptionId: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase.rpc("unsign_prescription", {
+    p_prescription_id: prescriptionId,
+  })
+  return { error: error?.message ?? null }
+}

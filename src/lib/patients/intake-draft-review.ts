@@ -8,6 +8,31 @@ export interface KioskIntakeDraft {
   created_at: string
 }
 
+export type IntakeRegistrationSource = "kiosk" | "portal" | "unknown"
+
+export type IntakeDraftCounts = {
+  total: number
+  kiosk: number
+  portal: number
+  unknown: number
+}
+
+export function getIntakeSource(payload: Record<string, unknown>): IntakeRegistrationSource {
+  const source = String(payload.source ?? "").toLowerCase()
+  if (source === "portal") return "portal"
+  if (source === "kiosk") return "kiosk"
+  return "unknown"
+}
+
+export function countIntakeDrafts(drafts: KioskIntakeDraft[]): IntakeDraftCounts {
+  return {
+    total: drafts.length,
+    kiosk: drafts.filter((d) => getIntakeSource(d.payload) === "kiosk").length,
+    portal: drafts.filter((d) => getIntakeSource(d.payload) === "portal").length,
+    unknown: drafts.filter((d) => getIntakeSource(d.payload) === "unknown").length,
+  }
+}
+
 const DRAFT_REVIEW_KEY = "ph_dental_intake_draft_review"
 
 export function payloadToFormValues(payload: Record<string, unknown>): Partial<PatientFormValues> {

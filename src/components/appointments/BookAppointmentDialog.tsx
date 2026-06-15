@@ -12,10 +12,10 @@ import { useAuth } from "@/hooks/use-auth"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
 import {
-  ensureProviderAvailabilityDefaults,
-  fetchAvailableAppointmentSlots,
-  type AppointmentSlot,
-} from "@/lib/appointments/provider-availability-service"
+  fetchPreparedAppointmentSlots,
+  manilaScheduledAtIso,
+} from "@/lib/appointments/appointment-slots"
+import type { AppointmentSlot } from "@/lib/appointments/provider-availability-service"
 import { AppointmentSlotButtons } from "@/components/appointments/AppointmentSlotButtons"
 import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
 import { PatientBillingGateBanner } from "@/components/billing/PatientBillingGateBanner"
@@ -78,14 +78,14 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
       return
     }
     setSlotsLoading(true)
-    void ensureProviderAvailabilityDefaults(activeBranch.id, providerId)
-    fetchAvailableAppointmentSlots({
+    void fetchPreparedAppointmentSlots({
       branchId: activeBranch.id,
       providerId,
       date,
-    }).then(({ data }) => {
+    }).then(({ data, error: slotError }) => {
       setSlots(data)
       setSlotsLoading(false)
+      if (slotError) setError(slotError)
       const firstOpen = data.find((s) => s.available)
       if (firstOpen) setTime(firstOpen.time)
     })
@@ -111,7 +111,7 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
       return
     }
 
-    const scheduledAt = new Date(`${date}T${time}:00`).toISOString()
+    const scheduledAt = manilaScheduledAtIso(date, time)
     const { error: createError } = await createAppointment({
       organizationId: org.id,
       branchId: activeBranch.id,

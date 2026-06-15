@@ -35,6 +35,7 @@ import {
   getPrescription,
   savePrescriptionDraft,
   signPrescription,
+  unsignPrescription,
   voidPrescription,
   type PrescriptionItem,
   type PrescriptionRecord,
@@ -227,6 +228,49 @@ export default function PrescriptionsPage() {
     }
   }
 
+  const loadDraftFromRx = (rx: PrescriptionRecord) => {
+    setDraftId(rx.id)
+    setDiagnosis(rx.diagnosis ?? "")
+    setGeneralInstructions(rx.general_instructions ?? "")
+    setViewRxId(null)
+    getPrescription(rx.id).then(({ data }) => {
+      if (data?.items) {
+        setItems(
+          data.items.map((i) => ({
+            drug_name: i.drug_name || "",
+            strength: i.strength || "",
+            dosage: i.dosage || "",
+            frequency: i.frequency || "",
+            duration: i.duration || "",
+            quantity: i.quantity || "",
+            instructions: i.instructions || "",
+          }))
+        )
+      }
+    })
+  }
+
+  const handleUnsign = async (rxId: string) => {
+    if (
+      !confirm(
+        "Remove approval from this prescription? It will return to draft so you can edit medications again."
+      )
+    ) {
+      return
+    }
+    const { error: err } = await unsignPrescription(rxId)
+    if (err) {
+      setError(err)
+      return
+    }
+    toast.success("Prescription unlocked for editing")
+    await loadHistory()
+    if (viewRxId === rxId) {
+      const { data } = await getPrescription(rxId)
+      if (data) setViewRx(data)
+    }
+  }
+
   return (
     <PermissionGate permission={PERMISSIONS.PRESCRIPTIONS_READ}>
       <PatientPageShell
@@ -416,29 +460,22 @@ export default function PrescriptionsPage() {
                               <Printer className="h-3.5 w-3.5" /> Print
                             </Button>
                           ) : null}
+                          {rx.status === "signed" && canWrite ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 text-amber-800 border-amber-200 hover:bg-amber-50"
+                              onClick={() => void handleUnsign(rx.id)}
+                            >
+                              <PenLine className="h-3.5 w-3.5" /> Unapprove
+                            </Button>
+                          ) : null}
                           {rx.status === "draft" && canWrite ? (
                             <Button
                               size="sm"
                               variant="outline"
                               className="gap-1 text-primary-700 hover:text-primary-800"
-                              onClick={() => {
-                                setDraftId(rx.id)
-                                setDiagnosis(rx.diagnosis ?? "")
-                                setGeneralInstructions(rx.general_instructions ?? "")
-                                getPrescription(rx.id).then(({ data }) => {
-                                  if (data?.items) {
-                                    setItems(data.items.map((i) => ({
-                                      drug_name: i.drug_name || "",
-                                      strength: i.strength || "",
-                                      dosage: i.dosage || "",
-                                      frequency: i.frequency || "",
-                                      duration: i.duration || "",
-                                      quantity: i.quantity || "",
-                                      instructions: i.instructions || "",
-                                    })))
-                                  }
-                                })
-                              }}
+                              onClick={() => loadDraftFromRx(rx)}
                             >
                               Edit draft
                             </Button>
@@ -542,10 +579,25 @@ export default function PrescriptionsPage() {
                         </p>
                       ) : null}
 
-                      <div className="flex gap-2 pt-2">
+                      <div className="flex flex-wrap gap-2 pt-2">
                         {viewRx.status === "signed" ? (
                           <Button size="sm" className="gap-1.5" onClick={() => void handlePrint(viewRx)}>
                             <Printer className="h-4 w-4" /> Print Rx
+                          </Button>
+                        ) : null}
+                        {viewRx.status === "signed" && canWrite ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 text-amber-800 border-amber-200 hover:bg-amber-50"
+                            onClick={() => void handleUnsign(viewRx.id)}
+                          >
+                            <PenLine className="h-4 w-4" /> Unapprove to edit
+                          </Button>
+                        ) : null}
+                        {viewRx.status === "draft" && canWrite ? (
+                          <Button size="sm" variant="outline" onClick={() => loadDraftFromRx(viewRx)}>
+                            Edit draft
                           </Button>
                         ) : null}
                         <Button size="sm" variant="outline" onClick={() => setViewRxId(null)}>

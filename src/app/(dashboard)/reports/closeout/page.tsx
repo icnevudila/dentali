@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Download, Printer, RefreshCw, Save, Wallet } from "lucide-react"
+import { ArrowLeft, Download, Printer, RefreshCw, Save, Wallet, CheckCircle2, XCircle, FileWarning, Receipt, PackageX } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
+import { MetricStrip } from "@/components/layout/MetricStrip"
+import type { MetricItem } from "@/components/layout/MetricStrip"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
 import {
@@ -16,6 +18,7 @@ import {
 } from "@/lib/analytics/analytics-service"
 import { Button } from "@/components/ui/button"
 import { CompareBar } from "@/components/charts/ChartKit"
+import { CloseoutPrintDocument } from "@/components/reports/CloseoutPrintDocument"
 
 export default function DailyCloseoutPage() {
   const { activeBranch } = useBranch()
@@ -43,21 +46,69 @@ export default function DailyCloseoutPage() {
     void reload()
   }, [reload])
 
-  const metrics = data
+  const metrics: MetricItem[] = data
     ? [
-        { label: t("closeout.collected", "Collected today"), value: data.collected },
-        { label: t("closeout.openBalance", "Open balance"), value: data.openBalance },
-        { label: t("closeout.completed", "Completed visits"), value: data.appointmentsCompleted },
-        { label: t("closeout.noShow", "No-shows"), value: data.noShow },
-        { label: t("closeout.pendingConsents", "Pending consents"), value: data.pendingConsents },
-        { label: t("closeout.hmoPending", "HMO pending"), value: data.hmoPending },
+        {
+          label: t("closeout.collected", "Collected today"),
+          value: loading ? "—" : `₱${data.collected.toLocaleString()}`,
+          hint: t("reports.metricCollectedOpen", "Open billing ledger"),
+          icon: Wallet,
+          variant: data.collected > 0 ? "success" : "default",
+          href: "/billing",
+        },
+        {
+          label: t("closeout.openBalance", "Open balance"),
+          value: loading ? "—" : `₱${data.openBalance.toLocaleString()}`,
+          hint: t("closeout.openBalanceHint", "View open invoices"),
+          icon: Receipt,
+          variant: data.openBalance > 0 ? "warning" : "default",
+          href: "/billing?focus=open",
+        },
+        {
+          label: t("closeout.completed", "Completed visits"),
+          value: loading ? "—" : data.appointmentsCompleted,
+          hint: t("reports.metricCompletedOpen", "View completed visits"),
+          icon: CheckCircle2,
+          variant: data.appointmentsCompleted > 0 ? "success" : "default",
+          href: "/appointments",
+        },
+        {
+          label: t("closeout.noShow", "No-shows"),
+          value: loading ? "—" : data.noShow,
+          hint: t("reports.metricNoShowOpen", "Review appointments"),
+          icon: XCircle,
+          variant: data.noShow > 0 ? "warning" : "default",
+          href: "/appointments",
+        },
+        {
+          label: t("closeout.pendingConsents", "Pending consents"),
+          value: loading ? "—" : data.pendingConsents,
+          hint: t("dashboard.pendingConsentsHint", "Awaiting patient signature"),
+          icon: FileWarning,
+          variant: data.pendingConsents > 0 ? "warning" : "default",
+          href: "/patients?attention=consents",
+        },
+        {
+          label: t("closeout.hmoPending", "HMO pending"),
+          value: loading ? "—" : data.hmoPending,
+          hint: t("closeout.hmoPendingHint", "Open HMO claims"),
+          icon: PackageX,
+          variant: data.hmoPending > 0 ? "warning" : "default",
+          href: "/billing/hmo",
+        },
       ]
     : []
 
-  const chartData = metrics.map((m) => ({
-    label: m.label.length > 12 ? `${m.label.slice(0, 11)}…` : m.label,
-    value: m.value,
-  }))
+  const chartData = data
+    ? [
+        { label: t("closeout.collected", "Collected today").slice(0, 11), value: data.collected },
+        { label: t("closeout.openBalance", "Open balance").slice(0, 11), value: data.openBalance },
+        { label: t("closeout.completed", "Completed visits").slice(0, 11), value: data.appointmentsCompleted },
+        { label: t("closeout.noShow", "No-shows").slice(0, 11), value: data.noShow },
+        { label: t("closeout.pendingConsents", "Pending consents").slice(0, 11), value: data.pendingConsents },
+        { label: t("closeout.hmoPending", "HMO pending").slice(0, 11), value: data.hmoPending },
+      ]
+    : []
 
   const handleSaveSnapshot = async () => {
     setSavingSnapshot(true)
@@ -95,7 +146,28 @@ export default function DailyCloseoutPage() {
     URL.revokeObjectURL(url)
   }
 
+  const printMetrics = metrics.map((m) => ({
+    label: m.label,
+    value: String(m.value),
+  }))
+
   return (
+    <>
+      {data ? (
+        <CloseoutPrintDocument
+          clinicName="DentQL"
+          branchName={activeBranch?.name ?? null}
+          reportDate={data.date}
+          title={t("closeout.title", "Daily closeout")}
+          subtitle={t("closeout.subtitle", "Review collections, open balances, and exceptions before closing the day.")}
+          metrics={printMetrics}
+          data={data}
+          history={history}
+          snapshotTitle={t("closeout.snapshot", "Today snapshot")}
+          historyTitle={t("closeout.history", "Saved snapshots")}
+        />
+      ) : null}
+
     <ModulePageShell
       icon={Wallet}
       eyebrow={t("closeout.eyebrow", "Owner · End of day")}
@@ -132,23 +204,7 @@ export default function DailyCloseoutPage() {
         <p className="text-sm text-red-600">{error}</p>
       ) : (
         <div className="space-y-6">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {metrics.map((m) => (
-              <div
-                key={m.label}
-                className="rounded-xl border border-neutral-200/80 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
-              >
-                <p className="text-xs font-medium text-neutral-500">{m.label}</p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">
-                  {loading
-                    ? "—"
-                    : m.label.includes("Collected") || m.label.includes("balance")
-                      ? `₱${Number(m.value).toLocaleString()}`
-                      : m.value}
-                </p>
-              </div>
-            ))}
-          </div>
+          <MetricStrip items={metrics} className="lg:grid-cols-3" />
 
           <div className="rounded-xl border border-neutral-200/80 bg-white p-4 print:border-0 print:shadow-none">
             <h3 className="mb-3 text-sm font-semibold text-neutral-900">
@@ -182,5 +238,6 @@ export default function DailyCloseoutPage() {
         </div>
       )}
     </ModulePageShell>
+    </>
   )
 }

@@ -3,7 +3,8 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users, Plus, Receipt, Pill } from "lucide-react"
+import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users, Plus, Receipt, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { MetricStrip } from "@/components/layout/MetricStrip"
@@ -42,22 +43,23 @@ import { buildClinicalVisitJourney } from "@/lib/clinical/clinical-visit-journey
 import { getPatientOdontogram } from "@/lib/odontogram/dental-chart-service"
 import { PatientVisitHistoryPanel } from "@/components/patients/PatientVisitHistoryPanel"
 import { ManualInvoiceDrawer } from "@/components/billing/ManualInvoiceDrawer"
+import { cn } from "@/lib/utils"
 
-const PATIENT_TABS = [
-  { id: "record", label: "Patient Record" },
-  { id: "medical-history", label: "Medical History" },
-  { id: "dental-chart", label: "Dental Chart" },
-  { id: "clinical-notes", label: "Clinical Notes" },
-  { id: "treatment-plans", label: "Treatment Plans" },
-  { id: "orthodontics", label: "Orthodontics" },
-  { id: "prescriptions", label: "Prescriptions" },
-  { id: "appointments", label: "Appointments" },
-  { id: "visits", label: "Visits" },
-  { id: "epicrisis", label: "Epicrisis & Discharge" },
-  { id: "consents", label: "Consents & Forms" },
-  { id: "radiology", label: "Radiology & Imaging" },
-  { id: "documents", label: "Documents" },
-] as const
+const PATIENT_TABS: { id: string; label: string; icon: LucideIcon }[] = [
+  { id: "record", label: "Patient Record", icon: ClipboardList },
+  { id: "medical-history", label: "Medical History", icon: Activity },
+  { id: "dental-chart", label: "Dental Chart", icon: Scan },
+  { id: "clinical-notes", label: "Clinical Notes", icon: FileText },
+  { id: "treatment-plans", label: "Treatment Plans", icon: ListOrdered },
+  { id: "orthodontics", label: "Orthodontics", icon: Braces },
+  { id: "prescriptions", label: "Prescriptions", icon: Pill },
+  { id: "appointments", label: "Appointments", icon: Calendar },
+  { id: "visits", label: "Visits", icon: UserCheck },
+  { id: "epicrisis", label: "Epicrisis & Discharge", icon: FileCheck2 },
+  { id: "consents", label: "Consents & Forms", icon: ShieldCheck },
+  { id: "radiology", label: "Radiology & Imaging", icon: ScanLine },
+  { id: "documents", label: "Documents", icon: FolderOpen },
+]
 
 type PatientTabId = (typeof PATIENT_TABS)[number]["id"]
 
@@ -421,19 +423,31 @@ export default function PatientProfilePage() {
 
           {/* Desktop sidebar list */}
           <nav className="hidden md:flex flex-col gap-1 border-r border-neutral-200 pr-6 w-full">
-            {PATIENT_TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? "bg-primary-50 text-primary-700"
-                    : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+            {PATIENT_TABS.map((tab) => {
+              const isActive = activeTab === tab.id
+              const TabIcon = tab.icon
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id as PatientTabId)}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-primary-50 text-primary-700"
+                      : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
+                  )}
+                >
+                  <TabIcon
+                    className={cn(
+                      "h-4 w-4 shrink-0",
+                      isActive ? "text-primary-600" : "text-neutral-500"
+                    )}
+                  />
+                  <span className="truncate">{tab.label}</span>
+                </button>
+              )
+            })}
           </nav>
         </aside>
 

@@ -8,70 +8,17 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useLocale } from "@/hooks/use-locale"
 import { formatDate } from "@/lib/i18n/translate"
-import { fetchPatientTimeline, type TimelineEvent } from "@/lib/clinical/clinical-notes-service"
-import { fetchPatientQueueHistory, type PatientQueueVisit } from "@/lib/queue/queue-service"
-import { fetchPatientLabCases, type PatientWithLabCase } from "@/lib/clinical/lab-service"
-
-type VisitRow = {
-  id: string
-  occurredAt: string
-  kind: "appointment" | "clinical_note" | "queue_visit" | "lab_case"
-  title: string
-  subtitle: string | null
-  status: string
-  meta?: string
-}
-
-function mergeVisitRows(
-  timeline: TimelineEvent[],
-  queueVisits: PatientQueueVisit[],
-  labCases: PatientWithLabCase[]
-): VisitRow[] {
-  const rows: VisitRow[] = []
-
-  for (const e of timeline) {
-    if (e.event_type === "appointment" && e.status === "cancelled") continue
-    rows.push({
-      id: `${e.event_type}-${e.event_id}`,
-      occurredAt: e.occurred_at,
-      kind: e.event_type === "clinical_note" ? "clinical_note" : "appointment",
-      title: e.title,
-      subtitle: e.subtitle,
-      status: e.status,
-      meta:
-        e.event_type === "appointment" && String(e.title).toLowerCase().includes("portal")
-          ? "online"
-          : undefined,
-    })
-  }
-
-  for (const q of queueVisits) {
-    rows.push({
-      id: `queue-${q.id}`,
-      occurredAt: q.completed_at ?? q.checked_in_at,
-      kind: "queue_visit",
-      title: q.appointment_id ? "Scheduled visit" : "Walk-in visit",
-      subtitle: `Queue ${q.display_code}${q.chair_label ? ` · ${q.chair_label}` : ""}`,
-      status: q.status,
-      meta: q.appointment_id ? "scheduled" : "walk-in",
-    })
-  }
-
-  for (const lab of labCases) {
-    rows.push({
-      id: `lab-${lab.id}`,
-      occurredAt: lab.sent_date,
-      kind: "lab_case",
-      title: lab.case_type,
-      subtitle: lab.lab_name,
-      status: lab.status,
-    })
-  }
-
-  return rows.sort(
-    (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
-  )
-}
+import type { AppLocale } from "@/lib/i18n/config"
+import { fetchPatientTimeline } from "@/lib/clinical/clinical-notes-service"
+import { fetchPatientQueueHistory } from "@/lib/queue/queue-service"
+import { fetchPatientLabCases } from "@/lib/clinical/lab-service"
+import {
+  groupSessionsByWeek,
+  groupVisitRowsIntoSessions,
+  mergeVisitRows,
+  type VisitRow,
+  type VisitWeekBucket,
+} from "@/lib/patients/visit-history-grouping"
 
 function kindIcon(kind: VisitRow["kind"]) {
   switch (kind) {
@@ -125,9 +72,27 @@ function kindBadge(row: VisitRow, t: (key: string, fallback: string) => string) 
   return null
 }
 
+function weekBucketLabel(bucket: VisitWeekBucket, t: (key: string, fallback: string) => string) {
+  switch (bucket) {
+    case "this_week":
+      return t("visits.thisWeek", "This week")
+    case "last_week":
+      return t("visits.lastWeek", "Last week")
+    default:
+      return t("visits.earlier", "Earlier")
+  }
+}
+
+function sessionTitle(sessionAt: string, t: (key: string, fallback: string) => string, locale: AppLocale) {
+  return t("visits.sessionOn", "Visit · {date}").replace(
+    "{date}",
+    formatDate(locale, sessionAt)
+  )
+}
+
 export function PatientVisitHistoryPanel({ patientId, branchId }: { patientId: string; branchId?: string | null }) {
   const { t, locale } = useLocale()
-  const [rows, setRows] = React.useState<VisitRow[]>([])
+  const [grouped, setGrouped] = React.useState<ReturnType<typeof groupSessionsByWeek>>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
 
@@ -140,13 +105,18 @@ export function PatientVisitHistoryPanel({ patientId, branchId }: { patientId: s
     ])
     if (timelineRes.error) setError(timelineRes.error)
     else setError(null)
-    setRows(mergeVisitRows(timelineRes.data, queueRes.data, labRes.data))
+
+    const rows = mergeVisitRows(timelineRes.data, queueRes.data, labRes.data)
+    const sessions = groupVisitRowsIntoSessions(rows, queueRes.data)
+    setGrouped(groupSessionsByWeek(sessions))
     setLoading(false)
   }, [patientId, branchId])
 
   React.useEffect(() => {
     void load()
   }, [load])
+
+  const sessionCount = grouped.reduce((sum, g) => sum + g.sessions.length, 0)
 
   return (
     <Card>
@@ -159,8 +129,8 @@ export function PatientVisitHistoryPanel({ patientId, branchId }: { patientId: s
             </CardTitle>
             <CardDescription>
               {t(
-                "visits.description",
-                "Every time this patient came in — appointments, queue check-ins, notes, and lab work."
+                "visits.descriptionGrouped",
+                "Each clinic visit is grouped separately — check-ins, appointments, notes, and lab work from the same day stay together."
               )}
             </CardDescription>
           </div>
@@ -174,34 +144,66 @@ export function PatientVisitHistoryPanel({ patientId, branchId }: { patientId: s
           <p className="text-sm text-neutral-500">{t("common.loading", "Loading…")}</p>
         ) : error ? (
           <p className="text-sm text-red-700">{error}</p>
-        ) : rows.length === 0 ? (
+        ) : sessionCount === 0 ? (
           <p className="text-sm text-neutral-500">{t("visits.empty", "No visits recorded yet.")}</p>
         ) : (
-          <ul className="divide-y divide-neutral-100">
-            {rows.slice(0, 25).map((row) => {
-              const Icon = kindIcon(row.kind)
-              return (
-                <li key={row.id} className="flex gap-3 py-3 first:pt-0">
-                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-600">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium text-neutral-900">{row.title}</p>
-                      {kindBadge(row, t)}
-                      <Badge variant={row.status === "completed" || row.status === "served" || row.status === "signed" ? "success" : "outline"} className="text-[10px] capitalize">
-                        {row.status.replace(/_/g, " ")}
-                      </Badge>
+          <div className="space-y-6">
+            {grouped.map((group) => (
+              <section key={group.bucket}>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+                  {weekBucketLabel(group.bucket, t)}
+                </h3>
+                <div className="space-y-4">
+                  {group.sessions.map((session) => (
+                    <div
+                      key={session.key}
+                      className="rounded-xl border border-neutral-200 bg-neutral-50/40 overflow-hidden"
+                    >
+                      <div className="border-b border-neutral-200 bg-white px-4 py-2.5">
+                        <p className="text-sm font-semibold text-neutral-900">
+                          {sessionTitle(session.sessionAt, t, locale)}
+                        </p>
+                      </div>
+                      <ul className="divide-y divide-neutral-100 px-4">
+                        {session.rows.map((row) => {
+                          const Icon = kindIcon(row.kind)
+                          return (
+                            <li key={row.id} className="flex gap-3 py-3 first:pt-3 last:pb-3">
+                              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-neutral-600 ring-1 ring-neutral-200/80">
+                                <Icon className="h-4 w-4" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="font-medium text-neutral-900">{row.title}</p>
+                                  {kindBadge(row, t)}
+                                  <Badge
+                                    variant={
+                                      row.status === "completed" ||
+                                      row.status === "served" ||
+                                      row.status === "signed"
+                                        ? "success"
+                                        : "outline"
+                                    }
+                                    className="text-[10px] capitalize"
+                                  >
+                                    {row.status.replace(/_/g, " ")}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-neutral-500 mt-0.5">
+                                  {formatDate(locale, row.occurredAt)}
+                                  {row.subtitle ? ` · ${row.subtitle}` : ""}
+                                </p>
+                              </div>
+                            </li>
+                          )
+                        })}
+                      </ul>
                     </div>
-                    <p className="text-xs text-neutral-500 mt-0.5">
-                      {formatDate(locale, row.occurredAt)}
-                      {row.subtitle ? ` · ${row.subtitle}` : ""}
-                    </p>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
         )}
         <div className="mt-4 flex flex-wrap gap-2 border-t pt-3">
           <Button variant="ghost" size="sm" asChild>

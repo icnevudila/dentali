@@ -9,6 +9,7 @@ import { useLocale } from "@/hooks/use-locale"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { KioskStepIndicator, kioskStepFromFlow } from "@/components/kiosk/KioskStepIndicator"
+import { PublicChannelBrand } from "@/components/brand/public-channel-brand"
 import { CheckCircle2, AlertCircle, Loader2, Users } from "lucide-react"
 import { updateKioskMood, getKioskQueueStats } from "@/lib/kiosk/kiosk-service"
 
@@ -252,9 +253,7 @@ function KioskContent() {
           <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-400 blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
         </div>
         <div className="z-10 flex flex-col items-center gap-6 animate-float">
-          <div className="h-24 w-24 rounded-3xl bg-white p-4 shadow-xl flex items-center justify-center border border-white/40 ring-4 ring-white/10">
-            <img src="/icons/icon.svg" alt="dentQL Logo" className="h-full w-full object-contain" />
-          </div>
+          <PublicChannelBrand variant="screensaver" />
           <h1 className="text-4xl font-light tracking-wide text-teal-50">Welcome to <span className="font-semibold text-white">{branchName || "Our Clinic"}</span></h1>
           <p className="mt-8 rounded-full border border-teal-500/30 bg-teal-900/50 px-6 py-2 text-teal-200 backdrop-blur-sm animate-pulse">
             Tap anywhere to start
@@ -291,9 +290,7 @@ function KioskContent() {
         </div>
       )}
 
-      <p className="absolute left-0 right-0 top-6 text-center text-sm font-bold tracking-widest text-neutral-400 select-none uppercase">
-        dentali<span className="text-primary-600">.</span>
-      </p>
+      <PublicChannelBrand variant="header" />
 
       <div className="relative z-10 w-full max-w-lg touch-manipulation transition-all duration-500 ease-out">
         {showSteps ? <KioskStepIndicator active={flowStep} /> : null}
@@ -317,18 +314,16 @@ function KioskContent() {
 
         {step === "welcome" && (
           <div className="space-y-8 rounded-[2rem] border border-white bg-white/70 p-10 text-center shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-4 duration-500">
-            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-[2rem] bg-white p-4 shadow-sm border border-neutral-100">
-              <img src="/icons/icon.svg" alt="dentQL Logo" className="h-full w-full object-contain" />
-            </div>
+            <PublicChannelBrand variant="hero" className="mb-2" />
             <div className="inline-flex rounded-full border border-primary-200 bg-primary-50/80 px-5 py-2 text-xs font-bold uppercase tracking-widest text-primary-700 shadow-sm">
-              {branchName || "dentali. clinic"}
+              {branchName || t("kiosk.defaultClinic", "Our clinic")}
             </div>
             <div className="space-y-3">
               <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary-600/80">
                 {t("kiosk.welcomeTo", "Welcome to")}
               </p>
               <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-neutral-900 bg-clip-text text-transparent bg-gradient-to-r from-neutral-900 to-neutral-600">
-                {branchName || "dentali."}
+                {branchName || t("kiosk.defaultClinic", "Our clinic")}
               </h1>
             </div>
             <p className="text-lg text-neutral-600 leading-relaxed font-medium px-4">

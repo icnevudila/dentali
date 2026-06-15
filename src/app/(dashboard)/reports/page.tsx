@@ -17,8 +17,10 @@ import {
   RefreshCw,
   MapPin,
   Shield,
+  FileWarning,
 } from "lucide-react"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
+import { MetricStrip } from "@/components/layout/MetricStrip"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { TrendArea, TrendLine, DistributionPie } from "@/components/charts/ChartKit"
 import { useOwnerAnalytics } from "@/hooks/use-owner-analytics"
@@ -101,29 +103,67 @@ export default function ReportsHubPage() {
     {
       label: metricPeriod("reports.metricAppointments", "Appointments ({days}d)"),
       value: loading ? "—" : (summary?.totals.appointments ?? 0),
-      hint: t("reports.metricAppointmentsHint", "Scheduled in period"),
+      hint: t("reports.metricAppointmentsOpen", "Open appointments calendar"),
       icon: Calendar,
+      href: "/appointments",
     },
     {
       label: metricPeriod("reports.metricCompleted", "Completed ({days}d)"),
       value: loading ? "—" : (summary?.totals.completed ?? 0),
-      hint: t("reports.metricCompletedHint", "Marked done"),
+      hint: t("reports.metricCompletedOpen", "View completed visits"),
       icon: CheckCircle2,
       variant: (summary?.totals.completed ?? 0) > 0 && !loading ? ("success" as const) : ("default" as const),
+      href: "/appointments",
     },
     {
       label: metricPeriod("reports.metricCollected", "Collected ({days}d)"),
       value: loading ? "—" : `₱${(summary?.totals.collected ?? 0).toLocaleString()}`,
-      hint: t("reports.metricCollectedHint", "Payments recorded"),
+      hint: t("reports.metricCollectedOpen", "Open billing ledger"),
       icon: Wallet,
       variant: (summary?.totals.collected ?? 0) > 0 && !loading ? ("success" as const) : ("default" as const),
+      href: "/billing",
     },
     {
       label: metricPeriod("reports.metricNoShow", "No-shows ({days}d)"),
       value: loading ? "—" : (summary?.totals.noShow ?? 0),
-      hint: t("reports.metricNoShowHint", "Missed appointments"),
+      hint: t("reports.metricNoShowOpen", "Review appointments"),
       icon: XCircle,
       variant: (summary?.totals.noShow ?? 0) > 0 && !loading ? ("warning" as const) : ("default" as const),
+      href: "/appointments",
+    },
+  ]
+
+  const todayPulseMetrics = [
+    {
+      label: t("dashboard.todayAppointments", "Today's Appointments"),
+      value: stats.today_appointments,
+      hint: t("reports.metricAppointmentsOpen", "Open appointments calendar"),
+      icon: Calendar,
+      href: "/appointments",
+    },
+    {
+      label: t("dashboard.collectedToday", "Collected Today"),
+      value: `₱${stats.today_collected.toLocaleString()}`,
+      hint: t("reports.metricCollectedOpen", "Open billing ledger"),
+      icon: Wallet,
+      variant: stats.today_collected > 0 ? ("success" as const) : ("default" as const),
+      href: "/billing",
+    },
+    {
+      label: t("dashboard.pendingConsents", "Pending Consents"),
+      value: stats.pending_consents,
+      hint: t("dashboard.pendingConsentsHint", "Awaiting patient signature"),
+      icon: FileWarning,
+      variant: stats.pending_consents > 0 ? ("warning" as const) : ("default" as const),
+      href: "/patients?attention=consents",
+    },
+    {
+      label: t("dashboard.openInvoices", "Open Invoices"),
+      value: stats.open_invoices,
+      hint: t("dashboard.viewBilling", "View billing"),
+      icon: Receipt,
+      variant: stats.open_invoices > 0 ? ("warning" as const) : ("default" as const),
+      href: "/billing?focus=open",
     },
   ]
 
@@ -317,24 +357,7 @@ export default function ReportsHubPage() {
 
       <section className="space-y-3">
         <SectionEyebrow icon={BarChart3}>{t("reports.sectionToday", "Today's pulse")}</SectionEyebrow>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-neutral-200/80 bg-white px-4 py-3">
-            <p className="text-xs text-neutral-500">{t("dashboard.todayAppointments", "Today's Appointments")}</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums">{stats.today_appointments}</p>
-          </div>
-          <div className="rounded-xl border border-neutral-200/80 bg-white px-4 py-3">
-            <p className="text-xs text-neutral-500">{t("dashboard.collectedToday", "Collected Today")}</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums">₱{stats.today_collected.toLocaleString()}</p>
-          </div>
-          <div className="rounded-xl border border-amber-200/80 bg-amber-50/40 px-4 py-3">
-            <p className="text-xs text-neutral-500">{t("dashboard.pendingConsents", "Pending Consents")}</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-amber-900">{stats.pending_consents}</p>
-          </div>
-          <div className="rounded-xl border border-neutral-200/80 bg-white px-4 py-3">
-            <p className="text-xs text-neutral-500">{t("dashboard.openInvoices", "Open Invoices")}</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums">{stats.open_invoices}</p>
-          </div>
-        </div>
+        <MetricStrip items={todayPulseMetrics} />
       </section>
 
       <section className="space-y-3">

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useBranch } from "@/hooks/use-branch"
@@ -22,7 +22,10 @@ import {
 } from "@/lib/appointments/appointment-service"
 import { toast } from "sonner"
 import {
-  fetchAvailableAppointmentSlots,
+  fetchPreparedAppointmentSlots,
+  manilaScheduledAtIso,
+} from "@/lib/appointments/appointment-slots"
+import {
   fetchBranchProviderAvailability,
   ensureProviderAvailabilityDefaults,
   type AppointmentSlot,
@@ -51,14 +54,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Calendar, Plus, Check, X, LayoutGrid, List, ChevronLeft, ChevronRight, UserCheck, Bell, UserX, MapPin } from "lucide-react"
+import { Calendar, Plus, Check, X, LayoutGrid, List, ChevronLeft, ChevronRight, UserCheck, Bell, UserX, MapPin, Globe } from "lucide-react"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
-import { MetricStrip } from "@/components/layout/MetricStrip"
+import { MetricStrip, type MetricItem } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
+import { resolveBookingSource } from "@/lib/appointments/booking-source"
+import type { BookingSource } from "@/lib/appointments/booking-source"
 
 type ViewMode = "today" | "week"
 
@@ -72,7 +77,13 @@ export default function AppointmentsPage() {
 
 function AppointmentsPageContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const focusMissingNotes = searchParams.get("focus") === "missing-notes"
+  const sourceParam = searchParams.get("source")
+  const bookingSourceFilter: BookingSource | null =
+    sourceParam === "portal" || sourceParam === "kiosk" || sourceParam === "walk_in" || sourceParam === "phone"
+      ? sourceParam
+      : null
   const { activeBranch } = useBranch()
   const { user } = useAuth()
   const { t } = useLocale()
@@ -112,6 +123,22 @@ function AppointmentsPageContent() {
   const [availabilityLoading, setAvailabilityLoading] = React.useState(false)
 
   const today = toDateKey(new Date())
+
+  const setBookingSourceFilter = React.useCallback(
+    (source: BookingSource | null) => {
+      const params = new URLSearchParams(searchParams.toString())
+      if (!source) params.delete("source")
+      else params.set("source", source)
+      const qs = params.toString()
+      router.replace(qs ? `/appointments?${qs}` : "/appointments", { scroll: false })
+    },
+    [router, searchParams]
+  )
+
+  const filteredWeekAppointments = React.useMemo(() => {
+    if (!bookingSourceFilter) return weekAppointments
+    return weekAppointments.filter((a) => resolveBookingSource(a) === bookingSourceFilter)
+  }, [weekAppointments, bookingSourceFilter])
 
   const loadWeek = React.useCallback(() => {
     if (!activeBranch) return
@@ -155,7 +182,7 @@ function AppointmentsPageContent() {
       return
     }
     setSlotsLoading(true)
-    fetchAvailableAppointmentSlots({
+    void fetchPreparedAppointmentSlots({
       branchId: activeBranch.id,
       providerId: selectedProviderId,
       date,
@@ -238,7 +265,7 @@ function AppointmentsPageContent() {
       organizationId: org.id,
       branchId: activeBranch.id,
       patientId: selectedPatientId,
-      scheduledAt: new Date(`${date}T${time}:00`).toISOString(),
+      scheduledAt: manilaScheduledAtIso(date, time),
       purpose,
       userId: user.id,
       providerId: selectedProviderId || undefined,
@@ -281,9 +308,17 @@ function AppointmentsPageContent() {
     if (err) {
       toast.error(err)
     } else {
-      toast.success(t("appointments.rescheduleSuccess", "Appointment rescheduled successfully"))
+      toast.success(
+        t("appointments.rescheduleSuccess", "Appointment rescheduled successfully") +
+          ` · ${targetDateKey}`
+      )
       patchAppointment(id, { scheduled_at: scheduledAt })
       setSelectedDate(targetDateKey)
+      const weekMonday = toDateKey(weekStart)
+      const weekSunday = addDaysToKey(weekMonday, 6)
+      if (targetDateKey < weekMonday || targetDateKey > weekSunday) {
+        setWeekStart(startOfWeekMonday(parseDateKey(targetDateKey)))
+      }
       void tryNotifyWaitlist(freedSlotAt)
     }
   }
@@ -382,8 +417,10 @@ function AppointmentsPageContent() {
     const todayTotal = todayAppts.length
     const todayUpcoming = todayAppts.filter((a) => a.status === "scheduled" || a.status === "confirmed").length
     const todayCompleted = todayAppts.filter((a) => a.status === "completed").length
+    const todayPortal = todayAppts.filter((a) => resolveBookingSource(a) === "portal").length
+    const weekPortal = weekAppointments.filter((a) => resolveBookingSource(a) === "portal").length
 
-    return [
+    const items: MetricItem[] = [
       {
         label: t("appointments.metricTotal", "Today"),
         value: loading ? "—" : todayTotal,
@@ -403,7 +440,26 @@ function AppointmentsPageContent() {
         variant: "success" as const,
       },
     ]
-  }, [weekAppointments, today, loading, t])
+
+    if (!loading && (todayPortal > 0 || weekPortal > 0)) {
+      items.push({
+        label: t("appointments.metricPortal", "Online bookings"),
+        value: todayPortal,
+        hint:
+          weekPortal > todayPortal
+            ? t("appointments.metricPortalWeekHint", "{week} this week — tap to filter").replace(
+                "{week}",
+                String(weekPortal)
+              )
+            : t("appointments.metricPortalHint", "Patient portal — tap to filter"),
+        icon: Globe,
+        variant: bookingSourceFilter === "portal" ? ("default" as const) : ("default" as const),
+        onClick: () => setBookingSourceFilter(bookingSourceFilter === "portal" ? null : "portal"),
+      })
+    }
+
+    return items
+  }, [weekAppointments, today, loading, t, bookingSourceFilter, setBookingSourceFilter])
 
   return (
     <PermissionGate permission={PERMISSIONS.APPOINTMENTS_READ}>
@@ -452,6 +508,28 @@ function AppointmentsPageContent() {
               </p>
               <Button variant="outline" size="sm" className="mt-2" asChild>
                 <Link href="/appointments">{t("billing.clearFilter", "Clear filter")}</Link>
+              </Button>
+            </div>
+          ) : null}
+
+          {bookingSourceFilter === "portal" ? (
+            <div className="rounded-xl border border-sky-200/80 bg-sky-50/50 px-4 py-3 text-sm text-sky-950 animate-fade-rise">
+              <p className="font-medium">
+                {t("appointments.portalFilterTitle", "Showing online portal bookings only")}
+              </p>
+              <p className="mt-1 text-sky-900/80">
+                {t(
+                  "appointments.portalFilterHint",
+                  "New patient registrations from the portal appear under Patients → Pending registrations."
+                )}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => setBookingSourceFilter(null)}
+              >
+                {t("billing.clearFilter", "Clear filter")}
               </Button>
             </div>
           ) : null}
@@ -657,10 +735,10 @@ function AppointmentsPageContent() {
                             if (err) throw err
                             
                             // Re-fetch slots
-                            const { data: newSlots } = await fetchAvailableAppointmentSlots({
+                            const { data: newSlots } = await fetchPreparedAppointmentSlots({
                               branchId: activeBranch!.id,
                               providerId: selectedProviderId,
-                              date
+                              date,
                             })
                             setSlots(newSlots)
                           } catch (err: any) {
@@ -776,7 +854,7 @@ function AppointmentsPageContent() {
         ) : (
           <>
         <AppointmentWeekCalendar
-            appointments={weekAppointments}
+            appointments={filteredWeekAppointments}
             weekStart={weekStart}
             onWeekChange={(start) => {
               setWeekStart(start)

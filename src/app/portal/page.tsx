@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useLocale } from "@/hooks/use-locale"
 import { PORTAL_VISIT_REASONS, type PortalVisitReasonId } from "@/lib/portal/visit-reasons"
+import { PublicChannelBrand } from "@/components/brand/public-channel-brand"
 import { 
   Calendar as CalendarIcon, 
   Clock, 
@@ -332,9 +333,7 @@ function PortalPageContent() {
         <div className="absolute -bottom-[10%] -right-[10%] h-[50%] w-[50%] rounded-full bg-primary-300/20 blur-[120px]" />
       </div>
 
-      <p className="absolute left-0 right-0 top-6 text-center text-sm font-bold tracking-widest text-neutral-400 select-none uppercase">
-        dentali<span className="text-primary-600">.</span> portal
-      </p>
+      <PublicChannelBrand variant="header" suffix={t("portal.brandSuffix", "Portal")} />
 
       <div className="relative z-10 w-full max-w-[440px] my-12">
         {renderStepper()}
@@ -356,9 +355,7 @@ function PortalPageContent() {
 
         {step === "welcome" && (
           <div className="rounded-[2.5rem] border border-white bg-white/70 p-6 sm:p-8 shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-8 fade-in duration-500">
-            <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-white p-4 shadow-sm border border-neutral-100">
-              <img src="/icons/icon.svg" alt="dentQL Logo" className="h-full w-full object-contain" />
-            </div>
+            <PublicChannelBrand variant="hero" className="mb-6" />
             <div className="mb-8 text-center">
               <div className="mx-auto mb-4 inline-flex items-center rounded-full border border-primary-200/50 bg-primary-50/50 px-4 py-1.5 text-xs font-bold tracking-wider text-primary-700 uppercase">
                 ONLINE APPOINTMENT SYSTEM

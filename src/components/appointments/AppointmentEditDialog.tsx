@@ -13,9 +13,14 @@ import {
   type AppointmentRecord,
 } from "@/lib/appointments/appointment-service"
 import {
-  fetchAvailableAppointmentSlots,
+  ensureProviderAvailabilityDefaults,
   type AppointmentSlot,
 } from "@/lib/appointments/provider-availability-service"
+import {
+  fetchPreparedAppointmentSlots,
+  manilaScheduledAtIso,
+  withCurrentAppointmentSlot,
+} from "@/lib/appointments/appointment-slots"
 import { appointmentDateKey } from "@/lib/appointments/week-calendar"
 import { AppointmentSlotButtons } from "@/components/appointments/AppointmentSlotButtons"
 
@@ -49,16 +54,21 @@ export function AppointmentEditDialog({
   const [time, setTime] = React.useState("")
   const [slots, setSlots] = React.useState<AppointmentSlot[]>([])
   const [slotsLoading, setSlotsLoading] = React.useState(false)
+  const [slotsError, setSlotsError] = React.useState<string | null>(null)
+  const [configuringSlots, setConfiguringSlots] = React.useState(false)
 
-  const PRESET_PURPOSES = React.useMemo(() => [
-    "General Checkup",
-    "Dental Cleaning",
-    "Tooth Filling",
-    "Root Canal",
-    "Tooth Extraction",
-    "Orthodontic Consultation",
-    "Other"
-  ], [])
+  const PRESET_PURPOSES = React.useMemo(
+    () => [
+      "General Checkup",
+      "Dental Cleaning",
+      "Tooth Filling",
+      "Root Canal",
+      "Tooth Extraction",
+      "Orthodontic Consultation",
+      "Other",
+    ],
+    []
+  )
 
   React.useEffect(() => {
     setMounted(true)
@@ -82,10 +92,19 @@ export function AppointmentEditDialog({
     }).format(new Date(iso))
   }, [])
 
+  const originalDate = appointment ? appointmentDateKey(appointment.scheduled_at) : ""
+  const originalTime = appointment ? extract24HourTime(appointment.scheduled_at) : ""
+
   React.useEffect(() => {
     if (!open || !appointment) return
-    setProviderId(appointment.provider_id || "")
+
+    const nextProviderId =
+      appointment.provider_id && providers.some((p) => p.profile_id === appointment.provider_id)
+        ? appointment.provider_id
+        : providers[0]?.profile_id ?? ""
+
     const origPurpose = appointment.purpose || ""
+    setProviderId(nextProviderId)
     setPurpose(origPurpose)
     if (PRESET_PURPOSES.includes(origPurpose)) {
       setSelectedPurposeOption(origPurpose)
@@ -99,32 +118,72 @@ export function AppointmentEditDialog({
     }
     setDate(appointmentDateKey(appointment.scheduled_at))
     setTime(extract24HourTime(appointment.scheduled_at))
-  }, [open, appointment, extract24HourTime, PRESET_PURPOSES])
+    setSlotsError(null)
+  }, [open, appointment, providers, extract24HourTime, PRESET_PURPOSES])
 
-  React.useEffect(() => {
+  const loadSlots = React.useCallback(async () => {
     if (!open || !branchId || !providerId || !date || !appointment) {
       setSlots([])
+      setSlotsError(null)
       return
     }
+
     setSlotsLoading(true)
-    fetchAvailableAppointmentSlots({
+    setSlotsError(null)
+
+    const { data, error } = await fetchPreparedAppointmentSlots({
       branchId,
       providerId,
       date,
       excludeAppointmentId: appointment.id,
-    }).then(({ data }) => {
-      setSlots(data)
-      setSlotsLoading(false)
     })
-  }, [open, branchId, providerId, date, appointment])
+
+    const merged = withCurrentAppointmentSlot(
+      data,
+      originalDate === date ? originalTime : undefined
+    )
+
+    setSlots(merged)
+    setSlotsError(error)
+    setSlotsLoading(false)
+
+    if (merged.length > 0 && !merged.some((slot) => slot.time === time)) {
+      const firstOpen = merged.find((slot) => slot.available)
+      if (firstOpen) setTime(firstOpen.time)
+    }
+  }, [open, branchId, providerId, date, appointment, originalDate, originalTime, time])
+
+  React.useEffect(() => {
+    void loadSlots()
+  }, [loadSlots])
+
+  const handleConfigureSlots = async () => {
+    if (!branchId || !providerId) return
+    setConfiguringSlots(true)
+    setSlotsError(null)
+    const { error } = await ensureProviderAvailabilityDefaults(branchId, providerId)
+    if (error) {
+      setSlotsError(error)
+      setConfiguringSlots(false)
+      return
+    }
+    await loadSlots()
+    setConfiguringSlots(false)
+  }
 
   if (!open || !mounted || !appointment) return null
 
-  const originalDate = appointmentDateKey(appointment.scheduled_at)
-  const originalTime = extract24HourTime(appointment.scheduled_at)
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!providerId) {
+      toast.error(t("appointments.selectDentistAndDate", "Select dentist and date."))
+      return
+    }
+    if (!time) {
+      toast.error(t("appointments.pickTime", "Pick a time for the appointment."))
+      return
+    }
+
     setSaving(true)
 
     const finalPurpose = selectedPurposeOption === "Other" ? customPurpose.trim() : selectedPurposeOption
@@ -147,7 +206,7 @@ export function AppointmentEditDialog({
 
     let scheduledAt = appointment.scheduled_at
     if (date !== originalDate || time !== originalTime) {
-      scheduledAt = new Date(`${date}T${time}:00+08:00`).toISOString()
+      scheduledAt = manilaScheduledAtIso(date, time)
       const { error: err2 } = await rescheduleAppointment(appointment.id, scheduledAt)
       if (err2) {
         toast.error(err2)
@@ -203,14 +262,18 @@ export function AppointmentEditDialog({
             <select
               value={providerId}
               onChange={(e) => setProviderId(e.target.value)}
+              required
               className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              <option value="">{t("appointments.anyProvider", "Any dentist")}</option>
-              {providers.map((p) => (
-                <option key={p.profile_id} value={p.profile_id}>
-                  {p.full_name ?? p.email ?? "Dentist"}
-                </option>
-              ))}
+              {providers.length === 0 ? (
+                <option value="">{t("appointments.noProviders", "No dentists for this branch")}</option>
+              ) : (
+                providers.map((p) => (
+                  <option key={p.profile_id} value={p.profile_id}>
+                    {p.full_name ?? p.email ?? "Dentist"}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
@@ -226,14 +289,57 @@ export function AppointmentEditDialog({
                 {t("appointments.selectDentistAndDate", "Select dentist and date.")}
               </p>
             ) : (
-              <AppointmentSlotButtons
-                slots={slots}
-                selectedTime={time}
-                onSelect={setTime}
-                currentTime={originalDate === date ? originalTime : undefined}
-                loading={slotsLoading}
-              />
+              <>
+                <AppointmentSlotButtons
+                  slots={slots}
+                  selectedTime={time}
+                  onSelect={setTime}
+                  currentTime={originalDate === date ? originalTime : undefined}
+                  loading={slotsLoading}
+                />
+                {slotsError ? (
+                  <p className="text-xs text-red-600">{slotsError}</p>
+                ) : null}
+                {!slotsLoading && slots.length === 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-amber-700">
+                      {t(
+                        "appointments.noSlotsEdit",
+                        "No slots — dentist may be closed this day or has no active clinic hours."
+                      )}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-8 gap-1.5 border-amber-300 hover:bg-amber-50"
+                      disabled={configuringSlots}
+                      onClick={() => void handleConfigureSlots()}
+                    >
+                      {configuringSlots ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          {t("common.loading", "Loading…")}
+                        </>
+                      ) : (
+                        t("appointments.configureSlots", "Configure working hours & slots")
+                      )}
+                    </Button>
+                  </div>
+                ) : null}
+              </>
             )}
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-medium">{t("appointments.timeManual", "Or pick time")}</label>
+            <Input
+              type="time"
+              required
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className="max-w-[10rem]"
+            />
           </div>
 
           <div className="space-y-1.5">
@@ -249,7 +355,7 @@ export function AppointmentEditDialog({
                 </option>
               ))}
             </select>
-            {selectedPurposeOption === "Other" && (
+            {selectedPurposeOption === "Other" ? (
               <Input
                 placeholder="Specify other purpose..."
                 value={customPurpose}
@@ -257,11 +363,11 @@ export function AppointmentEditDialog({
                 required
                 className="mt-2"
               />
-            )}
+            ) : null}
           </div>
 
           <div className="flex flex-wrap gap-2 pt-2 border-t border-neutral-100">
-            <Button type="submit" disabled={saving || !time}>
+            <Button type="submit" disabled={saving || !time || !providerId}>
               {saving ? t("common.saving", "Saving…") : t("common.save", "Save")}
             </Button>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

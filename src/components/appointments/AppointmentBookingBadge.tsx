@@ -1,6 +1,7 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
+import { Globe } from "lucide-react"
 import { useLocale } from "@/hooks/use-locale"
 import {
   bookingSourceBadgeVariant,
@@ -8,6 +9,7 @@ import {
   resolveBookingSource,
 } from "@/lib/appointments/booking-source"
 import type { AppointmentRecord } from "@/lib/appointments/types"
+import { cn } from "@/lib/utils"
 
 export function AppointmentBookingBadge({
   appointment,
@@ -21,7 +23,8 @@ export function AppointmentBookingBadge({
   if (source === "staff") return null
 
   return (
-    <Badge variant={bookingSourceBadgeVariant(source)} className={className}>
+    <Badge variant={bookingSourceBadgeVariant(source)} className={cn("gap-0.5", className)}>
+      {source === "portal" ? <Globe className="h-2.5 w-2.5 shrink-0" aria-hidden /> : null}
       {bookingSourceLabel(source, t)}
     </Badge>
   )

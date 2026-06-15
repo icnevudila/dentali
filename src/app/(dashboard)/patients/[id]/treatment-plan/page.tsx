@@ -598,7 +598,7 @@ function TreatmentPlanContent() {
                   {/* Select Procedure from Catalog */}
                   <div className="flex flex-col gap-1.5 sm:col-span-1">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                      Catalog Procedure / Katalog Tedavisi
+                      Catalog Procedure
                     </label>
                     <select
                       value={selectedProc}
@@ -622,14 +622,14 @@ function TreatmentPlanContent() {
                           {p.name} — ₱{p.effective_price.toLocaleString()}
                         </option>
                       ))}
-                      <option value="custom">✍️ Custom Procedure / Yeni Tedavi Ekle</option>
+                      <option value="custom">✍️ Custom Procedure</option>
                     </select>
                   </div>
 
                   {/* Tooth Number */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                      Tooth # / Diş No (Optional)
+                      Tooth # (Optional)
                     </label>
                     <Input
                       placeholder="e.g. 18, 24, 36"
