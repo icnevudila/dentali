@@ -158,6 +158,8 @@ export async function createInvoiceFromPlan(params: {
 export interface InvoiceDetail extends InvoiceRecord {
   treatment_plan_id: string | null
   due_date: string | null
+  subtotal_amount: number
+  discount_amount: number
 }
 
 export interface InvoicePayment {
@@ -174,6 +176,7 @@ export interface InvoiceLineItem {
   tooth_number: string | null
   quantity: number
   unit_price: number
+  discount_amount: number
   line_total: number
   sort_order: number
 }
@@ -311,7 +314,7 @@ export async function getInvoice(
 
   const { data: inv, error } = await supabase
     .from("invoices")
-    .select("id, invoice_number, total_amount, paid_amount, status, patient_id, created_at, treatment_plan_id, due_date, patients(first_name, last_name)")
+    .select("id, invoice_number, total_amount, paid_amount, status, patient_id, created_at, treatment_plan_id, due_date, subtotal_amount, discount_amount, patients(first_name, last_name)")
     .eq("id", invoiceId)
     .maybeSingle()
 
@@ -328,7 +331,7 @@ export async function getInvoice(
 
   const { data: lineRows } = await supabase
     .from("invoice_line_items")
-    .select("id, description, tooth_number, quantity, unit_price, line_total, sort_order")
+    .select("id, description, tooth_number, quantity, unit_price, discount_amount, line_total, sort_order")
     .eq("invoice_id", invoiceId)
     .order("sort_order")
 
@@ -343,6 +346,8 @@ export async function getInvoice(
       created_at: inv.created_at,
       treatment_plan_id: inv.treatment_plan_id,
       due_date: inv.due_date,
+      subtotal_amount: Number(inv.subtotal_amount ?? inv.total_amount),
+      discount_amount: Number(inv.discount_amount ?? 0),
       patient_name: patient ? `${patient.first_name} ${patient.last_name}` : undefined,
     },
     payments: (payments ?? []).map((row) => ({
@@ -358,6 +363,7 @@ export async function getInvoice(
       tooth_number: row.tooth_number,
       quantity: Number(row.quantity),
       unit_price: Number(row.unit_price),
+      discount_amount: Number(row.discount_amount ?? 0),
       line_total: Number(row.line_total),
       sort_order: row.sort_order,
     })),
@@ -510,6 +516,7 @@ export async function updateInvoiceLineItem(params: {
   description: string
   unitPrice: number
   quantity: number
+  discountAmount?: number
 }): Promise<{ error: string | null }> {
   const supabase = createClient()
   const { error } = await supabase.rpc("update_invoice_line_item", {
@@ -517,6 +524,19 @@ export async function updateInvoiceLineItem(params: {
     p_description: params.description,
     p_unit_price: params.unitPrice,
     p_quantity: params.quantity,
+    p_discount_amount: params.discountAmount ?? 0,
+  })
+  return { error: error?.message ?? null }
+}
+
+export async function updateInvoiceDiscount(
+  invoiceId: string,
+  discountAmount: number
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase.rpc("update_invoice_discount", {
+    p_invoice_id: invoiceId,
+    p_discount_amount: discountAmount,
   })
   return { error: error?.message ?? null }
 }

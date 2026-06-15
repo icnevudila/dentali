@@ -38,6 +38,8 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   [PERMISSIONS.AUDIT_READ]: "View audit log",
   [PERMISSIONS.COMPLIANCE_READ]: "View compliance records",
   [PERMISSIONS.COMPLIANCE_WRITE]: "Manage compliance records",
+  [PERMISSIONS.PRESCRIPTIONS_READ]: "View prescriptions",
+  [PERMISSIONS.PRESCRIPTIONS_WRITE]: "Create and sign prescriptions",
 }
 
 export const PERMISSION_GROUPS: { id: string; labelKey: string; labelFallback: string; permissions: PermissionKey[] }[] =
@@ -58,7 +60,12 @@ export const PERMISSION_GROUPS: { id: string; labelKey: string; labelFallback: s
       id: "clinical",
       labelKey: "settings.permGroupClinical",
       labelFallback: "Clinical",
-      permissions: [PERMISSIONS.DENTAL_CHART_READ, PERMISSIONS.DENTAL_CHART_WRITE],
+      permissions: [
+        PERMISSIONS.DENTAL_CHART_READ,
+        PERMISSIONS.DENTAL_CHART_WRITE,
+        PERMISSIONS.PRESCRIPTIONS_READ,
+        PERMISSIONS.PRESCRIPTIONS_WRITE,
+      ],
     },
     {
       id: "scheduling",

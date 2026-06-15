@@ -46,6 +46,7 @@ import { fetchProcedureStockWarnings } from "@/lib/inventory/inventory-service"
 import { ProcedureStockWarningBanner } from "@/components/inventory/ProcedureStockWarningBanner"
 import { ChartFindingSuggestionsCard } from "@/components/clinical/ChartFindingSuggestionsCard"
 import { TreatmentPlanItemRow } from "@/components/clinical/TreatmentPlanItemRow"
+import { fetchOrganizationPreferences } from "@/lib/settings/org-preferences-service"
 
 const PROCEDURE_TEMPLATES = [
   { code: "EXAM", name: "Oral Examination", price: 500, category: "preventive" },
@@ -83,6 +84,7 @@ function TreatmentPlanContent() {
   const [customName, setCustomName] = React.useState("")
   const [customPrice, setCustomPrice] = React.useState("")
   const [customCode, setCustomCode] = React.useState("")
+  const [showCustomPrice, setShowCustomPrice] = React.useState(false)
   const [loading, setLoading] = React.useState(!!planId)
   const [saving, setSaving] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -166,6 +168,12 @@ function TreatmentPlanContent() {
     })
   }, [activeBranch?.id, selectedProc])
 
+  React.useEffect(() => {
+    fetchOrganizationPreferences().then(({ data }) => {
+      if (data) setShowCustomPrice(data.custom_procedure_show_price)
+    })
+  }, [])
+
   const handleCreatePlan = async () => {
     if (!user || !activeBranch || !planTitle.trim()) return
     setSaving(true)
@@ -201,7 +209,7 @@ function TreatmentPlanContent() {
         setSaving(false)
         return
       }
-      const priceVal = parseFloat(customPrice) || 0
+      const priceVal = showCustomPrice ? parseFloat(customPrice) || 0 : 0
       
       const org = await fetchOrganization()
       if (!org) {
@@ -645,7 +653,7 @@ function TreatmentPlanContent() {
 
                 {/* Custom Fields (Shown if isCustom is true) */}
                 {isCustom && (
-                  <div className="grid gap-3 sm:grid-cols-3 p-4 rounded-lg bg-neutral-50 border border-neutral-100 animate-fade-rise">
+                  <div className={`grid gap-3 p-4 rounded-lg bg-neutral-50 border border-neutral-100 animate-fade-rise ${showCustomPrice ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-semibold text-neutral-600">{t("treatmentPlan.customName", "Custom procedure name")}</label>
                       <Input
@@ -655,16 +663,22 @@ function TreatmentPlanContent() {
                         className="h-10 bg-white"
                       />
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-neutral-600">{t("treatmentPlan.customPrice", "Price (₱)")}</label>
-                      <Input
-                        placeholder="e.g. 2500"
-                        type="number"
-                        value={customPrice}
-                        onChange={(e) => setCustomPrice(e.target.value)}
-                        className="h-10 bg-white"
-                      />
-                    </div>
+                    {showCustomPrice ? (
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-neutral-600">{t("treatmentPlan.customPrice", "Price (₱)")}</label>
+                        <Input
+                          placeholder="e.g. 2500"
+                          type="number"
+                          value={customPrice}
+                          onChange={(e) => setCustomPrice(e.target.value)}
+                          className="h-10 bg-white"
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-xs text-neutral-500 self-end pb-2">
+                        Price hidden for free-text procedures — set on invoice later.
+                      </p>
+                    )}
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-semibold text-neutral-600">{t("treatmentPlan.customCode", "Code (optional)")}</label>
                       <Input

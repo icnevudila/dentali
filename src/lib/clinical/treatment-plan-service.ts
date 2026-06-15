@@ -94,21 +94,18 @@ export async function createTreatmentPlan(params: {
   userId: string
 }): Promise<{ data: { id: string } | null; error: string | null }> {
   const supabase = createClient()
-  const { data, error } = await supabase
-    .from("treatment_plans")
-    .insert({
+  const { data, error } = await supabase.rpc("create_treatment_plan", {
+    p_payload: {
       organization_id: params.organizationId,
       branch_id: params.branchId,
       patient_id: params.patientId,
       title: params.title,
-      status: "proposed",
-      created_by: params.userId,
-    })
-    .select("id")
-    .single()
+    },
+  })
 
-  if (error || !data) return { data: null, error: error?.message ?? "Failed" }
-  return { data: { id: data.id }, error: null }
+  if (error) return { data: null, error: error.message }
+  const raw = data as { id: string }
+  return { data: { id: raw.id }, error: null }
 }
 
 export async function addPlanItem(params: {
@@ -120,22 +117,18 @@ export async function addPlanItem(params: {
   priority?: string
 }): Promise<{ error: string | null }> {
   const supabase = createClient()
-  const { error } = await supabase.from("treatment_plan_items").insert({
-    plan_id: params.planId,
-    procedure_id: params.procedureId ?? null,
-    description: params.description,
-    estimated_price: params.estimatedPrice,
-    tooth_number: params.toothNumber ?? null,
-    priority: params.priority ?? "restorative",
+  const { error } = await supabase.rpc("add_treatment_plan_item", {
+    p_payload: {
+      plan_id: params.planId,
+      procedure_id: params.procedureId ?? null,
+      description: params.description,
+      estimated_price: params.estimatedPrice,
+      tooth_number: params.toothNumber ?? null,
+      priority: params.priority ?? "restorative",
+    },
   })
 
-  if (error) return { error: error.message }
-
-  const { error: estimateError } = await supabase.rpc("calculate_treatment_estimate", {
-    p_plan_id: params.planId,
-  })
-
-  return { error: estimateError?.message ?? null }
+  return { error: error?.message ?? null }
 }
 
 export async function updatePlanItem(params: {
@@ -147,24 +140,18 @@ export async function updatePlanItem(params: {
   priority?: string
 }): Promise<{ error: string | null }> {
   const supabase = createClient()
-  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
-  if (params.description !== undefined) patch.description = params.description
-  if (params.estimatedPrice !== undefined) patch.estimated_price = params.estimatedPrice
-  if (params.toothNumber !== undefined) patch.tooth_number = params.toothNumber
-  if (params.priority !== undefined) patch.priority = params.priority
+  const payload: Record<string, string | number | null> = {}
+  if (params.description !== undefined) payload.description = params.description
+  if (params.estimatedPrice !== undefined) payload.estimated_price = params.estimatedPrice
+  if (params.toothNumber !== undefined) payload.tooth_number = params.toothNumber
+  if (params.priority !== undefined) payload.priority = params.priority
 
-  const { error } = await supabase
-    .from("treatment_plan_items")
-    .update(patch)
-    .eq("id", params.itemId)
-    .eq("plan_id", params.planId)
-
-  if (error) return { error: error.message }
-
-  const { error: estimateError } = await supabase.rpc("calculate_treatment_estimate", {
+  const { error } = await supabase.rpc("update_treatment_plan_item", {
+    p_item_id: params.itemId,
     p_plan_id: params.planId,
+    p_payload: payload,
   })
-  return { error: estimateError?.message ?? null }
+  return { error: error?.message ?? null }
 }
 
 export async function deletePlanItem(
@@ -172,13 +159,11 @@ export async function deletePlanItem(
   planId: string
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
-  const { error } = await supabase.from("treatment_plan_items").delete().eq("id", itemId).eq("plan_id", planId)
-  if (error) return { error: error.message }
-
-  const { error: estimateError } = await supabase.rpc("calculate_treatment_estimate", {
+  const { error } = await supabase.rpc("delete_treatment_plan_item", {
+    p_item_id: itemId,
     p_plan_id: planId,
   })
-  return { error: estimateError?.message ?? null }
+  return { error: error?.message ?? null }
 }
 
 export async function bulkAddChartFindingsToPlan(

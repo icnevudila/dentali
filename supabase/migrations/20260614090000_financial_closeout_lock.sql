@@ -12,6 +12,15 @@ declare
   v_branch_id uuid;
   v_org_id uuid;
 begin
+  -- Internal recalculations (line totals, payment sync, one-off backfills) set this for the transaction.
+  if coalesce(current_setting('app.bypass_closeout_lock', true), '') = 'true' then
+    if TG_OP = 'DELETE' then
+      return old;
+    else
+      return new;
+    end if;
+  end if;
+
   if TG_OP = 'DELETE' then
     if TG_TABLE_NAME = 'invoices' then
       v_date := old.created_at::date;

@@ -202,52 +202,19 @@ export async function ensurePatientConsent(params: {
 }): Promise<{ consentId: string; error: string | null }> {
   const supabase = createClient()
 
-  const { data: existingRows, error: existingError } = await supabase
-    .from("patient_consents")
-    .select("id, status")
-    .eq("patient_id", params.patientId)
-    .eq("template_slug", params.template.slug)
-    .order("created_at", { ascending: false })
-    .limit(1)
-
-  if (existingError) return { consentId: "", error: existingError.message }
-
-  const existing = existingRows?.[0]
-
-  if (existing?.id && existing.status !== "voided") {
-    return { consentId: existing.id, error: null }
-  }
-
-  if (existing?.id && existing.status === "voided") {
-    const { error } = await supabase
-      .from("patient_consents")
-      .update({
-        status: "pending",
-        signature_data: null,
-        signed_at: null,
-        signed_by: null,
-        signed_pdf_path: null,
-        template_name: params.template.name,
-      })
-      .eq("id", existing.id)
-    return { consentId: existing.id, error: error?.message ?? null }
-  }
-
-  const { data, error } = await supabase
-    .from("patient_consents")
-    .insert({
+  const { data, error } = await supabase.rpc("ensure_patient_consent", {
+    p_payload: {
       patient_id: params.patientId,
       organization_id: params.organizationId,
       branch_id: params.branchId,
       template_slug: params.template.slug,
       template_name: params.template.name,
-      status: "pending",
-    })
-    .select("id")
-    .single()
+    },
+  })
 
-  if (error || !data) return { consentId: "", error: error?.message ?? "Failed to create consent" }
-  return { consentId: data.id, error: null }
+  if (error) return { consentId: "", error: error.message }
+  const raw = data as { id: string }
+  return { consentId: raw.id, error: null }
 }
 
 export async function signPatientConsent(params: {
@@ -426,6 +393,41 @@ export async function uploadSignedConsentExport(params: {
     p_consent_id: params.consentId,
     p_storage_path: storagePath,
     p_file_size: blob.size,
+  })
+
+  if (registerError) {
+    await supabase.storage.from(CONSENT_BUCKET).remove([storagePath])
+    return { storagePath: null, error: registerError.message }
+  }
+
+  return { storagePath, error: null }
+}
+
+export async function uploadScannedConsent(params: {
+  organizationId: string
+  patientId: string
+  consentId: string
+  templateSlug: string
+  file: File
+}): Promise<{ storagePath: string | null; error: string | null }> {
+  const supabase = createClient()
+  const ext = params.file.name.split(".").pop()?.toLowerCase() ?? "bin"
+  const storagePath = `${params.organizationId}/${params.patientId}/${params.consentId}/${params.templateSlug}-scan.${ext}`
+
+  const { error: uploadError } = await supabase.storage
+    .from(CONSENT_BUCKET)
+    .upload(storagePath, params.file, {
+      contentType: params.file.type || "application/octet-stream",
+      upsert: true,
+    })
+
+  if (uploadError) return { storagePath: null, error: uploadError.message }
+
+  const { error: registerError } = await supabase.rpc("register_scanned_consent", {
+    p_consent_id: params.consentId,
+    p_storage_path: storagePath,
+    p_file_size: params.file.size,
+    p_content_type: params.file.type || "application/octet-stream",
   })
 
   if (registerError) {

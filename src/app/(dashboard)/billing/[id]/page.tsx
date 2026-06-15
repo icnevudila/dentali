@@ -9,7 +9,7 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { useParams } from "next/navigation"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
-import { getInvoice, recordInvoicePayment, voidInvoice, deleteInvoicePayment, updateInvoiceLineItem, addInvoiceLineItem } from "@/lib/billing/invoice-service"
+import { getInvoice, recordInvoicePayment, voidInvoice, deleteInvoicePayment, updateInvoiceLineItem, addInvoiceLineItem, updateInvoiceDiscount } from "@/lib/billing/invoice-service"
 import { printInvoice } from "@/lib/billing/invoice-print"
 import { downloadInvoicePdf } from "@/lib/billing/invoice-pdf"
 import {
@@ -60,6 +60,9 @@ export default function InvoiceDetailPage() {
   const [editDesc, setEditDesc] = React.useState("")
   const [editPrice, setEditPrice] = React.useState("")
   const [editQty, setEditQty] = React.useState("1")
+  const [editDiscount, setEditDiscount] = React.useState("0")
+  const [invoiceDiscount, setInvoiceDiscount] = React.useState("")
+  const [savingDiscount, setSavingDiscount] = React.useState(false)
   const [newDesc, setNewDesc] = React.useState("")
   const [newPrice, setNewPrice] = React.useState("")
   const [newQty, setNewQty] = React.useState("1")
@@ -103,6 +106,7 @@ export default function InvoiceDetailPage() {
       description: editDesc.trim(),
       unitPrice: price,
       quantity: qty,
+      discountAmount: parseFloat(editDiscount) || 0,
     })
     setSaving(false)
     if (updateErr) {
@@ -122,6 +126,9 @@ export default function InvoiceDetailPage() {
     setPayments(result.payments)
     setLineItems(result.lineItems)
     setError(result.error)
+    if (result.data) {
+      setInvoiceDiscount(String(result.data.discount_amount ?? 0))
+    }
     const pending = await fetchPendingIntents(invoiceId)
     setPendingIntents(pending.data)
     const org = await fetchOrganization()
@@ -134,6 +141,21 @@ export default function InvoiceDetailPage() {
   }, [load])
 
   const balance = invoice ? invoice.total_amount - invoice.paid_amount : 0
+
+  const handleSaveInvoiceDiscount = async () => {
+    const discount = parseFloat(invoiceDiscount)
+    if (isNaN(discount) || discount < 0) return
+    setSavingDiscount(true)
+    const { error: discErr } = await updateInvoiceDiscount(invoiceId, discount)
+    setSavingDiscount(false)
+    if (discErr) {
+      toast.error(discErr)
+      setError(discErr)
+    } else {
+      toast.success(t("billing.discountSaved", "Discount applied"))
+      await load()
+    }
+  }
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -410,6 +432,7 @@ export default function InvoiceDetailPage() {
                       <th className="pb-2 text-left font-medium">{t("billing.description", "Description")}</th>
                       <th className="pb-2 text-center font-medium">{t("billing.qty", "Qty")}</th>
                       <th className="pb-2 text-right font-medium">{t("billing.unitPrice", "Unit")}</th>
+                      <th className="pb-2 text-right font-medium">{t("billing.discount", "Disc.")}</th>
                       <th className="pb-2 text-right font-medium">{t("billing.lineTotal", "Total")}</th>
                     </tr>
                   </thead>
@@ -444,6 +467,16 @@ export default function InvoiceDetailPage() {
                                 className="h-8 text-xs text-right bg-white"
                               />
                             </td>
+                            <td className="py-2 px-1 text-right w-20">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={editDiscount}
+                                onChange={(e) => setEditDiscount(e.target.value)}
+                                className="h-8 text-xs text-right bg-white"
+                                min="0"
+                              />
+                            </td>
                             <td className="py-2 pl-2 text-right">
                               <div className="flex items-center justify-end gap-1">
                                 <Button
@@ -476,6 +509,9 @@ export default function InvoiceDetailPage() {
                           </td>
                           <td className="py-2 text-center">{item.quantity}</td>
                           <td className="py-2 text-right">₱{item.unit_price.toLocaleString()}</td>
+                          <td className="py-2 text-right text-amber-700">
+                            {item.discount_amount > 0 ? `-₱${item.discount_amount.toLocaleString()}` : "—"}
+                          </td>
                           <td className="py-2 text-right font-medium">
                             <div className="flex items-center justify-end gap-2">
                               <span>₱{item.line_total.toLocaleString()}</span>
@@ -488,6 +524,7 @@ export default function InvoiceDetailPage() {
                                   setEditDesc(item.description)
                                   setEditPrice(String(item.unit_price))
                                   setEditQty(String(item.quantity))
+                                  setEditDiscount(String(item.discount_amount ?? 0))
                                 }}
                                 title="Edit Item"
                               >
@@ -540,6 +577,10 @@ export default function InvoiceDetailPage() {
           <CardHeader><CardTitle className="text-base">{t("billing.summary", "Summary")}</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
             <div>
+              <p className="text-neutral-500">{t("billing.subtotal", "Subtotal")}</p>
+              <p className="text-lg font-semibold">₱{(invoice.subtotal_amount ?? invoice.total_amount).toLocaleString()}</p>
+            </div>
+            <div>
               <p className="text-neutral-500">{t("billing.total", "Total")}</p>
               <p className="text-xl font-bold">₱{invoice.total_amount.toLocaleString()}</p>
             </div>
@@ -559,6 +600,29 @@ export default function InvoiceDetailPage() {
               <p className="text-neutral-500">{t("billing.balance", "Balance")}</p>
               <p className="text-xl font-bold text-amber-600">₱{balance.toLocaleString()}</p>
             </div>
+            {canWriteBilling && invoice.status !== "void" && invoice.status !== "paid" ? (
+              <div className="sm:col-span-2 flex flex-wrap items-end gap-2 border-t pt-4 mt-2">
+                <div className="space-y-1">
+                  <p className="text-neutral-500 text-xs">{t("billing.invoiceDiscount", "Invoice discount (₱)")}</p>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={invoiceDiscount}
+                    onChange={(e) => setInvoiceDiscount(e.target.value)}
+                    className="h-9 w-32"
+                  />
+                </div>
+                <Button size="sm" onClick={handleSaveInvoiceDiscount} disabled={savingDiscount}>
+                  {savingDiscount ? t("common.saving", "Saving…") : t("billing.applyDiscount", "Apply")}
+                </Button>
+              </div>
+            ) : invoice.discount_amount > 0 ? (
+              <div>
+                <p className="text-neutral-500">{t("billing.discount", "Discount")}</p>
+                <p className="text-lg font-semibold text-amber-700">-₱{invoice.discount_amount.toLocaleString()}</p>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 

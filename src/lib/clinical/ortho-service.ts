@@ -9,6 +9,7 @@ export interface OrthoCase {
   start_date: string | null
   contract_amount: number
   notes: string | null
+  linked_invoice_id: string | null
   created_at: string
 }
 
@@ -36,7 +37,7 @@ export async function fetchOrthoCase(
   const supabase = createClient()
   const { data, error } = await supabase
     .from("ortho_cases")
-    .select("id, patient_id, branch_id, status, appliance_type, start_date, contract_amount, notes, created_at")
+    .select("id, patient_id, branch_id, status, appliance_type, start_date, contract_amount, notes, linked_invoice_id, created_at")
     .eq("patient_id", patientId)
     .eq("branch_id", branchId)
     .eq("status", "active")
@@ -138,4 +139,27 @@ export async function fetchOrthoBalance(
 
   if (error) return { data: null, error: error.message }
   return { data: data as OrthoBalance, error: null }
+}
+
+export async function revertOrthoAdjustment(
+  adjustmentId: string
+): Promise<{ data: OrthoBalance | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("revert_ortho_adjustment", {
+    p_adjustment_id: adjustmentId,
+  })
+  if (error) return { data: null, error: error.message }
+  return { data: data as OrthoBalance, error: null }
+}
+
+export async function createInvoiceFromOrthoCase(
+  caseId: string
+): Promise<{ data: { id: string; existing: boolean } | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("create_invoice_from_ortho_case", {
+    p_case_id: caseId,
+  })
+  if (error) return { data: null, error: error.message }
+  const raw = data as { id: string; existing?: boolean }
+  return { data: { id: raw.id, existing: Boolean(raw.existing) }, error: null }
 }

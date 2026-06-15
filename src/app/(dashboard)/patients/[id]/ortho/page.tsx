@@ -2,12 +2,14 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Plus, Lock } from "lucide-react"
+import { Plus, Lock, Undo2, Receipt } from "lucide-react"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { BulletTextarea } from "@/components/ui/BulletTextarea"
+import { BulletTextList } from "@/components/ui/BulletTextList"
 import { Badge } from "@/components/ui/badge"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
@@ -20,10 +22,12 @@ import { getPatient } from "@/lib/patients/patient-service"
 import {
   closeOrthoCase,
   createOrthoCase,
+  createInvoiceFromOrthoCase,
   fetchOrthoAdjustments,
   fetchOrthoBalance,
   fetchOrthoCase,
   logOrthoAdjustment,
+  revertOrthoAdjustment,
   type OrthoAdjustment,
   type OrthoBalance,
   type OrthoCase,
@@ -58,12 +62,14 @@ export default function OrthoRecordPage() {
   const [nextVisitDate, setNextVisitDate] = React.useState("")
   const [paymentAmount, setPaymentAmount] = React.useState("")
   const [adjNotes, setAdjNotes] = React.useState("")
+  const [linkedInvoiceId, setLinkedInvoiceId] = React.useState<string | null>(null)
 
   const load = React.useCallback(async () => {
     if (!activeBranch || !patientId) return
     setLoading(true)
     const { data: c, error: caseErr } = await fetchOrthoCase(patientId, activeBranch.id)
     setOrthoCase(c)
+    setLinkedInvoiceId(c?.linked_invoice_id ?? null)
     setError(caseErr)
 
     if (c) {
@@ -149,6 +155,29 @@ export default function OrthoRecordPage() {
     setSaving(false)
     if (err) setError(err)
     else load()
+  }
+
+  const handleRevertAdjustment = async (adjustmentId: string) => {
+    if (!confirm("Remove this visit row? Balance will be recalculated.")) return
+    setSaving(true)
+    const { error: err } = await revertOrthoAdjustment(adjustmentId)
+    setSaving(false)
+    if (err) setError(err)
+    else load()
+  }
+
+  const handleCreateInvoice = async () => {
+    if (!orthoCase) return
+    setSaving(true)
+    const { data, error: err } = await createInvoiceFromOrthoCase(orthoCase.id)
+    setSaving(false)
+    if (err) setError(err)
+    else if (data) {
+      setLinkedInvoiceId(data.id)
+      if (!data.existing) {
+        window.location.href = `/billing/${data.id}`
+      }
+    }
   }
 
   const orthoMetrics = orthoCase
@@ -248,10 +277,23 @@ export default function OrthoRecordPage() {
                   <CardDescription>Date · Procedure · Next visit · Payment · Balance</CardDescription>
                 </div>
                 {canWrite && orthoCase.status === "active" && (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" className="gap-2" onClick={() => setShowAddRow(true)}>
                       <Plus className="h-4 w-4" /> Log visit
                     </Button>
+                    {balance && balance.balance > 0 ? (
+                      linkedInvoiceId ? (
+                        <Button size="sm" variant="outline" className="gap-2" asChild>
+                          <Link href={`/billing/${linkedInvoiceId}`}>
+                            <Receipt className="h-4 w-4" /> Open invoice
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="default" className="gap-2" onClick={handleCreateInvoice} disabled={saving}>
+                          <Receipt className="h-4 w-4" /> Invoice balance
+                        </Button>
+                      )
+                    ) : null}
                     <Button size="sm" variant="ghost" className="gap-2" onClick={handleCloseCase} disabled={saving}>
                       <Lock className="h-4 w-4" /> Close case
                     </Button>
@@ -270,16 +312,39 @@ export default function OrthoRecordPage() {
                         <th className="pb-2 text-left font-medium">Next procedure</th>
                         <th className="pb-2 text-left font-medium">Next date</th>
                         <th className="pb-2 text-right font-medium">Payment</th>
+                        {canWrite && orthoCase.status === "active" ? (
+                          <th className="pb-2 text-right font-medium w-16" />
+                        ) : null}
                       </tr>
                     </thead>
                     <tbody className="divide-y">
                       {adjustments.map((a) => (
                         <tr key={a.id}>
                           <td className="py-2 whitespace-nowrap">{a.adjustment_date}</td>
-                          <td className="py-2">{a.procedure}</td>
-                          <td className="py-2 text-neutral-600">{a.next_procedure ?? "—"}</td>
+                          <td className="py-2 align-top max-w-xs">
+                            <BulletTextList text={a.procedure} />
+                          </td>
+                          <td className="py-2 align-top text-neutral-600 max-w-xs">
+                            <BulletTextList text={a.next_procedure} />
+                          </td>
                           <td className="py-2 text-neutral-600">{a.next_visit_date ?? "—"}</td>
                           <td className="py-2 text-right">₱{Number(a.payment_amount).toLocaleString()}</td>
+                          {canWrite && orthoCase.status === "active" ? (
+                            <td className="py-2 text-right">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 gap-1 text-xs text-amber-700"
+                                onClick={() => handleRevertAdjustment(a.id)}
+                                disabled={saving}
+                                title="Return / undo this row"
+                              >
+                                <Undo2 className="h-3.5 w-3.5" />
+                                Return
+                              </Button>
+                            </td>
+                          ) : null}
                         </tr>
                       ))}
                     </tbody>
@@ -342,13 +407,23 @@ export default function OrthoRecordPage() {
                   <label className="text-xs font-medium">Date</label>
                   <Input type="date" value={adjDate} onChange={(e) => setAdjDate(e.target.value)} />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 sm:col-span-2">
                   <label className="text-xs font-medium">Procedure *</label>
-                  <Input required value={procedure} onChange={(e) => setProcedure(e.target.value)} placeholder="Wire change, bonding…" />
+                  <BulletTextarea
+                    value={procedure}
+                    onChange={setProcedure}
+                    rows={5}
+                    placeholder={`e.g.\n• 2nd Adjustment\n• Change ligaties\n• Recement #17 buccal tube`}
+                  />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 sm:col-span-2">
                   <label className="text-xs font-medium">Next procedure</label>
-                  <Input value={nextProcedure} onChange={(e) => setNextProcedure(e.target.value)} />
+                  <BulletTextarea
+                    value={nextProcedure}
+                    onChange={setNextProcedure}
+                    rows={3}
+                    placeholder={`e.g.\n• Still for alignment\n• 14/15 for exo`}
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium">Next visit date</label>
@@ -360,7 +435,7 @@ export default function OrthoRecordPage() {
                 </div>
                 <div className="space-y-1 sm:col-span-2">
                   <label className="text-xs font-medium">Notes</label>
-                  <Input value={adjNotes} onChange={(e) => setAdjNotes(e.target.value)} />
+                  <BulletTextarea value={adjNotes} onChange={setAdjNotes} rows={2} placeholder="Optional visit notes" />
                 </div>
                 <div className="sm:col-span-2 flex gap-2">
                   <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Save entry"}</Button>

@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     const { data: invoice, error: invoiceError } = await supabaseUser
       .from("invoices")
       .select(
-        "id, invoice_number, total_amount, paid_amount, status, created_at, due_date, branch_id, organization_id, patients(first_name, last_name), branches(name), organizations(name)"
+        "id, invoice_number, total_amount, subtotal_amount, discount_amount, paid_amount, status, created_at, due_date, branch_id, organization_id, patients(first_name, last_name), branches(name), organizations(name)"
       )
       .eq("id", invoiceId)
       .single()
@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     const [{ data: lineRows }, { data: paymentRows }] = await Promise.all([
       supabaseUser
         .from("invoice_line_items")
-        .select("description, tooth_number, quantity, unit_price, line_total, sort_order")
+        .select("description, tooth_number, quantity, unit_price, line_total, discount_amount, sort_order")
         .eq("invoice_id", invoiceId)
         .order("sort_order"),
       supabaseUser
@@ -107,6 +107,8 @@ Deno.serve(async (req) => {
       createdAt: invoice.created_at,
       dueDate: invoice.due_date,
       patientName: patientRow ? `${patientRow.first_name} ${patientRow.last_name}` : null,
+      subtotalAmount: invoice.subtotal_amount != null ? Number(invoice.subtotal_amount) : null,
+      discountAmount: invoice.discount_amount != null ? Number(invoice.discount_amount) : null,
       totalAmount: Number(invoice.total_amount),
       paidAmount: Number(invoice.paid_amount),
       lineItems: (lineRows ?? []).map((row) => ({
@@ -115,6 +117,7 @@ Deno.serve(async (req) => {
         quantity: Number(row.quantity),
         unit_price: Number(row.unit_price),
         line_total: Number(row.line_total),
+        discount_amount: row.discount_amount != null ? Number(row.discount_amount) : 0,
       })),
       payments: (paymentRows ?? []).map((row) => ({
         created_at: row.created_at,

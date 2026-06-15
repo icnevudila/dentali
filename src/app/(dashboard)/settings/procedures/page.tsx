@@ -24,6 +24,9 @@ import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { ProcedureBomEditor } from "@/components/settings/ProcedureBomEditor"
 import { ListOrdered } from "lucide-react"
+import {
+  fetchOrganizationPreferences,
+} from "@/lib/settings/org-preferences-service"
 
 const PROCEDURE_TEMPLATES = [
   { code: "EXAM", name: "Oral Examination", price: "500", category: "preventive" },
@@ -62,6 +65,7 @@ export default function ProceduresSettingsPage() {
   const [importResult, setImportResult] = useState<string | null>(null)
   const [bomProcedureId, setBomProcedureId] = useState<string | null>(null)
   const [organizationId, setOrganizationId] = useState<string | null>(null)
+  const [branchPricingEnabled, setBranchPricingEnabled] = useState(false)
 
   const IMPORT_EXAMPLE = `[
   {"code":"EXAM","name":"Oral Examination","category":"preventive","base_price":500},
@@ -71,6 +75,9 @@ export default function ProceduresSettingsPage() {
   useEffect(() => {
     void fetchOrganization().then((org) => {
       if (org?.id) setOrganizationId(org.id)
+    })
+    void fetchOrganizationPreferences().then(({ data }) => {
+      if (data) setBranchPricingEnabled(data.branch_procedure_pricing_enabled)
     })
   }, [])
 
@@ -261,7 +268,7 @@ export default function ProceduresSettingsPage() {
         retryLabel={t("common.retry", "Retry")}
         panel={false}
       >
-        {availableBranches.length > 0 && (
+        {branchPricingEnabled && availableBranches.length > 1 ? (
           <div className="flex items-center gap-3">
             <label className="text-sm font-medium text-neutral-700">Branch pricing</label>
             <select
@@ -276,6 +283,10 @@ export default function ProceduresSettingsPage() {
               ))}
             </select>
           </div>
+        ) : (
+          <p className="text-sm text-neutral-500 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3">
+            Org-wide base prices only. Enable per-branch pricing in Organization settings when you run multiple large clinics.
+          </p>
         )}
 
         {showImport && (

@@ -4,6 +4,8 @@ import * as React from "react"
 import { Pencil, Trash2, Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { BulletTextarea } from "@/components/ui/BulletTextarea"
+import { BulletTextList } from "@/components/ui/BulletTextList"
 import { useLocale } from "@/hooks/use-locale"
 import type { TreatmentPlanItem } from "@/lib/clinical/treatment-plan-service"
 
@@ -44,9 +46,13 @@ export function TreatmentPlanItemRow({
   if (!editable) {
     return (
       <li className="py-2 flex justify-between gap-3 text-neutral-700">
-        <span>
-          {item.description}
-          {item.tooth_number ? ` (${t("treatmentPlan.toothNumber", "Tooth #")} ${item.tooth_number})` : ""}
+        <span className="min-w-0 flex-1">
+          <BulletTextList text={item.description} />
+          {item.tooth_number ? (
+            <span className="block text-xs text-neutral-500 mt-0.5">
+              {t("treatmentPlan.toothNumber", "Tooth #")} {item.tooth_number}
+            </span>
+          ) : null}
         </span>
         <span className="font-medium shrink-0">₱{Number(item.estimated_price).toLocaleString()}</span>
       </li>
@@ -56,8 +62,14 @@ export function TreatmentPlanItemRow({
   if (editing) {
     return (
       <li className="py-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between border-b border-neutral-100">
-        <div className="grid gap-2 sm:grid-cols-3 flex-1">
-          <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Procedure" />
+        <div className="grid gap-2 flex-1 w-full">
+          <BulletTextarea
+            value={description}
+            onChange={setDescription}
+            rows={3}
+            disabled={saving}
+          />
+          <div className="grid gap-2 sm:grid-cols-2">
           <Input
             type="number"
             value={price}
@@ -69,6 +81,7 @@ export function TreatmentPlanItemRow({
             onChange={(e) => setTooth(e.target.value)}
             placeholder={t("treatmentPlan.toothNumber", "Tooth #")}
           />
+          </div>
         </div>
         <div className="flex gap-1 shrink-0">
           <Button type="button" size="sm" onClick={handleSave} disabled={saving || !description.trim()}>

@@ -13,6 +13,10 @@ import { fetchAllOrgBranches } from "@/lib/org/branch-service"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
 import { fetchEffectiveSettings } from "@/lib/settings/settings-service"
+import {
+  fetchOrganizationPreferences,
+  updateOrganizationPreferences,
+} from "@/lib/settings/org-preferences-service"
 import { saveBranchRegionalOverrides } from "@/lib/org/branch-context-service"
 import Link from "next/link"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
@@ -39,6 +43,8 @@ export default function OrganizationSettingsPage() {
   const [slug, setSlug] = useState<string | null>(null)
   const [status, setStatus] = useState<string>("active")
   const [planTier, setPlanTier] = useState<string>("standard")
+  const [branchPricingEnabled, setBranchPricingEnabled] = useState(false)
+  const [customProcedureShowPrice, setCustomProcedureShowPrice] = useState(false)
 
   useEffect(() => {
     Promise.all([fetchOrganization(), fetchAllOrgBranches()]).then(([org, branches]) => {
@@ -54,6 +60,11 @@ export default function OrganizationSettingsPage() {
       }
       setBranchCount(branches.length)
       setLoading(false)
+    })
+    void fetchOrganizationPreferences().then(({ data }) => {
+      if (!data) return
+      setBranchPricingEnabled(data.branch_procedure_pricing_enabled)
+      setCustomProcedureShowPrice(data.custom_procedure_show_price)
     })
   }, [])
 
@@ -92,6 +103,15 @@ export default function OrganizationSettingsPage() {
       if (regionalError) {
         setSaving(false)
         setError(regionalError)
+        return
+      }
+      const { error: prefError } = await updateOrganizationPreferences({
+        branch_procedure_pricing_enabled: branchPricingEnabled,
+        custom_procedure_show_price: customProcedureShowPrice,
+      })
+      if (prefError) {
+        setSaving(false)
+        setError(prefError)
         return
       }
     }
@@ -191,6 +211,44 @@ export default function OrganizationSettingsPage() {
             ) : null}
           </CardContent>
         </Card>
+
+        {canManage ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Billing &amp; procedure preferences</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={branchPricingEnabled}
+                  onChange={(e) => setBranchPricingEnabled(e.target.checked)}
+                />
+                <span>
+                  <strong>Per-branch procedure pricing</strong>
+                  <span className="block text-neutral-500 text-xs mt-0.5">
+                    For multi-location clinics only. Single-branch clinics keep one org-wide price list.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={customProcedureShowPrice}
+                  onChange={(e) => setCustomProcedureShowPrice(e.target.checked)}
+                />
+                <span>
+                  <strong>Show price field for custom / free-text procedures</strong>
+                  <span className="block text-neutral-500 text-xs mt-0.5">
+                    When off, custom plan items have no price until invoicing.
+                  </span>
+                </span>
+              </label>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card>
           <CardHeader>

@@ -6,6 +6,7 @@ export type InvoicePdfLineItem = {
   quantity: number
   unit_price: number
   line_total: number
+  discount_amount?: number
 }
 
 export type InvoicePdfPayment = {
@@ -45,6 +46,8 @@ export async function buildInvoicePdf(params: {
   createdAt: string
   dueDate: string | null
   patientName: string | null
+  subtotalAmount?: number | null
+  discountAmount?: number | null
   totalAmount: number
   paidAmount: number
   lineItems: InvoicePdfLineItem[]
@@ -115,12 +118,26 @@ export async function buildInvoicePdf(params: {
     for (const item of params.lineItems) {
       const tooth = item.tooth_number ? ` (#${item.tooth_number})` : ""
       draw(`${item.description}${tooth}`, 10)
+      const discount = item.discount_amount ?? 0
+      const discountNote = discount > 0 ? ` · disc. -${formatPhp(discount)}` : ""
       draw(
-        `  Qty ${item.quantity} × ${formatPhp(item.unit_price)} = ${formatPhp(item.line_total)}`,
+        `  Qty ${item.quantity} × ${formatPhp(item.unit_price)} = ${formatPhp(item.line_total)}${discountNote}`,
         9,
         false,
         8
       )
+    }
+  }
+
+  y -= 8
+  const subtotal =
+    params.subtotalAmount ??
+    params.lineItems.reduce((sum, item) => sum + item.line_total + (item.discount_amount ?? 0), 0)
+  const invoiceDiscount = params.discountAmount ?? 0
+  if (invoiceDiscount > 0 || params.lineItems.some((item) => (item.discount_amount ?? 0) > 0)) {
+    draw(`Subtotal: ${formatPhp(subtotal)}`, 10)
+    if (invoiceDiscount > 0) {
+      draw(`Invoice discount: -${formatPhp(invoiceDiscount)}`, 10)
     }
   }
 

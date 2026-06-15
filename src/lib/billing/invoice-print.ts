@@ -56,6 +56,8 @@ export function buildInvoicePrintHtml(params: {
     branchName,
   } = params
   const balance = invoice.total_amount - invoice.paid_amount
+  const subtotal = invoice.subtotal_amount ?? invoice.total_amount + (invoice.discount_amount ?? 0)
+  const invoiceDiscount = invoice.discount_amount ?? 0
   const statusLabel = STATUS_LABELS[invoice.status] ?? invoice.status
   const statusColor = STATUS_COLORS[invoice.status] ?? STATUS_COLORS.sent
 
@@ -67,11 +69,12 @@ export function buildInvoicePrintHtml(params: {
           <td class="desc">${escapeHtml(item.description)}${item.tooth_number ? ` <span class="tooth">#${escapeHtml(item.tooth_number)}</span>` : ""}</td>
           <td class="num">${item.quantity}</td>
           <td class="num">${formatPhp(item.unit_price)}</td>
+          <td class="num">${item.discount_amount > 0 ? `-${formatPhp(item.discount_amount)}` : "—"}</td>
           <td class="num bold">${formatPhp(item.line_total)}</td>
         </tr>`
         )
         .join("")
-    : `<tr><td colspan="4" class="empty">No line items</td></tr>`
+    : `<tr><td colspan="5" class="empty">No line items</td></tr>`
 
   const paymentRows = payments.length
     ? payments
@@ -406,8 +409,9 @@ export function buildInvoicePrintHtml(params: {
       <tr>
         <th style="width:45%">Description</th>
         <th class="num" style="width:10%">Qty</th>
-        <th class="num" style="width:22%">Unit Price</th>
-        <th class="num" style="width:23%">Amount</th>
+        <th class="num" style="width:18%">Unit Price</th>
+        <th class="num" style="width:12%">Discount</th>
+        <th class="num" style="width:18%">Amount</th>
       </tr>
     </thead>
     <tbody>${lineRows}</tbody>
@@ -432,6 +436,11 @@ export function buildInvoicePrintHtml(params: {
     <div class="totals">
       <div class="row">
         <span class="label">Subtotal</span>
+        <span class="value">${formatPhp(subtotal)}</span>
+      </div>
+      ${invoiceDiscount > 0 ? `<div class="row"><span class="label">Invoice discount</span><span class="value">-${formatPhp(invoiceDiscount)}</span></div>` : ""}
+      <div class="row">
+        <span class="label">Total</span>
         <span class="value">${formatPhp(invoice.total_amount)}</span>
       </div>
       <div class="row">

@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users, Plus, Receipt } from "lucide-react"
+import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users, Plus, Receipt, Pill } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { MetricStrip } from "@/components/layout/MetricStrip"
@@ -49,6 +49,7 @@ const PATIENT_TABS = [
   { id: "clinical-notes", label: "Clinical Notes" },
   { id: "treatment-plans", label: "Treatment Plans" },
   { id: "orthodontics", label: "Orthodontics" },
+  { id: "prescriptions", label: "Prescriptions" },
   { id: "appointments", label: "Appointments" },
   { id: "consents", label: "Consents & Forms" },
   { id: "radiology", label: "Radiology & Imaging" },
@@ -580,6 +581,27 @@ export default function PatientProfilePage() {
               </CardHeader>
               <CardContent>
                 <OrthoRecordSummary patientId={patientId} />
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === "prescriptions" && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Prescriptions</CardTitle>
+                  <CardDescription>Medication orders with allergy checks and printable Rx.</CardDescription>
+                </div>
+                <Button size="sm" className="gap-2" asChild>
+                  <Link href={`/patients/${patientId}/prescriptions`} transitionTypes={NAV_FORWARD_TRANSITION}>
+                    <Pill className="h-4 w-4" /> Open prescriptions
+                  </Link>
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-neutral-600">
+                  Create signed prescriptions with dental formulary shortcuts. Medical history allergies appear on the Rx printout.
+                </p>
               </CardContent>
             </Card>
           )}

@@ -25,6 +25,7 @@ import {
 import { useBranch } from "@/hooks/use-branch"
 import { cn } from "@/lib/utils"
 import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
+import { ConsentScanUploadButton } from "@/components/consent/ConsentScanUploadButton"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 
 type FormStatus = "not_started" | "pending" | "signed" | "voided"
@@ -61,6 +62,13 @@ export function ConsentFormsPanel({
   const [busySlug, setBusySlug] = React.useState<string | null>(null)
   const [linkCopiedSlug, setLinkCopiedSlug] = React.useState<string | null>(null)
   const [activeLinks, setActiveLinks] = React.useState<Record<string, string>>({})
+  const [orgId, setOrgId] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    void fetchOrganization().then((org) => {
+      if (org?.id) setOrgId(org.id)
+    })
+  }, [])
 
   React.useEffect(() => {
     fetchConsentCatalog().then(({ data, error: err }) => {
@@ -188,6 +196,7 @@ export function ConsentFormsPanel({
           const status = resolveFormStatus(template.slug, consents)
           const badge = STATUS_BADGE[status]
           const isBusy = busySlug === template.slug
+          const consentRecord = consents.find((c) => c.template_slug === template.slug)
 
           return (
             <article
@@ -280,6 +289,31 @@ export function ConsentFormsPanel({
                     </>
                   )}
                 </div>
+                {orgId && consentRecord && status !== "voided" ? (
+                  <ConsentScanUploadButton
+                    organizationId={orgId}
+                    patientId={patientId}
+                    consentId={consentRecord.id}
+                    templateSlug={template.slug}
+                    onUploaded={onConsentsChange}
+                    disabled={isBusy}
+                  />
+                ) : status !== "signed" ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1 w-full"
+                    disabled={isBusy}
+                    onClick={async () => {
+                      const consentId = await ensureAndGetConsentId(template)
+                      if (!consentId || !orgId) return
+                      // consent created — parent refresh enables upload on next render
+                      onConsentsChange?.()
+                    }}
+                  >
+                    Prepare for paper upload
+                  </Button>
+                ) : null}
 
                 {activeLinks[template.slug] && (
                   <div className="mt-1 p-2 bg-neutral-50 rounded-lg border border-neutral-200 flex items-center justify-between gap-2 text-xs">
