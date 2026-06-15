@@ -4,6 +4,7 @@ import * as React from "react"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useBranch } from "@/hooks/use-branch"
+import { usePermission } from "@/hooks/use-permission"
 import { useLocale } from "@/hooks/use-locale"
 import { useAuth } from "@/hooks/use-auth"
 import { fetchOrganization } from "@/lib/auth/auth-service"
@@ -39,6 +40,8 @@ export default function WaitlistPage() {
   const { activeBranch } = useBranch()
   const { user } = useAuth()
   const { t } = useLocale()
+  const { hasPermission } = usePermission()
+  const canWriteAppointments = hasPermission(PERMISSIONS.APPOINTMENTS_WRITE)
   const [tab, setTab] = React.useState<TabFilter>("active")
   const [entries, setEntries] = React.useState<WaitlistEntry[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -122,12 +125,15 @@ export default function WaitlistPage() {
       userId: user.id,
     })
     setSaving(false)
-    if (err) setError(err)
-    else {
+    if (err) {
+      setError(err)
+      toast.error(err)
+    } else {
       setShowAdd(false)
       setSelectedPatientId("")
       setPatientQuery("")
       setNotes("")
+      toast.success(t("waitlist.added", "Patient added to waitlist"))
       load()
     }
   }
@@ -222,9 +228,11 @@ export default function WaitlistPage() {
           "First-in-first-served queue with urgency priority when slots open."
         )}
         actions={
+          canWriteAppointments ? (
           <Button className="gap-2 shadow-sm" onClick={() => setShowAdd(true)}>
             <Plus className="h-4 w-4" /> {t("waitlist.addPatient", "Add to waitlist")}
           </Button>
+          ) : null
         }
         badges={
           activeBranch ? (
@@ -402,6 +410,7 @@ export default function WaitlistPage() {
                 tab={tab}
                 actionLoading={actionLoading}
                 slotAlertLabel={t("waitlist.slotAlertSent", "Slot alert sent")}
+                canWrite={canWriteAppointments}
                 onContact={(entry) => {
                   setContactEntry(entry)
                   setContactOutcome("reached")

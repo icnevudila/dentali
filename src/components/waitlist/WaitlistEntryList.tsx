@@ -34,6 +34,7 @@ export function WaitlistEntryList({
   tab,
   actionLoading,
   slotAlertLabel,
+  canWrite = true,
   onContact,
   onBook,
   onCancel,
@@ -42,6 +43,7 @@ export function WaitlistEntryList({
   tab: "active" | "history"
   actionLoading: string | null
   slotAlertLabel: string
+  canWrite?: boolean
   onContact: (entry: WaitlistEntry) => void
   onBook: (entry: WaitlistEntry) => void
   onCancel: (entryId: string) => void
@@ -85,7 +87,7 @@ export function WaitlistEntryList({
               </>
             }
             trailing={
-              tab === "active" ? (
+              tab === "active" && canWrite ? (
                 <div className="flex flex-wrap justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                   <Button
                     size="sm"
@@ -115,6 +117,10 @@ export function WaitlistEntryList({
                     <Trash2 className="h-3.5 w-3.5 text-neutral-400" />
                   </Button>
                 </div>
+              ) : tab === "active" ? (
+                <span className="text-xs text-neutral-400">
+                  {new Date(entry.created_at).toLocaleDateString("en-PH")}
+                </span>
               ) : entry.appointment_id ? (
                 <Button size="sm" variant="link" asChild onClick={(e) => e.stopPropagation()}>
                   <Link href="/appointments">View appointment</Link>

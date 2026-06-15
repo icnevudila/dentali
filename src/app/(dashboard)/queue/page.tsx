@@ -42,95 +42,9 @@ import { QueueAnalyticsPanel } from "@/components/analytics/QueueAnalyticsPanel"
 import { KioskAnalyticsPanel } from "@/components/analytics/KioskAnalyticsPanel"
 import { DisplayAnalyticsPanel } from "@/components/analytics/DisplayAnalyticsPanel"
 import { BranchPublicTokensPanel } from "@/components/analytics/BranchPublicTokensPanel"
+import { QueueBoard } from "@/components/queue/QueueBoard"
 
 type Tab = "board" | "history"
-
-const COLUMNS: { key: QueueStatus[]; title: string; borderClass: string }[] = [
-  { key: ["waiting", "ready"], title: "Waiting", borderClass: "border-t-2 border-t-amber-500 bg-white" },
-  { key: ["now_serving"], title: "Now Serving", borderClass: "border-t-2 border-t-blue-500 bg-white" },
-  { key: ["in_chair"], title: "In Chair", borderClass: "border-t-2 border-t-emerald-500 bg-white" },
-]
-
-function QueueCard({
-  entry,
-  onAction,
-  loading,
-}: {
-  entry: QueueEntry
-  onAction: (status: QueueStatus | "announce", chair?: string) => void
-  loading: boolean
-}) {
-  const mins = waitMinutes(entry.checked_in_at)
-  const { t } = useLocale()
-
-  return (
-    <div className={`rounded-lg border bg-white p-3 shadow-sm border-l-4 transition-all ${
-      entry.appointment_id 
-        ? "border-l-blue-500 border-y-neutral-200 border-r-neutral-200 bg-blue-50/10 hover:bg-blue-50/20" 
-        : "border-l-neutral-400 border-y-neutral-200 border-r-neutral-200 hover:bg-neutral-50/50"
-    }`}>
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-lg font-bold text-primary-700">{entry.display_code}</span>
-            {entry.patient_mood === 'anxious' && <span title="Patient is a bit anxious" className="text-xl cursor-help animate-pulse">😰</span>}
-            {entry.patient_mood === 'normal' && <span title="Patient feels normal" className="text-xl cursor-help">😐</span>}
-            {entry.patient_mood === 'great' && <span title="Patient is feeling great" className="text-xl cursor-help">😊</span>}
-            {entry.appointment_id ? (
-              <Badge variant="outline" className="text-[10px] border-blue-200 bg-blue-50 text-blue-700 font-semibold">
-                {t("queue.scheduledAppt", "Scheduled")}
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="text-[10px] border-neutral-200 bg-neutral-50 text-neutral-500 font-medium">
-                {t("queue.walkIn", "Walk-in")}
-              </Badge>
-            )}
-          </div>
-          <Link href={`/patients/${entry.patient_id}`} className="block text-sm font-medium text-neutral-900 hover:underline">
-            {entry.patient_name ?? "Patient"}
-          </Link>
-        </div>
-        <Badge variant={entry.status === "ready" ? "info" : "warning"}>{entry.status.replace("_", " ")}</Badge>
-      </div>
-      <p className="text-xs text-neutral-500 mt-1">{mins} min waiting</p>
-      {entry.chair_label && <p className="text-xs text-neutral-600">Chair: {entry.chair_label}</p>}
-      {entry.notes && <p className="text-xs text-neutral-400 mt-1 truncate">{entry.notes}</p>}
-      <div className="flex flex-wrap gap-1 mt-2">
-        {entry.status === "waiting" && (
-          <Button size="sm" variant="outline" disabled={loading} onClick={() => onAction("ready")}>
-            Mark ready
-          </Button>
-        )}
-        {(entry.status === "waiting" || entry.status === "ready") && (
-          <Button size="sm" variant="outline" disabled={loading} onClick={() => onAction("now_serving")}>
-            Call
-          </Button>
-        )}
-        {entry.status === "now_serving" && (
-          <>
-            <Button size="sm" variant="outline" disabled={loading} onClick={() => onAction("announce")}>
-              <Megaphone className="h-3.5 w-3.5 mr-1.5" />
-              Announce
-            </Button>
-            <Button size="sm" disabled={loading} onClick={() => onAction("in_chair")}>
-              In chair
-            </Button>
-          </>
-        )}
-        {entry.status === "in_chair" && (
-          <Button size="sm" variant="default" disabled={loading} onClick={() => onAction("served")}>
-            Complete
-          </Button>
-        )}
-        {entry.status !== "served" && (
-          <Button size="sm" variant="ghost" disabled={loading} onClick={() => onAction("cancelled")}>
-            Cancel
-          </Button>
-        )}
-      </div>
-    </div>
-  )
-}
 
 export default function QueuePage() {
   const { activeBranch, branchRevision } = useBranch()
@@ -321,10 +235,21 @@ export default function QueuePage() {
           billingGate,
         })
       }
+      const isRevert =
+        entry &&
+        status !== "announce" &&
+        ((entry.status === "in_chair" && (status === "now_serving" || status === "waiting" || status === "ready")) ||
+          (entry.status === "now_serving" && (status === "waiting" || status === "ready")) ||
+          (entry.status === "ready" && status === "waiting"))
+
       const statusLabels: Partial<Record<QueueStatus | "announce", string>> = {
-        waiting: t("queue.statusWaiting", "Moved to waiting"),
+        waiting: isRevert
+          ? t("queue.statusRevertedWaiting", "Returned to waiting")
+          : t("queue.statusWaiting", "Moved to waiting"),
         ready: t("queue.statusReady", "Marked ready"),
-        now_serving: t("queue.statusServing", "Now serving"),
+        now_serving: isRevert
+          ? t("queue.statusRevertedCall", "Returned to call area")
+          : t("queue.statusServing", "Now serving"),
         in_chair: t("queue.statusInChair", "In chair"),
         served: t("queue.statusServed", "Marked as served"),
         cancelled: t("queue.statusCancelled", "Entry cancelled"),
@@ -772,30 +697,24 @@ export default function QueuePage() {
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-3">
-              {COLUMNS.map((col) => {
-                const colEntries = entries.filter((e) => col.key.includes(e.status))
-                return (
-                  <div key={col.title} className={`rounded-lg border border-neutral-200 p-4 min-h-[200px] shadow-sm ${col.borderClass}`}>
-                    <h2 className="font-semibold text-sm text-neutral-700 mb-3">
-                      {col.title}
-                      <span className="ml-2 text-neutral-400">({colEntries.length})</span>
-                    </h2>
-                    <div className="space-y-2">
-                      {colEntries.map((entry) => (
-                        <QueueCard
-                          key={entry.id}
-                          entry={entry}
-                          loading={actionId === entry.id}
-                          onAction={(status) => handleAction(entry.id, status)}
-                        />
-                      ))}
-                      {colEntries.length === 0 && (
-                        <p className="text-xs text-neutral-400 py-4 text-center">Empty</p>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
+              {activeBranch ? (
+                <div className="md:col-span-3">
+                  <QueueBoard
+                    entries={entries}
+                    branchId={activeBranch.id}
+                    actionId={actionId}
+                    onAction={handleAction}
+                    onReorderError={(msg) => {
+                      setError(msg)
+                      toast.error(msg)
+                    }}
+                    onReorderSuccess={() => {
+                      toast.success(t("queue.reordered", "Queue order updated"))
+                      load()
+                    }}
+                  />
+                </div>
+              ) : null}
             </div>
           )}
           {activeBranch ? (

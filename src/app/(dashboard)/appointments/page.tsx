@@ -79,6 +79,8 @@ function AppointmentsPageContent() {
   const { t } = useLocale()
   const { hasPermission } = usePermission()
   const canWriteAppts = hasPermission(PERMISSIONS.APPOINTMENTS_WRITE)
+  const canCheckIn =
+    hasPermission(PERMISSIONS.QUEUE_MANAGE) || hasPermission(PERMISSIONS.APPOINTMENTS_WRITE)
   const [weekStart, setWeekStart] = React.useState(() => startOfWeekMonday(new Date()))
   const [selectedDate, setSelectedDate] = React.useState(() => toDateKey(new Date()))
   const [weekAppointments, setWeekAppointments] = React.useState<Awaited<ReturnType<typeof fetchAppointmentsRange>>["data"]>([])
@@ -752,7 +754,7 @@ function AppointmentsPageContent() {
             onSelectDate={setSelectedDate}
             onStatusChange={handleStatus}
             onReschedule={canWriteAppts ? handleReschedule : undefined}
-            onCheckIn={canWriteAppts ? handleCheckIn : undefined}
+            onCheckIn={canCheckIn ? handleCheckIn : undefined}
             onRemind={canWriteAppts ? handleSendReminder : undefined}
             onEdit={canWriteAppts ? openEditDialog : undefined}
             updatingId={updatingId}

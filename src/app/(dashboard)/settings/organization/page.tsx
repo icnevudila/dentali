@@ -111,7 +111,7 @@ export default function OrganizationSettingsPage() {
   }
 
   return (
-    <PermissionGate permission={PERMISSIONS.APPOINTMENTS_READ}>
+    <PermissionGate permission={PERMISSIONS.SETTINGS_MANAGE}>
       <ModulePageShell
         maxWidth=""
         className="w-full"

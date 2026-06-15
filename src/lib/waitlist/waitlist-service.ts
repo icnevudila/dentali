@@ -98,25 +98,23 @@ export async function createWaitlistEntry(params: {
   userId: string
 }): Promise<{ data: { id: string } | null; error: string | null }> {
   const supabase = createClient()
-  const { data, error } = await supabase
-    .from("waitlist_entries")
-    .insert({
+  const { data, error } = await supabase.rpc("create_waitlist_entry", {
+    p_payload: {
       organization_id: params.organizationId,
       branch_id: params.branchId,
       patient_id: params.patientId,
       urgency: params.urgency,
-      preferred_date: params.preferredDate || null,
-      preferred_time_start: params.preferredTimeStart || null,
-      preferred_time_end: params.preferredTimeEnd || null,
-      notes: params.notes || null,
-      expires_at: params.expiresAt || null,
-      created_by: params.userId,
-    })
-    .select("id")
-    .single()
+      preferred_date: params.preferredDate ?? null,
+      preferred_time_start: params.preferredTimeStart ?? null,
+      preferred_time_end: params.preferredTimeEnd ?? null,
+      notes: params.notes ?? null,
+      expires_at: params.expiresAt ?? null,
+    },
+  })
 
-  if (error || !data) return { data: null, error: error?.message ?? "Failed to add to waitlist" }
-  return { data: { id: data.id }, error: null }
+  if (error) return { data: null, error: error.message }
+  const raw = data as { id: string }
+  return { data: { id: raw.id }, error: null }
 }
 
 export async function markWaitlistContacted(
@@ -152,11 +150,9 @@ export async function bookFromWaitlist(
 
 export async function cancelWaitlistEntry(entryId: string): Promise<{ error: string | null }> {
   const supabase = createClient()
-  const { error } = await supabase
-    .from("waitlist_entries")
-    .update({ status: "cancelled", updated_at: new Date().toISOString() })
-    .eq("id", entryId)
-
+  const { error } = await supabase.rpc("cancel_waitlist_entry", {
+    p_entry_id: entryId,
+  })
   return { error: error?.message ?? null }
 }
 

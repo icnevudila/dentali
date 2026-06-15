@@ -94,34 +94,24 @@ export async function createManualInvoice(params: {
 
   const supabase = createClient()
   const series = params.series || "INV"
-  const invoiceNumber = params.invoiceNumber?.trim() || `${series}-${Date.now().toString(36).toUpperCase()}`
+  const invoiceNumber = params.invoiceNumber?.trim()
 
-  const { data, error } = await supabase
-    .from("invoices")
-    .insert({
+  const { data, error } = await supabase.rpc("create_manual_invoice", {
+    p_payload: {
       organization_id: params.organizationId,
       branch_id: params.branchId,
       patient_id: params.patientId,
-      invoice_number: invoiceNumber,
-      series: series,
-      total_amount: 0,
-      status: "sent",
+      total_amount: params.totalAmount,
       due_date: params.dueDate ?? null,
-      created_by: params.userId,
-    })
-    .select("id")
-    .single()
-
-  if (error || !data) return { data: null, error: error?.message ?? "Failed" }
-
-  const lineErr = await insertInvoiceLineItem({
-    invoiceId: data.id,
-    description: "Clinical services",
-    unitPrice: params.totalAmount,
+      series,
+      invoice_number: invoiceNumber ?? null,
+      description: "Clinical services",
+    },
   })
-  if (lineErr.error) return { data: null, error: lineErr.error }
 
-  return { data: { id: data.id }, error: null }
+  if (error) return { data: null, error: error.message }
+  const raw = data as { id: string }
+  return { data: { id: raw.id }, error: null }
 }
 
 export async function createInvoiceFromPlan(params: {

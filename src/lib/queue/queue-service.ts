@@ -99,6 +99,19 @@ export async function checkInPatient(params: {
   return { data: result, error: null }
 }
 
+export async function reorderQueueBoard(
+  branchId: string,
+  orderedEntryIds: string[]
+): Promise<{ error: string | null }> {
+  if (orderedEntryIds.length === 0) return { error: null }
+  const supabase = createClient()
+  const { error } = await supabase.rpc("reorder_queue_board", {
+    p_branch_id: branchId,
+    p_ordered_entry_ids: orderedEntryIds,
+  })
+  return { error: error?.message ?? null }
+}
+
 export async function updateQueueStatus(
   entryId: string,
   status: QueueStatus,

@@ -169,11 +169,10 @@ export async function updateAppointmentStatus(
   status: string
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
-  const { error } = await supabase
-    .from("appointments")
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq("id", appointmentId)
-
+  const { error } = await supabase.rpc("update_appointment_status", {
+    p_appointment_id: appointmentId,
+    p_status: status,
+  })
   return { error: error?.message ?? null }
 }
 
@@ -186,16 +185,15 @@ export async function updateAppointmentDetails(
   }
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
-  const { error } = await supabase
-    .from("appointments")
-    .update({
-      ...(params.providerId !== undefined && { provider_id: params.providerId }),
-      ...(params.purpose !== undefined && { purpose: params.purpose }),
-      ...(params.durationMinutes !== undefined && { duration_minutes: params.durationMinutes }),
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", appointmentId)
+  const payload: Record<string, string | number | null> = {}
+  if (params.providerId !== undefined) payload.provider_id = params.providerId
+  if (params.purpose !== undefined) payload.purpose = params.purpose
+  if (params.durationMinutes !== undefined) payload.duration_minutes = params.durationMinutes
 
+  const { error } = await supabase.rpc("update_appointment_details", {
+    p_appointment_id: appointmentId,
+    p_payload: payload,
+  })
   return { error: error?.message ?? null }
 }
 

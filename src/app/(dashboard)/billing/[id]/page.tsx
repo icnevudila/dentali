@@ -19,10 +19,10 @@ import {
   type PaymentIntent,
 } from "@/lib/billing/payment-gateway-service"
 import { AuditHistoryPanel } from "@/components/audit/AuditHistoryPanel"
-import { logAuditEvent } from "@/lib/audit/audit-service"
 import { toast } from "sonner"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { useBranch } from "@/hooks/use-branch"
+import { usePermission } from "@/hooks/use-permission"
 import { useLocale } from "@/hooks/use-locale"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -35,6 +35,8 @@ export default function InvoiceDetailPage() {
   const invoiceId = params.id as string
   const { activeBranch } = useBranch()
   const { t } = useLocale()
+  const { hasPermission } = usePermission()
+  const canWriteBilling = hasPermission(PERMISSIONS.BILLING_WRITE)
   const [invoice, setInvoice] = React.useState<Awaited<ReturnType<typeof getInvoice>>["data"]>(null)
   const [payments, setPayments] = React.useState<Awaited<ReturnType<typeof getInvoice>>["payments"]>([])
   const [lineItems, setLineItems] = React.useState<Awaited<ReturnType<typeof getInvoice>>["lineItems"]>([])
@@ -165,18 +167,6 @@ export default function InvoiceDetailPage() {
       }, 1500)
     }
 
-    const org = await fetchOrganization()
-    if (org) {
-      await logAuditEvent({
-        organizationId: org.id,
-        branchId: activeBranch?.id,
-        action: "invoice.payment",
-        entityType: "invoice",
-        entityId: invoiceId,
-        metadata: { amount: payAmount, method },
-      })
-    }
-
     setAmount("")
     if (data && invoice) {
       setInvoice({ ...invoice, paid_amount: data.paid_amount, status: data.status })
@@ -242,19 +232,6 @@ export default function InvoiceDetailPage() {
       return
     }
     toast.success("Invoice voided")
-    
-    // Audit Logging
-    const org = await fetchOrganization()
-    if (org) {
-      await logAuditEvent({
-        organizationId: org.id,
-        branchId: activeBranch?.id,
-        action: "invoice.void",
-        entityType: "invoice",
-        entityId: invoiceId,
-        metadata: { reason: voidReason.trim(), invoiceNumber: invoice?.invoice_number },
-      })
-    }
 
     if (data && invoice) {
       setInvoice({ ...invoice, status: data.status })
@@ -304,7 +281,7 @@ export default function InvoiceDetailPage() {
   ]
 
   return (
-    <PermissionGate permission={PERMISSIONS.BILLING_WRITE}>
+    <PermissionGate permission={PERMISSIONS.BILLING_READ}>
       <div className="space-y-6 pb-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -502,6 +479,7 @@ export default function InvoiceDetailPage() {
                           <td className="py-2 text-right font-medium">
                             <div className="flex items-center justify-end gap-2">
                               <span>₱{item.line_total.toLocaleString()}</span>
+                              {canWriteBilling ? (
                               <Button
                                 variant="ghost"
                                 className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0 flex items-center justify-center text-primary-600"
@@ -515,6 +493,7 @@ export default function InvoiceDetailPage() {
                               >
                                 <Edit className="h-3.5 w-3.5" />
                               </Button>
+                              ) : null}
                             </div>
                           </td>
                         </tr>
@@ -524,7 +503,7 @@ export default function InvoiceDetailPage() {
                 </table>
               </div>
             )}
-            {invoice && invoice.status !== "void" && invoice.status !== "paid" ? (
+            {invoice && invoice.status !== "void" && invoice.status !== "paid" && canWriteBilling ? (
               <form onSubmit={handleAddLineItem} className="mt-4 grid gap-2 sm:grid-cols-4 border-t pt-4">
                 <Input
                   placeholder={t("billing.newLineDesc", "Description")}
@@ -583,7 +562,7 @@ export default function InvoiceDetailPage() {
           </CardContent>
         </Card>
 
-        {balance > 0 && invoice.status !== "void" && (
+        {balance > 0 && invoice.status !== "void" && canWriteBilling && (
           <Card>
             <CardHeader><CardTitle className="text-base">{t("billing.recordPayment", "Record Payment")}</CardTitle></CardHeader>
             <CardContent>
@@ -616,7 +595,7 @@ export default function InvoiceDetailPage() {
           </Card>
         )}
 
-        {balance > 0 && invoice.status !== "void" && (
+        {balance > 0 && invoice.status !== "void" && canWriteBilling && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{t("billing.onlinePayment", "Online Payment")}</CardTitle>
@@ -698,7 +677,7 @@ export default function InvoiceDetailPage() {
           </Card>
         )}
 
-        {invoice.status !== "void" && invoice.paid_amount === 0 && (
+        {invoice.status !== "void" && invoice.paid_amount === 0 && canWriteBilling && (
           <Card className="border-red-200">
             <CardHeader><CardTitle className="text-base text-red-800">{t("billing.voidInvoice", "Void Invoice")}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
@@ -729,6 +708,7 @@ export default function InvoiceDetailPage() {
                     <span>{new Date(p.created_at).toLocaleString("en-PH")} · {p.payment_method}</span>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">₱{p.amount.toLocaleString()}</span>
+                      {canWriteBilling ? (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -749,6 +729,7 @@ export default function InvoiceDetailPage() {
                       >
                         <X className="h-4 w-4" />
                       </Button>
+                      ) : null}
                     </div>
                   </li>
                 ))}
