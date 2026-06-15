@@ -18,7 +18,8 @@ import { ClinicalNotesWorkspace } from "@/components/clinical/ClinicalNotesWorks
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { getPatient, type PatientWithContacts } from "@/lib/patients/patient-service"
-import { getPatientBalance, type PatientBalance } from "@/lib/billing/invoice-service"
+import { getPatientBalance, getPatientBillingGate, type PatientBalance, type PatientBillingGate } from "@/lib/billing/invoice-service"
+import { PatientBillingGateBanner } from "@/components/billing/PatientBillingGateBanner"
 import { ConsentFormsPanel } from "@/components/consent/ConsentFormsPanel"
 import { fetchPatientConsents, type PatientConsent } from "@/lib/patients/consent-service"
 import { getLatestMedicalHistory } from "@/lib/patients/medical-history-service"
@@ -33,12 +34,13 @@ import { OrthoRecordSummary } from "@/components/patients/OrthoRecordSummary"
 import { fetchPatientTimeline, type TimelineEvent } from "@/lib/clinical/clinical-notes-service"
 import { createClient } from "@/lib/supabase/client"
 import { useRouteParams } from "@/hooks/use-route-params"
+import { useBranch } from "@/hooks/use-branch"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
 import { NAV_BACK_TRANSITION, NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 import { ClinicalVisitJourneyPanel } from "@/components/clinical/ClinicalVisitJourneyPanel"
 import { buildClinicalVisitJourney } from "@/lib/clinical/clinical-visit-journey"
 import { getPatientOdontogram } from "@/lib/odontogram/dental-chart-service"
-import { useBranch } from "@/hooks/use-branch"
+import { PatientVisitHistoryPanel } from "@/components/patients/PatientVisitHistoryPanel"
 
 const PATIENT_TABS = [
   { id: "record", label: "Patient Record" },
@@ -99,6 +101,7 @@ export default function PatientProfilePage() {
     conditions: string[]
   } | null>(null)
   const [balance, setBalance] = React.useState<PatientBalance | null>(null)
+  const [billingGate, setBillingGate] = React.useState<PatientBillingGate | null>(null)
   const [balanceError, setBalanceError] = React.useState<string | null>(null)
   const [timeline, setTimeline] = React.useState<TimelineEvent[]>([])
   const [timelineError, setTimelineError] = React.useState<string | null>(null)
@@ -122,9 +125,10 @@ export default function PatientProfilePage() {
       fetchPatientTreatmentPlans(patientId),
       getLatestMedicalHistory(patientId),
       getPatientBalance(patientId),
+      getPatientBillingGate(patientId),
       fetchPatientTimeline(patientId),
     ])
-      .then(([patientRes, consentsRes, apptsRes, plansRes, medRes, balanceRes, timelineRes]) => {
+      .then(([patientRes, consentsRes, apptsRes, plansRes, medRes, balanceRes, gateRes, timelineRes]) => {
         setPatient(patientRes.data)
         setLoadError(patientRes.error)
         setConsents(consentsRes.data)
@@ -141,6 +145,7 @@ export default function PatientProfilePage() {
         }
         setBalance(balanceRes.data)
         setBalanceError(balanceRes.error)
+        setBillingGate(gateRes.data)
         setTimeline(timelineRes.data)
         setTimelineError(timelineRes.error)
         setLoading(false)
@@ -224,6 +229,7 @@ export default function PatientProfilePage() {
     appointments,
     treatmentPlans,
     balance,
+    billingGate,
     timeline,
     hasChartFindings,
   })
@@ -327,19 +333,21 @@ export default function PatientProfilePage() {
         </div>
       </div>
 
-      {balance && balance.open_balance > 0 && (
+      {billingGate?.has_billing_gap ? (
+        <PatientBillingGateBanner gate={billingGate} patientId={patientId} />
+      ) : balance && balance.open_balance > 0 ? (
         <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50/50 p-4 text-red-900 shadow-sm animate-in slide-in-from-top-4 duration-300">
           <AlertTriangle className="h-6 w-6 text-red-600 shrink-0" />
           <div className="flex-1 text-sm font-medium">
-            <span className="font-bold">Outstanding Balance Warning:</span> This patient has an outstanding balance of <span className="font-bold">₱{balance.open_balance.toLocaleString()}</span>. Please settle outstanding invoices before proceeding with new appointments or treatments.
+            <span className="font-bold">Outstanding Balance Warning:</span> This patient has an outstanding balance of{" "}
+            <span className="font-bold">₱{balance.open_balance.toLocaleString()}</span>. Please settle outstanding
+            invoices before proceeding with new appointments or treatments.
           </div>
           <Button size="sm" variant="destructive" asChild className="shrink-0 bg-red-600 hover:bg-red-700">
-            <Link href={`/billing?patient=${patientId}`}>
-              Settle Balance
-            </Link>
+            <Link href={`/billing?patient=${patientId}`}>Settle Balance</Link>
           </Button>
         </div>
-      )}
+      ) : null}
 
       <MetricStrip items={profileMetrics} />
 
@@ -629,6 +637,8 @@ export default function PatientProfilePage() {
 
           {/* APPOINTMENTS TAB */}
           {activeTab === "appointments" && (
+            <div className="space-y-4">
+              <PatientVisitHistoryPanel patientId={patientId} branchId={activeBranch?.id} />
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -668,6 +678,7 @@ export default function PatientProfilePage() {
                 </div>
               </CardContent>
             </Card>
+            </div>
           )}
         </div>
       </div>

@@ -1,3 +1,5 @@
+export type BookingSource = "staff" | "portal" | "kiosk" | "phone" | "walk_in"
+
 export interface AppointmentRecord {
   id: string
   scheduled_at: string
@@ -6,5 +8,6 @@ export interface AppointmentRecord {
   patient_id: string
   patient_name?: string
   provider_id?: string | null
+  booking_source?: BookingSource | null
 }
 

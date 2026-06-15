@@ -6,7 +6,13 @@ import { fetchDisplayAnalytics, fetchTvDisplayAnalytics } from "@/lib/analytics/
 import { useLocale } from "@/hooks/use-locale"
 import { cn } from "@/lib/utils"
 
-export function DisplayAnalyticsPanel({ branchId }: { branchId: string }) {
+export function DisplayAnalyticsPanel({
+  branchId,
+  refreshKey = 0,
+}: {
+  branchId: string
+  refreshKey?: number
+}) {
   const { t, locale } = useLocale()
   const [loading, setLoading] = useState(true)
   const [activeDisplay, setActiveDisplay] = useState(0)
@@ -35,7 +41,7 @@ export function DisplayAnalyticsPanel({ branchId }: { branchId: string }) {
       setMinutesSinceRefresh(healthRes.data.minutesSinceRefresh)
     }
     setLoading(false)
-  }, [branchId])
+  }, [branchId, refreshKey])
 
   useEffect(() => {
     void load()

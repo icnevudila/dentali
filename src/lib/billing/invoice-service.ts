@@ -133,6 +133,10 @@ export async function createInvoiceFromPlan(params: {
   userId: string
   series?: string
 }): Promise<{ data: { id: string } | null; error: string | null }> {
+  const existing = await getLinkedInvoiceForPlan(params.treatmentPlanId)
+  if (existing.error) return { data: null, error: existing.error }
+  if (existing.data) return { data: { id: existing.data.id }, error: null }
+
   const supabase = createClient()
   const series = params.series || "INV"
   const invoiceNumber = `${series}-${Date.now().toString(36).toUpperCase()}`
@@ -241,6 +245,44 @@ async function seedLineItemsFromTreatmentPlan(
   return { error: null }
 }
 
+export async function getLinkedInvoiceForPlan(
+  treatmentPlanId: string
+): Promise<{ data: { id: string; status: string } | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("id, status")
+    .eq("treatment_plan_id", treatmentPlanId)
+    .neq("status", "void")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) return { data: null, error: error.message }
+  if (!data) return { data: null, error: null }
+  return { data: { id: data.id, status: data.status }, error: null }
+}
+
+export async function resyncDraftInvoiceFromPlan(
+  invoiceId: string,
+  treatmentPlanId: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { data: inv, error: invErr } = await supabase
+    .from("invoices")
+    .select("status")
+    .eq("id", invoiceId)
+    .maybeSingle()
+
+  if (invErr) return { error: invErr.message }
+  if (!inv || inv.status !== "draft") return { error: null }
+
+  const { error: delErr } = await supabase.from("invoice_line_items").delete().eq("invoice_id", invoiceId)
+  if (delErr) return { error: delErr.message }
+
+  return seedLineItemsFromTreatmentPlan(invoiceId, treatmentPlanId)
+}
+
 export async function getInvoice(
   invoiceId: string
 ): Promise<{
@@ -336,9 +378,22 @@ export async function recordInvoicePayment(params: {
 export interface PatientBalance {
   patient_id: string
   open_balance: number
+  invoice_open_balance: number
+  ortho_open_balance: number
   total_billed: number
   total_paid: number
   open_invoice_count: number
+}
+
+export interface PatientBillingGate extends PatientBalance {
+  approved_plans_missing_invoice: Array<{
+    plan_id: string
+    title: string
+    total_estimated: number
+  }>
+  primary_open_invoice_id: string | null
+  has_billing_gap: boolean
+  can_checkout: boolean
 }
 
 export async function getPatientBalance(
@@ -355,9 +410,53 @@ export async function getPatientBalance(
     data: {
       patient_id: String(raw.patient_id),
       open_balance: Number(raw.open_balance ?? 0),
+      invoice_open_balance: Number(raw.invoice_open_balance ?? raw.open_balance ?? 0),
+      ortho_open_balance: Number(raw.ortho_open_balance ?? 0),
       total_billed: Number(raw.total_billed ?? 0),
       total_paid: Number(raw.total_paid ?? 0),
       open_invoice_count: Number(raw.open_invoice_count ?? 0),
+    },
+    error: null,
+  }
+}
+
+export async function getPatientBillingGate(
+  patientId: string
+): Promise<{ data: PatientBillingGate | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("get_patient_billing_gate", {
+    p_patient_id: patientId,
+  })
+
+  if (error) return { data: null, error: error.message }
+  const raw = data as Record<string, unknown>
+  const missing = raw.approved_plans_missing_invoice
+  const missingList = Array.isArray(missing)
+    ? missing.map((row) => {
+        const item = row as Record<string, unknown>
+        return {
+          plan_id: String(item.plan_id),
+          title: String(item.title ?? "Treatment plan"),
+          total_estimated: Number(item.total_estimated ?? 0),
+        }
+      })
+    : []
+
+  return {
+    data: {
+      patient_id: String(raw.patient_id),
+      open_balance: Number(raw.open_balance ?? 0),
+      invoice_open_balance: Number(raw.invoice_open_balance ?? 0),
+      ortho_open_balance: Number(raw.ortho_open_balance ?? 0),
+      total_billed: Number(raw.total_billed ?? 0),
+      total_paid: Number(raw.total_paid ?? 0),
+      open_invoice_count: Number(raw.open_invoice_count ?? 0),
+      approved_plans_missing_invoice: missingList,
+      primary_open_invoice_id: raw.primary_open_invoice_id
+        ? String(raw.primary_open_invoice_id)
+        : null,
+      has_billing_gap: Boolean(raw.has_billing_gap),
+      can_checkout: Boolean(raw.can_checkout),
     },
     error: null,
   }

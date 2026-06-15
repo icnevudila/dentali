@@ -28,16 +28,30 @@ export async function fetchBranchProviderAvailability(
   return { data: raw.rows ?? [], error: null }
 }
 
+const MANILA_TZ = "Asia/Manila"
+
+function manilaDayOfWeek(dateKey: string): number {
+  return new Date(`${dateKey}T12:00:00+08:00`).getUTCDay()
+}
+
+function manilaTimeKey(iso: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: MANILA_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(iso))
+}
+
 export async function fetchAvailableAppointmentSlots(params: {
   branchId: string
   providerId: string
   date: string
+  excludeAppointmentId?: string
 }): Promise<{ data: AppointmentSlot[]; error: string | null }> {
   const supabase = createClient()
 
-  // 1. Get Day of Week
-  const targetDate = new Date(params.date)
-  const dow = targetDate.getDay() // 0 = Sunday, 1 = Monday, etc.
+  const dow = manilaDayOfWeek(params.date)
 
   // 2. Fetch Availability
   const { data: availData, error: availErr } = await supabase
@@ -84,7 +98,7 @@ export async function fetchAvailableAppointmentSlots(params: {
 
   const { data: aptData, error: aptErr } = await supabase
     .from("appointments")
-    .select("scheduled_at, status")
+    .select("id, scheduled_at, status")
     .eq("branch_id", params.branchId)
     .eq("provider_id", params.providerId)
     .gte("scheduled_at", startOfDay)
@@ -95,10 +109,9 @@ export async function fetchAvailableAppointmentSlots(params: {
   if (aptErr) return { data: [], error: aptErr.message }
 
   const takenTimes = new Set(
-    (aptData || []).map((a) => {
-      const d = new Date(a.scheduled_at)
-      return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`
-    })
+    (aptData || [])
+      .filter((a) => a.id !== params.excludeAppointmentId)
+      .map((a) => manilaTimeKey(a.scheduled_at))
   )
 
   // 4. Generate Slots

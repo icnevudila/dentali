@@ -91,18 +91,29 @@ export async function submitKioskIntake(
 export async function generateBranchPublicToken(
   branchId: string,
   tokenType: "kiosk" | "display" | "portal",
-  label?: string
-): Promise<{ data: { token: string } | null; error: string | null }> {
+  label?: string,
+  replaceExisting = true
+): Promise<{
+  data: { token: string; revokedPrevious: number } | null
+  error: string | null
+}> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("generate_branch_public_token", {
     p_branch_id: branchId,
     p_token_type: tokenType,
     p_label: label ?? null,
+    p_replace_existing: replaceExisting,
   })
 
   if (error) return { data: null, error: error.message }
-  const result = data as { token: string }
-  return { data: { token: result.token }, error: null }
+  const result = data as { token: string; revoked_previous?: number }
+  return {
+    data: {
+      token: result.token,
+      revokedPrevious: Number(result.revoked_previous ?? 0),
+    },
+    error: null,
+  }
 }
 
 export function buildPublicDeviceUrl(

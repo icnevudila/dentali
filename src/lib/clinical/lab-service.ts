@@ -26,7 +26,7 @@ export type PatientWithLabCase = LabCase & {
   }
 }
 
-export async function fetchActiveLabCases(branchId: string): Promise<{ data: PatientWithLabCase[] | null; error: string | null }> {
+export async function fetchActiveLabCases(branchId: string): Promise<{ data: PatientWithLabCase[]; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from("lab_cases")
@@ -42,23 +42,69 @@ export async function fetchActiveLabCases(branchId: string): Promise<{ data: Pat
     .neq("status", "cancelled")
     .order("expected_date", { ascending: true })
 
-  if (error) return { data: null, error: error.message }
-  return { data: data as unknown as PatientWithLabCase[], error: null }
+  if (error) return { data: [], error: error.message }
+  return { data: (data ?? []) as unknown as PatientWithLabCase[], error: null }
+}
+
+export async function fetchPatientLabCases(
+  patientId: string,
+  branchId?: string | null
+): Promise<{ data: PatientWithLabCase[]; error: string | null }> {
+  const supabase = createClient()
+  let query = supabase
+    .from("lab_cases")
+    .select(`
+      *,
+      patients:patient_id (
+        id,
+        first_name,
+        last_name
+      )
+    `)
+    .eq("patient_id", patientId)
+    .neq("status", "cancelled")
+    .order("sent_date", { ascending: false })
+
+  if (branchId) query = query.eq("branch_id", branchId)
+
+  const { data, error } = await query
+  if (error) return { data: [], error: error.message }
+  return { data: (data ?? []) as unknown as PatientWithLabCase[], error: null }
 }
 
 export async function createLabCase(
   payload: Omit<LabCase, "id" | "created_at" | "updated_at" | "organization_id" | "branch_id" | "status"> & { branch_id: string }
-): Promise<{ error: string | null }> {
+): Promise<{ data: PatientWithLabCase | null; error: string | null }> {
   const supabase = createClient()
-  const { data: orgData } = await supabase.from("branches").select("organization_id").eq("id", payload.branch_id).single()
-  
-  const { error } = await supabase.from("lab_cases").insert({
-    ...payload,
-    organization_id: orgData?.organization_id,
-    status: "pending"
-  })
+  const { data: orgData, error: orgError } = await supabase
+    .from("branches")
+    .select("organization_id")
+    .eq("id", payload.branch_id)
+    .single()
 
-  return { error: error?.message ?? null }
+  if (orgError || !orgData?.organization_id) {
+    return { data: null, error: orgError?.message ?? "Branch organization not found" }
+  }
+
+  const { data, error } = await supabase
+    .from("lab_cases")
+    .insert({
+      ...payload,
+      organization_id: orgData.organization_id,
+      status: "pending",
+    })
+    .select(`
+      *,
+      patients:patient_id (
+        id,
+        first_name,
+        last_name
+      )
+    `)
+    .single()
+
+  if (error) return { data: null, error: error.message }
+  return { data: data as unknown as PatientWithLabCase, error: null }
 }
 
 export async function updateLabCaseStatus(

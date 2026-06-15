@@ -4,7 +4,7 @@ import * as React from "react"
 import { createPortal } from "react-dom"
 import { useLocale } from "@/hooks/use-locale"
 import { useBranch } from "@/hooks/use-branch"
-import { createLabCase } from "@/lib/clinical/lab-service"
+import { createLabCase, type PatientWithLabCase } from "@/lib/clinical/lab-service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Loader2 } from "lucide-react"
@@ -14,10 +14,11 @@ import { createClient } from "@/lib/supabase/client"
 interface NewLabCaseDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSuccess: () => void
+  onSuccess: (created?: PatientWithLabCase) => void | Promise<void>
+  defaultPatientId?: string
 }
 
-export function NewLabCaseDialog({ open, onOpenChange, onSuccess }: NewLabCaseDialogProps) {
+export function NewLabCaseDialog({ open, onOpenChange, onSuccess, defaultPatientId }: NewLabCaseDialogProps) {
   const { t } = useLocale()
   const { activeBranch } = useBranch()
   const [submitting, setSubmitting] = React.useState(false)
@@ -27,6 +28,12 @@ export function NewLabCaseDialog({ open, onOpenChange, onSuccess }: NewLabCaseDi
   React.useEffect(() => {
     setMounted(true)
   }, [])
+
+  React.useEffect(() => {
+    if (open && defaultPatientId) {
+      setPatientId(defaultPatientId)
+    }
+  }, [open, defaultPatientId])
 
   React.useEffect(() => {
     if (open && activeBranch?.organization_id) {
@@ -85,7 +92,7 @@ export function NewLabCaseDialog({ open, onOpenChange, onSuccess }: NewLabCaseDi
     }
 
     setSubmitting(true)
-    const { error } = await createLabCase({
+    const { data, error } = await createLabCase({
       branch_id: activeBranch.id,
       patient_id: patientId,
       provider_id: null,
@@ -103,7 +110,7 @@ export function NewLabCaseDialog({ open, onOpenChange, onSuccess }: NewLabCaseDi
       toast.error(error)
     } else {
       toast.success(t("labcases.success.created", "Lab case successfully created!"))
-      onSuccess()
+      await onSuccess(data ?? undefined)
       onOpenChange(false)
       // reset
       setPatientId("")

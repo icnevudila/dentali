@@ -26,10 +26,26 @@ export default function LabCasesPage() {
   const loadCases = React.useCallback(async () => {
     if (!activeBranch?.id) return
     setLoading(true)
-    const { data } = await fetchActiveLabCases(activeBranch.id)
-    if (data) setCases(data)
+    const { data, error } = await fetchActiveLabCases(activeBranch.id)
+    if (error) toast.error(error)
+    setCases(data)
     setLoading(false)
   }, [activeBranch?.id])
+
+  const handleLabCaseCreated = React.useCallback(
+    async (created?: PatientWithLabCase) => {
+      if (created) {
+        setCases((prev) => {
+          const exists = prev.some((c) => c.id === created.id)
+          if (exists) return prev
+          return [created, ...prev]
+        })
+        setLoading(false)
+      }
+      await loadCases()
+    },
+    [loadCases]
+  )
 
   React.useEffect(() => {
     loadCases()
@@ -150,7 +166,7 @@ export default function LabCasesPage() {
       <NewLabCaseDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onSuccess={loadCases}
+        onSuccess={handleLabCaseCreated}
       />
     </DirectionalTransition>
   )

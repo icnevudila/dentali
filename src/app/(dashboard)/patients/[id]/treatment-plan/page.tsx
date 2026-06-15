@@ -5,6 +5,7 @@ import { Suspense } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Plus, CheckCircle, Sparkles } from "lucide-react"
+import { useLocale } from "@/hooks/use-locale"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Button } from "@/components/ui/button"
@@ -28,12 +29,15 @@ import {
   addPlanItem,
   approveTreatmentPlan,
   bulkAddChartFindingsToPlan,
+  updatePlanItem,
+  deletePlanItem,
 } from "@/lib/clinical/treatment-plan-service"
-import { createInvoiceFromPlan } from "@/lib/billing/invoice-service"
+import { createInvoiceFromPlan, getLinkedInvoiceForPlan, resyncDraftInvoiceFromPlan } from "@/lib/billing/invoice-service"
 import { logAuditEvent } from "@/lib/audit/audit-service"
 import { fetchProcedureStockWarnings } from "@/lib/inventory/inventory-service"
 import { ProcedureStockWarningBanner } from "@/components/inventory/ProcedureStockWarningBanner"
 import { ChartFindingSuggestionsCard } from "@/components/clinical/ChartFindingSuggestionsCard"
+import { TreatmentPlanItemRow } from "@/components/clinical/TreatmentPlanItemRow"
 
 const PROCEDURE_TEMPLATES = [
   { code: "EXAM", name: "Oral Examination", price: 500, category: "preventive" },
@@ -56,6 +60,7 @@ function TreatmentPlanContent() {
   const router = useRouter()
   const { user } = useAuth()
   const { activeBranch } = useBranch()
+  const { t } = useLocale()
 
   const [patientName, setPatientName] = React.useState("")
   const [planTitle, setPlanTitle] = React.useState("")
@@ -98,15 +103,32 @@ function TreatmentPlanContent() {
   }
 
   const loadPlan = React.useCallback(async (id: string) => {
-    const result = await getTreatmentPlan(id)
+    const [result, invoiceResult] = await Promise.all([
+      getTreatmentPlan(id),
+      getLinkedInvoiceForPlan(id),
+    ])
     if (result.plan) {
       setPlanTitle(result.plan.title)
       setPlanStatus(result.plan.status)
       setTotal(Number(result.plan.total_estimated))
       setItems(result.items)
     }
+    setAutoInvoiceId(invoiceResult.data?.id ?? null)
     setLoading(false)
   }, [])
+
+  const syncInvoiceIfNeeded = React.useCallback(async () => {
+    if (!activePlanId) return
+    let invoiceId = autoInvoiceId
+    if (!invoiceId) {
+      const { data } = await getLinkedInvoiceForPlan(activePlanId)
+      if (!data || data.status !== "draft") return
+      invoiceId = data.id
+      setAutoInvoiceId(data.id)
+    }
+    const { error: syncErr } = await resyncDraftInvoiceFromPlan(invoiceId, activePlanId)
+    if (syncErr) setError(syncErr)
+  }, [autoInvoiceId, activePlanId])
 
   React.useEffect(() => {
     getPatient(patientId).then(({ data }) => {
@@ -223,6 +245,7 @@ function TreatmentPlanContent() {
       setError(err)
     } else {
       await loadPlan(activePlanId)
+      await syncInvoiceIfNeeded()
       setSelectedProc("")
       setIsCustom(false)
       setCustomName("")
@@ -243,6 +266,42 @@ function TreatmentPlanContent() {
       setError("No chart findings matched procedures for this plan.")
     }
     await loadPlan(activePlanId)
+    await syncInvoiceIfNeeded()
+    setSaving(false)
+  }
+
+  const handleUpdateItem = async (
+    itemId: string,
+    patch: { description: string; estimatedPrice: number; toothNumber: string | null }
+  ) => {
+    if (!activePlanId) return
+    setSaving(true)
+    setError(null)
+    const { error: err } = await updatePlanItem({
+      itemId,
+      planId: activePlanId,
+      description: patch.description,
+      estimatedPrice: patch.estimatedPrice,
+      toothNumber: patch.toothNumber,
+    })
+    if (err) setError(err)
+    else {
+      await loadPlan(activePlanId)
+      await syncInvoiceIfNeeded()
+    }
+    setSaving(false)
+  }
+
+  const handleDeleteItem = async (itemId: string) => {
+    if (!activePlanId) return
+    setSaving(true)
+    setError(null)
+    const { error: err } = await deletePlanItem(itemId, activePlanId)
+    if (err) setError(err)
+    else {
+      await loadPlan(activePlanId)
+      await syncInvoiceIfNeeded()
+    }
     setSaving(false)
   }
 
@@ -276,6 +335,7 @@ function TreatmentPlanContent() {
       userId: user.id,
     })
     if (!err && data) {
+      setAutoInvoiceId(data.id)
       await logAuditEvent({
         organizationId: org.id,
         branchId: activeBranch.id,
@@ -345,10 +405,14 @@ function TreatmentPlanContent() {
                 ) : (
                   <ul className="divide-y text-sm">
                     {items.map((item) => (
-                      <li key={item.id} className="py-2 flex justify-between">
-                        <span>{item.description}{item.tooth_number ? ` (Tooth ${item.tooth_number})` : ""}</span>
-                        <span className="font-medium">₱{Number(item.estimated_price).toLocaleString()}</span>
-                      </li>
+                      <TreatmentPlanItemRow
+                        key={item.id}
+                        item={item}
+                        editable={planStatus !== "approved"}
+                        saving={saving}
+                        onSave={(patch) => handleUpdateItem(item.id, patch)}
+                        onDelete={() => handleDeleteItem(item.id)}
+                      />
                     ))}
                   </ul>
                 )}
@@ -380,15 +444,15 @@ function TreatmentPlanContent() {
               </>
             ) : null}
 
+            {planStatus !== "approved" ? (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Add Procedure / Tedavi Ekle</CardTitle>
+                <CardTitle className="text-base">{t("treatmentPlan.addProcedure", "Add procedure")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Quick Select from Templates */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                    Quick Select from Templates / Şablondan Hızlı Seç (Örn: Lab Case gibi)
+                    {t("treatmentPlan.quickSelect", "Quick select from templates")}
                   </label>
                   <select
                     onChange={(e) => {
@@ -410,7 +474,7 @@ function TreatmentPlanContent() {
                     className="h-10 w-full rounded-md border border-neutral-300 px-3 text-sm bg-white"
                     value={isCustom ? customCode : ""}
                   >
-                    <option value="">-- Quick select a template (e.g. Crown, Veneer, Filling...) --</option>
+                    <option value="">{t("treatmentPlan.quickSelectPlaceholder", "Select a template (e.g. crown, veneer, filling…)")}</option>
                     {PROCEDURE_TEMPLATES.map((t) => (
                       <option key={t.code} value={t.code}>
                         {t.name} — ₱{t.price.toLocaleString()}
@@ -480,7 +544,7 @@ function TreatmentPlanContent() {
                 {isCustom && (
                   <div className="grid gap-3 sm:grid-cols-3 p-4 rounded-lg bg-neutral-50 border border-neutral-100 animate-fade-rise">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-neutral-600">Custom Procedure Name / Tedavi Adı</label>
+                      <label className="text-xs font-semibold text-neutral-600">{t("treatmentPlan.customName", "Custom procedure name")}</label>
                       <Input
                         placeholder="e.g. Zirconia Crown"
                         value={customName}
@@ -489,7 +553,7 @@ function TreatmentPlanContent() {
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-neutral-600">Price / Ücret (₱)</label>
+                      <label className="text-xs font-semibold text-neutral-600">{t("treatmentPlan.customPrice", "Price (₱)")}</label>
                       <Input
                         placeholder="e.g. 2500"
                         type="number"
@@ -499,7 +563,7 @@ function TreatmentPlanContent() {
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-neutral-600">Code / Kod (Optional)</label>
+                      <label className="text-xs font-semibold text-neutral-600">{t("treatmentPlan.customCode", "Code (optional)")}</label>
                       <Input
                         placeholder="e.g. ZIRC"
                         value={customCode}
@@ -529,6 +593,7 @@ function TreatmentPlanContent() {
                 <ProcedureStockWarningBanner warnings={stockWarnings} />
               </CardContent>
             </Card>
+            ) : null}
 
             <div className="flex flex-wrap gap-2">
               {planStatus !== "approved" ? (
@@ -550,9 +615,12 @@ function TreatmentPlanContent() {
 
             {autoInvoiceId ? (
               <p className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900">
-                Invoice draft created automatically.{" "}
+                {t(
+                  "treatmentPlan.invoiceLinked",
+                  "Invoice draft created from this plan. Collect payment before the patient leaves."
+                )}{" "}
                 <Link href={`/billing/${autoInvoiceId}`} className="font-medium underline">
-                  Open invoice
+                  {t("treatmentPlan.openInvoice", "Open invoice")}
                 </Link>
                 {" · "}
                 <Link href="/billing/hmo?status=draft" className="font-medium underline">

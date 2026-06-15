@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils"
 import type { StaffMember } from "@/lib/staff/staff-service"
 import { useLocale } from "@/hooks/use-locale"
+import { AppointmentBookingBadge } from "@/components/appointments/AppointmentBookingBadge"
 
 const DRAG_MIME = "application/x-dentali-appointment"
 
@@ -494,8 +495,9 @@ export function AppointmentWeekCalendar({
                           <Link href={`/patients/${appt.patient_id}`} className="font-bold text-sm text-neutral-800 hover:underline">
                             {appt.patient_name ?? "Patient"}
                           </Link>
-                          <div className="flex items-center gap-2 mt-0.5">
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                             <span className="text-[11px] text-neutral-500">{appt.purpose ?? "General Checkup"}</span>
+                            <AppointmentBookingBadge appointment={appt} className="text-[9px] px-1.5 py-0" />
                             {provider && (
                               <span className="text-[10px] px-1.5 py-0.2 bg-neutral-100 text-neutral-600 rounded">
                             Dr. {provider.full_name?.split(" ")[1] ?? provider.email?.split("@")[0] ?? "Dentist"}
@@ -667,6 +669,7 @@ export function AppointmentWeekCalendar({
                           <Link href={`/patients/${appt.patient_id}`} className="font-extrabold text-sm text-primary-600 hover:underline">
                             {appt.patient_name ?? appt.patient_id.slice(0, 8)}
                           </Link>
+                          <AppointmentBookingBadge appointment={appt} className="text-[9px] px-1.5 py-0" />
                           {provider && (
                             <Badge variant="outline" className="text-[10px] font-semibold">
                               Dr. {provider.full_name ?? provider.email?.split("@")[0] ?? "Dentist"}
@@ -762,7 +765,7 @@ export function AppointmentWeekCalendar({
             <div className="mt-4 flex flex-col gap-1.5 border-t border-neutral-100 pt-3">
               <p className="text-xs text-neutral-400">{dragHint}</p>
               <p className="text-xs text-primary-500 font-semibold flex items-center gap-1">
-                💡 {t("appointments.monthDragRecommendation", "Note: For the best drag-and-drop rescheduling experience, please switch to the Month view. / En iyi sürükle-bırak deneyimi için Aylık (Month) görünümü kullanabilirsiniz.")}
+                💡 {t("appointments.monthDragRecommendation", "For the best drag-and-drop rescheduling experience, switch to Month view.")}
               </p>
             </div>
           )}

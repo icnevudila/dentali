@@ -26,9 +26,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Megaphone, Plus, Users, X, Link2, Copy, Check, UserCheck, Calendar, MapPin, Clock, FileText, User } from "lucide-react"
+import { Megaphone, Plus, Users, X, Link2, Copy, Check, UserCheck, Calendar, MapPin, Clock, FileText, User, Receipt } from "lucide-react"
+import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { generateBranchPublicToken } from "@/lib/kiosk/kiosk-service"
+import { toast } from "sonner"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { MetricStrip } from "@/components/layout/MetricStrip"
@@ -39,6 +41,7 @@ import { createClient } from "@/lib/supabase/client"
 import { QueueAnalyticsPanel } from "@/components/analytics/QueueAnalyticsPanel"
 import { KioskAnalyticsPanel } from "@/components/analytics/KioskAnalyticsPanel"
 import { DisplayAnalyticsPanel } from "@/components/analytics/DisplayAnalyticsPanel"
+import { BranchPublicTokensPanel } from "@/components/analytics/BranchPublicTokensPanel"
 
 type Tab = "board" | "history"
 
@@ -148,13 +151,18 @@ export default function QueuePage() {
   const [displayUrl, setDisplayUrl] = React.useState<string | null>(null)
   const [portalUrl, setPortalUrl] = React.useState<string | null>(null)
   const [generatingLink, setGeneratingLink] = React.useState<"kiosk" | "display" | "portal" | null>(null)
+  const [tokenRevision, setTokenRevision] = React.useState(0)
   const [copied, setCopied] = React.useState<string | null>(null)
+  const bumpTokenRevision = React.useCallback(() => {
+    setTokenRevision((v) => v + 1)
+  }, [])
   const [todayAppointments, setTodayAppointments] = React.useState<AppointmentRecord[]>([])
   const [apptCheckInId, setApptCheckInId] = React.useState<string | null>(null)
   const [consentOverridePending, setConsentOverridePending] = React.useState(false)
   const [servedNotePrompt, setServedNotePrompt] = React.useState<{
     patientId: string
     patientName: string
+    billingGate: PatientBillingGate | null
   } | null>(null)
 
   const siteOrigin = typeof window !== "undefined" ? window.location.origin : ""
@@ -185,6 +193,15 @@ export default function QueuePage() {
     setGeneratingLink(null)
     if (err) setError(err)
     else if (data) {
+      if (data.revokedPrevious > 0) {
+        toast.info(
+          t("display.replacedPreviousLinks", "{n} previous link(s) closed automatically.").replace(
+            "{n}",
+            String(data.revokedPrevious)
+          )
+        )
+        bumpTokenRevision()
+      }
       const url =
         type === "display"
           ? `${siteOrigin}/display?token=${data.token}&theme=light&names=1&voice=1`
@@ -292,9 +309,11 @@ export default function QueuePage() {
     if (err) setError(err)
     else {
       if (status === "served" && entry?.patient_id) {
+        const { data: billingGate } = await getPatientBillingGate(entry.patient_id)
         setServedNotePrompt({
           patientId: entry.patient_id,
           patientName: entry.patient_name ?? "Patient",
+          billingGate,
         })
       }
       load()
@@ -469,23 +488,39 @@ export default function QueuePage() {
           </div>
 
           {servedNotePrompt ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900 animate-fade-rise">
-              <p className="font-medium">
-                {servedNotePrompt.patientName} — {t("queue.visitComplete", "visit marked complete")}
-              </p>
-              <p className="mt-1 text-emerald-800/90">
-                {t("queue.notePrompt", "Add a clinical note while the visit is fresh.")}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Button size="sm" className="gap-1.5" asChild>
-                  <Link href={`/patients/${servedNotePrompt.patientId}?tab=clinical-notes`}>
-                    <FileText className="h-3.5 w-3.5" />
-                    {t("queue.createNote", "Create note")}
-                  </Link>
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setServedNotePrompt(null)}>
-                  {t("common.dismiss", "Dismiss")}
-                </Button>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900 animate-fade-rise space-y-3">
+              <div>
+                <p className="font-medium">
+                  {servedNotePrompt.patientName} — {t("queue.visitComplete", "visit marked complete")}
+                </p>
+                <p className="mt-1 text-emerald-800/90">
+                  {t("queue.notePrompt", "Add a clinical note while the visit is fresh.")}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button size="sm" className="gap-1.5" asChild>
+                    <Link href={`/patients/${servedNotePrompt.patientId}?tab=clinical-notes`}>
+                      <FileText className="h-3.5 w-3.5" />
+                      {t("queue.createNote", "Create note")}
+                    </Link>
+                  </Button>
+                  {servedNotePrompt.billingGate?.primary_open_invoice_id ? (
+                    <Button size="sm" variant="outline" className="gap-1.5" asChild>
+                      <Link href={`/billing/${servedNotePrompt.billingGate.primary_open_invoice_id}`}>
+                        <Receipt className="h-3.5 w-3.5" />
+                        {t("queue.collectPayment", "Collect payment")}
+                      </Link>
+                    </Button>
+                  ) : servedNotePrompt.billingGate?.has_billing_gap ? (
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href={`/patients/${servedNotePrompt.patientId}/treatment-plan`}>
+                        {t("queue.completeBilling", "Complete billing")}
+                      </Link>
+                    </Button>
+                  ) : null}
+                  <Button size="sm" variant="ghost" onClick={() => setServedNotePrompt(null)}>
+                    {t("common.dismiss", "Dismiss")}
+                  </Button>
+                </div>
               </div>
             </div>
           ) : null}
@@ -691,7 +726,7 @@ export default function QueuePage() {
                 <QueueAnalyticsPanel branchId={activeBranch.id} />
                 <KioskAnalyticsPanel branchId={activeBranch.id} />
               </div>
-              <DisplayAnalyticsPanel branchId={activeBranch.id} />
+              <DisplayAnalyticsPanel branchId={activeBranch.id} refreshKey={tokenRevision} />
             </div>
           ) : null}
         </div>
@@ -749,7 +784,14 @@ export default function QueuePage() {
           <CardContent className="space-y-4">
             <p className="text-sm text-neutral-500">
               Generate links for the patient tablet (kiosk), waiting room TV display, and online patient portal.
+              {t(
+                "display.generateReplaceHint",
+                " New links automatically close older links of the same type."
+              )}
             </p>
+            {activeBranch ? (
+              <BranchPublicTokensPanel branchId={activeBranch.id} onChanged={bumpTokenRevision} />
+            ) : null}
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"

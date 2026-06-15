@@ -138,6 +138,49 @@ export async function addPlanItem(params: {
   return { error: estimateError?.message ?? null }
 }
 
+export async function updatePlanItem(params: {
+  itemId: string
+  planId: string
+  description?: string
+  estimatedPrice?: number
+  toothNumber?: string | null
+  priority?: string
+}): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (params.description !== undefined) patch.description = params.description
+  if (params.estimatedPrice !== undefined) patch.estimated_price = params.estimatedPrice
+  if (params.toothNumber !== undefined) patch.tooth_number = params.toothNumber
+  if (params.priority !== undefined) patch.priority = params.priority
+
+  const { error } = await supabase
+    .from("treatment_plan_items")
+    .update(patch)
+    .eq("id", params.itemId)
+    .eq("plan_id", params.planId)
+
+  if (error) return { error: error.message }
+
+  const { error: estimateError } = await supabase.rpc("calculate_treatment_estimate", {
+    p_plan_id: params.planId,
+  })
+  return { error: estimateError?.message ?? null }
+}
+
+export async function deletePlanItem(
+  itemId: string,
+  planId: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase.from("treatment_plan_items").delete().eq("id", itemId).eq("plan_id", planId)
+  if (error) return { error: error.message }
+
+  const { error: estimateError } = await supabase.rpc("calculate_treatment_estimate", {
+    p_plan_id: planId,
+  })
+  return { error: estimateError?.message ?? null }
+}
+
 export async function bulkAddChartFindingsToPlan(
   planId: string
 ): Promise<{ data: { added: number } | null; error: string | null }> {

@@ -133,6 +133,36 @@ export async function callNextPatient(
   return { data: { id: result.id!, display_code: result.display_code! }, error: null }
 }
 
+export type PatientQueueVisit = {
+  id: string
+  display_code: string
+  status: QueueStatus
+  chair_label: string | null
+  checked_in_at: string
+  completed_at: string | null
+  appointment_id: string | null
+}
+
+export async function fetchPatientQueueHistory(
+  patientId: string,
+  branchId?: string | null
+): Promise<{ data: PatientQueueVisit[]; error: string | null }> {
+  const supabase = createClient()
+  let query = supabase
+    .from("queue_entries")
+    .select("id, display_code, status, chair_label, checked_in_at, completed_at, appointment_id")
+    .eq("patient_id", patientId)
+    .in("status", ["served", "cancelled", "in_chair", "now_serving"])
+    .order("checked_in_at", { ascending: false })
+    .limit(50)
+
+  if (branchId) query = query.eq("branch_id", branchId)
+
+  const { data, error } = await query
+  if (error) return { data: [], error: error.message }
+  return { data: (data ?? []) as PatientQueueVisit[], error: null }
+}
+
 export function waitMinutes(checkedInAt: string): number {
   return Math.max(0, Math.floor((Date.now() - new Date(checkedInAt).getTime()) / 60_000))
 }

@@ -7,6 +7,8 @@ import { fetchBranchProviderAvailability } from "@/lib/appointments/provider-ava
 import { fetchAvailableAppointmentSlots } from "@/lib/appointments/provider-availability-service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useLocale } from "@/hooks/use-locale"
+import { PORTAL_VISIT_REASONS, type PortalVisitReasonId } from "@/lib/portal/visit-reasons"
 import { 
   Calendar as CalendarIcon, 
   Clock, 
@@ -54,6 +56,7 @@ export default function PortalPage() {
 
 function PortalPageContent() {
   const searchParams = useSearchParams()
+  const { t } = useLocale()
   const token = searchParams?.get("token")
 
   const [step, setStep] = React.useState<Step>("loading")
@@ -69,7 +72,7 @@ function PortalPageContent() {
   const [selectedProvider, setSelectedProvider] = React.useState("")
   const [selectedDate, setSelectedDate] = React.useState("")
   const [selectedTime, setSelectedTime] = React.useState("")
-  const [bookingReason, setBookingReason] = React.useState("General Checkup / Genel Muayene")
+  const [bookingReason, setBookingReason] = React.useState<PortalVisitReasonId>("general_checkup")
   const [customReason, setCustomReason] = React.useState("")
 
   // New Patient Registration Form State
@@ -229,7 +232,11 @@ function PortalPageContent() {
     if (!selectedTime) return
     setSubmitting(true)
     setErrorMsg("")
-    const finalPurpose = bookingReason === "Other / Diğer" ? (customReason || "Other / Diğer") : bookingReason
+    const reasonEntry = PORTAL_VISIT_REASONS.find((r) => r.id === bookingReason)
+    const finalPurpose =
+      bookingReason === "other"
+        ? customReason.trim() || t("portal.reasonOther", "Other")
+        : t(reasonEntry?.labelKey ?? "portal.reasonGeneral", reasonEntry?.labelFallback ?? "General checkup")
     const { data, error } = await submitPortalAppointment({
       sessionId,
       phone,
@@ -810,6 +817,11 @@ function PortalPageContent() {
                     }`}
                   >
                     {s.time}
+                    {!s.available ? (
+                      <span className="ml-1 text-[10px] font-normal opacity-70">
+                        ({t("portal.slotFull", "Full")})
+                      </span>
+                    ) : null}
                   </button>
                 )
               })}
@@ -818,28 +830,25 @@ function PortalPageContent() {
             {/* Booking Reason Dropdown */}
             <div className="mb-6 space-y-2">
               <label className="pl-1 text-xs font-bold uppercase tracking-widest text-neutral-500">
-                Reason for Visit / Randevu Nedeni
+                {t("portal.reasonLabel", "Reason for visit")}
               </label>
               <select
                 value={bookingReason}
-                onChange={(e) => setBookingReason(e.target.value)}
+                onChange={(e) => setBookingReason(e.target.value as PortalVisitReasonId)}
                 className="h-12 w-full rounded-xl border-2 border-neutral-200 bg-white/80 px-4 shadow-sm text-sm outline-none focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 text-neutral-700 font-medium"
               >
-                <option value="General Checkup / Genel Muayene">General Checkup / Genel Muayene</option>
-                <option value="Toothache / Diş Ağrısı">Toothache / Diş Ağrısı</option>
-                <option value="Dental Cleaning / Diş Temizliği">Dental Cleaning / Diş Temizliği</option>
-                <option value="Tooth Filling / Dolgu">Tooth Filling / Dolgu</option>
-                <option value="Root Canal / Kanal Tedavisi">Root Canal / Kanal Tedavisi</option>
-                <option value="Tooth Extraction / Diş Çekimi">Tooth Extraction / Diş Çekimi</option>
-                <option value="Orthodontic Consultation / Ortodonti">Orthodontic Consultation / Ortodonti</option>
-                <option value="Other / Diğer">Other / Diğer</option>
+                {PORTAL_VISIT_REASONS.map((reason) => (
+                  <option key={reason.id} value={reason.id}>
+                    {t(reason.labelKey, reason.labelFallback)}
+                  </option>
+                ))}
               </select>
 
-              {bookingReason === "Other / Diğer" && (
+              {bookingReason === "other" && (
                 <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-250">
                   <Input
                     type="text"
-                    placeholder="Please specify your reason / Lütfen randevu nedeninizi belirtin"
+                    placeholder={t("portal.reasonOtherPlaceholder", "Please specify your reason")}
                     value={customReason}
                     onChange={(e) => setCustomReason(e.target.value)}
                     className="h-12 rounded-xl border-2 border-neutral-200 bg-white/80 px-4 shadow-sm text-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"

@@ -351,7 +351,7 @@ function BillingPageContent() {
                       onChange={(e) => setCustomInvoiceNumber(e.target.value)}
                     />
                     <p className="text-[10px] text-neutral-400">
-                      Leave blank to auto-generate based on series. / Fatura numarası girilmezse seriye göre otomatik oluşturulacaktır.
+                      {t("billing.invoiceNumberAutoHint", "Leave blank to auto-generate based on series.")}
                     </p>
                   </div>
 

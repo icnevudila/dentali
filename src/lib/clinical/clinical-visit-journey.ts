@@ -1,6 +1,6 @@
 import type { PatientWithContacts } from "@/lib/patients/patient-service"
 import type { PatientConsent } from "@/lib/patients/consent-service"
-import type { PatientBalance } from "@/lib/billing/invoice-service"
+import type { PatientBalance, PatientBillingGate } from "@/lib/billing/invoice-service"
 import type { TreatmentPlanSummary } from "@/lib/clinical/treatment-plan-service"
 import type { TimelineEvent } from "@/lib/clinical/clinical-notes-service"
 import type { AppointmentRecord } from "@/lib/appointments/types"
@@ -97,6 +97,7 @@ export function buildClinicalVisitJourney(params: {
   appointments: AppointmentRecord[]
   treatmentPlans: TreatmentPlanSummary[]
   balance: PatientBalance | null
+  billingGate?: PatientBillingGate | null
   timeline: TimelineEvent[]
   hasChartFindings: boolean
 }): ClinicalVisitJourney {
@@ -108,6 +109,7 @@ export function buildClinicalVisitJourney(params: {
     appointments,
     treatmentPlans,
     balance,
+    billingGate,
     timeline,
     hasChartFindings,
   } = params
@@ -130,12 +132,13 @@ export function buildClinicalVisitJourney(params: {
   const hasApprovedPlan = treatmentPlans.some((p) =>
     ["approved", "in_progress", "completed"].includes(p.status)
   )
+  const missingPlanInvoices = billingGate?.approved_plans_missing_invoice.length ?? 0
   const hasInvoice =
-    (balance?.open_invoice_count ?? 0) > 0 || (balance?.total_billed ?? 0) > 0
-  const paymentDone =
     hasApprovedPlan &&
-    (balance?.open_balance ?? 0) <= 0 &&
-    (balance?.total_paid ?? 0) > 0
+    missingPlanInvoices === 0 &&
+    ((balance?.open_invoice_count ?? 0) > 0 || (balance?.total_billed ?? 0) > 0)
+  const paymentDone =
+    hasApprovedPlan && missingPlanInvoices === 0 && (balance?.open_balance ?? 0) <= 0
 
   const flags: Record<ClinicalVisitStepId, boolean> = {
     register: profileDone,

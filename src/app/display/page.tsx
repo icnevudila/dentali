@@ -71,7 +71,9 @@ function DisplayContent() {
       fetchPublicQueueDisplay(token).then(({ data: d, error: err }) => {
         if (err) setError(err)
         else {
-          const servingKey = (d?.now_serving ?? []).map((i) => `${i.display_code}_${(i as any).called_at ?? ""}`).join("|")
+          const servingKey = (d?.now_serving ?? [])
+            .map((i) => `${i.display_code}_${i.called_at ?? ""}`)
+            .join("|")
           if (servingKey && servingKey !== prevServingRef.current) {
             setPulseGen((g) => g + 1)
             prevServingRef.current = servingKey
@@ -158,7 +160,7 @@ function DisplayContent() {
         setLiveConnected(status === "SUBSCRIBED")
       })
 
-    const interval = setInterval(() => load(true), 60_000)
+    const interval = setInterval(() => load(true), 4_000)
 
     return () => {
       clearInterval(interval)

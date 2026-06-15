@@ -18,7 +18,6 @@ import {
   rescheduleAppointment,
   updateAppointmentStatus,
   markAppointmentNoShow,
-  updateAppointmentDetails,
   type AppointmentRecord,
 } from "@/lib/appointments/appointment-service"
 import { toast } from "sonner"
@@ -34,6 +33,8 @@ import { notifyWaitlistOnSlotOpen } from "@/lib/waitlist/waitlist-service"
 import { usePermission } from "@/hooks/use-permission"
 import { fetchOrgStaff, type StaffMember, addStaffMemberDirectly, fetchRolesList } from "@/lib/staff/staff-service"
 import { AppointmentWeekCalendar } from "@/components/appointments/AppointmentWeekCalendar"
+import { AppointmentEditDialog } from "@/components/appointments/AppointmentEditDialog"
+import { AppointmentSlotButtons } from "@/components/appointments/AppointmentSlotButtons"
 import { ProviderAvailabilityPanel } from "@/components/appointments/ProviderAvailabilityPanel"
 import {
   startOfWeekMonday,
@@ -99,13 +100,8 @@ function AppointmentsPageContent() {
   const [providers, setProviders] = React.useState<StaffMember[]>([])
   const [selectedProviderId, setSelectedProviderId] = React.useState("")
   const [slots, setSlots] = React.useState<AppointmentSlot[]>([])
+  const [editDialogOpen, setEditDialogOpen] = React.useState(false)
   const [editingAppt, setEditingAppt] = React.useState<AppointmentRecord | null>(null)
-  const [editProviderId, setEditProviderId] = React.useState("")
-  const [editPurpose, setEditPurpose] = React.useState("")
-  const [editDate, setEditDate] = React.useState("")
-  const [editTime, setEditTime] = React.useState("")
-  const [editSlots, setEditSlots] = React.useState<AppointmentSlot[]>([])
-  const [editSlotsLoading, setEditSlotsLoading] = React.useState(false)
   const [slotsLoading, setSlotsLoading] = React.useState(false)
   const [availabilityRows, setAvailabilityRows] = React.useState<ProviderAvailabilityRow[]>([])
   const [availabilityLoading, setAvailabilityLoading] = React.useState(false)
@@ -166,32 +162,6 @@ function AppointmentsPageContent() {
     })
   }, [activeBranch, selectedProviderId, date])
 
-  const extract24HourTime = React.useCallback((iso: string): string => {
-    return new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Asia/Manila",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).format(new Date(iso))
-  }, [])
-
-  React.useEffect(() => {
-    if (!activeBranch || !editProviderId || !editDate) {
-      setEditSlots([])
-      return
-    }
-    setEditSlotsLoading(true)
-    fetchAvailableAppointmentSlots({
-      branchId: activeBranch.id,
-      providerId: editProviderId,
-      date: editDate,
-    }).then(({ data }) => {
-      setEditSlots(data)
-      setEditSlotsLoading(false)
-    })
-  }, [activeBranch, editProviderId, editDate])
-
-
   React.useEffect(() => {
     if (!activeBranch || patientQuery.length < 2) {
       setPatients([])
@@ -202,6 +172,10 @@ function AppointmentsPageContent() {
     }, 300)
     return () => clearTimeout(t)
   }, [patientQuery, activeBranch])
+
+  const patchAppointment = React.useCallback((id: string, patch: Partial<AppointmentRecord>) => {
+    setWeekAppointments((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)))
+  }, [])
 
   const reload = () => {
     loadWeek()
@@ -264,47 +238,19 @@ function AppointmentsPageContent() {
       setSelectedPatientId("")
       setPurpose("")
       setSelectedDate(date)
-      reload()
+      void loadWeek()
     }
   }
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingAppt) return
-    setBooking(true)
-    
-    // 1. Update details
-    const { error: err1 } = await updateAppointmentDetails(editingAppt.id, {
-      providerId: editProviderId || null,
-      purpose: editPurpose
-    })
-    
-    if (err1) {
-      toast.error(err1)
-      setBooking(false)
-      return
-    }
+  const handleEditSaved = (updated: AppointmentRecord) => {
+    patchAppointment(updated.id, updated)
+    setSelectedDate(appointmentDateKey(updated.scheduled_at))
+    void loadWeek()
+  }
 
-    // 2. Check if date or time has changed to reschedule
-    const originalDate = appointmentDateKey(editingAppt.scheduled_at)
-    const originalTime = extract24HourTime(editingAppt.scheduled_at)
-
-    if (editDate !== originalDate || editTime !== originalTime) {
-      const scheduledAt = new Date(`${editDate}T${editTime}:00+08:00`).toISOString()
-      const { error: err2 } = await rescheduleAppointment(editingAppt.id, scheduledAt)
-      if (err2) {
-        toast.error(err2)
-        setBooking(false)
-        return
-      }
-      void tryNotifyWaitlist(editingAppt.scheduled_at)
-      setSelectedDate(editDate)
-    }
-
-    setBooking(false)
-    toast.success("Appointment updated successfully")
-    setEditingAppt(null)
-    reload()
+  const openEditDialog = (appt: AppointmentRecord) => {
+    setEditingAppt(appt)
+    setEditDialogOpen(true)
   }
 
   const handleReschedule = async (id: string, targetDateKey: string) => {
@@ -319,9 +265,9 @@ function AppointmentsPageContent() {
     if (err) {
       toast.error(err)
     } else {
-      toast.success("Appointment rescheduled successfully")
+      toast.success(t("appointments.rescheduleSuccess", "Appointment rescheduled successfully"))
+      patchAppointment(id, { scheduled_at: scheduledAt })
       setSelectedDate(targetDateKey)
-      reload()
       void tryNotifyWaitlist(freedSlotAt)
     }
   }
@@ -330,15 +276,16 @@ function AppointmentsPageContent() {
     const appt =
       weekAppointments.find((a) => a.id === id)
     setUpdatingId(id)
+    patchAppointment(id, { status })
 
     if (status === "no_show") {
       const { data, error: err } = await markAppointmentNoShow(id)
       setUpdatingId(null)
       if (err) {
         toast.error(err)
+        if (appt) patchAppointment(id, { status: appt.status })
       } else {
-        toast.success("Appointment marked as no-show")
-        reload()
+        toast.success(t("appointments.noShowMarked", "Appointment marked as no-show"))
         const slotAt = data?.scheduled_at ?? appt?.scheduled_at
         if (slotAt) void tryNotifyWaitlist(slotAt)
       }
@@ -349,9 +296,9 @@ function AppointmentsPageContent() {
     setUpdatingId(null)
     if (err) {
       toast.error(err)
+      if (appt) patchAppointment(id, { status: appt.status })
     } else {
-      toast.success(`Appointment status updated to ${status}`)
-      reload()
+      toast.success(t("appointments.statusUpdated", "Appointment status updated"))
       if (status === "cancelled" && appt?.scheduled_at) {
         void tryNotifyWaitlist(appt.scheduled_at)
       }
@@ -367,9 +314,9 @@ function AppointmentsPageContent() {
     if (err) {
       toast.error(err)
     } else if (data) {
-      toast.success("Patient checked in and added to queue")
+      toast.success(t("appointments.checkInSuccess", "Patient checked in and added to queue"))
+      patchAppointment(appointmentId, { status: "checked_in" })
       setCheckInQueueNotice(true)
-      reload()
     }
   }
 
@@ -686,20 +633,16 @@ function AppointmentsPageContent() {
                       </Button>
                     </div>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {slots.map((slot) => (
-                        <Button
-                          key={slot.time}
-                          type="button"
-                          size="sm"
-                          variant={time === slot.time ? "default" : "outline"}
-                          disabled={!slot.available}
-                          onClick={() => setTime(slot.time)}
-                        >
-                          {slot.time}
-                        </Button>
-                      ))}
-                    </div>
+                    <AppointmentSlotButtons
+                      slots={slots}
+                      selectedTime={time}
+                      onSelect={setTime}
+                      loading={slotsLoading}
+                      emptyMessage={t(
+                        "appointments.noSlotsBook",
+                        "No open slots — configure working hours or pick another day."
+                      )}
+                    />
                   )}
                 </div>
                 <div className="sm:col-span-2 space-y-1">
@@ -725,82 +668,6 @@ function AppointmentsPageContent() {
           <PageLoadingSkeleton variant="block" />
         ) : (
           <>
-            {editingAppt && (
-          <Card className="border-primary-200/60 shadow-sm mt-4">
-            <CardHeader>
-              <CardTitle className="text-base">{t("appointments.editAppointment", "Edit / Reschedule Appointment")}: {editingAppt.patient_name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleEditSubmit} className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">Dentist</label>
-                  <select
-                    value={editProviderId}
-                    onChange={(e) => setEditProviderId(e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  >
-                    <option value="">Any Dentist</option>
-                    {providers.map((p) => (
-                      <option key={p.profile_id} value={p.profile_id}>
-                        {p.full_name ?? p.email ?? "Dentist"}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">{t("appointments.date", "Date")}</label>
-                  <Input
-                    type="date"
-                    required
-                    value={editDate}
-                    onChange={(e) => setEditDate(e.target.value)}
-                  />
-                </div>
-                <div className="sm:col-span-2 space-y-2">
-                  <label className="text-xs font-medium">{t("appointments.availableSlots", "Available Slots")}</label>
-                  {editSlotsLoading ? (
-                    <p className="text-xs text-neutral-500">{t("common.loading", "Loading…")}</p>
-                  ) : !editDate || !editProviderId ? (
-                    <p className="text-xs text-neutral-500">{t("appointments.selectDentistAndDate", "Select dentist and date.")}</p>
-                  ) : editSlots.length === 0 ? (
-                    <p className="text-xs text-amber-700">{t("appointments.noSlotsEdit", "No slots — dentist may be closed this day or has no active clinic hours.")}</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {editSlots.map((slot) => {
-                        const isCurrentSlot = editDate === appointmentDateKey(editingAppt!.scheduled_at) && slot.time === extract24HourTime(editingAppt!.scheduled_at)
-                        return (
-                          <Button
-                            key={slot.time}
-                            type="button"
-                            size="sm"
-                            variant={editTime === slot.time ? "default" : "outline"}
-                            disabled={!slot.available && !isCurrentSlot}
-                            onClick={() => setEditTime(slot.time)}
-                          >
-                            {slot.time}
-                          </Button>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-                <div className="sm:col-span-2 space-y-1">
-                  <label className="text-xs font-medium">Purpose</label>
-                  <Input value={editPurpose} onChange={(e) => setEditPurpose(e.target.value)} />
-                </div>
-                <div className="sm:col-span-2 flex flex-wrap gap-2">
-                  <Button type="submit" disabled={booking || !editTime || (editDate !== appointmentDateKey(editingAppt.scheduled_at) && editSlots.length === 0)}>
-                    {booking ? "Saving…" : "Save Changes"}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => setEditingAppt(null)}>
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
         <AppointmentWeekCalendar
             appointments={weekAppointments}
             weekStart={weekStart}
@@ -814,13 +681,7 @@ function AppointmentsPageContent() {
             onReschedule={canWriteAppts ? handleReschedule : undefined}
             onCheckIn={canWriteAppts ? handleCheckIn : undefined}
             onRemind={canWriteAppts ? handleSendReminder : undefined}
-            onEdit={canWriteAppts ? (appt) => {
-              setEditingAppt(appt)
-              setEditProviderId(appt.provider_id || "")
-              setEditPurpose(appt.purpose || "")
-              setEditDate(appointmentDateKey(appt.scheduled_at))
-              setEditTime(extract24HourTime(appt.scheduled_at))
-            } : undefined}
+            onEdit={canWriteAppts ? openEditDialog : undefined}
             updatingId={updatingId}
             reschedulingId={reschedulingId}
             checkingInId={checkingInId}
@@ -835,6 +696,20 @@ function AppointmentsPageContent() {
             }
             providers={providers}
           />
+          {activeBranch ? (
+            <AppointmentEditDialog
+              open={editDialogOpen}
+              onOpenChange={(next) => {
+                setEditDialogOpen(next)
+                if (!next) setEditingAppt(null)
+              }}
+              appointment={editingAppt}
+              providers={providers}
+              branchId={activeBranch.id}
+              onSaved={handleEditSaved}
+              onFreedSlot={(freedAt) => void tryNotifyWaitlist(freedAt)}
+            />
+          ) : null}
           </>
         )}
 

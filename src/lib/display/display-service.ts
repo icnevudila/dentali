@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/client"
 export type PublicQueueDisplayItem = {
   display_code: string
   masked_name?: string | null
+  called_at?: string | null
 }
 
 export interface PublicQueueDisplay {
