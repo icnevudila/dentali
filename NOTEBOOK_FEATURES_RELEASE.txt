@@ -1,0 +1,99 @@
+DENTALI — NOTEBOOK FEATURES RELEASE REPORT
+==========================================
+Commit: 6f63a82
+Branch: main (pushed to origin/main)
+Repo: https://github.com/icnevudila/dentali.git
+DB migration: 20260615230000_notebook_features.sql (USER RAN SUCCESSFULLY)
+
+------------------------------------------
+BILLING & DISCOUNTS
+------------------------------------------
+- Line-item + invoice-level discounts on billing detail page
+- Discount on print view + PDF edge function
+- RPCs: update_invoice_discount, updated add/update_invoice_line_item
+
+------------------------------------------
+ORTHODONTICS
+------------------------------------------
+- Invoice balance button -> draft invoice from ortho balance
+- Return button per visit row (revert adjustment)
+- Bullet/long-text: Procedure, Next procedure, Notes
+- RPCs: create_invoice_from_ortho_case, revert_ortho_adjustment
+
+------------------------------------------
+TREATMENT PLAN
+------------------------------------------
+- Bullet textarea when editing items
+- Bullet list in read-only view
+- Custom procedure price hidden per org setting
+
+------------------------------------------
+PRESCRIPTIONS (NEW)
+------------------------------------------
+- Patient tab + full page: draft, sign, void, history
+- Dental formulary shortcuts, allergy banner on print
+- Professional Rx print (header, meds table, void stamp)
+- RPCs: upsert_prescription_draft, sign_prescription, void_prescription
+- Permissions: prescriptions.read, prescriptions.write
+
+------------------------------------------
+CONSENT
+------------------------------------------
+- Upload scanned PDF/photo on consent panel
+- RPC: register_scanned_consent
+- Digital templates: 20260610120000_clinic_paper_consent_templates.sql
+
+------------------------------------------
+DENTAL CHART
+------------------------------------------
+- Periodontal section collapsed by default (expand on demand)
+
+------------------------------------------
+ORG SETTINGS
+------------------------------------------
+- Per-branch procedure pricing toggle
+- Show/hide price for custom free-text procedures
+- RPCs: get_organization_preferences, update_organization_preferences
+
+------------------------------------------
+CLOSEOUT / MIGRATION FIX
+------------------------------------------
+- Backfill in single DO block (no set_config false — was hanging)
+- Derived totals bypass closeout; real billing edits still blocked on closed days
+
+------------------------------------------
+ALSO IN PUSH
+------------------------------------------
+- 20260615220000_portal_slots_clinical_rpc.sql
+- Invoice PDF discount in generate-invoice-pdf
+
+------------------------------------------
+NOT IN THIS RELEASE
+------------------------------------------
+- Medical certificate (not built)
+- Ortho paper-form print export (not built)
+
+------------------------------------------
+SMOKE TEST CHECKLIST
+------------------------------------------
+[ ] Patient -> Prescriptions -> sign -> print
+[ ] Patient -> Ortho -> log visit (bullets) -> Invoice balance
+[ ] Billing -> discount -> print / PDF
+[ ] Chart -> expand periodontal panel
+[ ] Consent -> upload scan
+[ ] Settings -> Organization -> billing preferences toggles
+
+------------------------------------------
+KEY FILES
+------------------------------------------
+supabase/migrations/20260615230000_notebook_features.sql
+src/app/(dashboard)/patients/[id]/prescriptions/page.tsx
+src/lib/clinical/prescription-service.ts
+src/lib/clinical/prescription-print.ts
+src/app/(dashboard)/patients/[id]/ortho/page.tsx
+src/app/(dashboard)/billing/[id]/page.tsx
+
+NOT COMMITTED (untracked):
+scripts/debug-danica.js
+supabase/functions/send-email/
+yeni screenshoot ve mp4/
