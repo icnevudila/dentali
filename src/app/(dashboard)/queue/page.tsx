@@ -46,6 +46,16 @@ import { QueueBoard } from "@/components/queue/QueueBoard"
 
 type Tab = "board" | "history"
 
+function sortQueueEntries(data: QueueEntry[]): QueueEntry[] {
+  return [...data].sort((a, b) => {
+    const aHasAppt = !!a.appointment_id
+    const bHasAppt = !!b.appointment_id
+    if (aHasAppt && !bHasAppt) return -1
+    if (!aHasAppt && bHasAppt) return 1
+    return new Date(a.checked_in_at).getTime() - new Date(b.checked_in_at).getTime()
+  })
+}
+
 export default function QueuePage() {
   const { activeBranch, branchRevision } = useBranch()
   const { t } = useLocale()
@@ -135,23 +145,35 @@ export default function QueuePage() {
     setTimeout(() => setCopied(null), 2000)
   }
 
-  const load = React.useCallback(() => {
-    if (!activeBranch) return
-    setLoading(true)
-    fetchQueueEntries(activeBranch.id, tab === "board").then(({ data, error: err }) => {
-      // Prioritize scheduled appointments (appointment_id is not null) over walk-ins
-      const sorted = [...data].sort((a, b) => {
-        const aHasAppt = !!a.appointment_id
-        const bHasAppt = !!b.appointment_id
-        if (aHasAppt && !bHasAppt) return -1
-        if (!aHasAppt && bHasAppt) return 1
-        return new Date(a.checked_in_at).getTime() - new Date(b.checked_in_at).getTime()
+  const applyOptimisticQueueAction = React.useCallback(
+    (entryId: string, status: QueueStatus | "announce") => {
+      setEntries((prev) => {
+        if (status === "announce") {
+          return prev.map((e) =>
+            e.id === entryId ? { ...e, called_at: new Date().toISOString() } : e
+          )
+        }
+        if (status === "served" || status === "cancelled") {
+          return prev.filter((e) => e.id !== entryId)
+        }
+        return prev.map((e) => (e.id === entryId ? { ...e, status } : e))
       })
-      setEntries(sorted)
-      setError(err)
-      setLoading(false)
-    })
-  }, [activeBranch, branchRevision, tab])
+    },
+    []
+  )
+
+  const load = React.useCallback(
+    (silent = false) => {
+      if (!activeBranch) return
+      if (!silent) setLoading(true)
+      fetchQueueEntries(activeBranch.id, tab === "board").then(({ data, error: err }) => {
+        setEntries(sortQueueEntries(data))
+        setError(err)
+        setLoading(false)
+      })
+    },
+    [activeBranch, branchRevision, tab]
+  )
 
   React.useEffect(() => {
     load()
@@ -186,12 +208,12 @@ export default function QueuePage() {
           filter: `branch_id=eq.${activeBranch.id}`,
         },
         () => {
-          load()
+          load(true)
         }
       )
       .subscribe()
 
-    const interval = setInterval(load, 60_000)
+    const interval = setInterval(() => load(true), 60_000)
 
     return () => {
       clearInterval(interval)
@@ -212,6 +234,8 @@ export default function QueuePage() {
 
   const handleAction = async (entryId: string, status: QueueStatus | "announce") => {
     const entry = entries.find((e) => e.id === entryId)
+    const entriesSnapshot = entries
+    if (entry) applyOptimisticQueueAction(entryId, status)
     setActionId(entryId)
     let err: string | null = null
     if (status === "announce") {
@@ -224,6 +248,7 @@ export default function QueuePage() {
     }
     setActionId(null)
     if (err) {
+      setEntries(entriesSnapshot)
       setError(err)
       toast.error(err)
     } else {
@@ -256,7 +281,7 @@ export default function QueuePage() {
         announce: t("queue.statusAnnounced", "Patient recalled"),
       }
       toast.success(statusLabels[status] ?? t("queue.statusUpdated", "Queue updated"))
-      load()
+      void load(true)
     }
   }
 
@@ -288,7 +313,7 @@ export default function QueuePage() {
     } else {
       closeCheckInModal()
       toast.success(t("queue.walkInCheckInSuccess", "Patient added to queue"))
-      load()
+      void load(true)
     }
   }
 
@@ -304,7 +329,7 @@ export default function QueuePage() {
       toast.message(t("queue.emptyQueue", "No patients waiting in queue"))
     } else {
       toast.success(t("queue.calledNext", "Called next patient"))
-      load()
+      void load(true)
     }
   }
 
@@ -345,7 +370,7 @@ export default function QueuePage() {
       toast.success(
         t("queue.checkInSuccess", "Checked in — queue #{code}").replace("{code}", data.display_code)
       )
-      load()
+      void load(true)
     }
   }
 
@@ -516,7 +541,7 @@ export default function QueuePage() {
           {error && (
             <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 animate-fade-rise">
               <p className="text-sm text-red-700">{error}</p>
-              <Button variant="outline" size="sm" className="mt-3" onClick={load}>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => load()}>
                 {t("common.retry", "Retry")}
               </Button>
             </div>
@@ -683,7 +708,7 @@ export default function QueuePage() {
           </div>
         )}
 
-        {loading ? (
+        {loading && entries.length === 0 ? (
           <PageLoadingSkeleton variant="grid3" />
         ) : tab === "board" ? (
           <div className="space-y-4">
@@ -710,7 +735,7 @@ export default function QueuePage() {
                     }}
                     onReorderSuccess={() => {
                       toast.success(t("queue.reordered", "Queue order updated"))
-                      load()
+                      void load(true)
                     }}
                   />
                 </div>

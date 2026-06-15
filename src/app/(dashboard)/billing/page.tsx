@@ -78,7 +78,8 @@ function BillingPageContent() {
       return
     }
     // Prevent overriding if patientFilter is already loaded
-    if (patientFilter && selectedPatientId === patientFilter && patientQuery !== "") {
+    const isNameMatch = selectedPatientId && patientQuery.includes(" ")
+    if (isNameMatch) {
       return
     }
     const timer = setTimeout(
@@ -277,14 +278,14 @@ function BillingPageContent() {
         <ContentPanel padding="lg" className="space-y-6">
 
           {showCreate && (
-            <div className="fixed inset-0 z-50 flex justify-end">
+            <div className="fixed inset-0 z-[150] flex justify-end">
               <button
                 type="button"
-                className="absolute inset-0 bg-neutral-950/40 animate-fade-in"
+                className="absolute inset-0 bg-black/60 animate-fade-in"
                 aria-label="Close form"
                 onClick={() => setShowCreate(false)}
               />
-              <aside className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col p-6 animate-slide-left border-l border-neutral-200">
+              <aside className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col p-6 animate-slide-left border-l border-neutral-200 z-[160]">
                 <div className="flex items-center justify-between border-b pb-4 mb-6">
                   <h2 className="text-lg font-bold text-neutral-950">
                     {t("billing.createInvoiceTitle", "Create manual invoice")}

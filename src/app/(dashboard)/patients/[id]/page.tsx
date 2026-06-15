@@ -51,6 +51,8 @@ const PATIENT_TABS = [
   { id: "orthodontics", label: "Orthodontics" },
   { id: "prescriptions", label: "Prescriptions" },
   { id: "appointments", label: "Appointments" },
+  { id: "visits", label: "Visits" },
+  { id: "epicrisis", label: "Epicrisis & Discharge" },
   { id: "consents", label: "Consents & Forms" },
   { id: "radiology", label: "Radiology & Imaging" },
   { id: "documents", label: "Documents" },
@@ -664,10 +666,56 @@ export default function PatientProfilePage() {
             </Card>
           )}
 
+          {/* VISITS TAB */}
+          {activeTab === "visits" && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Visits History</CardTitle>
+                  <CardDescription>Comprehensive record of all clinic check-ins, SOAP notes, appointments and dental treatments.</CardDescription>
+                </div>
+                <Button size="sm" asChild>
+                  <Link href={`/patients/${patientId}/visits`} transitionTypes={NAV_FORWARD_TRANSITION}>
+                    Open Dedicated Visits Log
+                  </Link>
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <PatientVisitHistoryPanel patientId={patientId} branchId={activeBranch?.id} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* EPICRISIS TAB */}
+          {activeTab === "epicrisis" && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Discharge & Epicrisis Summary</CardTitle>
+                  <CardDescription>Consolidated treatment progress report, SOAP dental notes, and billing history.</CardDescription>
+                </div>
+                <Button size="sm" asChild>
+                  <Link href={`/patients/${patientId}/epicrisis`} transitionTypes={NAV_FORWARD_TRANSITION}>
+                    Generate Epicrisis Report
+                  </Link>
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-lg bg-neutral-50 p-4 border border-neutral-200/60 text-sm space-y-2">
+                  <p className="font-semibold text-neutral-800">Epicrisis Compilation Includes:</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs text-neutral-600">
+                    <li>Demographics & Profile Information</li>
+                    <li>SOAP Clinical assessment history & chronological procedure logs</li>
+                    <li>Consolidated Invoice Status & Balance ledgers</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* APPOINTMENTS TAB */}
           {activeTab === "appointments" && (
             <div className="space-y-4">
-              <PatientVisitHistoryPanel patientId={patientId} branchId={activeBranch?.id} />
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>

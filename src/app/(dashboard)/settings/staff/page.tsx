@@ -24,6 +24,13 @@ import { useLocale } from "@/hooks/use-locale"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Users, UserPlus } from "lucide-react"
+import { ProviderAvailabilityPanel } from "@/components/appointments/ProviderAvailabilityPanel"
+import {
+  fetchBranchProviderAvailability,
+  ensureProviderAvailabilityDefaults,
+  type ProviderAvailabilityRow,
+} from "@/lib/appointments/provider-availability-service"
+import { usePermission } from "@/hooks/use-permission"
 
 const ROLE_LABELS: Record<string, string> = {
   owner: "Owner",
@@ -44,6 +51,12 @@ export default function StaffSettingsPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [actionId, setActionId] = useState<string | null>(null)
 
+  const { hasPermission } = usePermission()
+  const canWriteAppts = hasPermission(PERMISSIONS.APPOINTMENTS_WRITE)
+  const [activeBranchId, setActiveBranchId] = useState<string>("")
+  const [availabilityRows, setAvailabilityRows] = useState<ProviderAvailabilityRow[]>([])
+  const [availabilityLoading, setAvailabilityLoading] = useState(false)
+
   const load = async () => {
     setLoading(true)
     const [staffResult, inviteResult, roleList] = await Promise.all([
@@ -55,12 +68,32 @@ export default function StaffSettingsPage() {
     setInvitations(inviteResult.data)
     setRoles(roleList)
     setError(staffResult.error ?? inviteResult.error)
+    
+    if (availableBranches.length > 0) {
+      const initialBranch = availableBranches[0]
+      setActiveBranchId(initialBranch.id)
+    }
+
     setLoading(false)
+  }
+
+  const reloadAvailability = async (branchId: string) => {
+    if (!branchId) return
+    setAvailabilityLoading(true)
+    const { data: rows } = await fetchBranchProviderAvailability(branchId)
+    setAvailabilityRows(rows)
+    setAvailabilityLoading(false)
   }
 
   useEffect(() => {
     load()
   }, [])
+
+  useEffect(() => {
+    if (activeBranchId) {
+      reloadAvailability(activeBranchId)
+    }
+  }, [activeBranchId])
 
   const handleRevokeInvite = async (inv: StaffInvitation) => {
     if (!confirm(`Revoke invitation for ${inv.email}?`)) return
@@ -274,6 +307,43 @@ export default function StaffSettingsPage() {
             </CardContent>
           </Card>
         )}
+
+        {availableBranches.length > 1 && (
+          <div className="flex items-center gap-2 mt-6 bg-white p-4 rounded-xl border border-neutral-200">
+            <span className="text-sm font-medium text-neutral-700">Select Branch for Availability Settings:</span>
+            <select
+              value={activeBranchId}
+              onChange={(e) => {
+                setActiveBranchId(e.target.value)
+                reloadAvailability(e.target.value)
+              }}
+              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm"
+            >
+              {availableBranches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div className="mt-6">
+          <ProviderAvailabilityPanel
+            rows={availabilityRows}
+            loading={availabilityLoading}
+            branchId={activeBranchId}
+            providers={staff
+              .filter((s) => s.is_active && s.role_name === "dentist")
+              .map((p) => ({
+                profile_id: p.profile_id,
+                name: p.full_name || p.email || "Dentist",
+              }))}
+            canWrite={canWriteAppts}
+            onSaved={() => reloadAvailability(activeBranchId)}
+            defaultCollapsed={false}
+          />
+        </div>
       </ModulePageShell>
     </PermissionGate>
   )

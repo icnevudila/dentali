@@ -35,7 +35,6 @@ import { fetchOrgStaff, type StaffMember, addStaffMemberDirectly, fetchRolesList
 import { AppointmentWeekCalendar } from "@/components/appointments/AppointmentWeekCalendar"
 import { AppointmentEditDialog } from "@/components/appointments/AppointmentEditDialog"
 import { AppointmentSlotButtons } from "@/components/appointments/AppointmentSlotButtons"
-import { ProviderAvailabilityPanel } from "@/components/appointments/ProviderAvailabilityPanel"
 import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
 import { PatientBillingGateBanner } from "@/components/billing/PatientBillingGateBanner"
 import {
@@ -687,9 +686,42 @@ function AppointmentsPageContent() {
                     />
                   )}
                 </div>
-                <div className="sm:col-span-2 space-y-1">
+                <div className="sm:col-span-2 space-y-1.5">
                   <label className="text-xs font-medium">Purpose</label>
-                  <Input required value={purpose} onChange={(e) => setPurpose(e.target.value)} />
+                  <select
+                    value={purpose && ["General Checkup", "Dental Cleaning", "Tooth Filling", "Root Canal", "Tooth Extraction", "Orthodontic Consultation"].includes(purpose) ? purpose : (purpose ? "Other" : "General Checkup")}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "Other") {
+                        setPurpose("");
+                      } else {
+                        setPurpose(val);
+                      }
+                    }}
+                    className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="General Checkup">General Checkup</option>
+                    <option value="Dental Cleaning">Dental Cleaning</option>
+                    <option value="Tooth Filling">Tooth Filling</option>
+                    <option value="Root Canal">Root Canal</option>
+                    <option value="Tooth Extraction">Tooth Extraction</option>
+                    <option value="Orthodontic Consultation">Orthodontic Consultation</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  {purpose !== "General Checkup" &&
+                    purpose !== "Dental Cleaning" &&
+                    purpose !== "Tooth Filling" &&
+                    purpose !== "Root Canal" &&
+                    purpose !== "Tooth Extraction" &&
+                    purpose !== "Orthodontic Consultation" && (
+                      <Input
+                        required
+                        placeholder="Please specify purpose"
+                        value={purpose}
+                        onChange={(e) => setPurpose(e.target.value)}
+                        className="mt-1"
+                      />
+                    )}
                 </div>
                 {bookingBillingGate?.has_billing_gap ? (
                   <div className="sm:col-span-2 space-y-2">
@@ -786,21 +818,6 @@ function AppointmentsPageContent() {
             />
           ) : null}
           </>
-        )}
-
-        {!showBook && (
-          <ProviderAvailabilityPanel
-            rows={availabilityRows}
-            loading={availabilityLoading}
-            branchId={activeBranch?.id}
-            providers={providers.map((p) => ({
-              profile_id: p.profile_id,
-              name: p.full_name || p.email || "Dentist",
-            }))}
-            canWrite={canWriteAppts}
-            onSaved={reloadAvailability}
-            defaultCollapsed
-          />
         )}
         </ContentPanel>
       </DirectionalTransition>

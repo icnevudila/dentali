@@ -404,14 +404,50 @@ export default function PrescriptionsPage() {
                               <Printer className="h-3.5 w-3.5" /> Print
                             </Button>
                           ) : null}
-                          <Button size="sm" variant="ghost" className="gap-1" onClick={() => setViewRxId(rx.id)}>
+                          {rx.status === "draft" && canWrite ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 text-primary-700 hover:text-primary-800"
+                              onClick={() => {
+                                setDraftId(rx.id)
+                                setDiagnosis(rx.diagnosis ?? "")
+                                setGeneralInstructions(rx.general_instructions ?? "")
+                                getPrescription(rx.id).then(({ data }) => {
+                                  if (data?.items) {
+                                    setItems(data.items.map((i) => ({
+                                      drug_name: i.drug_name || "",
+                                      strength: i.strength || "",
+                                      dosage: i.dosage || "",
+                                      frequency: i.frequency || "",
+                                      duration: i.duration || "",
+                                      quantity: i.quantity || "",
+                                      instructions: i.instructions || "",
+                                    })))
+                                  }
+                                })
+                              }}
+                            >
+                              Edit draft
+                            </Button>
+                          ) : null}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="gap-1"
+                            onClick={() => {
+                              setViewRxId(rx.id)
+                              // Immediately pre-populate viewRx from list data to prevent flashing blank details
+                              setViewRx(rx)
+                            }}
+                          >
                             View <ChevronRight className="h-3.5 w-3.5" />
                           </Button>
                           {canWrite && rx.status !== "voided" ? (
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="text-red-600"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               onClick={() => void handleVoid(rx.id)}
                             >
                               Void
@@ -423,35 +459,76 @@ export default function PrescriptionsPage() {
                   </ul>
                 )}
               </CardContent>
-            </Card>
-
-            {viewRx ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Prescription detail</CardTitle>
+            </Card>            {viewRx ? (
+              <Card className="border-neutral-200 shadow-sm animate-fade-rise">
+                <CardHeader className="bg-neutral-50/50 border-b border-neutral-100 flex flex-row items-center justify-between py-3">
+                  <div>
+                    <CardTitle className="text-base">Prescription Details</CardTitle>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      {new Date(viewRx.signed_at ?? viewRx.created_at).toLocaleString("en-PH")}
+                      {viewRx.prescriber_name ? ` · Prescribed by ${viewRx.prescriber_name}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={viewRx.status === "signed" ? "success" : viewRx.status === "voided" ? "danger" : "default"}>
+                      {viewRx.status}
+                    </Badge>
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <p>
-                    <span className="text-neutral-500">Diagnosis:</span> {viewRx.diagnosis ?? "—"}
-                  </p>
-                  {viewRx.items?.map((item, i) => (
-                    <div key={item.id ?? i} className="rounded-md border px-3 py-2">
-                      <p className="font-medium">
-                        {i + 1}. {item.drug_name} {item.strength ? `(${item.strength})` : ""}
-                      </p>
-                      <p className="text-neutral-600 text-xs mt-1">
-                        {[item.dosage, item.frequency, item.duration, item.quantity].filter(Boolean).join(" · ")}
-                      </p>
-                      {item.instructions ? (
-                        <p className="text-neutral-500 text-xs mt-1">{item.instructions}</p>
-                      ) : null}
+                <CardContent className="space-y-4 pt-4 text-sm">
+                  {viewRx.diagnosis && (
+                    <div className="bg-neutral-50 rounded-lg p-3 border border-neutral-100">
+                      <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Diagnosis / Indication:</span>
+                      <p className="font-medium text-neutral-800 mt-1">{viewRx.diagnosis}</p>
                     </div>
-                  ))}
-                  {viewRx.status === "signed" ? (
-                    <Button size="sm" className="gap-1" onClick={() => void handlePrint(viewRx)}>
-                      <Printer className="h-4 w-4" /> Print
+                  )}
+
+                  {viewRx.general_instructions && (
+                    <div className="bg-primary-50/20 rounded-lg p-3 border border-primary-100">
+                      <span className="text-xs font-semibold text-primary-700 uppercase tracking-wide">Patient Instructions:</span>
+                      <div className="text-neutral-700 mt-1 whitespace-pre-line text-xs leading-relaxed">
+                        {viewRx.general_instructions}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Prescribed Medications:</span>
+                    <div className="space-y-2">
+                      {viewRx.items && viewRx.items.length > 0 ? (
+                        viewRx.items.map((item, i) => (
+                          <div key={item.id ?? i} className="rounded-lg border border-neutral-200 bg-white p-3 shadow-2xs">
+                            <p className="font-semibold text-neutral-900">
+                              {i + 1}. {item.drug_name} {item.strength ? `(${item.strength})` : ""}
+                            </p>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-neutral-600 text-xs mt-1">
+                              {item.dosage && <span><strong>Dosage:</strong> {item.dosage}</span>}
+                              {item.frequency && <span><strong>Frequency:</strong> {item.frequency}</span>}
+                              {item.duration && <span><strong>Duration:</strong> {item.duration}</span>}
+                              {item.quantity && <span><strong>Qty:</strong> {item.quantity}</span>}
+                            </div>
+                            {item.instructions ? (
+                              <p className="text-neutral-500 text-xs mt-1.5 pt-1.5 border-t border-neutral-100">
+                                <strong>Instructions:</strong> {item.instructions}
+                              </p>
+                            ) : null}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-neutral-500 italic py-2">Loading items / no items found in this draft.</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    {viewRx.status === "signed" && (
+                      <Button size="sm" className="gap-1.5" onClick={() => void handlePrint(viewRx)}>
+                        <Printer className="h-4 w-4" /> Print Rx
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" onClick={() => setViewRxId(null)}>
+                      Close Detail
                     </Button>
-                  ) : null}
+                  </div>
                 </CardContent>
               </Card>
             ) : null}

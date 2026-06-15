@@ -43,10 +43,22 @@ export function AppointmentEditDialog({
   const [saving, setSaving] = React.useState(false)
   const [providerId, setProviderId] = React.useState("")
   const [purpose, setPurpose] = React.useState("")
+  const [selectedPurposeOption, setSelectedPurposeOption] = React.useState("General Checkup")
+  const [customPurpose, setCustomPurpose] = React.useState("")
   const [date, setDate] = React.useState("")
   const [time, setTime] = React.useState("")
   const [slots, setSlots] = React.useState<AppointmentSlot[]>([])
   const [slotsLoading, setSlotsLoading] = React.useState(false)
+
+  const PRESET_PURPOSES = React.useMemo(() => [
+    "General Checkup",
+    "Dental Cleaning",
+    "Tooth Filling",
+    "Root Canal",
+    "Tooth Extraction",
+    "Orthodontic Consultation",
+    "Other"
+  ], [])
 
   React.useEffect(() => {
     setMounted(true)
@@ -73,10 +85,21 @@ export function AppointmentEditDialog({
   React.useEffect(() => {
     if (!open || !appointment) return
     setProviderId(appointment.provider_id || "")
-    setPurpose(appointment.purpose || "")
+    const origPurpose = appointment.purpose || ""
+    setPurpose(origPurpose)
+    if (PRESET_PURPOSES.includes(origPurpose)) {
+      setSelectedPurposeOption(origPurpose)
+      setCustomPurpose("")
+    } else if (origPurpose) {
+      setSelectedPurposeOption("Other")
+      setCustomPurpose(origPurpose)
+    } else {
+      setSelectedPurposeOption("General Checkup")
+      setCustomPurpose("")
+    }
     setDate(appointmentDateKey(appointment.scheduled_at))
     setTime(extract24HourTime(appointment.scheduled_at))
-  }, [open, appointment, extract24HourTime])
+  }, [open, appointment, extract24HourTime, PRESET_PURPOSES])
 
   React.useEffect(() => {
     if (!open || !branchId || !providerId || !date || !appointment) {
@@ -104,9 +127,16 @@ export function AppointmentEditDialog({
     e.preventDefault()
     setSaving(true)
 
+    const finalPurpose = selectedPurposeOption === "Other" ? customPurpose.trim() : selectedPurposeOption
+    if (!finalPurpose) {
+      toast.error("Please specify a purpose for the appointment")
+      setSaving(false)
+      return
+    }
+
     const { error: err1 } = await updateAppointmentDetails(appointment.id, {
       providerId: providerId || null,
-      purpose,
+      purpose: finalPurpose,
     })
 
     if (err1) {
@@ -131,7 +161,7 @@ export function AppointmentEditDialog({
     onSaved({
       ...appointment,
       provider_id: providerId || null,
-      purpose,
+      purpose: finalPurpose,
       scheduled_at: scheduledAt,
     })
     onOpenChange(false)
@@ -206,9 +236,28 @@ export function AppointmentEditDialog({
             )}
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <label className="text-xs font-medium">{t("appointments.purpose", "Purpose")}</label>
-            <Input value={purpose} onChange={(e) => setPurpose(e.target.value)} />
+            <select
+              value={selectedPurposeOption}
+              onChange={(e) => setSelectedPurposeOption(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              {PRESET_PURPOSES.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            {selectedPurposeOption === "Other" && (
+              <Input
+                placeholder="Specify other purpose..."
+                value={customPurpose}
+                onChange={(e) => setCustomPurpose(e.target.value)}
+                required
+                className="mt-2"
+              />
+            )}
           </div>
 
           <div className="flex flex-wrap gap-2 pt-2 border-t border-neutral-100">
