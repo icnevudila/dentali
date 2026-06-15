@@ -9,7 +9,7 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { useParams } from "next/navigation"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
-import { getInvoice, recordInvoicePayment, voidInvoice, deleteInvoicePayment, updateInvoiceLineItem } from "@/lib/billing/invoice-service"
+import { getInvoice, recordInvoicePayment, voidInvoice, deleteInvoicePayment, updateInvoiceLineItem, addInvoiceLineItem } from "@/lib/billing/invoice-service"
 import { printInvoice } from "@/lib/billing/invoice-print"
 import { downloadInvoicePdf } from "@/lib/billing/invoice-pdf"
 import {
@@ -58,6 +58,36 @@ export default function InvoiceDetailPage() {
   const [editDesc, setEditDesc] = React.useState("")
   const [editPrice, setEditPrice] = React.useState("")
   const [editQty, setEditQty] = React.useState("1")
+  const [newDesc, setNewDesc] = React.useState("")
+  const [newPrice, setNewPrice] = React.useState("")
+  const [newQty, setNewQty] = React.useState("1")
+  const [addingLine, setAddingLine] = React.useState(false)
+
+  const handleAddLineItem = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const price = parseFloat(newPrice)
+    const qty = parseInt(newQty, 10)
+    if (!newDesc.trim() || isNaN(price) || isNaN(qty) || qty <= 0) return
+    setAddingLine(true)
+    setError(null)
+    const { error: addErr } = await addInvoiceLineItem({
+      invoiceId,
+      description: newDesc.trim(),
+      unitPrice: price,
+      quantity: qty,
+    })
+    setAddingLine(false)
+    if (addErr) {
+      toast.error(addErr)
+      setError(addErr)
+    } else {
+      toast.success(t("billing.lineItemAdded", "Line item added"))
+      setNewDesc("")
+      setNewPrice("")
+      setNewQty("1")
+      load()
+    }
+  }
 
   const handleUpdateLineItem = async (itemId: string) => {
     const price = parseFloat(editPrice)
@@ -494,6 +524,36 @@ export default function InvoiceDetailPage() {
                 </table>
               </div>
             )}
+            {invoice && invoice.status !== "void" && invoice.status !== "paid" ? (
+              <form onSubmit={handleAddLineItem} className="mt-4 grid gap-2 sm:grid-cols-4 border-t pt-4">
+                <Input
+                  placeholder={t("billing.newLineDesc", "Description")}
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  className="sm:col-span-2"
+                  required
+                />
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder={t("billing.qty", "Qty")}
+                  value={newQty}
+                  onChange={(e) => setNewQty(e.target.value)}
+                  required
+                />
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder={t("billing.unitPrice", "Unit")}
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                  required
+                />
+                <Button type="submit" size="sm" disabled={addingLine} className="sm:col-span-4 w-fit">
+                  {addingLine ? t("common.saving", "Saving…") : t("billing.addLineItem", "Add line item")}
+                </Button>
+              </form>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -679,18 +739,9 @@ export default function InvoiceDetailPage() {
                           const { error: delErr } = await deleteInvoicePayment(p.id, invoiceId)
                           if (delErr) {
                             setError(delErr)
+                            toast.error(delErr)
                           } else {
-                            const org = await fetchOrganization()
-                            if (org) {
-                              await logAuditEvent({
-                                organizationId: org.id,
-                                branchId: activeBranch?.id,
-                                action: "invoice.payment_delete",
-                                entityType: "invoice",
-                                entityId: invoiceId,
-                                metadata: { paymentId: p.id, amount: p.amount, method: p.payment_method, invoiceNumber: invoice?.invoice_number },
-                              })
-                            }
+                            toast.success(t("billing.paymentDeleted", "Payment record removed"))
                             await load()
                           }
                         }}

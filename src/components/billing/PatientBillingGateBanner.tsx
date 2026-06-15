@@ -1,21 +1,29 @@
 "use client"
 
 import Link from "next/link"
-import { AlertTriangle, Receipt, Wallet } from "lucide-react"
+import { AlertTriangle, Receipt, Wallet, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useLocale } from "@/hooks/use-locale"
 import type { PatientBillingGate } from "@/lib/billing/invoice-service"
+import { backfillPatientPlanInvoices } from "@/lib/billing/invoice-service"
+import * as React from "react"
+import { toast } from "sonner"
 
 export function PatientBillingGateBanner({
   gate,
   patientId,
+  branchId,
   onDismiss,
+  onBackfill,
 }: {
   gate: PatientBillingGate
   patientId: string
+  branchId?: string | null
   onDismiss?: () => void
+  onBackfill?: () => void
 }) {
   const { t } = useLocale()
+  const [backfilling, setBackfilling] = React.useState(false)
 
   if (!gate.has_billing_gap) return null
 
@@ -23,6 +31,25 @@ export function PatientBillingGateBanner({
   const invoiceHref = gate.primary_open_invoice_id
     ? `/billing/${gate.primary_open_invoice_id}`
     : `/billing?patient=${patientId}`
+
+  const handleBackfill = async () => {
+    setBackfilling(true)
+    const { data, error } = await backfillPatientPlanInvoices({
+      patientId,
+      branchId: branchId ?? undefined,
+    })
+    setBackfilling(false)
+    if (error) toast.error(error)
+    else if (data) {
+      toast.success(
+        t("billing.gateBackfillDone", "Created {count} draft invoice(s).").replace(
+          "{count}",
+          String(data.created)
+        )
+      )
+      onBackfill?.()
+    }
+  }
 
   return (
     <div className="rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-950 animate-fade-rise">
@@ -69,6 +96,18 @@ export function PatientBillingGateBanner({
                   <Receipt className="h-3.5 w-3.5" />
                   {t("billing.gateCollectPayment", "Collect payment")}
                 </Link>
+              </Button>
+            ) : null}
+            {missingPlans.length > 0 ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="gap-1.5"
+                disabled={backfilling}
+                onClick={() => void handleBackfill()}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${backfilling ? "animate-spin" : ""}`} />
+                {t("billing.gateBackfill", "Create missing invoices")}
               </Button>
             ) : null}
             {missingPlans.length > 0 ? (

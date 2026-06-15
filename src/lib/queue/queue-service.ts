@@ -80,6 +80,7 @@ export async function checkInPatient(params: {
   appointmentId?: string
   notes?: string
   forceCheckin?: boolean
+  forceBillingOverride?: boolean
 }): Promise<{ data: { id: string; display_code: string } | null; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("check_in_patient", {
@@ -89,6 +90,7 @@ export async function checkInPatient(params: {
       appointment_id: params.appointmentId ?? "",
       notes: params.notes ?? "",
       force_checkin: params.forceCheckin ?? false,
+      force_billing_override: params.forceBillingOverride ?? false,
     },
   })
 

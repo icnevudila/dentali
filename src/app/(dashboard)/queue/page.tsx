@@ -159,6 +159,7 @@ export default function QueuePage() {
   const [todayAppointments, setTodayAppointments] = React.useState<AppointmentRecord[]>([])
   const [apptCheckInId, setApptCheckInId] = React.useState<string | null>(null)
   const [consentOverridePending, setConsentOverridePending] = React.useState(false)
+  const [billingOverridePending, setBillingOverridePending] = React.useState(false)
   const [servedNotePrompt, setServedNotePrompt] = React.useState<{
     patientId: string
     patientName: string
@@ -174,6 +175,7 @@ export default function QueuePage() {
     setSelectedPatientId("")
     setCheckInNotes("")
     setConsentOverridePending(false)
+    setBillingOverridePending(false)
     setShowCheckIn(true)
   }
 
@@ -183,6 +185,7 @@ export default function QueuePage() {
     setSelectedPatientId("")
     setCheckInNotes("")
     setConsentOverridePending(false)
+    setBillingOverridePending(false)
     setShowCheckIn(false)
   }
 
@@ -306,8 +309,10 @@ export default function QueuePage() {
       err = res.error
     }
     setActionId(null)
-    if (err) setError(err)
-    else {
+    if (err) {
+      setError(err)
+      toast.error(err)
+    } else {
       if (status === "served" && entry?.patient_id) {
         const { data: billingGate } = await getPatientBillingGate(entry.patient_id)
         setServedNotePrompt({
@@ -316,11 +321,25 @@ export default function QueuePage() {
           billingGate,
         })
       }
+      const statusLabels: Partial<Record<QueueStatus | "announce", string>> = {
+        waiting: t("queue.statusWaiting", "Moved to waiting"),
+        ready: t("queue.statusReady", "Marked ready"),
+        now_serving: t("queue.statusServing", "Now serving"),
+        in_chair: t("queue.statusInChair", "In chair"),
+        served: t("queue.statusServed", "Marked as served"),
+        cancelled: t("queue.statusCancelled", "Entry cancelled"),
+        announce: t("queue.statusAnnounced", "Patient recalled"),
+      }
+      toast.success(statusLabels[status] ?? t("queue.statusUpdated", "Queue updated"))
       load()
     }
   }
 
-  const handleCheckIn = async (e: React.FormEvent, forceCheckin = false) => {
+  const handleCheckIn = async (
+    e: React.FormEvent,
+    forceCheckin = false,
+    forceBillingOverride = false
+  ) => {
     e.preventDefault()
     if (!activeBranch || !selectedPatientId) return
     setCheckingIn(true)
@@ -329,15 +348,21 @@ export default function QueuePage() {
       patientId: selectedPatientId,
       notes: checkInNotes || undefined,
       forceCheckin,
+      forceBillingOverride,
     })
     setCheckingIn(false)
     if (err) {
       if (!forceCheckin && err.includes("Pending consents")) {
         setConsentOverridePending(true)
       }
+      if (!forceBillingOverride && err.includes("Billing clearance")) {
+        setBillingOverridePending(true)
+      }
       setError(err)
+      toast.error(err)
     } else {
       closeCheckInModal()
+      toast.success(t("queue.walkInCheckInSuccess", "Patient added to queue"))
       load()
     }
   }
@@ -347,18 +372,56 @@ export default function QueuePage() {
     setCallingNext(true)
     const { data, error: err } = await callNextPatient(activeBranch.id)
     setCallingNext(false)
-    if (err) setError(err)
-    else if (!data) setError("No patients waiting in queue")
-    else load()
+    if (err) {
+      setError(err)
+      toast.error(err)
+    } else if (!data) {
+      toast.message(t("queue.emptyQueue", "No patients waiting in queue"))
+    } else {
+      toast.success(t("queue.calledNext", "Called next patient"))
+      load()
+    }
   }
 
-  const handleAppointmentCheckIn = async (appointmentId: string) => {
+  const handleAppointmentCheckIn = async (
+    appointmentId: string,
+    forceBillingOverride = false,
+    forceCheckin = false
+  ) => {
     setApptCheckInId(appointmentId)
     setError(null)
-    const { data, error: err } = await checkInAppointment(appointmentId)
+    const { data, error: err } = await checkInAppointment(appointmentId, {
+      forceBillingOverride,
+      forceCheckin,
+    })
     setApptCheckInId(null)
-    if (err) setError(err)
-    else if (data) load()
+    if (err) {
+      if (!forceCheckin && err.includes("Pending consents")) {
+        const ok = window.confirm(
+          t(
+            "queue.consentOverrideConfirm",
+            "Required consents are unsigned. Check in anyway? This will be logged in audit."
+          )
+        )
+        if (ok) return handleAppointmentCheckIn(appointmentId, forceBillingOverride, true)
+      }
+      if (!forceBillingOverride && err.includes("Billing clearance")) {
+        const ok = window.confirm(
+          t(
+            "billing.gateConfirmCheckIn",
+            "Patient has outstanding billing. Check in anyway? This will be logged in audit."
+          )
+        )
+        if (ok) return handleAppointmentCheckIn(appointmentId, true, forceCheckin)
+      }
+      setError(err)
+      toast.error(err)
+    } else if (data) {
+      toast.success(
+        t("queue.checkInSuccess", "Checked in — queue #{code}").replace("{code}", data.display_code)
+      )
+      load()
+    }
   }
 
   const avgWait =
@@ -647,6 +710,21 @@ export default function QueuePage() {
                     <label className="text-xs font-medium">Notes</label>
                     <Input value={checkInNotes} onChange={(e) => setCheckInNotes(e.target.value)} placeholder="Walk-in reason…" />
                   </div>
+                  {billingOverridePending ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-900">
+                      <p>{t("billing.gateBlockCheckIn", "Outstanding billing must be collected or overridden.")}</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        disabled={checkingIn}
+                        onClick={(e) => void handleCheckIn(e as unknown as React.FormEvent, false, true)}
+                      >
+                        {t("billing.gateOverrideCheckIn", "Check in with billing override")}
+                      </Button>
+                    </div>
+                  ) : null}
                   {consentOverridePending ? (
                     <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-900">
                       <p>{t("queue.consentGate", "Patient has unsigned consents. Override is logged in audit.")}</p>

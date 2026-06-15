@@ -2,7 +2,7 @@
 
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import { DEFAULT_LOCALE, getLocaleDefinition, isAppLocale, LOCALE_STORAGE_KEY, type AppLocale } from "@/lib/i18n/config"
+import { DEFAULT_LOCALE, getLocaleDefinition, normalizeLocale, LOCALE_STORAGE_KEY, type AppLocale } from "@/lib/i18n/config"
 import { createTranslator } from "@/lib/i18n/translate"
 import { writeLocaleCookie } from "@/lib/i18n/locale-cookie"
 
@@ -17,7 +17,7 @@ export const useLocaleStore = create<LocaleState>()(
     (set, get) => ({
       locale: DEFAULT_LOCALE,
       setLocale: (locale) => {
-        const next = isAppLocale(locale) ? locale : DEFAULT_LOCALE
+        const next = normalizeLocale(locale)
         set({ locale: next, t: createTranslator(next) })
         if (typeof document !== "undefined") {
           document.documentElement.lang = getLocaleDefinition(next).htmlLang
@@ -31,7 +31,7 @@ export const useLocaleStore = create<LocaleState>()(
       partialize: (state) => ({ locale: state.locale }),
       onRehydrateStorage: () => (state) => {
         if (!state) return
-        const locale = isAppLocale(state.locale) ? state.locale : DEFAULT_LOCALE
+        const locale = normalizeLocale(state.locale)
         state.locale = locale
         state.t = createTranslator(locale)
         if (typeof document !== "undefined") {

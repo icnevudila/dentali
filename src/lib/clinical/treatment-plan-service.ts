@@ -241,14 +241,44 @@ export async function approveTreatmentPlan(planId: string): Promise<{
   }
 }
 
+export async function unapproveTreatmentPlan(planId: string): Promise<{
+  data: { plan_id: string; status: string; voided_invoice_id: string | null } | null
+  error: string | null
+}> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("unapprove_treatment_plan", {
+    p_plan_id: planId,
+  })
+  if (error) return { data: null, error: error.message }
+  const raw = data as Record<string, unknown>
+  return {
+    data: {
+      plan_id: String(raw.plan_id),
+      status: String(raw.status),
+      voided_invoice_id: raw.voided_invoice_id ? String(raw.voided_invoice_id) : null,
+    },
+    error: null,
+  }
+}
+
 export async function updatePlanStatus(
   planId: string,
   status: string
 ): Promise<{ error: string | null }> {
+  if (status === "approved") {
+    return {
+      error: "Use approveTreatmentPlan() — direct status updates bypass invoice and audit workflow.",
+    }
+  }
+  if (status === "proposed" || status === "draft") {
+    return {
+      error: "Use unapproveTreatmentPlan() to revert an approved plan.",
+    }
+  }
   const supabase = createClient()
-  const patch: Record<string, unknown> = { status, updated_at: new Date().toISOString() }
-  if (status === "approved") patch.approved_at = new Date().toISOString()
-
-  const { error } = await supabase.from("treatment_plans").update(patch).eq("id", planId)
+  const { error } = await supabase
+    .from("treatment_plans")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("id", planId)
   return { error: error?.message ?? null }
 }

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useLocaleStore } from "@/hooks/use-locale"
-import { DEFAULT_LOCALE, getLocaleDefinition, isAppLocale } from "@/lib/i18n/config"
+import { getLocaleDefinition, normalizeLocale } from "@/lib/i18n/config"
 import { readLocaleCookie, writeLocaleCookie } from "@/lib/i18n/locale-cookie"
 
 /** Syncs html[lang] and cookie with persisted locale after hydration. */
@@ -13,12 +13,9 @@ export function LocaleBootstrap() {
   useEffect(() => {
     const cookieLocale = readLocaleCookie()
     const stored = useLocaleStore.getState().locale
-    const resolved =
-      cookieLocale && cookieLocale !== stored
-        ? cookieLocale
-        : isAppLocale(stored)
-          ? stored
-          : DEFAULT_LOCALE
+    const resolved = normalizeLocale(
+      cookieLocale && cookieLocale !== stored ? cookieLocale : stored
+    )
 
     if (resolved !== stored) {
       setLocale(resolved)

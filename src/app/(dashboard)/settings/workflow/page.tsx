@@ -18,6 +18,7 @@ import { fetchOwnerDigestReadiness, type OwnerDigestReadiness } from "@/lib/staf
 import { ATTENTION_RULE_UI } from "@/lib/dashboard/attention-rules"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 
 type WorkflowRule = {
   key: string
@@ -56,8 +57,9 @@ const WORKFLOW_GROUPS: { title: string; items: WorkflowRule[] }[] = [
     items: [
       {
         key: "auto_approve_creates_invoice",
-        label: "Plan approval creates invoice draft",
-        description: "Approved treatment plan automatically creates a draft invoice.",
+        label: "Plan approval automation event",
+        description:
+          "Emit workflow automation when a plan is approved. Invoice draft is always created on approval regardless of this toggle.",
       },
       {
         key: "auto_hmo_claim_on_invoice",
@@ -68,6 +70,12 @@ const WORKFLOW_GROUPS: { title: string; items: WorkflowRule[] }[] = [
         key: "auto_payment_reminder",
         label: "Payment balance reminders",
         description: "Overdue balances enqueue SMS reminders via payment-reminder-cron.",
+      },
+      {
+        key: "billing_gate_block_services",
+        label: "Block booking/check-in with open balance",
+        description:
+          "Require billing clearance before new appointments and queue check-in. Staff can override with audit log.",
       },
     ],
   },
@@ -142,8 +150,13 @@ export default function WorkflowSettingsPage() {
     setError(null)
     const { error: err } = await updateWorkflowSettings(activeBranch.id, { [key]: next })
     setSavingKey(null)
-    if (err) setError(err)
-    else await load()
+    if (err) {
+      setError(err)
+      toast.error(err)
+    } else {
+      toast.success(t("settings.workflowSaved", "Workflow setting updated"))
+      await load()
+    }
   }
 
   return (

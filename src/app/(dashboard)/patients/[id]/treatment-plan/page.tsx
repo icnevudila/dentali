@@ -4,7 +4,7 @@ import * as React from "react"
 import { Suspense } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Plus, CheckCircle, Sparkles } from "lucide-react"
+import { Plus, CheckCircle, Sparkles, Undo2, Lock } from "lucide-react"
 import { useLocale } from "@/hooks/use-locale"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
@@ -28,12 +28,20 @@ import {
   getTreatmentPlan,
   addPlanItem,
   approveTreatmentPlan,
+  unapproveTreatmentPlan,
   bulkAddChartFindingsToPlan,
   updatePlanItem,
   deletePlanItem,
 } from "@/lib/clinical/treatment-plan-service"
-import { createInvoiceFromPlan, getLinkedInvoiceForPlan, resyncDraftInvoiceFromPlan } from "@/lib/billing/invoice-service"
-import { logAuditEvent } from "@/lib/audit/audit-service"
+import {
+  getLinkedInvoiceForPlan,
+  resyncDraftInvoiceFromPlan,
+  backfillPatientPlanInvoices,
+  getPatientBillingGate,
+  type PatientBillingGate,
+} from "@/lib/billing/invoice-service"
+import { PatientBillingGateBanner } from "@/components/billing/PatientBillingGateBanner"
+import { toast } from "sonner"
 import { fetchProcedureStockWarnings } from "@/lib/inventory/inventory-service"
 import { ProcedureStockWarningBanner } from "@/components/inventory/ProcedureStockWarningBanner"
 import { ChartFindingSuggestionsCard } from "@/components/clinical/ChartFindingSuggestionsCard"
@@ -84,6 +92,9 @@ function TreatmentPlanContent() {
   >([])
   const [riskFlags, setRiskFlags] = React.useState<string[]>([])
   const [seeding, setSeeding] = React.useState(false)
+  const [billingGate, setBillingGate] = React.useState<PatientBillingGate | null>(null)
+
+  const planEditable = planStatus === "proposed" || planStatus === "draft"
 
   const handleSeedDefaults = async () => {
     setSeeding(true)
@@ -118,7 +129,7 @@ function TreatmentPlanContent() {
   }, [])
 
   const syncInvoiceIfNeeded = React.useCallback(async () => {
-    if (!activePlanId) return
+    if (!activePlanId || !planEditable) return
     let invoiceId = autoInvoiceId
     if (!invoiceId) {
       const { data } = await getLinkedInvoiceForPlan(activePlanId)
@@ -128,7 +139,7 @@ function TreatmentPlanContent() {
     }
     const { error: syncErr } = await resyncDraftInvoiceFromPlan(invoiceId, activePlanId)
     if (syncErr) setError(syncErr)
-  }, [autoInvoiceId, activePlanId])
+  }, [autoInvoiceId, activePlanId, planEditable])
 
   React.useEffect(() => {
     getPatient(patientId).then(({ data }) => {
@@ -136,6 +147,9 @@ function TreatmentPlanContent() {
     })
     getMedicalRiskFlags(patientId).then(({ data }) => {
       if (data) setRiskFlags(data.flags.map((flag) => flag.label))
+    })
+    getPatientBillingGate(patientId).then(({ data }) => {
+      if (data) setBillingGate(data)
     })
     fetchProcedures(activeBranch?.id).then(({ data }) => setProcedures(data))
     if (planId) loadPlan(planId)
@@ -243,9 +257,11 @@ function TreatmentPlanContent() {
     
     if (err) {
       setError(err)
+      toast.error(err)
     } else {
       await loadPlan(activePlanId)
       await syncInvoiceIfNeeded()
+      toast.success(t("treatmentPlan.itemAdded", "Procedure added"))
       setSelectedProc("")
       setIsCustom(false)
       setCustomName("")
@@ -261,9 +277,15 @@ function TreatmentPlanContent() {
     setSaving(true)
     setError(null)
     const { data, error: err } = await bulkAddChartFindingsToPlan(activePlanId)
-    if (err) setError(err)
-    else if (data && data.added === 0) {
-      setError("No chart findings matched procedures for this plan.")
+    if (err) {
+      setError(err)
+      toast.error(err)
+    } else if (data && data.added === 0) {
+      const msg = "No chart findings matched procedures for this plan."
+      setError(msg)
+      toast.message(msg)
+    } else if (data && data.added > 0) {
+      toast.success(t("treatmentPlan.itemsFromChart", "Added {count} procedure(s) from chart").replace("{count}", String(data.added)))
     }
     await loadPlan(activePlanId)
     await syncInvoiceIfNeeded()
@@ -284,10 +306,13 @@ function TreatmentPlanContent() {
       estimatedPrice: patch.estimatedPrice,
       toothNumber: patch.toothNumber,
     })
-    if (err) setError(err)
-    else {
+    if (err) {
+      setError(err)
+      toast.error(err)
+    } else {
       await loadPlan(activePlanId)
       await syncInvoiceIfNeeded()
+      toast.success(t("treatmentPlan.itemUpdated", "Procedure updated"))
     }
     setSaving(false)
   }
@@ -297,10 +322,13 @@ function TreatmentPlanContent() {
     setSaving(true)
     setError(null)
     const { error: err } = await deletePlanItem(itemId, activePlanId)
-    if (err) setError(err)
-    else {
+    if (err) {
+      setError(err)
+      toast.error(err)
+    } else {
       await loadPlan(activePlanId)
       await syncInvoiceIfNeeded()
+      toast.success(t("treatmentPlan.itemRemoved", "Procedure removed"))
     }
     setSaving(false)
   }
@@ -310,42 +338,68 @@ function TreatmentPlanContent() {
     setSaving(true)
     setError(null)
     const { data, error: err } = await approveTreatmentPlan(activePlanId)
-    if (err) setError(err)
-    else if (data) {
+    if (err) {
+      setError(err)
+      toast.error(err)
+    } else if (data) {
       setPlanStatus(data.status)
       setTotal(data.total_estimated)
       setAutoInvoiceId(data.invoice_id)
+      toast.success(t("treatmentPlan.approved", "Treatment plan approved"))
     }
     await loadPlan(activePlanId)
     setSaving(false)
   }
 
-  const handleConvertInvoice = async () => {
-    if (!user || !activeBranch || !activePlanId) return
+  const handleUnapprove = async () => {
+    if (!activePlanId) return
+    const confirmed = window.confirm(
+      t(
+        "treatmentPlan.unapproveConfirm",
+        "Unapprove this plan? The linked draft invoice will be voided and you can edit procedures again."
+      )
+    )
+    if (!confirmed) return
     setSaving(true)
-    const org = await fetchOrganization()
-    if (!org) { setSaving(false); return }
+    setError(null)
+    const { data, error: err } = await unapproveTreatmentPlan(activePlanId)
+    if (err) {
+      setError(err)
+      toast.error(err)
+    } else if (data) {
+      setPlanStatus(data.status)
+      setAutoInvoiceId(null)
+      toast.success(t("treatmentPlan.unapproved", "Plan approval removed — you can edit procedures again"))
+    }
+    await loadPlan(activePlanId)
+    setSaving(false)
+  }
 
-    const { data, error: err } = await createInvoiceFromPlan({
-      organizationId: org.id,
-      branchId: activeBranch.id,
+  const handleBackfillInvoice = async () => {
+    if (!activeBranch) return
+    setSaving(true)
+    setError(null)
+    const { data, error: err } = await backfillPatientPlanInvoices({
       patientId,
-      treatmentPlanId: activePlanId,
-      totalAmount: total,
-      userId: user.id,
+      branchId: activeBranch.id,
     })
-    if (!err && data) {
-      setAutoInvoiceId(data.id)
-      await logAuditEvent({
-        organizationId: org.id,
-        branchId: activeBranch.id,
-        action: "patient.update",
-        entityType: "invoice",
-        entityId: data.id,
-        metadata: { from_plan: activePlanId },
-      })
-      router.push("/billing")
-    } else setError(err ?? "Failed")
+    if (err) {
+      setError(err)
+      toast.error(err)
+    } else if (data && data.created > 0) {
+      const { data: linked } = await getLinkedInvoiceForPlan(activePlanId!)
+      if (linked) setAutoInvoiceId(linked.id)
+      toast.success(
+        t("billing.gateBackfillDone", "Created {count} draft invoice(s).").replace(
+          "{count}",
+          String(data.created)
+        )
+      )
+    } else {
+      const msg = t("treatmentPlan.noInvoiceBackfill", "No missing invoices to create.")
+      setError(msg)
+      toast.message(msg)
+    }
     setSaving(false)
   }
 
@@ -373,6 +427,16 @@ function TreatmentPlanContent() {
         error={error}
         metrics={metricItems}
       >
+        {billingGate?.has_billing_gap ? (
+          <PatientBillingGateBanner
+            gate={billingGate}
+            patientId={patientId}
+            branchId={activeBranch?.id}
+            onBackfill={() => {
+              getPatientBillingGate(patientId).then(({ data }) => data && setBillingGate(data))
+            }}
+          />
+        ) : null}
         {!activePlanId ? (
           <Card>
             <CardHeader>
@@ -408,7 +472,7 @@ function TreatmentPlanContent() {
                       <TreatmentPlanItemRow
                         key={item.id}
                         item={item}
-                        editable={planStatus !== "approved"}
+                        editable={planEditable}
                         saving={saving}
                         onSave={(patch) => handleUpdateItem(item.id, patch)}
                         onDelete={() => handleDeleteItem(item.id)}
@@ -419,7 +483,46 @@ function TreatmentPlanContent() {
               </CardContent>
             </Card>
 
-            {planStatus !== "approved" ? (
+            {planStatus === "approved" || planStatus === "in_progress" ? (
+              <div className="rounded-xl border border-blue-200 bg-blue-50/80 px-4 py-3 text-sm text-blue-950 space-y-2">
+                <div className="flex gap-2">
+                  <Lock className="h-5 w-5 shrink-0 text-blue-600" />
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="font-semibold">
+                      {t("treatmentPlan.approvedLockedTitle", "Plan approved — procedures locked")}
+                    </p>
+                    <p className="text-blue-900/90">
+                      {t(
+                        "treatmentPlan.approvedLockedHint",
+                        "To change procedures or prices, unapprove the plan first. For minor billing adjustments, edit the linked invoice in Billing."
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 pl-7">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 border-blue-300"
+                    onClick={() => void handleUnapprove()}
+                    disabled={saving}
+                  >
+                    <Undo2 className="h-3.5 w-3.5" />
+                    {t("treatmentPlan.unapprove", "Unapprove plan")}
+                  </Button>
+                  {autoInvoiceId ? (
+                    <Button type="button" size="sm" variant="outline" asChild>
+                      <Link href={`/billing/${autoInvoiceId}`}>
+                        {t("treatmentPlan.editInvoiceInstead", "Edit invoice instead")}
+                      </Link>
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            {planEditable ? (
               <>
                 {riskFlags.length > 0 && (
                   <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 mb-4 animate-fade-rise flex gap-3">
@@ -444,7 +547,7 @@ function TreatmentPlanContent() {
               </>
             ) : null}
 
-            {planStatus !== "approved" ? (
+            {planEditable ? (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">{t("treatmentPlan.addProcedure", "Add procedure")}</CardTitle>
@@ -596,19 +699,19 @@ function TreatmentPlanContent() {
             ) : null}
 
             <div className="flex flex-wrap gap-2">
-              {planStatus !== "approved" ? (
+              {planEditable ? (
                 <Button variant="outline" onClick={handleBulkFromChart} disabled={saving} className="gap-2">
                   <Sparkles className="h-4 w-4" /> Add from chart findings
                 </Button>
               ) : null}
-              {planStatus !== "approved" && (
+              {planEditable ? (
                 <Button onClick={handleApprove} disabled={saving || items.length === 0} className="gap-2">
                   <CheckCircle className="h-4 w-4" /> Approve Plan
                 </Button>
-              )}
-              {planStatus === "approved" && !autoInvoiceId ? (
-                <Button variant="default" onClick={handleConvertInvoice} disabled={saving}>
-                  Convert to Invoice
+              ) : null}
+              {(planStatus === "approved" || planStatus === "in_progress") && !autoInvoiceId ? (
+                <Button variant="default" onClick={handleBackfillInvoice} disabled={saving}>
+                  {t("treatmentPlan.createMissingInvoice", "Create invoice from plan")}
                 </Button>
               ) : null}
             </div>

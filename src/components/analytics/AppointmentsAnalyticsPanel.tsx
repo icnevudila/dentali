@@ -113,7 +113,7 @@ export function AppointmentsAnalyticsPanel({ branchId }: { branchId: string }) {
         />
       </div>
       <ModuleAnalyticsPanel
-        title={t("appointments.providerUtil", "Provider utilization")}
+        title={t("appointments.dentistUtil", "Dentist utilization")}
         variant="pie"
         data={providers}
         loading={loading}

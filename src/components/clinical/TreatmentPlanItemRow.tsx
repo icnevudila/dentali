@@ -43,7 +43,7 @@ export function TreatmentPlanItemRow({
 
   if (!editable) {
     return (
-      <li className="py-2 flex justify-between gap-3">
+      <li className="py-2 flex justify-between gap-3 text-neutral-700">
         <span>
           {item.description}
           {item.tooth_number ? ` (${t("treatmentPlan.toothNumber", "Tooth #")} ${item.tooth_number})` : ""}

@@ -221,33 +221,38 @@ export async function createAppointment(params: {
   userId: string
   providerId?: string
   durationMinutes?: number
+  bookingSource?: "staff" | "portal" | "kiosk" | "phone" | "walk_in"
+  forceBillingOverride?: boolean
 }): Promise<{ data: { id: string } | null; error: string | null }> {
   const supabase = createClient()
-  const { data, error } = await supabase
-    .from("appointments")
-    .insert({
+  const { data, error } = await supabase.rpc("create_appointment_validated", {
+    p_payload: {
       organization_id: params.organizationId,
       branch_id: params.branchId,
       patient_id: params.patientId,
-      provider_id: params.providerId ?? null,
+      provider_id: params.providerId ?? "",
       scheduled_at: params.scheduledAt,
       purpose: params.purpose,
       duration_minutes: params.durationMinutes ?? 30,
-      status: "scheduled",
-    })
-    .select("id")
-    .single()
+      booking_source: params.bookingSource ?? "staff",
+      force_billing_override: params.forceBillingOverride ?? false,
+    },
+  })
 
   if (error) return { data: null, error: error.message }
-  return { data, error: null }
+  const raw = data as { id: string }
+  return { data: { id: raw.id }, error: null }
 }
 
 export async function checkInAppointment(
-  appointmentId: string
+  appointmentId: string,
+  options?: { forceBillingOverride?: boolean; forceCheckin?: boolean }
 ): Promise<{ data: { queue_id: string; display_code: string } | null; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("check_in_appointment", {
     p_appointment_id: appointmentId,
+    p_force_billing_override: options?.forceBillingOverride ?? false,
+    p_force_checkin: options?.forceCheckin ?? false,
   })
 
   if (error) return { data: null, error: error.message }

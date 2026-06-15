@@ -31,6 +31,7 @@ import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { StatusPipeline, waitlistPipelineSteps } from "@/components/visual/StatusPipeline"
 import { WaitlistEntryList } from "@/components/waitlist/WaitlistEntryList"
 import { WaitlistAnalyticsPanel } from "@/components/analytics/WaitlistAnalyticsPanel"
+import { toast } from "sonner"
 
 type TabFilter = "active" | "history"
 
@@ -137,10 +138,13 @@ export default function WaitlistPage() {
     setActionLoading(contactEntry.id)
     const { error: err } = await markWaitlistContacted(contactEntry.id, contactNote, contactOutcome)
     setActionLoading(null)
-    if (err) setError(err)
-    else {
+    if (err) {
+      setError(err)
+      toast.error(err)
+    } else {
       setContactEntry(null)
       setContactNote("")
+      toast.success(t("waitlist.contactLogged", "Contact attempt recorded"))
       load()
     }
   }
@@ -152,10 +156,13 @@ export default function WaitlistPage() {
     const scheduledAt = new Date(`${bookDate}T${bookTime}:00`).toISOString()
     const { error: err } = await bookFromWaitlist(bookEntry.id, scheduledAt, bookPurpose || bookEntry.notes || undefined)
     setActionLoading(null)
-    if (err) setError(err)
-    else {
+    if (err) {
+      setError(err)
+      toast.error(err)
+    } else {
       setBookEntry(null)
       setBookDate("")
+      toast.success(t("waitlist.booked", "Appointment booked from waitlist"))
       load()
     }
   }
@@ -164,8 +171,13 @@ export default function WaitlistPage() {
     setActionLoading(entryId)
     const { error: err } = await cancelWaitlistEntry(entryId)
     setActionLoading(null)
-    if (err) setError(err)
-    else load()
+    if (err) {
+      setError(err)
+      toast.error(err)
+    } else {
+      toast.success(t("waitlist.cancelled", "Waitlist entry cancelled"))
+      load()
+    }
   }
 
   const metricItems =

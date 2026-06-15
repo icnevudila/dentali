@@ -36,6 +36,8 @@ import { AppointmentWeekCalendar } from "@/components/appointments/AppointmentWe
 import { AppointmentEditDialog } from "@/components/appointments/AppointmentEditDialog"
 import { AppointmentSlotButtons } from "@/components/appointments/AppointmentSlotButtons"
 import { ProviderAvailabilityPanel } from "@/components/appointments/ProviderAvailabilityPanel"
+import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
+import { PatientBillingGateBanner } from "@/components/billing/PatientBillingGateBanner"
 import {
   startOfWeekMonday,
   toDateKey,
@@ -103,6 +105,8 @@ function AppointmentsPageContent() {
   const [editDialogOpen, setEditDialogOpen] = React.useState(false)
   const [editingAppt, setEditingAppt] = React.useState<AppointmentRecord | null>(null)
   const [slotsLoading, setSlotsLoading] = React.useState(false)
+  const [bookingBillingGate, setBookingBillingGate] = React.useState<PatientBillingGate | null>(null)
+  const [forceBillingOverride, setForceBillingOverride] = React.useState(false)
   const [availabilityRows, setAvailabilityRows] = React.useState<ProviderAvailabilityRow[]>([])
   const [availabilityLoading, setAvailabilityLoading] = React.useState(false)
 
@@ -173,6 +177,16 @@ function AppointmentsPageContent() {
     return () => clearTimeout(t)
   }, [patientQuery, activeBranch])
 
+  React.useEffect(() => {
+    if (!selectedPatientId) {
+      setBookingBillingGate(null)
+      setForceBillingOverride(false)
+      return
+    }
+    getPatientBillingGate(selectedPatientId).then(({ data }) => setBookingBillingGate(data))
+    setForceBillingOverride(false)
+  }, [selectedPatientId])
+
   const patchAppointment = React.useCallback((id: string, patch: Partial<AppointmentRecord>) => {
     setWeekAppointments((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)))
   }, [])
@@ -227,6 +241,7 @@ function AppointmentsPageContent() {
       purpose,
       userId: user.id,
       providerId: selectedProviderId || undefined,
+      forceBillingOverride,
     })
     setBooking(false)
     if (err) {
@@ -305,13 +320,38 @@ function AppointmentsPageContent() {
     }
   }
 
-  const handleCheckIn = async (appointmentId: string) => {
+  const handleCheckIn = async (
+    appointmentId: string,
+    forceBillingOverride = false,
+    forceCheckin = false
+  ) => {
     setCheckingInId(appointmentId)
     setError(null)
     setReminderNotice(null)
-    const { data, error: err } = await checkInAppointment(appointmentId)
+    const { data, error: err } = await checkInAppointment(appointmentId, {
+      forceBillingOverride,
+      forceCheckin,
+    })
     setCheckingInId(null)
     if (err) {
+      if (err.includes("Pending consents") && !forceCheckin) {
+        const ok = window.confirm(
+          t(
+            "queue.consentOverrideConfirm",
+            "Required consents are unsigned. Check in anyway? This will be logged in audit."
+          )
+        )
+        if (ok) return handleCheckIn(appointmentId, forceBillingOverride, true)
+      }
+      if (err.includes("Billing clearance") && !forceBillingOverride) {
+        const ok = window.confirm(
+          t(
+            "billing.gateConfirmCheckIn",
+            "Patient has outstanding billing. Check in anyway? This will be logged in audit."
+          )
+        )
+        if (ok) return handleCheckIn(appointmentId, true, forceCheckin)
+      }
       toast.error(err)
     } else if (data) {
       toast.success(t("appointments.checkInSuccess", "Patient checked in and added to queue"))
@@ -649,8 +689,41 @@ function AppointmentsPageContent() {
                   <label className="text-xs font-medium">Purpose</label>
                   <Input required value={purpose} onChange={(e) => setPurpose(e.target.value)} />
                 </div>
+                {bookingBillingGate?.has_billing_gap ? (
+                  <div className="sm:col-span-2 space-y-2">
+                    <PatientBillingGateBanner
+                      gate={bookingBillingGate}
+                      patientId={selectedPatientId}
+                      branchId={activeBranch?.id}
+                      onBackfill={() => {
+                        getPatientBillingGate(selectedPatientId).then(({ data }) => setBookingBillingGate(data))
+                      }}
+                    />
+                    <label className="flex items-start gap-2 text-xs text-amber-900">
+                      <input
+                        type="checkbox"
+                        checked={forceBillingOverride}
+                        onChange={(e) => setForceBillingOverride(e.target.checked)}
+                        className="mt-0.5"
+                      />
+                      {t(
+                        "billing.gateOverrideBook",
+                        "Override billing block for this booking (logged in audit)"
+                      )}
+                    </label>
+                  </div>
+                ) : null}
                 <div className="sm:col-span-2 flex flex-wrap gap-2">
-                  <Button type="submit" disabled={booking || !selectedPatientId || !time || slots.length === 0}>
+                  <Button
+                    type="submit"
+                    disabled={
+                      booking ||
+                      !selectedPatientId ||
+                      !time ||
+                      slots.length === 0 ||
+                      (bookingBillingGate?.has_billing_gap && !forceBillingOverride)
+                    }
+                  >
                     {booking
                       ? t("appointments.booking", "Booking…")
                       : t("appointments.confirmBooking", "Confirm Booking")}

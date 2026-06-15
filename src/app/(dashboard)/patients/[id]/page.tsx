@@ -334,7 +334,14 @@ export default function PatientProfilePage() {
       </div>
 
       {billingGate?.has_billing_gap ? (
-        <PatientBillingGateBanner gate={billingGate} patientId={patientId} />
+        <PatientBillingGateBanner
+          gate={billingGate}
+          patientId={patientId}
+          branchId={activeBranch?.id}
+          onBackfill={() => {
+            getPatientBillingGate(patientId).then(({ data }) => data && setBillingGate(data))
+          }}
+        />
       ) : balance && balance.open_balance > 0 ? (
         <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50/50 p-4 text-red-900 shadow-sm animate-in slide-in-from-top-4 duration-300">
           <AlertTriangle className="h-6 w-6 text-red-600 shrink-0" />

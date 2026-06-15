@@ -14,5 +14,7 @@ export function readLocaleCookie(): AppLocale | null {
   const raw = match?.[1]
   if (!raw) return null
   const value = decodeURIComponent(raw)
-  return isAppLocale(value) ? value : null
+  if (isAppLocale(value)) return value
+  if (value === "en-PH") return "en"
+  return null
 }

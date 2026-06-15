@@ -46,7 +46,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en-PH" suppressHydrationWarning data-theme="light">
+    <html lang="en" suppressHydrationWarning data-theme="light">
       <body className={inter.className}>
         <LocaleBootstrap />
         <ServiceWorkerRegister />
