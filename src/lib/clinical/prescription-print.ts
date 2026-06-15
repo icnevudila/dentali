@@ -1,5 +1,6 @@
 import type { PrescriptionItem, PrescriptionRecord } from "@/lib/clinical/prescription-service"
 import { formatBulletLines } from "@/lib/text/bullet-text"
+import { openPrintableHtml } from "@/lib/utils/print"
 
 function escapeHtml(value: string): string {
   return value
@@ -180,8 +181,5 @@ export function buildPrescriptionPrintHtml(params: {
 }
 
 export function printPrescription(html: string): void {
-  const win = window.open("", "_blank", "noopener,noreferrer,width=900,height=700")
-  if (!win) return
-  win.document.write(html)
-  win.document.close()
+  openPrintableHtml(html, { autoPrint: true })
 }

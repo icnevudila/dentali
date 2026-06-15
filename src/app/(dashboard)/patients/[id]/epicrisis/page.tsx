@@ -4,228 +4,282 @@ import * as React from "react"
 import { useRouteParams } from "@/hooks/use-route-params"
 import { useBranch } from "@/hooks/use-branch"
 import { useAuth } from "@/hooks/use-auth"
-import { getPatient } from "@/lib/patients/patient-service"
+import { getPatient, type PatientWithContacts } from "@/lib/patients/patient-service"
+import { getLatestMedicalHistory, type MedicalHistoryRecord } from "@/lib/patients/medical-history-service"
 import { fetchPatientTimeline, type TimelineEvent } from "@/lib/clinical/clinical-notes-service"
-import { fetchInvoices, type InvoiceRecord } from "@/lib/billing/invoice-service"
+import { fetchInvoices, getPatientBalance, type InvoiceRecord } from "@/lib/billing/invoice-service"
+import { fetchPatientConsents, type PatientConsent } from "@/lib/patients/consent-service"
+import { fetchPatientTreatmentTimeline, type TreatmentTimelineEntry } from "@/lib/clinical/treatment-plan-service"
+import { fetchPatientPrescriptions, type PrescriptionRecord } from "@/lib/clinical/prescription-service"
+import { fetchPatientQueueHistory, type PatientQueueVisit } from "@/lib/queue/queue-service"
+import { fetchPatientLabCases, type PatientWithLabCase } from "@/lib/clinical/lab-service"
+import { buildEpicrisisPrintHtml, printEpicrisis, type EpicrisisData } from "@/lib/clinical/epicrisis-print"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Printer, Download, FileText, CheckCircle2 } from "lucide-react"
-import { toast } from "sonner"
+import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
+import { Printer, FileText, CheckCircle2 } from "lucide-react"
 import { fetchOrganization } from "@/lib/auth/auth-service"
+
+function SectionPreview({
+  title,
+  count,
+  children,
+}: {
+  title: string
+  count: number
+  children: React.ReactNode
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center justify-between gap-2">
+          <span>{title}</span>
+          <Badge variant="outline">{count}</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="text-sm text-neutral-600">{children}</CardContent>
+    </Card>
+  )
+}
 
 export default function EpicrisisPage() {
   const { id: patientId } = useRouteParams<{ id: string }>()
   const { activeBranch } = useBranch()
   const { user } = useAuth()
 
-  const [patient, setPatient] = React.useState<any>(null)
-  const [timeline, setTimeline] = React.useState<TimelineEvent[]>([])
-  const [invoices, setInvoices] = React.useState<InvoiceRecord[]>([])
+  const [data, setData] = React.useState<EpicrisisData | null>(null)
   const [loading, setLoading] = React.useState(true)
-  const [clinicName, setClinicName] = React.useState("Dental Clinic")
+  const [error, setError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
-    async function loadData() {
+    if (!patientId) return
+    let cancelled = false
+
+    async function load() {
       setLoading(true)
-      const patientRes = await getPatient(patientId)
-      if (patientRes.data) {
-        setPatient(patientRes.data)
+      setError(null)
+      const [
+        patientRes,
+        medicalRes,
+        timelineRes,
+        consentsRes,
+        balanceRes,
+        org,
+      ] = await Promise.all([
+        getPatient(patientId),
+        getLatestMedicalHistory(patientId),
+        fetchPatientTimeline(patientId),
+        fetchPatientConsents(patientId),
+        getPatientBalance(patientId),
+        fetchOrganization(),
+      ])
+
+      const branchId = activeBranch?.id
+      const [queueRes, labRes, treatmentRes, rxRes, invoicesRes] = await Promise.all([
+        fetchPatientQueueHistory(patientId),
+        fetchPatientLabCases(patientId),
+        fetchPatientTreatmentTimeline(patientId, branchId),
+        branchId ? fetchPatientPrescriptions(patientId, branchId) : Promise.resolve({ data: [], error: null }),
+        branchId ? fetchInvoices(branchId) : Promise.resolve({ data: [], error: null }),
+      ])
+
+      if (cancelled) return
+
+      if (!patientRes.data) {
+        setError(patientRes.error ?? "Patient not found")
+        setLoading(false)
+        return
       }
-      const timelineRes = await fetchPatientTimeline(patientId)
-      if (timelineRes.data) {
-        setTimeline(timelineRes.data)
-      }
-      if (activeBranch) {
-        const invoicesRes = await fetchInvoices(activeBranch.id)
-        if (invoicesRes.data) {
-          setInvoices(invoicesRes.data.filter((inv) => inv.patient_id === patientId))
-        }
-      }
-      const org = await fetchOrganization()
-      if (org) {
-        setClinicName(org.name)
-      }
+
+      const invoices = (invoicesRes.data ?? []).filter((inv) => inv.patient_id === patientId)
+
+      setData({
+        patient: patientRes.data,
+        medicalHistory: medicalRes.data,
+        timeline: timelineRes.data ?? [],
+        queueVisits: queueRes.data ?? [],
+        labCases: labRes.data ?? [],
+        consents: consentsRes.data ?? [],
+        treatmentItems: treatmentRes.data ?? [],
+        prescriptions: rxRes.data ?? [],
+        invoices,
+        balance: balanceRes.data,
+        clinicName: org?.name ?? "Dental Clinic",
+        clinicAddress: org?.address,
+        clinicPhone: org?.contact_number,
+        branchName: activeBranch?.name,
+        generatedBy: user?.email ?? null,
+      })
       setLoading(false)
     }
-    loadData()
-  }, [patientId, activeBranch])
 
-  const handlePrintEpicrisis = () => {
-    const age = patient?.date_of_birth
-      ? String(new Date().getFullYear() - new Date(patient.date_of_birth).getFullYear())
-      : "—"
-    
-    const timelineRows = timeline
-      .map(
-        (event, i) => `
-      <tr>
-        <td>${new Date(event.occurred_at).toLocaleDateString("en-PH")}</td>
-        <td><strong style="text-transform: capitalize;">${event.event_type.replace(/_/g, " ")}</strong></td>
-        <td>${event.title}</td>
-        <td>${event.subtitle ?? "—"}</td>
-      </tr>`
-      )
-      .join("")
-
-    const invoiceRows = invoices
-      .map(
-        (inv) => `
-      <tr>
-        <td>${inv.invoice_number}</td>
-        <td>${new Date(inv.created_at).toLocaleDateString("en-PH")}</td>
-        <td>₱${Number(inv.total_amount).toLocaleString()}</td>
-        <td>₱${Number(inv.paid_amount).toLocaleString()}</td>
-        <td><span style="font-weight: bold; color: ${inv.status === "paid" ? "green" : "orange"}">${inv.status.toUpperCase()}</span></td>
-      </tr>`
-      )
-      .join("")
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Epicrisis & Discharge Report — ${patient?.first_name} ${patient?.last_name}</title>
-        <style>
-          body { font-family: system-ui, sans-serif; color: #1e293b; padding: 40px; line-height: 1.6; }
-          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
-          .title { font-size: 24px; font-weight: bold; color: #0f172a; margin: 0; }
-          .clinic-name { font-size: 16px; color: #64748b; margin-top: 4px; }
-          .section { margin-bottom: 30px; }
-          .section-title { font-size: 16px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; color: #0d9488; border-left: 4px solid #0d9488; padding-left: 10px; margin-bottom: 15px; }
-          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
-          .grid-item { font-size: 14px; }
-          .grid-item strong { color: #64748b; display: block; font-size: 11px; text-transform: uppercase; }
-          table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-          th { background: #f1f5f9; color: #475569; font-weight: 600; text-align: left; padding: 10px; border-bottom: 2px solid #e2e8f0; }
-          td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
-          .footer { margin-top: 50px; display: flex; justify-content: space-between; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 20px; }
-          .signature-box { width: 200px; border-top: 1px solid #0f172a; text-align: center; margin-top: 40px; padding-top: 8px; }
-          @media print {
-            .no-print { display: none !important; }
-            body { padding: 0; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="no-print" style="margin-bottom: 20px;">
-          <button onclick="window.print()" style="padding: 10px 20px; background: #0d9488; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Print / Export PDF</button>
-        </div>
-        <div class="header">
-          <div>
-            <h1 class="title">Clinical Epicrisis & Discharge Summary</h1>
-            <div class="clinic-name">${clinicName} · Patient Record System</div>
-          </div>
-          <div style="text-align: right;">
-            <div><strong>Date Generated:</strong> ${new Date().toLocaleDateString("en-PH")}</div>
-            <div style="font-size: 12px; color: #64748b;">Record Ref: #${patientId.slice(0, 8).toUpperCase()}</div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-title">Patient Profile Information</div>
-          <div class="grid">
-            <div class="grid-item"><strong>Full Name</strong>${patient?.first_name} ${patient?.last_name}</div>
-            <div class="grid-item"><strong>Contact Number</strong>${patient?.phone_number ?? "—"}</div>
-            <div class="grid-item"><strong>Age / Sex</strong>${age} / ${patient?.gender ?? "—"}</div>
-            <div class="grid-item"><strong>Email Address</strong>${patient?.email ?? "—"}</div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-title">Treatment History & Clinical Encounters</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Description / Diagnosis</th>
-                <th>Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${timelineRows || '<tr><td colspan="4" style="text-align: center; color: #94a3b8;">No clinical encounters found.</td></tr>'}
-            </tbody>
-          </table>
-        </div>
-
-        <div class="section">
-          <div class="section-title">Financial Summary & Billings</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Invoice No.</th>
-                <th>Date Issued</th>
-                <th>Total Bill</th>
-                <th>Amount Paid</th>
-                <th>Payment Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${invoiceRows || '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No financial records found.</td></tr>'}
-            </tbody>
-          </table>
-        </div>
-
-        <div class="footer">
-          <div>
-            Generated by system clinician. Valid medical document.
-          </div>
-          <div>
-            <div class="signature-box">
-              Attending Dentist Signature
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
-
-    const win = window.open("", "_blank", "noopener,noreferrer,width=1000,height=800")
-    if (win) {
-      win.document.write(htmlContent)
-      win.document.close()
+    void load()
+    return () => {
+      cancelled = true
     }
+  }, [patientId, activeBranch?.id, activeBranch?.name, user?.email])
+
+  const handlePrint = () => {
+    if (!data) return
+    printEpicrisis(buildEpicrisisPrintHtml(data))
   }
+
+  const patientName = data
+    ? `${data.patient.first_name} ${data.patient.last_name}`
+    : "Patient"
 
   return (
     <PatientPageShell
       patientId={patientId}
       section="Epicrisis"
       title="Discharge & Epicrisis Summary"
-      description={`Discharge report, SOAP summaries, and complete clinical ledger for ${patient ? `${patient.first_name} ${patient.last_name}` : "Patient"}`}
-      maxWidth="max-w-4xl"
+      description={`Full clinical discharge report for ${patientName}`}
+      maxWidth="max-w-5xl"
+      error={error}
     >
-      <div className="space-y-6">
-        <Card className="border-teal-200/60 bg-teal-50/10">
-          <CardHeader className="flex flex-row items-center justify-between pb-4">
-            <div>
-              <CardTitle className="text-base flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-teal-600" />
-                Comprehensive Epicrisis Report
-              </CardTitle>
-              <CardDescription>
-                Generate a medical epicrisis document compile from all visits, procedures, SOAP notes and bills.
-              </CardDescription>
-            </div>
-            <Button className="gap-1.5" onClick={handlePrintEpicrisis}>
-              <Printer className="h-4 w-4" /> Generate Report / Print PDF
-            </Button>
-          </CardHeader>
-          <CardContent className="text-sm space-y-4">
-            <p className="text-neutral-600">
-              The epicrisis compiling logic aggregates:
-            </p>
-            <ul className="list-disc list-inside space-y-1 text-xs text-neutral-500">
-              <li>Attending Patient Profile and Demographic variables</li>
-              <li>Consolidated History of Dental Procedures & Clinic Journeys</li>
-              <li>SOAP assessment plans and Clinical notes</li>
-              <li>Outstanding Balance, Total billed value, and Invoice logs</li>
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
+      {loading ? (
+        <PageLoadingSkeleton variant="detail" />
+      ) : data ? (
+        <div className="space-y-6">
+          <Card className="border-teal-200/60 bg-teal-50/10">
+            <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 pb-4">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-teal-600" />
+                  Comprehensive epicrisis report
+                </CardTitle>
+                <CardDescription className="mt-1 max-w-xl">
+                  Ten-section discharge document: demographics, medical history, consents, visits,
+                  clinical notes, treatment procedures, lab work, prescriptions, and billing — ready
+                  to print or save as PDF.
+                </CardDescription>
+              </div>
+              <Button className="gap-1.5 shrink-0" onClick={handlePrint}>
+                <Printer className="h-4 w-4" /> Print / PDF
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-3 text-sm">
+                <Badge variant="outline">{data.timeline.length} timeline events</Badge>
+                <Badge variant="outline">{data.queueVisits.length} queue visits</Badge>
+                <Badge variant="outline">{data.treatmentItems.length} procedures</Badge>
+                <Badge variant="outline">{data.prescriptions.length} prescriptions</Badge>
+                <Badge variant="outline">{data.invoices.length} invoices</Badge>
+                {data.balance && data.balance.open_balance > 0 ? (
+                  <Badge variant="warning">
+                    ₱{data.balance.open_balance.toLocaleString()} outstanding
+                  </Badge>
+                ) : (
+                  <Badge variant="success">Balance settled</Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <SectionPreview title="1. Demographics" count={1}>
+              <p>
+                <strong>{patientName}</strong>
+                <br />
+                {data.patient.phone ?? "—"} · {data.patient.email ?? "—"}
+                <br />
+                {data.patient.address ?? "—"}
+              </p>
+            </SectionPreview>
+
+            <SectionPreview title="2. Medical history" count={data.medicalHistory ? 1 : 0}>
+              {data.medicalHistory ? (
+                <>
+                  <p>
+                    <strong>Allergies:</strong>{" "}
+                    {data.medicalHistory.allergies.length
+                      ? data.medicalHistory.allergies.join(", ")
+                      : "None recorded"}
+                  </p>
+                  <p className="mt-1">
+                    <strong>Medications:</strong>{" "}
+                    {data.medicalHistory.medications.join(", ") || "—"}
+                  </p>
+                  <p className="mt-1">
+                    <strong>Conditions:</strong>{" "}
+                    {data.medicalHistory.conditions.join(", ") || "—"}
+                  </p>
+                </>
+              ) : (
+                <p>No medical history on file.</p>
+              )}
+            </SectionPreview>
+
+            <SectionPreview title="3. Consents" count={data.consents.length}>
+              {data.consents.length === 0 ? (
+                <p>No consent forms.</p>
+              ) : (
+                <ul className="space-y-1 text-xs">
+                  {data.consents.slice(0, 6).map((c) => (
+                    <li key={c.id}>
+                      {c.template_name} — <span className="capitalize">{c.status}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </SectionPreview>
+
+            <SectionPreview title="4–5. Visits & notes" count={data.timeline.length + data.queueVisits.length}>
+              <p>
+                {data.queueVisits.length} queue check-in(s), {data.timeline.length} appointment /
+                note event(s) included in printout.
+              </p>
+            </SectionPreview>
+
+            <SectionPreview title="6. Treatment procedures" count={data.treatmentItems.length}>
+              {data.treatmentItems.length === 0 ? (
+                <p>No treatment plan items.</p>
+              ) : (
+                <ul className="space-y-1 text-xs max-h-32 overflow-y-auto">
+                  {data.treatmentItems.slice(0, 8).map((item) => (
+                    <li key={item.item_id}>
+                      {item.description}
+                      {item.tooth_number ? ` (#${item.tooth_number})` : ""} — ₱
+                      {Number(item.estimated_price).toLocaleString()}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </SectionPreview>
+
+            <SectionPreview title="7–8. Lab & prescriptions" count={data.labCases.length + data.prescriptions.length}>
+              <p>
+                {data.labCases.length} lab case(s), {data.prescriptions.length} prescription(s).
+              </p>
+            </SectionPreview>
+
+            <SectionPreview title="9. Billing" count={data.invoices.length}>
+              <p>
+                Total billed ₱{(data.balance?.total_billed ?? 0).toLocaleString()} · Paid ₱
+                {(data.balance?.total_paid ?? 0).toLocaleString()} · Outstanding ₱
+                {(data.balance?.open_balance ?? 0).toLocaleString()}
+              </p>
+            </SectionPreview>
+
+            <Card className="md:col-span-2 border-dashed">
+              <CardContent className="pt-6 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-start gap-2 text-sm text-neutral-600">
+                  <FileText className="h-5 w-5 text-teal-600 shrink-0 mt-0.5" />
+                  <p>
+                    The printed epicrisis includes signature blocks for the attending dentist and a
+                    formal discharge statement suitable for referral or insurance.
+                  </p>
+                </div>
+                <Button variant="outline" className="gap-1.5" onClick={handlePrint}>
+                  <Printer className="h-4 w-4" /> Open print preview
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      ) : null}
     </PatientPageShell>
   )
 }

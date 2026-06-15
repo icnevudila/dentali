@@ -18,12 +18,29 @@ export interface PrintOptions {
   autoPrint?: boolean
 }
 
+const AUTO_PRINT_SCRIPT = `<script>
+window.addEventListener('load', function() {
+  setTimeout(function() { window.print(); }, 400);
+});
+</script>`
+
+function withAutoPrint(html: string): string {
+  if (html.includes("</body>")) {
+    return html.replace("</body>", `${AUTO_PRINT_SCRIPT}</body>`)
+  }
+  return `${html}${AUTO_PRINT_SCRIPT}`
+}
+
 /**
  * Opens a clean print-ready page from raw HTML string.
  * Uses Blob URL which is never blocked by popup blockers.
  */
-export function openPrintableHtml(html: string): void {
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" })
+export function openPrintableHtml(
+  html: string,
+  options: { autoPrint?: boolean } = {}
+): void {
+  const finalHtml = options.autoPrint ? withAutoPrint(html) : html
+  const blob = new Blob([finalHtml], { type: "text/html;charset=utf-8" })
   const url = URL.createObjectURL(blob)
   const win = window.open(url, "_blank")
 

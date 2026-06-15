@@ -3,26 +3,22 @@
 import * as React from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { Plus, Receipt, FileText, X } from "lucide-react"
+import { Plus, Receipt, FileText } from "lucide-react"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
-import { useAuth } from "@/hooks/use-auth"
-import { fetchOrganization } from "@/lib/auth/auth-service"
-import { searchPatients, getPatient } from "@/lib/patients/patient-service"
+import { getPatient } from "@/lib/patients/patient-service"
 import {
-  createManualInvoice,
   fetchInvoices,
   filterInvoicesByStatus,
   filterOverdueInvoices,
   type InvoiceStatusFilter,
 } from "@/lib/billing/invoice-service"
-import { toast } from "sonner"
+import { ManualInvoiceDrawer } from "@/components/billing/ManualInvoiceDrawer"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
@@ -36,7 +32,6 @@ const STATUS_FILTERS: InvoiceStatusFilter[] = ["all", "open", "paid", "void"]
 
 function BillingPageContent() {
   const { activeBranch, branchRevision } = useBranch()
-  const { user } = useAuth()
   const { t, locale } = useLocale()
   const { summary: reportsSummary, loading: reportsLoading } = useReportsSummary(7, locale)
   const searchParams = useSearchParams()
@@ -49,14 +44,8 @@ function BillingPageContent() {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [showCreate, setShowCreate] = React.useState(false)
-  const [patientQuery, setPatientQuery] = React.useState("")
-  const [patients, setPatients] = React.useState<Awaited<ReturnType<typeof searchPatients>>["data"]>([])
-  const [selectedPatientId, setSelectedPatientId] = React.useState("")
-  const [amount, setAmount] = React.useState("")
-  const [dueDate, setDueDate] = React.useState("")
-  const [customInvoiceNumber, setCustomInvoiceNumber] = React.useState("")
-  const [creating, setCreating] = React.useState(false)
-  const [series, setSeries] = React.useState("INV")
+  const [prefillPatientId, setPrefillPatientId] = React.useState<string | undefined>()
+  const [prefillPatientLabel, setPrefillPatientLabel] = React.useState<string | undefined>()
 
   const load = React.useCallback(() => {
     if (!activeBranch) return
@@ -73,33 +62,19 @@ function BillingPageContent() {
   }, [load, branchRevision])
 
   React.useEffect(() => {
-    if (!activeBranch || patientQuery.length < 2) {
-      setPatients([])
-      return
-    }
-    // Prevent overriding if patientFilter is already loaded
-    const isNameMatch = selectedPatientId && patientQuery.includes(" ")
-    if (isNameMatch) {
-      return
-    }
-    const timer = setTimeout(
-      () => searchPatients(patientQuery, activeBranch.id).then(({ data }) => setPatients(data)),
-      300
-    )
-    return () => clearTimeout(timer)
-  }, [patientQuery, activeBranch, patientFilter, selectedPatientId])
-
-  React.useEffect(() => {
     if (patientFilter) {
-      setSelectedPatientId(patientFilter)
       getPatient(patientFilter).then(({ data }) => {
         if (data) {
-          setPatientQuery(`${data.first_name} ${data.last_name}`)
+          setPrefillPatientId(patientFilter)
+          setPrefillPatientLabel(`${data.first_name} ${data.last_name}`)
         }
       })
       if (searchParams.get("create") === "true") {
         setShowCreate(true)
       }
+    } else {
+      setPrefillPatientId(undefined)
+      setPrefillPatientLabel(undefined)
     }
   }, [patientFilter, searchParams])
 
@@ -138,60 +113,6 @@ function BillingPageContent() {
     if (status === "void") return "outline" as const
     if (status === "paid" || balance <= 0) return "success" as const
     return "warning" as const
-  }
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user || !activeBranch || !selectedPatientId) return
-    const totalAmount = parseFloat(amount)
-    if (!totalAmount || totalAmount <= 0) return
-
-    let finalInvoiceNumber = customInvoiceNumber.trim()
-    if (!finalInvoiceNumber) {
-      const generated = `${series}-${Date.now().toString(36).toUpperCase()}`
-      const confirmed = window.confirm(
-        `Fatura numarası boş bırakıldı. Sistem tarafından otomatik olarak "${generated}" şeklinde oluşturulacaktır. Onaylıyor musunuz?\n\n(The invoice number is blank. It will be auto-generated as "${generated}". Do you approve?)`
-      )
-      if (!confirmed) return
-      finalInvoiceNumber = generated
-    }
-
-    setCreating(true)
-    setError(null)
-    const org = await fetchOrganization()
-    if (!org) {
-      setError("Organization not found")
-      setCreating(false)
-      return
-    }
-
-    const { data, error: err } = await createManualInvoice({
-      organizationId: org.id,
-      branchId: activeBranch.id,
-      patientId: selectedPatientId,
-      totalAmount,
-      dueDate: dueDate || undefined,
-      userId: user.id,
-      series: series,
-      invoiceNumber: finalInvoiceNumber,
-    })
-
-    setCreating(false)
-    if (err) {
-      toast.error(err)
-      setError(err)
-    } else {
-      toast.success("Invoice created successfully")
-      setShowCreate(false)
-      setAmount("")
-      setDueDate("")
-      setPatientQuery("")
-      setSelectedPatientId("")
-      setCustomInvoiceNumber("")
-      setSeries("INV")
-      load()
-      if (data?.id) window.location.href = `/billing/${data.id}`
-    }
   }
 
   const metricItems = [
@@ -277,124 +198,13 @@ function BillingPageContent() {
 
         <ContentPanel padding="lg" className="space-y-6">
 
-          {showCreate && (
-            <div className="fixed inset-0 z-[150] flex justify-end">
-              <button
-                type="button"
-                className="absolute inset-0 bg-black/60 animate-fade-in"
-                aria-label="Close form"
-                onClick={() => setShowCreate(false)}
-              />
-              <aside className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col p-6 animate-slide-left border-l border-neutral-200 z-[160]">
-                <div className="flex items-center justify-between border-b pb-4 mb-6">
-                  <h2 className="text-lg font-bold text-neutral-950">
-                    {t("billing.createInvoiceTitle", "Create manual invoice")}
-                  </h2>
-                  <Button variant="ghost" size="icon" onClick={() => setShowCreate(false)}>
-                    <X className="h-5 w-5" />
-                  </Button>
-                </div>
-                <form onSubmit={handleCreate} className="space-y-4">
-                  <div className="space-y-1 relative">
-                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                      {t("billing.searchPatient", "Search patient")}
-                    </label>
-                    <Input
-                      placeholder={t("appointments.searchPatientPlaceholder", "Name or phone…")}
-                      value={patientQuery}
-                      onChange={(e) => setPatientQuery(e.target.value)}
-                    />
-                    {patients.length > 0 && (
-                      <ul className="absolute z-10 left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-md shadow-lg divide-y max-h-48 overflow-y-auto">
-                        {patients.map((p) => (
-                          <li key={p.id}>
-                            <button
-                              type="button"
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-50"
-                              onClick={() => {
-                                setSelectedPatientId(p.id)
-                                setPatientQuery(`${p.first_name} ${p.last_name}`)
-                                setPatients([])
-                              }}
-                            >
-                              {p.first_name} {p.last_name}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                      Invoice Series
-                    </label>
-                    <select
-                      className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none"
-                      value={series}
-                      onChange={(e) => setSeries(e.target.value)}
-                    >
-                      <option value="INV">INV (Default)</option>
-                      <option value="A">Series A</option>
-                      <option value="B">Series B</option>
-                      <option value="C">Series C</option>
-                      <option value="REC">REC (Receipt)</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                      Invoice Number (Optional)
-                    </label>
-                    <Input
-                      placeholder="e.g. INV-00201"
-                      value={customInvoiceNumber}
-                      onChange={(e) => setCustomInvoiceNumber(e.target.value)}
-                    />
-                    <p className="text-[10px] text-neutral-400">
-                      {t("billing.invoiceNumberAutoHint", "Leave blank to auto-generate based on series.")}
-                    </p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                      {t("billing.invoiceAmountLabel", "Invoice Amount (PHP)")}
-                    </label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      placeholder={t("billing.invoiceAmount", "Amount (PHP)")}
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                      {t("billing.dueDateLabel", "Due date")}
-                    </label>
-                    <Input
-                      type="date"
-                      value={dueDate}
-                      onChange={(e) => setDueDate(e.target.value)}
-                      aria-label={t("billing.dueDate", "Due date")}
-                    />
-                  </div>
-
-                  <div className="flex gap-2 pt-4 border-t">
-                    <Button type="submit" className="w-full" disabled={creating || !selectedPatientId}>
-                      {creating ? t("billing.creating", "Creating…") : t("billing.createInvoice", "New invoice")}
-                    </Button>
-                    <Button type="button" variant="outline" className="w-full" onClick={() => setShowCreate(false)}>
-                      {t("common.cancel", "Cancel")}
-                    </Button>
-                  </div>
-                </form>
-              </aside>
-            </div>
-          )}
+          <ManualInvoiceDrawer
+            open={showCreate}
+            onOpenChange={setShowCreate}
+            defaultPatientId={prefillPatientId}
+            defaultPatientLabel={prefillPatientLabel}
+            onCreated={() => load()}
+          />
 
           {(patientFilter || focusOverdue || focusOpen) && (
             <div className="flex items-center gap-2 text-sm animate-fade-rise">

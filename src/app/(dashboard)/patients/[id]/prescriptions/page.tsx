@@ -83,6 +83,7 @@ export default function PrescriptionsPage() {
   const [items, setItems] = React.useState([EMPTY_ITEM()])
   const [viewRxId, setViewRxId] = React.useState<string | null>(null)
   const [viewRx, setViewRx] = React.useState<PrescriptionRecord | null>(null)
+  const [viewLoading, setViewLoading] = React.useState(false)
 
   const loadHistory = React.useCallback(async () => {
     if (!activeBranch) return
@@ -107,9 +108,20 @@ export default function PrescriptionsPage() {
   React.useEffect(() => {
     if (!viewRxId) {
       setViewRx(null)
+      setViewLoading(false)
       return
     }
-    getPrescription(viewRxId).then(({ data }) => setViewRx(data))
+    let cancelled = false
+    setViewLoading(true)
+    getPrescription(viewRxId).then(({ data, error: rxErr }) => {
+      if (cancelled) return
+      if (rxErr) setError(rxErr)
+      setViewRx(data)
+      setViewLoading(false)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [viewRxId])
 
   const resetDraft = () => {
@@ -435,11 +447,7 @@ export default function PrescriptionsPage() {
                             size="sm"
                             variant="ghost"
                             className="gap-1"
-                            onClick={() => {
-                              setViewRxId(rx.id)
-                              // Immediately pre-populate viewRx from list data to prevent flashing blank details
-                              setViewRx(rx)
-                            }}
+                            onClick={() => setViewRxId(rx.id)}
                           >
                             View <ChevronRight className="h-3.5 w-3.5" />
                           </Button>
@@ -459,76 +467,95 @@ export default function PrescriptionsPage() {
                   </ul>
                 )}
               </CardContent>
-            </Card>            {viewRx ? (
+            </Card>
+
+            {(viewRxId || viewLoading) ? (
               <Card className="border-neutral-200 shadow-sm animate-fade-rise">
                 <CardHeader className="bg-neutral-50/50 border-b border-neutral-100 flex flex-row items-center justify-between py-3">
                   <div>
-                    <CardTitle className="text-base">Prescription Details</CardTitle>
-                    <p className="text-xs text-neutral-500 mt-0.5">
-                      {new Date(viewRx.signed_at ?? viewRx.created_at).toLocaleString("en-PH")}
-                      {viewRx.prescriber_name ? ` · Prescribed by ${viewRx.prescriber_name}` : ""}
-                    </p>
+                    <CardTitle className="text-base">Prescription details</CardTitle>
+                    {viewRx ? (
+                      <p className="text-xs text-neutral-500 mt-0.5">
+                        {new Date(viewRx.signed_at ?? viewRx.created_at).toLocaleString("en-PH")}
+                        {viewRx.prescriber_name ? ` · Prescribed by ${viewRx.prescriber_name}` : ""}
+                      </p>
+                    ) : null}
                   </div>
-                  <div className="flex items-center gap-2">
+                  {viewRx ? (
                     <Badge variant={viewRx.status === "signed" ? "success" : viewRx.status === "voided" ? "danger" : "default"}>
                       {viewRx.status}
                     </Badge>
-                  </div>
+                  ) : null}
                 </CardHeader>
                 <CardContent className="space-y-4 pt-4 text-sm">
-                  {viewRx.diagnosis && (
-                    <div className="bg-neutral-50 rounded-lg p-3 border border-neutral-100">
-                      <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Diagnosis / Indication:</span>
-                      <p className="font-medium text-neutral-800 mt-1">{viewRx.diagnosis}</p>
-                    </div>
-                  )}
+                  {viewLoading ? (
+                    <PageLoadingSkeleton variant="inline" />
+                  ) : viewRx ? (
+                    <>
+                      {viewRx.diagnosis ? (
+                        <div className="bg-neutral-50 rounded-lg p-3 border border-neutral-100">
+                          <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Diagnosis / indication</span>
+                          <p className="font-medium text-neutral-800 mt-1">{viewRx.diagnosis}</p>
+                        </div>
+                      ) : null}
 
-                  {viewRx.general_instructions && (
-                    <div className="bg-primary-50/20 rounded-lg p-3 border border-primary-100">
-                      <span className="text-xs font-semibold text-primary-700 uppercase tracking-wide">Patient Instructions:</span>
-                      <div className="text-neutral-700 mt-1 whitespace-pre-line text-xs leading-relaxed">
-                        {viewRx.general_instructions}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Prescribed Medications:</span>
-                    <div className="space-y-2">
-                      {viewRx.items && viewRx.items.length > 0 ? (
-                        viewRx.items.map((item, i) => (
-                          <div key={item.id ?? i} className="rounded-lg border border-neutral-200 bg-white p-3 shadow-2xs">
-                            <p className="font-semibold text-neutral-900">
-                              {i + 1}. {item.drug_name} {item.strength ? `(${item.strength})` : ""}
-                            </p>
-                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-neutral-600 text-xs mt-1">
-                              {item.dosage && <span><strong>Dosage:</strong> {item.dosage}</span>}
-                              {item.frequency && <span><strong>Frequency:</strong> {item.frequency}</span>}
-                              {item.duration && <span><strong>Duration:</strong> {item.duration}</span>}
-                              {item.quantity && <span><strong>Qty:</strong> {item.quantity}</span>}
-                            </div>
-                            {item.instructions ? (
-                              <p className="text-neutral-500 text-xs mt-1.5 pt-1.5 border-t border-neutral-100">
-                                <strong>Instructions:</strong> {item.instructions}
-                              </p>
-                            ) : null}
+                      {viewRx.general_instructions ? (
+                        <div className="bg-primary-50/20 rounded-lg p-3 border border-primary-100">
+                          <span className="text-xs font-semibold text-primary-700 uppercase tracking-wide">Patient instructions</span>
+                          <div className="text-neutral-700 mt-1 whitespace-pre-line text-xs leading-relaxed">
+                            {viewRx.general_instructions}
                           </div>
-                        ))
-                      ) : (
-                        <p className="text-xs text-neutral-500 italic py-2">Loading items / no items found in this draft.</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2 pt-2">
-                    {viewRx.status === "signed" && (
-                      <Button size="sm" className="gap-1.5" onClick={() => void handlePrint(viewRx)}>
-                        <Printer className="h-4 w-4" /> Print Rx
-                      </Button>
-                    )}
-                    <Button size="sm" variant="outline" onClick={() => setViewRxId(null)}>
-                      Close Detail
-                    </Button>
-                  </div>
+                        </div>
+                      ) : null}
+
+                      <div className="space-y-2">
+                        <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Prescribed medications</span>
+                        <div className="space-y-2">
+                          {viewRx.items && viewRx.items.length > 0 ? (
+                            viewRx.items.map((item, i) => (
+                              <div key={item.id ?? i} className="rounded-lg border border-neutral-200 bg-white p-3 shadow-2xs">
+                                <p className="font-semibold text-neutral-900">
+                                  {i + 1}. {item.drug_name} {item.strength ? `(${item.strength})` : ""}
+                                </p>
+                                <div className="flex flex-wrap gap-x-3 gap-y-1 text-neutral-600 text-xs mt-1">
+                                  {item.dosage ? <span><strong>Dosage:</strong> {item.dosage}</span> : null}
+                                  {item.frequency ? <span><strong>Frequency:</strong> {item.frequency}</span> : null}
+                                  {item.duration ? <span><strong>Duration:</strong> {item.duration}</span> : null}
+                                  {item.quantity ? <span><strong>Qty:</strong> {item.quantity}</span> : null}
+                                </div>
+                                {item.instructions ? (
+                                  <p className="text-neutral-500 text-xs mt-1.5 pt-1.5 border-t border-neutral-100">
+                                    <strong>Instructions:</strong> {item.instructions}
+                                  </p>
+                                ) : null}
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-xs text-neutral-500 italic py-2">No medications recorded on this prescription.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {viewRx.void_reason ? (
+                        <p className="text-xs text-red-700 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                          Void reason: {viewRx.void_reason}
+                        </p>
+                      ) : null}
+
+                      <div className="flex gap-2 pt-2">
+                        {viewRx.status === "signed" ? (
+                          <Button size="sm" className="gap-1.5" onClick={() => void handlePrint(viewRx)}>
+                            <Printer className="h-4 w-4" /> Print Rx
+                          </Button>
+                        ) : null}
+                        <Button size="sm" variant="outline" onClick={() => setViewRxId(null)}>
+                          Close
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-neutral-500">Could not load prescription details.</p>
+                  )}
                 </CardContent>
               </Card>
             ) : null}

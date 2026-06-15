@@ -41,6 +41,7 @@ import { ClinicalVisitJourneyPanel } from "@/components/clinical/ClinicalVisitJo
 import { buildClinicalVisitJourney } from "@/lib/clinical/clinical-visit-journey"
 import { getPatientOdontogram } from "@/lib/odontogram/dental-chart-service"
 import { PatientVisitHistoryPanel } from "@/components/patients/PatientVisitHistoryPanel"
+import { ManualInvoiceDrawer } from "@/components/billing/ManualInvoiceDrawer"
 
 const PATIENT_TABS = [
   { id: "record", label: "Patient Record" },
@@ -109,6 +110,7 @@ export default function PatientProfilePage() {
   const [timeline, setTimeline] = React.useState<TimelineEvent[]>([])
   const [timelineError, setTimelineError] = React.useState<string | null>(null)
   const [hasChartFindings, setHasChartFindings] = React.useState(false)
+  const [showInvoiceDrawer, setShowInvoiceDrawer] = React.useState(false)
 
   const refreshConsents = React.useCallback(() => {
     fetchPatientConsents(patientId).then(({ data }) => setConsents(data))
@@ -318,10 +320,13 @@ export default function PatientProfilePage() {
             <FileText className="h-4 w-4" /> Consents
           </Button>
           <PermissionGate permission={PERMISSIONS.BILLING_WRITE}>
-            <Button variant="outline" size="sm" className="gap-2" asChild>
-              <Link href={`/billing?patient=${patientId}&create=true`} transitionTypes={NAV_FORWARD_TRANSITION}>
-                <Plus className="h-4 w-4" /> New Invoice
-              </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => setShowInvoiceDrawer(true)}
+            >
+              <Plus className="h-4 w-4" /> New Invoice
             </Button>
           </PermissionGate>
           <Button variant="outline" className="gap-2" onClick={() => printCurrentPage({ title: `Patient — ${patient.first_name} ${patient.last_name}` })}>
@@ -759,6 +764,15 @@ export default function PatientProfilePage() {
           )}
         </div>
       </div>
+      <ManualInvoiceDrawer
+        open={showInvoiceDrawer}
+        onOpenChange={setShowInvoiceDrawer}
+        defaultPatientId={patientId}
+        defaultPatientLabel={patient ? `${patient.first_name} ${patient.last_name}` : undefined}
+        onCreated={() => {
+          getPatientBalance(patientId).then(({ data }) => data && setBalance(data))
+        }}
+      />
     </DirectionalTransition>
     </PermissionGate>
   )
