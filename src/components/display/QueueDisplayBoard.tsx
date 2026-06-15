@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Activity, Radio, Volume2, VolumeX, WifiOff } from "lucide-react"
+import { Activity, Radio, Volume2, VolumeX, WifiOff, Sun, Cloud, CloudRain, CloudLightning, CloudSun, Bell } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/hooks/use-locale"
 
@@ -167,6 +167,42 @@ function WaitingTile({
   )
 }
 
+function useManilaWeather() {
+  const [weather, setWeather] = React.useState<{ temp: number; text: string; code: number } | null>(null)
+  
+  React.useEffect(() => {
+    fetch("https://api.open-meteo.com/v1/forecast?latitude=14.6091&longitude=120.9822&current=temperature_2m,weather_code")
+      .then((res) => res.json())
+      .then((data) => {
+        const temp = Math.round(data?.current?.temperature_2m ?? 31)
+        const code = data?.current?.weather_code ?? 3
+        let text = "Partly Cloudy"
+        if (code === 0) text = "Clear Sky"
+        else if (code === 1 || code === 2) text = "Mainly Clear"
+        else if (code === 3) text = "Partly Cloudy"
+        else if (code >= 51 && code <= 67) text = "Rainy"
+        else if (code >= 80 && code <= 82) text = "Rain Showers"
+        else if (code >= 95) text = "Thunderstorm"
+        setWeather({ temp, text, code })
+      })
+      .catch(() => {
+        setWeather({ temp: 31, text: "Partly Cloudy", code: 3 })
+      })
+  }, [])
+  
+  return weather
+}
+
+function getWeatherIcon(code: number) {
+  if (code === 0) return <Sun className="h-4 w-4 text-amber-500 animate-pulse" />
+  if (code === 1 || code === 2) return <CloudSun className="h-4 w-4 text-amber-400" />
+  if (code === 3) return <Cloud className="h-4 w-4 text-sky-400" />
+  if (code >= 51 && code <= 67) return <CloudRain className="h-4 w-4 text-blue-400 animate-bounce" />
+  if (code >= 80 && code <= 82) return <CloudRain className="h-4 w-4 text-blue-500" />
+  if (code >= 95) return <CloudLightning className="h-4 w-4 text-purple-400 animate-pulse" />
+  return <Cloud className="h-4 w-4 text-neutral-400" />
+}
+
 export function QueueDisplayBoard({
   branchName,
   nowServing,
@@ -185,6 +221,22 @@ export function QueueDisplayBoard({
   const { t, locale } = useLocale()
   const isLight = theme === "light"
   const liveClock = clock ?? new Date()
+  const weather = useManilaWeather()
+
+  const [activeAnnounce, setActiveAnnounce] = React.useState<QueueDisplayItem | null>(null)
+  const prevTriggerRef = React.useRef("")
+
+  React.useEffect(() => {
+    if (nowServing.length === 0) return
+    const top = nowServing[0]
+    const key = `${top.display_code}-${pulseGen}`
+    if (key !== prevTriggerRef.current) {
+      prevTriggerRef.current = key
+      setActiveAnnounce(top)
+      const timer = setTimeout(() => setActiveAnnounce(null), 3800)
+      return () => clearTimeout(timer)
+    }
+  }, [nowServing, pulseGen])
 
   const dateLabel = liveClock.toLocaleDateString(locale, {
     weekday: "long",
@@ -287,6 +339,20 @@ export function QueueDisplayBoard({
                   : connection.live
                     ? t("display.live", "Live")
                     : t("display.polling", "Polling")}
+            </div>
+          ) : null}
+
+          {weather ? (
+            <div
+              className={cn(
+                "hidden sm:flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold shadow-sm",
+                isLight
+                  ? "border-neutral-200 bg-neutral-50 text-neutral-600"
+                  : "border-neutral-800 bg-neutral-900 text-neutral-300"
+              )}
+            >
+              {getWeatherIcon(weather.code)}
+              <span>{weather.temp}°C · {weather.text}</span>
             </div>
           ) : null}
 
@@ -494,6 +560,41 @@ export function QueueDisplayBoard({
           </div>
         </div>
       </footer>
+
+      {/* Premium glassmorphism overlay popup when a patient is called */}
+      {activeAnnounce ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md transition-all duration-300">
+          <div className={cn(
+            "relative w-[90%] max-w-2xl overflow-hidden rounded-[2.5rem] p-10 text-center shadow-2xl border animate-serve-enter",
+            isLight
+              ? "bg-white/95 border-primary-200 text-neutral-900 shadow-primary-600/10"
+              : "bg-neutral-900/95 border-primary-900/40 text-white shadow-black/80"
+          )}>
+            <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-primary-500/10 blur-3xl" />
+            <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-primary-600/10 blur-3xl" />
+            
+            <div className="relative flex flex-col items-center">
+              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400">
+                <Bell className="h-10 w-10 animate-bounce" />
+              </div>
+              <h2 className="text-sm font-bold uppercase tracking-[0.3em] text-primary-600 dark:text-primary-400">
+                {t("display.callingPatient", "Calling Patient")}
+              </h2>
+              <h1 className="mt-4 font-mono text-8xl font-black tracking-wider text-primary-700 dark:text-primary-300 animate-pulse">
+                {activeAnnounce.display_code}
+              </h1>
+              {showNames && activeAnnounce.masked_name ? (
+                <p className="mt-6 text-2xl font-bold tracking-wide text-neutral-800 dark:text-neutral-100">
+                  {activeAnnounce.masked_name}
+                </p>
+              ) : null}
+              <p className="mt-4 text-base font-medium text-neutral-500 dark:text-neutral-400">
+                {t("display.proceedToCounter", "Please proceed to the front desk")}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

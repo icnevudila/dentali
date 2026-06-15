@@ -43,6 +43,41 @@ function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
   return voices[0]
 }
 
+function playChime() {
+  if (typeof window === "undefined") return
+  const AudioContext = window.AudioContext || (window as any).webkitAudioContext
+  if (!AudioContext) return
+  const ctx = new AudioContext()
+  
+  // Ding sound (higher pitch, E5 - 659.25Hz)
+  const osc1 = ctx.createOscillator()
+  const gain1 = ctx.createGain()
+  osc1.type = "sine"
+  osc1.frequency.setValueAtTime(659.25, ctx.currentTime) // E5
+  gain1.gain.setValueAtTime(0, ctx.currentTime)
+  gain1.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05)
+  gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8)
+  
+  osc1.connect(gain1)
+  gain1.connect(ctx.destination)
+  osc1.start()
+  osc1.stop(ctx.currentTime + 0.8)
+  
+  // Dong sound (lower pitch, C5 - 523.25Hz) after 0.3s
+  const osc2 = ctx.createOscillator()
+  const gain2 = ctx.createGain()
+  osc2.type = "sine"
+  osc2.frequency.setValueAtTime(523.25, ctx.currentTime + 0.3) // C5
+  gain2.gain.setValueAtTime(0, ctx.currentTime + 0.3)
+  gain2.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.35)
+  gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2)
+  
+  osc2.connect(gain2)
+  gain2.connect(ctx.destination)
+  osc2.start(ctx.currentTime + 0.3)
+  osc2.stop(ctx.currentTime + 1.2)
+}
+
 export function useQueueVoiceAnnounce({
   enabled,
   nowServing,
@@ -82,12 +117,29 @@ export function useQueueVoiceAnnounce({
 
     const utterance = new SpeechSynthesisUtterance(buildAnnouncement(primary, locale, t))
     utterance.lang = lang
-    utterance.rate = 0.9
+    utterance.rate = 0.85
     utterance.pitch = 1
     const voice = pickVoice(lang)
     if (voice) utterance.voice = voice
 
     window.speechSynthesis.cancel()
-    window.speechSynthesis.speak(utterance)
+    
+    // Play premium synthesized chime
+    try {
+      playChime()
+    } catch (e) {
+      console.warn("Failed to play queue chime:", e)
+    }
+
+    // Delay speech slightly so chime finishes playing beautifully
+    const timer = setTimeout(() => {
+      try {
+        window.speechSynthesis.speak(utterance)
+      } catch (e) {
+        console.warn("Failed to read announcement:", e)
+      }
+    }, 1100)
+
+    return () => clearTimeout(timer)
   }, [enabled, nowServing, locale, pulseGen, t, voicesReady])
 }

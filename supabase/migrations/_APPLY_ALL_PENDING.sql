@@ -1,4 +1,4 @@
-﻿-- AUTO-GENERATED: 62 migration dosyasi (sirali)
+﻿-- AUTO-GENERATED: 123 migration dosyasi (sirali)
 -- Supabase Dashboard > SQL Editor > Run
 -- Not: Bazi satirlar "already exists" verebilir; guvenli olanlar idempotent.
 -- Tercih edilen yol: npm run db:push
@@ -842,24 +842,7 @@ begin
   );
 end; $$;
 
--- Staff list RPC
-create or replace function public.get_org_staff()
-returns table (
-  profile_id uuid, full_name text, email text, is_active boolean,
-  role_name text, branch_names text[]
-) language sql stable security definer set search_path = public as $$
-  select p.id, p.full_name, p.email, coalesce(sp.is_active, true),
-    coalesce(max(r.name), 'staff'),
-    array_agg(distinct b.name order by b.name)
-  from public.profiles p
-  left join public.staff_profiles sp on sp.profile_id = p.id
-  left join public.staff_branch_assignments sba on sba.profile_id = p.id
-  left join public.roles r on r.id = sba.role_id
-  left join public.branches b on b.id = sba.branch_id
-  where p.organization_id = public.current_user_org_id()
-  group by p.id, p.full_name, p.email, sp.is_active
-  order by p.full_name;
-$$;
+-- get_org_staff: 20260612230000_staff_phone_digest.sql (phone + is_owner_or_admin)
 
 -- Seed global consent templates
 insert into public.consent_templates (organization_id, slug, name, body, version) values
@@ -6907,4 +6890,13854 @@ end;
 $$;
 
 grant execute on function public.reset_hmo_claim_to_draft(uuid) to authenticated;
+
+
+-- ===== 20260610000000_consent_fields_and_signing_tokens.sql =====
+
+-- Consent fillable fields, patient responses, and public signing tokens
+
+-- Eski imzalar (2 parametre) yeni overload ile cakismasin
+drop function if exists public.lock_signed_consent(uuid, text);
+drop function if exists public.create_consent_signing_token(uuid, text, int);
+drop function if exists public.get_consent_by_signing_token(text);
+drop function if exists public.lock_consent_via_signing_token(text, text, jsonb, text);
+drop function if exists public.lock_signed_consent(uuid, text, jsonb, text);
+drop function if exists public.upsert_org_consent_template(jsonb);
+
+alter table public.consent_templates
+  add column if not exists fields jsonb not null default '[]'::jsonb;
+
+alter table public.patient_consents
+  add column if not exists field_responses jsonb,
+  add column if not exists body_snapshot text;
+
+-- Default fillable fields on global general-treatment template
+update public.consent_templates
+set fields = '[
+  {"id":"emergency_contact","type":"text","label":"Emergency contact name & number","required":true,"placeholder":"Name, phone"},
+  {"id":"procedure_acknowledged","type":"yes_no","label":"I understand the proposed treatment and alternatives were explained","required":true},
+  {"id":"questions_answered","type":"checkbox","label":"I had the opportunity to ask questions and they were answered","required":true},
+  {"id":"patient_initials","type":"initials","label":"Patient initials","required":true,"placeholder":"e.g. MS"}
+]'::jsonb
+where slug = 'general-treatment'
+  and organization_id is null
+  and fields = '[]'::jsonb;
+
+create table if not exists public.consent_signing_tokens (
+  id uuid primary key default gen_random_uuid(),
+  patient_consent_id uuid not null references public.patient_consents(id) on delete cascade,
+  token text not null unique,
+  channel text not null default 'qr' check (channel in ('kiosk', 'sms', 'email', 'qr')),
+  expires_at timestamptz not null,
+  used_at timestamptz,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists consent_signing_tokens_consent_idx
+  on public.consent_signing_tokens (patient_consent_id);
+
+alter table public.consent_signing_tokens enable row level security;
+
+drop policy if exists consent_signing_tokens_staff on public.consent_signing_tokens;
+create policy consent_signing_tokens_staff on public.consent_signing_tokens
+  for select to authenticated
+  using (
+    exists (
+      select 1 from public.patient_consents pc
+      where pc.id = patient_consent_id
+        and pc.organization_id = public.current_user_org_id()
+    )
+  );
+
+-- Staff: create signing link
+create or replace function public.create_consent_signing_token(
+  p_consent_id uuid,
+  p_channel text default 'qr',
+  p_ttl_hours int default 72
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_consent record;
+  v_token text;
+begin
+  select * into v_consent
+  from public.patient_consents
+  where id = p_consent_id
+    and organization_id = public.current_user_org_id();
+
+  if v_consent.id is null then
+    raise exception 'Consent not found';
+  end if;
+
+  if v_consent.status <> 'pending' then
+    raise exception 'Consent is not pending';
+  end if;
+
+  if not public.has_permission('consents.manage', coalesce(v_consent.branch_id, (
+    select sba.branch_id from public.staff_branch_assignments sba
+    where sba.profile_id = auth.uid() limit 1
+  ))) then
+    raise exception 'Permission denied';
+  end if;
+
+  v_token := encode(gen_random_bytes(24), 'hex');
+
+  insert into public.consent_signing_tokens (
+    patient_consent_id, token, channel, expires_at, created_by
+  ) values (
+    p_consent_id,
+    v_token,
+    coalesce(nullif(trim(p_channel), ''), 'qr'),
+    now() + make_interval(hours => greatest(p_ttl_hours, 1)),
+    auth.uid()
+  );
+
+  return jsonb_build_object(
+    'token', v_token,
+    'expires_at', (now() + make_interval(hours => greatest(p_ttl_hours, 1)))::text
+  );
+end;
+$$;
+
+grant execute on function public.create_consent_signing_token(uuid, text, int) to authenticated;
+
+-- Public: load consent for signing (anon)
+create or replace function public.get_consent_by_signing_token(p_token text)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_row record;
+  v_template record;
+  v_patient record;
+  v_org record;
+begin
+  select t.*, pc.*
+  into v_row
+  from public.consent_signing_tokens t
+  join public.patient_consents pc on pc.id = t.patient_consent_id
+  where t.token = nullif(trim(p_token), '')
+    and t.used_at is null
+    and t.expires_at > now()
+    and pc.status = 'pending';
+
+  if v_row.id is null then
+    raise exception 'Invalid or expired signing link';
+  end if;
+
+  select slug, name, body, version, fields
+  into v_template
+  from public.consent_templates
+  where slug = v_row.template_slug
+    and is_active = true
+    and (organization_id = v_row.organization_id or organization_id is null)
+  order by organization_id nulls last
+  limit 1;
+
+  select first_name, last_name, date_of_birth
+  into v_patient
+  from public.patients
+  where id = v_row.patient_id;
+
+  select name into v_org from public.organizations where id = v_row.organization_id;
+
+  return jsonb_build_object(
+    'consent_id', v_row.patient_consent_id,
+    'template_slug', v_row.template_slug,
+    'template_name', coalesce(v_template.name, v_row.template_name),
+    'template_body', coalesce(v_template.body, ''),
+    'template_version', coalesce(v_template.version, '1.0'),
+    'fields', coalesce(v_template.fields, '[]'::jsonb),
+    'patient_first_name', v_patient.first_name,
+    'patient_last_name', v_patient.last_name,
+    'patient_dob', v_patient.date_of_birth,
+    'org_name', coalesce(v_org.name, 'Clinic')
+  );
+end;
+$$;
+
+grant execute on function public.get_consent_by_signing_token(text) to anon, authenticated;
+
+-- Public: sign via token
+create or replace function public.lock_consent_via_signing_token(
+  p_token text,
+  p_signature_data text,
+  p_field_responses jsonb default null,
+  p_body_snapshot text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_token record;
+  v_consent record;
+  v_parsed jsonb;
+  v_image text;
+begin
+  if p_signature_data is null or length(trim(p_signature_data)) = 0 then
+    raise exception 'Signature required';
+  end if;
+
+  begin
+    v_parsed := p_signature_data::jsonb;
+  exception when others then
+    raise exception 'Invalid signature payload';
+  end;
+
+  v_image := nullif(trim(v_parsed->>'image'), '');
+  if v_image is null or length(v_image) < 100 then
+    raise exception 'Drawn signature image required';
+  end if;
+
+  if nullif(trim(v_parsed->>'name'), '') is null then
+    raise exception 'Signer printed name required';
+  end if;
+
+  select t.*, pc.id as cid, pc.status as cstatus, pc.organization_id, pc.branch_id, pc.template_slug
+  into v_token
+  from public.consent_signing_tokens t
+  join public.patient_consents pc on pc.id = t.patient_consent_id
+  where t.token = nullif(trim(p_token), '')
+    and t.used_at is null
+    and t.expires_at > now()
+  for update of t, pc;
+
+  if v_token.id is null then
+    raise exception 'Invalid or expired signing link';
+  end if;
+
+  if v_token.cstatus <> 'pending' then
+    raise exception 'Consent already signed or voided';
+  end if;
+
+  update public.patient_consents
+  set
+    status = 'signed',
+    signed_at = now(),
+    signed_by = null,
+    signature_data = p_signature_data,
+    field_responses = p_field_responses,
+    body_snapshot = p_body_snapshot
+  where id = v_token.patient_consent_id;
+
+  update public.consent_signing_tokens
+  set used_at = now()
+  where id = v_token.id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_token.organization_id,
+    v_token.branch_id,
+    null,
+    'consent.signed_via_token',
+    'patient_consent',
+    v_token.patient_consent_id::text,
+    jsonb_build_object(
+      'template_slug', v_token.template_slug,
+      'channel', v_token.channel,
+      'signer_role', coalesce(v_parsed->>'signerRole', 'patient')
+    )
+  );
+end;
+$$;
+
+grant execute on function public.lock_consent_via_signing_token(text, text, jsonb, text) to anon, authenticated;
+
+-- Extend staff signing with field responses
+create or replace function public.lock_signed_consent(
+  p_consent_id uuid,
+  p_signature_data text,
+  p_field_responses jsonb default null,
+  p_body_snapshot text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_consent record;
+  v_parsed jsonb;
+  v_image text;
+begin
+  if p_signature_data is null or length(trim(p_signature_data)) = 0 then
+    raise exception 'Signature required';
+  end if;
+
+  begin
+    v_parsed := p_signature_data::jsonb;
+  exception when others then
+    raise exception 'Invalid signature payload';
+  end;
+
+  v_image := nullif(trim(v_parsed->>'image'), '');
+  if v_image is null or length(v_image) < 100 then
+    raise exception 'Drawn signature image required';
+  end if;
+
+  if nullif(trim(v_parsed->>'name'), '') is null then
+    raise exception 'Signer printed name required';
+  end if;
+
+  select *
+  into v_consent
+  from public.patient_consents
+  where id = p_consent_id
+    and organization_id = public.current_user_org_id()
+  for update;
+
+  if v_consent.id is null then
+    raise exception 'Consent not found';
+  end if;
+
+  if v_consent.status = 'signed' then
+    raise exception 'Consent already signed';
+  end if;
+
+  if v_consent.status = 'voided' then
+    raise exception 'Consent is voided';
+  end if;
+
+  if not public.has_permission('consents.manage', coalesce(v_consent.branch_id, (
+    select sba.branch_id from public.staff_branch_assignments sba
+    where sba.profile_id = auth.uid() limit 1
+  ))) then
+    raise exception 'Permission denied';
+  end if;
+
+  update public.patient_consents
+  set
+    status = 'signed',
+    signed_at = now(),
+    signed_by = auth.uid(),
+    signature_data = p_signature_data,
+    field_responses = coalesce(p_field_responses, field_responses),
+    body_snapshot = coalesce(p_body_snapshot, body_snapshot)
+  where id = p_consent_id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_consent.organization_id,
+    v_consent.branch_id,
+    auth.uid(),
+    'consent.signed',
+    'patient_consent',
+    p_consent_id::text,
+    jsonb_build_object(
+      'template_slug', v_consent.template_slug,
+      'signer_role', coalesce(v_parsed->>'signerRole', 'patient'),
+      'captured_at', coalesce(v_parsed->>'capturedAt', now()::text)
+    )
+  );
+end;
+$$;
+
+grant execute on function public.lock_signed_consent(uuid, text, jsonb, text) to authenticated;
+
+-- Org template admin: persist fields
+create or replace function public.upsert_org_consent_template(p_payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_slug text := nullif(trim(p_payload->>'slug'), '');
+  v_name text := nullif(trim(p_payload->>'name'), '');
+  v_body text := nullif(trim(p_payload->>'body'), '');
+  v_version text := coalesce(nullif(trim(p_payload->>'version'), ''), '1.0');
+  v_is_active boolean := coalesce((p_payload->>'is_active')::boolean, true);
+  v_fields jsonb := coalesce(p_payload->'fields', '[]'::jsonb);
+  v_id uuid;
+begin
+  if v_org is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if v_slug is null or v_name is null or v_body is null then
+    raise exception 'slug, name, and body are required';
+  end if;
+
+  if not exists (
+    select 1 from public.staff_branch_assignments sba
+    where sba.profile_id = auth.uid()
+      and public.has_permission('settings.manage', sba.branch_id)
+  ) then
+    raise exception 'Permission denied';
+  end if;
+
+  insert into public.consent_templates (
+    organization_id, slug, name, body, version, is_active, fields
+  ) values (
+    v_org, v_slug, v_name, v_body, v_version, v_is_active, v_fields
+  )
+  on conflict (organization_id, slug) do update
+  set
+    name = excluded.name,
+    body = excluded.body,
+    version = excluded.version,
+    is_active = excluded.is_active,
+    fields = excluded.fields;
+
+  select id into v_id
+  from public.consent_templates
+  where organization_id = v_org and slug = v_slug;
+
+  insert into public.organization_audit_logs (
+    organization_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_org,
+    auth.uid(),
+    'consent_template.upserted',
+    'consent_template',
+    v_id::text,
+    jsonb_build_object('slug', v_slug, 'version', v_version)
+  );
+
+  return jsonb_build_object('id', v_id, 'slug', v_slug, 'version', v_version);
+end;
+$$;
+
+create or replace function public.get_org_consent_templates()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'id', ct.id,
+        'slug', ct.slug,
+        'name', ct.name,
+        'body', ct.body,
+        'version', ct.version,
+        'is_active', ct.is_active,
+        'is_global', ct.organization_id is null,
+        'organization_id', ct.organization_id,
+        'fields', coalesce(ct.fields, '[]'::jsonb)
+      )
+      order by ct.slug, ct.organization_id nulls first
+    ),
+    '[]'::jsonb
+  )
+  from public.consent_templates ct
+  where ct.organization_id is null
+     or ct.organization_id = public.current_user_org_id();
+$$;
+
+
+-- ===== 20260610100000_search_patients_filters.sql =====
+
+-- Patient registry list: status, last-visit date, sort, intake score
+create or replace function public.search_patients(
+  p_query text,
+  p_branch_id uuid default null,
+  p_limit int default 20,
+  p_offset int default 0,
+  p_status text default 'active',
+  p_last_visit_from timestamptz default null,
+  p_last_visit_to timestamptz default null,
+  p_never_visited boolean default false,
+  p_sort text default 'name'
+)
+returns table (
+  id uuid,
+  first_name text,
+  last_name text,
+  date_of_birth date,
+  phone text,
+  email text,
+  status text,
+  last_visit_at timestamptz,
+  intake_pct int,
+  total_count bigint
+)
+language sql stable security definer set search_path = public
+as $$
+  with base as (
+    select
+      p.id,
+      p.first_name,
+      p.last_name,
+      p.date_of_birth,
+      p.phone,
+      p.email,
+      p.status,
+      pbl.last_visit_at,
+      least(100, (
+        (case when coalesce(p.phone, '') <> '' then 25 else 0 end)
+        + (case when p.date_of_birth is not null then 25 else 0 end)
+        + (case when exists (
+            select 1 from public.patient_medical_histories pmh
+            where pmh.patient_id = p.id
+            limit 1
+          ) then 25 else 0 end)
+        + (case when exists (
+            select 1 from public.patient_consents pc
+            where pc.patient_id = p.id and pc.status = 'signed'
+            limit 1
+          ) then 25 else 0 end)
+      ))::int as intake_pct
+    from public.patients p
+    left join public.patient_branch_links pbl
+      on pbl.patient_id = p.id and pbl.branch_id = p_branch_id
+    where p.organization_id = public.current_user_org_id()
+      and (
+        p_status is null
+        or p_status = 'all'
+        or p.status = p_status
+      )
+      and (
+        p_query is null
+        or p_query = ''
+        or p.first_name ilike '%' || p_query || '%'
+        or p.last_name ilike '%' || p_query || '%'
+        or p.phone ilike '%' || p_query || '%'
+      )
+      and (
+        (not p_never_visited)
+        or pbl.last_visit_at is null
+      )
+      and (
+        p_never_visited
+        or (
+          (p_last_visit_from is null or pbl.last_visit_at >= p_last_visit_from)
+          and (p_last_visit_to is null or pbl.last_visit_at <= p_last_visit_to)
+        )
+      )
+  )
+  select
+    b.id,
+    b.first_name,
+    b.last_name,
+    b.date_of_birth,
+    b.phone,
+    b.email,
+    b.status,
+    b.last_visit_at,
+    b.intake_pct,
+    count(*) over() as total_count
+  from base b
+  order by
+    case when coalesce(p_sort, 'name') = 'last_visit_desc' then b.last_visit_at end desc nulls last,
+    case when p_sort = 'last_visit_asc' then b.last_visit_at end asc nulls last,
+    b.last_name asc,
+    b.first_name asc
+  limit greatest(p_limit, 1)
+  offset greatest(p_offset, 0);
+$$;
+
+
+-- ===== 20260610100001_fix_patients_rls_recursion.sql =====
+
+-- Break infinite RLS recursion: patients_select â†’ patient_branch_links â†’ patients
+
+create or replace function public.patient_org_id(p_patient_id uuid)
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+set row_security = off
+as $$
+  select organization_id from public.patients where id = p_patient_id;
+$$;
+
+grant execute on function public.patient_org_id(uuid) to authenticated;
+
+drop policy if exists patient_branch_links_all on public.patient_branch_links;
+
+create policy patient_branch_links_all on public.patient_branch_links
+  for all to authenticated
+  using (
+    exists (
+      select 1
+      from public.branches b
+      where b.id = patient_branch_links.branch_id
+        and b.organization_id = public.current_user_org_id()
+    )
+    and public.patient_org_id(patient_id) = public.current_user_org_id()
+  )
+  with check (
+    exists (
+      select 1
+      from public.branches b
+      where b.id = patient_branch_links.branch_id
+        and b.organization_id = public.current_user_org_id()
+    )
+    and public.patient_org_id(patient_id) = public.current_user_org_id()
+  );
+
+drop policy if exists patient_contacts_all on public.patient_contacts;
+
+create policy patient_contacts_all on public.patient_contacts
+  for all to authenticated
+  using (
+    public.patient_org_id(patient_id) = public.current_user_org_id()
+  )
+  with check (
+    public.patient_org_id(patient_id) = public.current_user_org_id()
+  );
+
+
+-- ===== 20260610120000_clinic_paper_consent_templates.sql =====
+
+-- Clinic paper/PDF consent templates (DRG, PDA) â€” selectable on demand, not all auto-seeded
+
+alter table public.consent_templates
+  add column if not exists form_category text not null default 'consent',
+  add column if not exists is_default boolean not null default false,
+  add column if not exists source_asset text,
+  add column if not exists description text;
+
+delete from public.consent_templates a
+using public.consent_templates b
+where a.organization_id is null
+  and b.organization_id is null
+  and a.slug = b.slug
+  and a.id < b.id;
+
+drop index if exists public.idx_consent_templates_global_slug;
+create unique index idx_consent_templates_global_slug
+  on public.consent_templates (slug)
+  where organization_id is null;
+
+-- Only core intake consents auto-created for new patients
+update public.consent_templates
+set is_default = true,
+    form_category = 'consent',
+    source_asset = 'PDA'
+where organization_id is null
+  and slug in ('dpa-consent', 'general-treatment');
+
+update public.consent_templates
+set form_category = 'consent',
+    source_asset = 'DRG',
+    description = 'Orthodontic treatment agreement and risks'
+where organization_id is null
+  and slug = 'ortho-agreement';
+
+-- DRG CONFORME (from dental record paper)
+insert into public.consent_templates (
+  organization_id, slug, name, body, version, is_active,
+  form_category, is_default, source_asset, description, fields
+) values (
+  null,
+  'drg-conforme',
+  'CONFORME â€” Informed Consent (DRG)',
+  'CONFORME (Informed Consent)
+
+I hereby authorize the dentist to perform upon me dental treatment deemed necessary or advisable, including the use of anesthesia.
+
+I understand that dentistry is not an exact science and authorize my dentist to make whatever changes deemed necessary during treatment.
+
+I agree to be responsible for all costs of dental treatment rendered on my behalf, including clinic fees and associated laboratory costs.
+
+Patient: {{patient_name}}
+Date of birth: {{patient_dob}}
+Date: {{today_date}}
+Clinic: {{clinic_name}}',
+  '1.0',
+  true,
+  'consent',
+  false,
+  'DRG',
+  'Standard informed consent block from DRG dental record',
+  '[
+    {"id":"anesthesia_ack","type":"yes_no","label":"I understand that anesthesia may be used as part of my treatment","required":true},
+    {"id":"cost_ack","type":"yes_no","label":"I agree to be responsible for applicable treatment and laboratory fees","required":true},
+    {"id":"patient_initials","type":"initials","label":"Patient initials","required":true}
+  ]'::jsonb
+) on conflict (slug) where (organization_id is null) do update set
+  name = excluded.name,
+  body = excluded.body,
+  version = excluded.version,
+  form_category = excluded.form_category,
+  source_asset = excluded.source_asset,
+  description = excluded.description,
+  fields = excluded.fields;
+
+-- Procedure-specific consents (docs/04 + clinic paper set)
+insert into public.consent_templates (
+  organization_id, slug, name, body, version, is_active,
+  form_category, is_default, source_asset, description, fields
+) values
+(
+  null, 'radiograph-consent', 'Radiograph / X-Ray Consent',
+  'I consent to dental radiographs (X-rays) as recommended by my dentist for diagnosis and treatment planning.
+
+I understand that radiographs involve low levels of radiation and that reasonable precautions will be taken.
+
+Patient: {{patient_name}} Â· {{today_date}} Â· {{clinic_name}}',
+  '1.0', true, 'consent', false, 'DRG', 'Consent for diagnostic imaging',
+  '[{"id":"pregnancy_status","type":"yes_no","label":"Are you pregnant or could you be pregnant?","required":true},{"id":"risks_explained","type":"yes_no","label":"Risks and purpose of X-rays were explained to me","required":true},{"id":"patient_initials","type":"initials","label":"Initials","required":true}]'::jsonb
+),
+(
+  null, 'extraction-consent', 'Extraction / Removal Consent',
+  'I consent to the extraction (removal) of the tooth/teeth discussed with my dentist.
+
+I understand risks may include pain, swelling, bleeding, infection, nerve injury, sinus involvement, and dry socket.
+
+Patient: {{patient_name}} Â· {{today_date}} Â· {{clinic_name}}',
+  '1.0', true, 'consent', false, 'DRG', 'Tooth extraction consent',
+  '[{"id":"tooth_site","type":"text","label":"Tooth number / site","required":true,"placeholder":"e.g. #16"},{"id":"risks_ack","type":"yes_no","label":"Risks, benefits, and alternatives were explained","required":true},{"id":"patient_initials","type":"initials","label":"Initials","required":true}]'::jsonb
+),
+(
+  null, 'crown-bridge-consent', 'Crown / Bridge Consent',
+  'I consent to crown or bridge treatment as discussed with my dentist.
+
+I understand risks may include sensitivity, need for root canal, fracture, or replacement over time.
+
+Patient: {{patient_name}} Â· {{today_date}} Â· {{clinic_name}}',
+  '1.0', true, 'consent', false, 'DRG', 'Fixed prosthodontics consent',
+  '[{"id":"tooth_site","type":"text","label":"Tooth/teeth involved","required":true},{"id":"procedure_explained","type":"yes_no","label":"Procedure, risks, and alternatives were explained","required":true},{"id":"patient_initials","type":"initials","label":"Initials","required":true}]'::jsonb
+),
+(
+  null, 'root-canal-consent', 'Endodontic / Root Canal Consent',
+  'I consent to endodontic (root canal) treatment on the tooth discussed with my dentist.
+
+I understand success is not guaranteed and retreatment, surgery, or extraction may be needed.
+
+Patient: {{patient_name}} Â· {{today_date}} Â· {{clinic_name}}',
+  '1.0', true, 'consent', false, 'DRG', 'Root canal therapy consent',
+  '[{"id":"tooth_site","type":"text","label":"Tooth number","required":true},{"id":"risks_ack","type":"yes_no","label":"Risks and alternatives were explained","required":true},{"id":"patient_initials","type":"initials","label":"Initials","required":true}]'::jsonb
+),
+(
+  null, 'periodontal-consent', 'Periodontal Treatment Consent',
+  'I consent to periodontal (gum) treatment as recommended.
+
+I understand that periodontal disease may progress without treatment and that maintenance visits are important.
+
+Patient: {{patient_name}} Â· {{today_date}} Â· {{clinic_name}}',
+  '1.0', true, 'consent', false, 'DRG', 'Periodontal therapy consent',
+  '[{"id":"treatment_desc","type":"text","label":"Treatment described","required":true,"placeholder":"e.g. scaling & root planing"},{"id":"risks_ack","type":"yes_no","label":"Risks and home care instructions were explained","required":true},{"id":"patient_initials","type":"initials","label":"Initials","required":true}]'::jsonb
+),
+(
+  null, 'filling-consent', 'Filling / Restoration Consent',
+  'I consent to restorative (filling) treatment on the tooth/teeth discussed.
+
+I understand sensitivity or need for further treatment may occur.
+
+Patient: {{patient_name}} Â· {{today_date}} Â· {{clinic_name}}',
+  '1.0', true, 'consent', false, 'DRG', 'Restorative treatment consent',
+  '[{"id":"tooth_site","type":"text","label":"Tooth number / surface","required":true},{"id":"material_ack","type":"yes_no","label":"Material options were discussed","required":true},{"id":"patient_initials","type":"initials","label":"Initials","required":true}]'::jsonb
+),
+(
+  null, 'denture-consent', 'Denture Consent',
+  'I consent to removable denture treatment as discussed.
+
+I understand adaptation time is required and adjustments may be needed.
+
+Patient: {{patient_name}} Â· {{today_date}} Â· {{clinic_name}}',
+  '1.0', true, 'consent', false, 'DRG', 'Removable prosthodontics consent',
+  '[{"id":"denture_type","type":"text","label":"Type (partial / complete)","required":true},{"id":"expectations_ack","type":"yes_no","label":"Expectations and care instructions were explained","required":true},{"id":"patient_initials","type":"initials","label":"Initials","required":true}]'::jsonb
+),
+(
+  null, 'medication-risk-consent', 'Medication Risk Consent',
+  'I understand the medications prescribed or administered for my dental treatment, including possible side effects and interactions.
+
+I will inform the clinic of all medications and supplements I take.
+
+Patient: {{patient_name}} Â· {{today_date}} Â· {{clinic_name}}',
+  '1.0', true, 'consent', false, 'PDA', 'Medication risks acknowledgment',
+  '[{"id":"med_list_reviewed","type":"yes_no","label":"My current medications were reviewed with the dentist","required":true},{"id":"allergy_disclosed","type":"yes_no","label":"I disclosed known drug allergies","required":true},{"id":"patient_initials","type":"initials","label":"Initials","required":true}]'::jsonb
+),
+(
+  null, 'treatment-plan-change-consent', 'Change in Treatment Plan Consent',
+  'I consent to changes in my treatment plan as discussed during treatment.
+
+I understand the reason for the change and any impact on fees or appointments.
+
+Patient: {{patient_name}} Â· {{today_date}} Â· {{clinic_name}}',
+  '1.0', true, 'consent', false, 'DRG', 'When planned treatment changes mid-course',
+  '[{"id":"change_summary","type":"text","label":"Summary of change","required":true},{"id":"fees_discussed","type":"yes_no","label":"Fee impact was discussed","required":true},{"id":"patient_initials","type":"initials","label":"Initials","required":true}]'::jsonb
+)
+on conflict (slug) where (organization_id is null) do update set
+  name = excluded.name,
+  body = excluded.body,
+  version = excluded.version,
+  form_category = excluded.form_category,
+  source_asset = excluded.source_asset,
+  description = excluded.description,
+  fields = excluded.fields;
+
+-- Enrich existing global templates
+update public.consent_templates
+set
+  description = 'Republic Act No. 10173 â€” health data processing consent',
+  source_asset = 'PDA',
+  fields = '[
+    {"id":"data_use_ack","type":"yes_no","label":"I consent to collection and use of my personal and health information per the Data Privacy Act","required":true},
+    {"id":"patient_initials","type":"initials","label":"Initials","required":true}
+  ]'::jsonb
+where organization_id is null and slug = 'dpa-consent';
+
+update public.consent_templates
+set
+  description = 'General dental examination and treatment consent',
+  source_asset = 'DRG',
+  body = 'I consent to dental examination, diagnosis, and treatment as recommended by my dental provider at {{clinic_name}}.
+
+Patient: {{patient_name}}
+Date of birth: {{patient_dob}}
+Date: {{today_date}}',
+  fields = '[
+    {"id":"emergency_contact","type":"text","label":"Emergency contact name & number","required":true,"placeholder":"Name, phone"},
+    {"id":"procedure_acknowledged","type":"yes_no","label":"I understand the proposed treatment and alternatives were explained","required":true},
+    {"id":"questions_answered","type":"checkbox","label":"I had the opportunity to ask questions and they were answered","required":true},
+    {"id":"patient_initials","type":"initials","label":"Patient initials","required":true}
+  ]'::jsonb
+where organization_id is null and slug = 'general-treatment';
+
+update public.consent_templates
+set fields = '[
+  {"id":"ortho_duration_ack","type":"yes_no","label":"I understand treatment duration varies and cooperation is required","required":true},
+  {"id":"hygiene_ack","type":"yes_no","label":"I understand good oral hygiene is essential during orthodontic treatment","required":true},
+  {"id":"retainer_ack","type":"yes_no","label":"I understand retainers are required after active treatment to prevent relapse","required":true},
+  {"id":"patient_initials","type":"initials","label":"Initials","required":true}
+]'::jsonb
+where organization_id is null and slug = 'ortho-agreement';
+
+create or replace function public.get_org_consent_templates()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'id', ct.id,
+        'slug', ct.slug,
+        'name', ct.name,
+        'body', ct.body,
+        'version', ct.version,
+        'is_active', ct.is_active,
+        'is_global', ct.organization_id is null,
+        'organization_id', ct.organization_id,
+        'fields', coalesce(ct.fields, '[]'::jsonb),
+        'form_category', coalesce(ct.form_category, 'consent'),
+        'is_default', coalesce(ct.is_default, false),
+        'source_asset', ct.source_asset,
+        'description', ct.description
+      )
+      order by ct.name, ct.organization_id nulls first
+    ),
+    '[]'::jsonb
+  )
+  from public.consent_templates ct
+  where ct.is_active = true
+    and (ct.organization_id is null or ct.organization_id = public.current_user_org_id());
+$$;
+
+
+-- ===== 20260610140000_multi_branch_tenant.sql =====
+
+-- Multi-branch tenant model: org isolation + secure branch creation
+
+-- ========== ONKOSUL (tekrar calistirilabilir) ==========
+create extension if not exists pgcrypto;
+
+create table if not exists public.organization_audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  branch_id uuid references public.branches(id) on delete set null,
+  profile_id uuid references public.profiles(id) on delete set null,
+  action text not null,
+  entity_type text,
+  entity_id text,
+  metadata jsonb default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.clinic_hours (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  day_of_week integer not null check (day_of_week between 0 and 6),
+  open_time time,
+  close_time time,
+  is_closed boolean default false,
+  unique(branch_id, day_of_week)
+);
+
+create or replace function public.user_is_org_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.staff_branch_assignments sba
+    join public.roles r on r.id = sba.role_id
+    where sba.profile_id = auth.uid()
+      and r.name in ('owner', 'admin')
+  );
+$$;
+
+create or replace function public.ensure_branch_clinic_hours(p_branch_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  d integer;
+begin
+  for d in 0..6 loop
+    insert into public.clinic_hours (branch_id, day_of_week, open_time, close_time, is_closed)
+    values (
+      p_branch_id,
+      d,
+      case when d in (0, 6) then null else '09:00'::time end,
+      case when d in (0, 6) then null else '18:00'::time end,
+      d in (0, 6)
+    )
+    on conflict (branch_id, day_of_week) do nothing;
+  end loop;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Tenant metadata (each rented clinic = one organization)
+-- ---------------------------------------------------------------------------
+alter table public.organizations
+  add column if not exists slug text,
+  add column if not exists status text not null default 'active'
+    check (status in ('active', 'suspended', 'trial')),
+  add column if not exists plan_tier text not null default 'standard'
+    check (plan_tier in ('trial', 'standard', 'enterprise'));
+
+create unique index if not exists idx_organizations_slug
+  on public.organizations (lower(slug))
+  where slug is not null;
+
+-- ---------------------------------------------------------------------------
+-- RLS: use user_is_org_admin() (auth.role() is always 'authenticated' in Supabase)
+-- ---------------------------------------------------------------------------
+drop policy if exists org_update on public.organizations;
+create policy org_update on public.organizations
+  for update using (
+    id = public.current_user_org_id()
+    and public.user_is_org_admin()
+  )
+  with check (
+    id = public.current_user_org_id()
+    and public.user_is_org_admin()
+  );
+
+drop policy if exists branch_insert on public.branches;
+create policy branch_insert on public.branches
+  for insert with check (
+    organization_id = public.current_user_org_id()
+    and public.user_is_org_admin()
+  );
+
+drop policy if exists branch_update on public.branches;
+create policy branch_update on public.branches
+  for update using (
+    organization_id = public.current_user_org_id()
+    and public.user_is_org_admin()
+  )
+  with check (
+    organization_id = public.current_user_org_id()
+    and public.user_is_org_admin()
+  );
+
+drop policy if exists branch_select on public.branches;
+create policy branch_select on public.branches
+  for select using (
+    organization_id = public.current_user_org_id()
+    and (
+      public.user_is_org_admin()
+      or public.user_has_branch_access(id)
+    )
+  );
+
+-- ---------------------------------------------------------------------------
+-- Slug helper
+-- ---------------------------------------------------------------------------
+create or replace function public.slugify_org_name(p_name text)
+returns text
+language sql
+immutable
+as $$
+  select nullif(
+    trim(both '-' from regexp_replace(lower(trim(coalesce(p_name, ''))), '[^a-z0-9]+', '-', 'g')),
+    ''
+  );
+$$;
+
+-- Backfill slug for existing organizations
+update public.organizations o
+set slug = coalesce(
+  public.slugify_org_name(o.name),
+  'clinic'
+) || '-' || left(replace(o.id::text, '-', ''), 8)
+where o.slug is null;
+
+-- ---------------------------------------------------------------------------
+-- Create branch (admin RPC): hours seed + optional staff assignment
+-- ---------------------------------------------------------------------------
+create or replace function public.create_org_branch(
+  p_name text,
+  p_address text default null,
+  p_contact_number text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org_id uuid := public.current_user_org_id();
+  v_branch_id uuid;
+  v_role_id uuid;
+begin
+  if v_org_id is null then
+    raise exception 'No organization context';
+  end if;
+
+  if not public.user_is_org_admin() then
+    raise exception 'Permission denied';
+  end if;
+
+  if p_name is null or length(trim(p_name)) < 2 then
+    raise exception 'Branch name is required (min 2 characters)';
+  end if;
+
+  insert into public.branches (organization_id, name, address, contact_number, is_active)
+  values (v_org_id, trim(p_name), nullif(trim(p_address), ''), nullif(trim(p_contact_number), ''), true)
+  returning id into v_branch_id;
+
+  perform public.ensure_branch_clinic_hours(v_branch_id);
+
+  -- Assign creator to the new branch (same role they hold on another branch, else admin)
+  select sba.role_id into v_role_id
+  from public.staff_branch_assignments sba
+  join public.roles r on r.id = sba.role_id
+  where sba.profile_id = auth.uid()
+  order by case r.name when 'owner' then 0 when 'admin' then 1 else 2 end
+  limit 1;
+
+  if v_role_id is null then
+    select id into v_role_id from public.roles where name = 'admin' limit 1;
+  end if;
+
+  if v_role_id is not null then
+    insert into public.staff_branch_assignments (profile_id, branch_id, role_id)
+    values (auth.uid(), v_branch_id, v_role_id)
+    on conflict (profile_id, branch_id) do update set role_id = excluded.role_id;
+  end if;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_org_id,
+    v_branch_id,
+    auth.uid(),
+    'branch.create',
+    'branch',
+    v_branch_id::text,
+    jsonb_build_object('name', trim(p_name))
+  );
+
+  return jsonb_build_object(
+    'status', 'created',
+    'branch_id', v_branch_id,
+    'organization_id', v_org_id
+  );
+end;
+$$;
+
+grant execute on function public.create_org_branch(text, text, text) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Bootstrap: set org slug on first signup
+-- ---------------------------------------------------------------------------
+create or replace function public.bootstrap_clinic(
+  p_org_name text,
+  p_branch_name text default 'Main Clinic'
+)
+returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_org_id uuid;
+  v_branch_id uuid;
+  v_owner_role_id uuid;
+  v_user_id uuid := auth.uid();
+  v_email text;
+  v_slug text;
+  v_slug_base text;
+  v_suffix int := 0;
+begin
+  if v_user_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if exists (select 1 from public.profiles where id = v_user_id) then
+    return jsonb_build_object('status', 'already_bootstrapped');
+  end if;
+
+  select email into v_email from auth.users where id = v_user_id;
+
+  v_slug_base := public.slugify_org_name(p_org_name);
+  if v_slug_base is null then
+    v_slug_base := 'clinic';
+  end if;
+  v_slug := v_slug_base;
+  while exists (select 1 from public.organizations where lower(slug) = lower(v_slug)) loop
+    v_suffix := v_suffix + 1;
+    v_slug := v_slug_base || '-' || v_suffix::text;
+  end loop;
+
+  insert into public.organizations (name, slug, status, plan_tier)
+  values (p_org_name, v_slug, 'trial', 'trial')
+  returning id into v_org_id;
+
+  insert into public.branches (organization_id, name) values (v_org_id, p_branch_name) returning id into v_branch_id;
+  insert into public.organization_settings (organization_id) values (v_org_id);
+  insert into public.profiles (id, organization_id, email, full_name)
+    values (v_user_id, v_org_id, coalesce(v_email, ''), split_part(coalesce(v_email, 'Owner'), '@', 1));
+  insert into public.staff_profiles (profile_id) values (v_user_id);
+
+  select id into v_owner_role_id from public.roles where name = 'owner' limit 1;
+  insert into public.staff_branch_assignments (profile_id, branch_id, role_id)
+    values (v_user_id, v_branch_id, v_owner_role_id);
+
+  perform public.ensure_branch_clinic_hours(v_branch_id);
+
+  return jsonb_build_object(
+    'status', 'created',
+    'organization_id', v_org_id,
+    'branch_id', v_branch_id,
+    'slug', v_slug
+  );
+end;
+$$;
+
+
+-- ===== 20260611010000_audit_trail_filters.sql =====
+
+-- Extend unified audit trail with optional date and text filters
+
+create or replace function public.get_unified_audit_trail(
+  p_branch_id uuid default null,
+  p_source text default 'all',
+  p_limit int default 100,
+  p_offset int default 0,
+  p_since timestamptz default null,
+  p_until timestamptz default null,
+  p_action_contains text default null,
+  p_actor_contains text default null,
+  p_entity_type text default null
+)
+returns table (
+  id uuid,
+  source text,
+  action text,
+  entity_type text,
+  entity_id text,
+  branch_id uuid,
+  profile_id uuid,
+  actor_name text,
+  metadata jsonb,
+  ip_address text,
+  user_agent text,
+  created_at timestamptz
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_branch uuid := coalesce(
+    p_branch_id,
+    (select sba.branch_id from public.staff_branch_assignments sba where sba.profile_id = auth.uid() limit 1)
+  );
+begin
+  if v_org is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if not (
+    public.user_is_org_admin()
+    or public.has_permission('audit.read', v_branch)
+  ) then
+    raise exception 'Permission denied';
+  end if;
+
+  return query
+  select *
+  from (
+    select
+      oal.id,
+      'organization'::text as source,
+      oal.action,
+      oal.entity_type,
+      oal.entity_id,
+      oal.branch_id,
+      oal.profile_id,
+      coalesce(pr.full_name, pr.email, 'Unknown') as actor_name,
+      coalesce(oal.metadata, '{}'::jsonb) as metadata,
+      null::text as ip_address,
+      null::text as user_agent,
+      oal.created_at
+    from public.organization_audit_logs oal
+    left join public.profiles pr on pr.id = oal.profile_id
+    where oal.organization_id = v_org
+      and (p_branch_id is null or oal.branch_id is null or oal.branch_id = p_branch_id)
+      and p_source in ('all', 'organization')
+
+    union all
+
+    select
+      sal.id,
+      'session'::text as source,
+      sal.event_type as action,
+      'session'::text as entity_type,
+      sal.event_type as entity_id,
+      null::uuid as branch_id,
+      sal.profile_id,
+      coalesce(pr.full_name, pr.email, 'Unknown') as actor_name,
+      '{}'::jsonb as metadata,
+      sal.ip_address,
+      sal.user_agent,
+      sal.created_at
+    from public.session_audit_logs sal
+    left join public.profiles pr on pr.id = sal.profile_id
+    where sal.organization_id = v_org
+      and p_source in ('all', 'session')
+  ) combined
+  where (p_since is null or combined.created_at >= p_since)
+    and (p_until is null or combined.created_at <= p_until)
+    and (
+      p_action_contains is null
+      or btrim(p_action_contains) = ''
+      or combined.action ilike '%' || btrim(p_action_contains) || '%'
+    )
+    and (
+      p_actor_contains is null
+      or btrim(p_actor_contains) = ''
+      or combined.actor_name ilike '%' || btrim(p_actor_contains) || '%'
+    )
+    and (
+      p_entity_type is null
+      or btrim(p_entity_type) = ''
+      or combined.entity_type ilike btrim(p_entity_type)
+    )
+  order by combined.created_at desc
+  limit greatest(p_limit, 1)
+  offset greatest(p_offset, 0);
+end;
+$$;
+
+grant execute on function public.get_unified_audit_trail(
+  uuid, text, int, int, timestamptz, timestamptz, text, text, text
+) to authenticated;
+
+
+-- ===== 20260611020000_audit_entity_history.sql =====
+
+-- Entity-scoped audit history for record detail panels
+
+create or replace function public.get_unified_audit_trail(
+  p_branch_id uuid default null,
+  p_source text default 'all',
+  p_limit int default 100,
+  p_offset int default 0,
+  p_since timestamptz default null,
+  p_until timestamptz default null,
+  p_action_contains text default null,
+  p_actor_contains text default null,
+  p_entity_type text default null,
+  p_entity_id text default null
+)
+returns table (
+  id uuid,
+  source text,
+  action text,
+  entity_type text,
+  entity_id text,
+  branch_id uuid,
+  profile_id uuid,
+  actor_name text,
+  metadata jsonb,
+  ip_address text,
+  user_agent text,
+  created_at timestamptz
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_branch uuid := coalesce(
+    p_branch_id,
+    (select sba.branch_id from public.staff_branch_assignments sba where sba.profile_id = auth.uid() limit 1)
+  );
+begin
+  if v_org is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if not (
+    public.user_is_org_admin()
+    or public.has_permission('audit.read', v_branch)
+  ) then
+    raise exception 'Permission denied';
+  end if;
+
+  return query
+  select *
+  from (
+    select
+      oal.id,
+      'organization'::text as source,
+      oal.action,
+      oal.entity_type,
+      oal.entity_id,
+      oal.branch_id,
+      oal.profile_id,
+      coalesce(pr.full_name, pr.email, 'Unknown') as actor_name,
+      coalesce(oal.metadata, '{}'::jsonb) as metadata,
+      null::text as ip_address,
+      null::text as user_agent,
+      oal.created_at
+    from public.organization_audit_logs oal
+    left join public.profiles pr on pr.id = oal.profile_id
+    where oal.organization_id = v_org
+      and (p_branch_id is null or oal.branch_id is null or oal.branch_id = p_branch_id)
+      and p_source in ('all', 'organization')
+
+    union all
+
+    select
+      sal.id,
+      'session'::text as source,
+      sal.event_type as action,
+      'session'::text as entity_type,
+      sal.event_type as entity_id,
+      null::uuid as branch_id,
+      sal.profile_id,
+      coalesce(pr.full_name, pr.email, 'Unknown') as actor_name,
+      '{}'::jsonb as metadata,
+      sal.ip_address,
+      sal.user_agent,
+      sal.created_at
+    from public.session_audit_logs sal
+    left join public.profiles pr on pr.id = sal.profile_id
+    where sal.organization_id = v_org
+      and p_source in ('all', 'session')
+  ) combined
+  where (p_since is null or combined.created_at >= p_since)
+    and (p_until is null or combined.created_at <= p_until)
+    and (
+      p_action_contains is null
+      or btrim(p_action_contains) = ''
+      or combined.action ilike '%' || btrim(p_action_contains) || '%'
+    )
+    and (
+      p_actor_contains is null
+      or btrim(p_actor_contains) = ''
+      or combined.actor_name ilike '%' || btrim(p_actor_contains) || '%'
+    )
+    and (
+      p_entity_type is null
+      or btrim(p_entity_type) = ''
+      or combined.entity_type ilike btrim(p_entity_type)
+    )
+    and (
+      p_entity_id is null
+      or btrim(p_entity_id) = ''
+      or combined.entity_id = btrim(p_entity_id)
+    )
+  order by combined.created_at desc
+  limit greatest(p_limit, 1)
+  offset greatest(p_offset, 0);
+end;
+$$;
+
+grant execute on function public.get_unified_audit_trail(
+  uuid, text, int, int, timestamptz, timestamptz, text, text, text, text
+) to authenticated;
+
+
+-- ===== 20260611030000_workflow_automation_analytics.sql =====
+
+-- Workflow engine, cross-module automation, owner analytics RPCs
+
+-- ---------------------------------------------------------------------------
+-- Appointment status: add checked_in
+-- ---------------------------------------------------------------------------
+alter table public.appointments drop constraint if exists appointments_status_check;
+alter table public.appointments add constraint appointments_status_check
+  check (status in ('scheduled', 'confirmed', 'checked_in', 'completed', 'cancelled', 'no_show'));
+
+-- ---------------------------------------------------------------------------
+-- Workflow tables
+-- ---------------------------------------------------------------------------
+create table if not exists public.workflow_events (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  branch_id uuid references public.branches(id) on delete set null,
+  event_type text not null,
+  entity_type text,
+  entity_id text,
+  payload jsonb not null default '{}'::jsonb,
+  processed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_workflow_events_unprocessed
+  on public.workflow_events(organization_id, created_at desc)
+  where processed_at is null;
+
+alter table public.workflow_events enable row level security;
+
+drop policy if exists workflow_events_select on public.workflow_events;
+create policy workflow_events_select on public.workflow_events
+  for select to authenticated using (
+    organization_id = public.current_user_org_id()
+    and (public.user_is_org_admin() or public.has_permission('audit.read', branch_id))
+  );
+
+create table if not exists public.branch_workflow_settings (
+  branch_id uuid primary key references public.branches(id) on delete cascade,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  settings jsonb not null default jsonb_build_object(
+    'auto_checkin_updates_appointment', true,
+    'auto_served_completes_appointment', true,
+    'consent_gate_checkin', true,
+    'auto_approve_creates_invoice', true,
+    'auto_hmo_claim_on_invoice', true,
+    'auto_waitlist_on_slot_open', true,
+    'auto_sms_reminders', true,
+    'auto_payment_reminder', true
+  ),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.branch_workflow_settings enable row level security;
+
+drop policy if exists branch_workflow_settings_select on public.branch_workflow_settings;
+create policy branch_workflow_settings_select on public.branch_workflow_settings
+  for select to authenticated using (
+    organization_id = public.current_user_org_id()
+    and public.user_has_branch_access(branch_id)
+  );
+
+drop policy if exists branch_workflow_settings_write on public.branch_workflow_settings;
+create policy branch_workflow_settings_write on public.branch_workflow_settings
+  for all to authenticated using (
+    organization_id = public.current_user_org_id()
+    and public.has_permission('settings.manage', branch_id)
+  )
+  with check (organization_id = public.current_user_org_id());
+
+create table if not exists public.slot_notification_queue (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  slot_at timestamptz not null,
+  source_appointment_id uuid references public.appointments(id) on delete set null,
+  processed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_slot_notification_pending
+  on public.slot_notification_queue(branch_id, created_at)
+  where processed_at is null;
+
+alter table public.slot_notification_queue enable row level security;
+
+drop policy if exists slot_notification_queue_select on public.slot_notification_queue;
+create policy slot_notification_queue_select on public.slot_notification_queue
+  for select to authenticated using (
+    organization_id = public.current_user_org_id()
+    and public.has_permission('appointments.read', branch_id)
+  );
+
+-- ---------------------------------------------------------------------------
+-- Workflow helpers
+-- ---------------------------------------------------------------------------
+create or replace function public._default_workflow_settings()
+returns jsonb
+language sql
+immutable
+as $$
+  select jsonb_build_object(
+    'auto_checkin_updates_appointment', true,
+    'auto_served_completes_appointment', true,
+    'consent_gate_checkin', true,
+    'auto_approve_creates_invoice', true,
+    'auto_hmo_claim_on_invoice', true,
+    'auto_waitlist_on_slot_open', true,
+    'auto_sms_reminders', true,
+    'auto_payment_reminder', true
+  );
+$$;
+
+create or replace function public._workflow_enabled(p_branch_id uuid, p_key text)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_settings jsonb;
+begin
+  if p_branch_id is null then
+    return true;
+  end if;
+
+  select coalesce(bws.settings, public._default_workflow_settings())
+  into v_settings
+  from public.branch_workflow_settings bws
+  where bws.branch_id = p_branch_id;
+
+  if v_settings is null then
+    v_settings := public._default_workflow_settings();
+  end if;
+
+  return coalesce((v_settings ->> p_key)::boolean, true);
+end;
+$$;
+
+create or replace function public.emit_workflow_event(
+  p_branch_id uuid,
+  p_event_type text,
+  p_entity_type text default null,
+  p_entity_id text default null,
+  p_payload jsonb default '{}'::jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_id uuid;
+begin
+  insert into public.workflow_events (
+    organization_id, branch_id, event_type, entity_type, entity_id, payload
+  ) values (
+    v_org, p_branch_id, p_event_type, p_entity_type, p_entity_id, coalesce(p_payload, '{}'::jsonb)
+  )
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
+
+create or replace function public.get_branch_workflow_settings(p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_settings jsonb;
+begin
+  if not public.user_has_branch_access(p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  select coalesce(bws.settings, public._default_workflow_settings())
+  into v_settings
+  from public.branch_workflow_settings bws
+  where bws.branch_id = p_branch_id;
+
+  return coalesce(v_settings, public._default_workflow_settings());
+end;
+$$;
+
+grant execute on function public.get_branch_workflow_settings(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Invoice draft from treatment plan (internal + automation)
+-- ---------------------------------------------------------------------------
+create or replace function public._create_invoice_draft_from_plan(p_plan_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_plan public.treatment_plans%rowtype;
+  v_existing uuid;
+  v_invoice_id uuid;
+  v_item record;
+  v_inv_num text;
+begin
+  select * into v_plan
+  from public.treatment_plans
+  where id = p_plan_id
+    and organization_id = public.current_user_org_id();
+
+  if v_plan.id is null then
+    raise exception 'Plan not found';
+  end if;
+
+  select id into v_existing
+  from public.invoices
+  where treatment_plan_id = p_plan_id
+    and status <> 'void'
+  limit 1;
+
+  if v_existing is not null then
+    return v_existing;
+  end if;
+
+  v_inv_num := 'INV-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8));
+
+  insert into public.invoices (
+    organization_id, branch_id, patient_id, treatment_plan_id,
+    invoice_number, total_amount, paid_amount, status, created_by
+  ) values (
+    v_plan.organization_id, v_plan.branch_id, v_plan.patient_id, p_plan_id,
+    v_inv_num, 0, 0, 'draft', auth.uid()
+  )
+  returning id into v_invoice_id;
+
+  for v_item in
+    select * from public.treatment_plan_items where plan_id = p_plan_id order by created_at
+  loop
+    perform public.add_invoice_line_item(
+      v_invoice_id,
+      coalesce(v_item.description, 'Treatment item'),
+      coalesce(v_item.estimated_price, 0),
+      1,
+      v_item.tooth_number,
+      v_item.procedure_id,
+      v_item.id
+    );
+  end loop;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_plan.organization_id,
+    v_plan.branch_id,
+    auth.uid(),
+    'invoice.auto_draft_from_plan',
+    'invoice',
+    v_invoice_id::text,
+    jsonb_build_object('treatment_plan_id', p_plan_id)
+  );
+
+  return v_invoice_id;
+end;
+$$;
+
+create or replace function public._auto_hmo_claim_for_invoice(p_invoice_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_inv public.invoices%rowtype;
+  v_ins record;
+  v_provider_id uuid;
+  v_claim_id uuid;
+begin
+  select * into v_inv from public.invoices where id = p_invoice_id;
+  if v_inv.id is null then return null; end if;
+
+  select pip.* into v_ins
+  from public.patient_insurance_profiles pip
+  where pip.patient_id = v_inv.patient_id
+    and pip.payer_type = 'hmo'
+    and pip.is_primary = true
+  limit 1;
+
+  if v_ins.id is null then return null; end if;
+
+  select hp.id into v_provider_id
+  from public.hmo_providers hp
+  where hp.organization_id = v_inv.organization_id
+    and hp.is_active = true
+    and lower(hp.name) = lower(coalesce(v_ins.payer_name, ''))
+  limit 1;
+
+  if exists (
+    select 1 from public.hmo_claims hc
+    where hc.invoice_id = p_invoice_id and hc.status <> 'rejected'
+  ) then
+    return null;
+  end if;
+
+  insert into public.hmo_claims (
+    organization_id, branch_id, patient_id, invoice_id, provider_id,
+    member_id, claimed_amount, status, created_by
+  ) values (
+    v_inv.organization_id, v_inv.branch_id, v_inv.patient_id, p_invoice_id, v_provider_id,
+    v_ins.member_id, v_inv.total_amount, 'draft', auth.uid()
+  )
+  returning id into v_claim_id;
+
+  return v_claim_id;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Approve plan â†’ auto invoice (+ optional HMO)
+-- ---------------------------------------------------------------------------
+create or replace function public.approve_treatment_plan(p_plan_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_plan record;
+  v_estimate jsonb;
+  v_count bigint;
+  v_invoice_id uuid := null;
+  v_claim_id uuid := null;
+begin
+  select *
+  into v_plan
+  from public.treatment_plans
+  where id = p_plan_id
+    and organization_id = public.current_user_org_id()
+  for update;
+
+  if v_plan.id is null then
+    raise exception 'Plan not found';
+  end if;
+
+  if not public.has_permission('dental_chart.write', v_plan.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_plan.status not in ('draft', 'proposed') then
+    raise exception 'Plan cannot be approved from status %', v_plan.status;
+  end if;
+
+  select count(*) into v_count
+  from public.treatment_plan_items
+  where plan_id = p_plan_id;
+
+  if v_count = 0 then
+    raise exception 'Add at least one procedure before approving';
+  end if;
+
+  v_estimate := public.calculate_treatment_estimate(p_plan_id);
+
+  update public.treatment_plans
+  set status = 'approved', approved_at = now(), updated_at = now()
+  where id = p_plan_id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_plan.organization_id,
+    v_plan.branch_id,
+    auth.uid(),
+    'treatment_plan.approved',
+    'treatment_plan',
+    p_plan_id::text,
+    jsonb_build_object(
+      'total_estimated', v_estimate->'total_estimated',
+      'item_count', v_estimate->'item_count'
+    )
+  );
+
+  if public._workflow_enabled(v_plan.branch_id, 'auto_approve_creates_invoice') then
+    v_invoice_id := public._create_invoice_draft_from_plan(p_plan_id);
+    if public._workflow_enabled(v_plan.branch_id, 'auto_hmo_claim_on_invoice') and v_invoice_id is not null then
+      v_claim_id := public._auto_hmo_claim_for_invoice(v_invoice_id);
+    end if;
+    perform public.emit_workflow_event(
+      v_plan.branch_id,
+      'treatment_plan.approved',
+      'treatment_plan',
+      p_plan_id::text,
+      jsonb_build_object('invoice_id', v_invoice_id, 'hmo_claim_id', v_claim_id)
+    );
+  end if;
+
+  return v_estimate || jsonb_build_object(
+    'status', 'approved',
+    'approved_at', now(),
+    'invoice_id', v_invoice_id,
+    'hmo_claim_id', v_claim_id
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Check-in â†’ appointment checked_in + consent gate
+-- ---------------------------------------------------------------------------
+create or replace function public.check_in_patient(p_payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_branch_id uuid := (p_payload->>'branch_id')::uuid;
+  v_patient_id uuid := (p_payload->>'patient_id')::uuid;
+  v_appointment_id uuid := nullif(p_payload->>'appointment_id', '')::uuid;
+  v_notes text := nullif(p_payload->>'notes', '');
+  v_force boolean := coalesce((p_payload->>'force_checkin')::boolean, false);
+  v_org uuid := public.current_user_org_id();
+  v_code text;
+  v_id uuid;
+  v_pending_consents int;
+begin
+  if v_branch_id is null or v_patient_id is null then
+    raise exception 'branch_id and patient_id are required';
+  end if;
+
+  if not public.has_permission('queue.manage', v_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if public._workflow_enabled(v_branch_id, 'consent_gate_checkin') and not v_force then
+    select count(*) into v_pending_consents
+    from public.patient_consents pc
+    where pc.patient_id = v_patient_id
+      and pc.organization_id = v_org
+      and pc.status = 'pending';
+
+    if v_pending_consents > 0 then
+      raise exception 'Pending consents must be signed before check-in. Set force_checkin to override (logged).';
+    end if;
+  end if;
+
+  if v_force and public._workflow_enabled(v_branch_id, 'consent_gate_checkin') then
+    insert into public.organization_audit_logs (
+      organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+    ) values (
+      v_org, v_branch_id, auth.uid(),
+      'checkin.consent_override', 'patient', v_patient_id::text,
+      jsonb_build_object('pending_consents', v_pending_consents)
+    );
+  end if;
+
+  if exists (
+    select 1 from public.queue_entries
+    where branch_id = v_branch_id
+      and patient_id = v_patient_id
+      and status in ('waiting', 'ready', 'now_serving', 'in_chair')
+  ) then
+    raise exception 'Patient is already in the queue';
+  end if;
+
+  if v_appointment_id is null and public._workflow_enabled(v_branch_id, 'auto_checkin_updates_appointment') then
+    select a.id into v_appointment_id
+    from public.appointments a
+    where a.branch_id = v_branch_id
+      and a.patient_id = v_patient_id
+      and (a.scheduled_at at time zone 'Asia/Manila')::date = (now() at time zone 'Asia/Manila')::date
+      and a.status in ('scheduled', 'confirmed')
+    order by a.scheduled_at
+    limit 1;
+  end if;
+
+  v_code := public._next_queue_display_code(v_branch_id);
+
+  insert into public.queue_entries (
+    organization_id, branch_id, patient_id, appointment_id,
+    display_code, notes, created_by
+  ) values (
+    v_org, v_branch_id, v_patient_id, v_appointment_id,
+    v_code, v_notes, auth.uid()
+  )
+  returning id into v_id;
+
+  if v_appointment_id is not null and public._workflow_enabled(v_branch_id, 'auto_checkin_updates_appointment') then
+    update public.appointments
+    set status = 'checked_in', updated_at = now()
+    where id = v_appointment_id
+      and status in ('scheduled', 'confirmed');
+  end if;
+
+  perform public.emit_workflow_event(
+    v_branch_id, 'patient.checked_in', 'queue_entry', v_id::text,
+    jsonb_build_object('patient_id', v_patient_id, 'appointment_id', v_appointment_id, 'display_code', v_code)
+  );
+
+  return jsonb_build_object(
+    'id', v_id,
+    'display_code', v_code,
+    'status', 'waiting',
+    'appointment_id', v_appointment_id
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Queue served â†’ appointment completed
+-- ---------------------------------------------------------------------------
+create or replace function public.update_queue_status(
+  p_entry_id uuid,
+  p_status text,
+  p_chair_label text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_entry public.queue_entries%rowtype;
+begin
+  select * into v_entry from public.queue_entries where id = p_entry_id;
+  if not found then
+    raise exception 'Queue entry not found';
+  end if;
+
+  if not public.has_permission('queue.manage', v_entry.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if p_status not in ('waiting', 'ready', 'now_serving', 'in_chair', 'served', 'cancelled') then
+    raise exception 'Invalid status';
+  end if;
+
+  update public.queue_entries
+  set status = p_status,
+      chair_label = coalesce(p_chair_label, chair_label),
+      called_at = case when p_status = 'now_serving' and called_at is null then now() else called_at end,
+      completed_at = case when p_status = 'served' then now() else completed_at end,
+      updated_by = auth.uid(),
+      updated_at = now()
+  where id = p_entry_id;
+
+  if p_status = 'served'
+    and v_entry.appointment_id is not null
+    and public._workflow_enabled(v_entry.branch_id, 'auto_served_completes_appointment') then
+    update public.appointments
+    set status = 'completed', updated_at = now()
+    where id = v_entry.appointment_id
+      and status in ('checked_in', 'scheduled', 'confirmed');
+  end if;
+
+  perform public.emit_workflow_event(
+    v_entry.branch_id, 'queue.status_changed', 'queue_entry', p_entry_id::text,
+    jsonb_build_object('status', p_status, 'appointment_id', v_entry.appointment_id)
+  );
+
+  return jsonb_build_object('id', p_entry_id, 'status', p_status);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- No-show â†’ slot notification queue
+-- ---------------------------------------------------------------------------
+create or replace function public.mark_appointment_no_show(p_appointment_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_appt record;
+begin
+  if p_appointment_id is null then
+    raise exception 'appointment_id is required';
+  end if;
+
+  select a.* into v_appt
+  from public.appointments a
+  where a.id = p_appointment_id;
+
+  if not found then
+    raise exception 'Appointment not found';
+  end if;
+
+  if v_appt.organization_id <> public.current_user_org_id() then
+    raise exception 'Organization mismatch';
+  end if;
+
+  if not public.has_permission('appointments.write', v_appt.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_appt.status not in ('scheduled', 'confirmed', 'checked_in') then
+    raise exception 'Only active appointments can be marked no-show';
+  end if;
+
+  update public.appointments
+  set status = 'no_show', updated_at = now()
+  where id = p_appointment_id;
+
+  if public._workflow_enabled(v_appt.branch_id, 'auto_waitlist_on_slot_open') then
+    insert into public.slot_notification_queue (
+      organization_id, branch_id, slot_at, source_appointment_id
+    ) values (
+      v_appt.organization_id, v_appt.branch_id, v_appt.scheduled_at, p_appointment_id
+    );
+    perform public.emit_workflow_event(
+      v_appt.branch_id, 'slot.opened', 'appointment', p_appointment_id::text,
+      jsonb_build_object('slot_at', v_appt.scheduled_at)
+    );
+  end if;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_appt.organization_id,
+    v_appt.branch_id,
+    auth.uid(),
+    'appointment.no_show',
+    'appointment',
+    p_appointment_id,
+    jsonb_build_object(
+      'scheduled_at', v_appt.scheduled_at,
+      'patient_id', v_appt.patient_id,
+      'previous_status', v_appt.status
+    )
+  );
+
+  return jsonb_build_object(
+    'id', p_appointment_id,
+    'status', 'no_show',
+    'scheduled_at', v_appt.scheduled_at,
+    'branch_id', v_appt.branch_id,
+    'waitlist_queued', public._workflow_enabled(v_appt.branch_id, 'auto_waitlist_on_slot_open')
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Owner analytics RPC
+-- ---------------------------------------------------------------------------
+create or replace function public.get_owner_analytics(
+  p_branch_id uuid default null,
+  p_period_days int default 7,
+  p_locale text default 'en'
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_start date;
+  v_end date := current_date;
+  v_daily_appts jsonb := '[]'::jsonb;
+  v_daily_coll jsonb := '[]'::jsonb;
+  v_status jsonb := '[]'::jsonb;
+  v_branch_compare jsonb;
+  v_totals jsonb;
+  d date;
+  v_cnt int;
+  v_amt numeric;
+begin
+  if v_org is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if p_branch_id is not null then
+    if not (
+      public.user_is_org_admin()
+      or public.has_permission('appointments.read', p_branch_id)
+    ) then
+      raise exception 'Permission denied';
+    end if;
+  elsif not public.user_is_org_admin() then
+    raise exception 'Organization-wide analytics requires admin access';
+  end if;
+
+  p_period_days := greatest(least(coalesce(p_period_days, 7), 90), 1);
+  v_start := v_end - (p_period_days - 1);
+
+  for d in select generate_series(v_start, v_end, '1 day'::interval)::date
+  loop
+    select count(*)::int into v_cnt
+    from public.appointments a
+    where a.organization_id = v_org
+      and (p_branch_id is null or a.branch_id = p_branch_id)
+      and (a.scheduled_at at time zone 'Asia/Manila')::date = d;
+
+    v_daily_appts := v_daily_appts || jsonb_build_array(jsonb_build_object(
+      'date', d::text,
+      'label', to_char(d, 'Mon DD'),
+      'value', v_cnt
+    ));
+
+    select coalesce(sum(ip.amount), 0) into v_amt
+    from public.invoice_payments ip
+    join public.invoices inv on inv.id = ip.invoice_id
+    where inv.organization_id = v_org
+      and (p_branch_id is null or inv.branch_id = p_branch_id)
+      and ip.created_at::date = d;
+
+    v_daily_coll := v_daily_coll || jsonb_build_array(jsonb_build_object(
+      'date', d::text,
+      'label', to_char(d, 'Mon DD'),
+      'value', v_amt
+    ));
+  end loop;
+
+  select coalesce(jsonb_agg(jsonb_build_object('status', s.status, 'count', s.cnt) order by s.cnt desc), '[]'::jsonb)
+  into v_status
+  from (
+    select a.status, count(*)::int as cnt
+    from public.appointments a
+    where a.organization_id = v_org
+      and (p_branch_id is null or a.branch_id = p_branch_id)
+      and (a.scheduled_at at time zone 'Asia/Manila')::date between v_start and v_end
+    group by a.status
+  ) s;
+
+  if p_branch_id is null then
+    select coalesce(jsonb_agg(jsonb_build_object('label', b.name, 'value', bc.cnt) order by bc.cnt desc), '[]'::jsonb)
+    into v_branch_compare
+    from (
+      select inv.branch_id, count(*)::int as cnt
+      from public.invoices inv
+      where inv.organization_id = v_org
+        and inv.status in ('draft', 'sent', 'partial')
+      group by inv.branch_id
+    ) bc
+    join public.branches b on b.id = bc.branch_id;
+  end if;
+
+  select jsonb_build_object(
+    'appointments', (select count(*) from public.appointments a where a.organization_id = v_org and (p_branch_id is null or a.branch_id = p_branch_id) and (a.scheduled_at at time zone 'Asia/Manila')::date between v_start and v_end),
+    'completed', (select count(*) from public.appointments a where a.organization_id = v_org and (p_branch_id is null or a.branch_id = p_branch_id) and a.status = 'completed' and (a.scheduled_at at time zone 'Asia/Manila')::date between v_start and v_end),
+    'cancelled', (select count(*) from public.appointments a where a.organization_id = v_org and (p_branch_id is null or a.branch_id = p_branch_id) and a.status = 'cancelled' and (a.scheduled_at at time zone 'Asia/Manila')::date between v_start and v_end),
+    'no_show', (select count(*) from public.appointments a where a.organization_id = v_org and (p_branch_id is null or a.branch_id = p_branch_id) and a.status = 'no_show' and (a.scheduled_at at time zone 'Asia/Manila')::date between v_start and v_end),
+    'collected', (select coalesce(sum(ip.amount), 0) from public.invoice_payments ip join public.invoices inv on inv.id = ip.invoice_id where inv.organization_id = v_org and (p_branch_id is null or inv.branch_id = p_branch_id) and ip.created_at::date between v_start and v_end),
+    'open_invoices', (select count(*) from public.invoices inv where inv.organization_id = v_org and (p_branch_id is null or inv.branch_id = p_branch_id) and inv.status in ('draft', 'sent', 'partial')),
+    'pending_consents', (select count(*) from public.patient_consents pc where pc.organization_id = v_org and (p_branch_id is null or pc.branch_id = p_branch_id) and pc.status = 'pending'),
+    'queue_waiting', (select count(*) from public.queue_entries qe where qe.organization_id = v_org and (p_branch_id is null or qe.branch_id = p_branch_id) and qe.status in ('waiting', 'ready')),
+    'hmo_draft', (select count(*) from public.hmo_claims hc where hc.organization_id = v_org and (p_branch_id is null or hc.branch_id = p_branch_id) and hc.status = 'draft')
+  ) into v_totals;
+
+  return jsonb_build_object(
+    'period_days', p_period_days,
+    'daily_appointments', v_daily_appts,
+    'daily_collections', v_daily_coll,
+    'status_breakdown', v_status,
+    'totals', v_totals,
+    'branch_compare', v_branch_compare
+  );
+end;
+$$;
+
+grant execute on function public.get_owner_analytics(uuid, int, text) to authenticated;
+
+-- Queue analytics
+create or replace function public.get_queue_analytics(
+  p_branch_id uuid,
+  p_period_days int default 7
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_median numeric;
+  v_peak jsonb;
+  v_flow jsonb;
+begin
+  if not public.has_permission('queue.manage', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  select percentile_cont(0.5) within group (order by extract(epoch from (coalesce(called_at, completed_at) - checked_in_at)) / 60.0)
+  into v_median
+  from public.queue_entries
+  where branch_id = p_branch_id
+    and status = 'served'
+    and checked_in_at >= now() - (greatest(p_period_days, 1) || ' days')::interval;
+
+  select coalesce(jsonb_agg(jsonb_build_object('label', h.hr, 'value', h.cnt) order by h.cnt desc), '[]'::jsonb)
+  into v_peak
+  from (
+    select to_char(checked_in_at at time zone 'Asia/Manila', 'HH24') || ':00' as hr, count(*)::int as cnt
+    from public.queue_entries
+    where branch_id = p_branch_id
+      and checked_in_at >= now() - (greatest(p_period_days, 1) || ' days')::interval
+    group by 1
+    order by cnt desc
+    limit 8
+  ) h;
+
+  select coalesce(jsonb_agg(jsonb_build_object('label', s.status, 'value', s.cnt)), '[]'::jsonb)
+  into v_flow
+  from (
+    select status, count(*)::int as cnt
+    from public.queue_entries
+    where branch_id = p_branch_id
+      and checked_in_at::date = current_date
+    group by status
+  ) s;
+
+  return jsonb_build_object(
+    'median_wait_minutes', round(coalesce(v_median, 0)::numeric, 1),
+    'peak_hours', v_peak,
+    'today_flow', v_flow
+  );
+end;
+$$;
+
+grant execute on function public.get_queue_analytics(uuid, int) to authenticated;
+
+-- Daily closeout
+create or replace function public.get_daily_closeout(
+  p_branch_id uuid default null,
+  p_date date default current_date
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+begin
+  if not public.user_is_org_admin() then
+    raise exception 'Permission denied';
+  end if;
+
+  return jsonb_build_object(
+    'date', p_date,
+    'collected', (
+      select coalesce(sum(ip.amount), 0)
+      from public.invoice_payments ip
+      join public.invoices inv on inv.id = ip.invoice_id
+      where inv.organization_id = v_org
+        and (p_branch_id is null or inv.branch_id = p_branch_id)
+        and ip.created_at::date = p_date
+    ),
+    'open_balance', (
+      select coalesce(sum(inv.total_amount - inv.paid_amount), 0)
+      from public.invoices inv
+      where inv.organization_id = v_org
+        and (p_branch_id is null or inv.branch_id = p_branch_id)
+        and inv.status in ('draft', 'sent', 'partial')
+    ),
+    'open_invoice_count', (
+      select count(*)
+      from public.invoices inv
+      where inv.organization_id = v_org
+        and (p_branch_id is null or inv.branch_id = p_branch_id)
+        and inv.status in ('draft', 'sent', 'partial')
+    ),
+    'appointments_completed', (
+      select count(*)
+      from public.appointments a
+      where a.organization_id = v_org
+        and (p_branch_id is null or a.branch_id = p_branch_id)
+        and a.status = 'completed'
+        and (a.scheduled_at at time zone 'Asia/Manila')::date = p_date
+    ),
+    'no_show', (
+      select count(*)
+      from public.appointments a
+      where a.organization_id = v_org
+        and (p_branch_id is null or a.branch_id = p_branch_id)
+        and a.status = 'no_show'
+        and (a.scheduled_at at time zone 'Asia/Manila')::date = p_date
+    ),
+    'pending_consents', (
+      select count(*)
+      from public.patient_consents pc
+      where pc.organization_id = v_org
+        and (p_branch_id is null or pc.branch_id = p_branch_id)
+        and pc.status = 'pending'
+    ),
+    'hmo_pending', (
+      select count(*)
+      from public.hmo_claims hc
+      where hc.organization_id = v_org
+        and (p_branch_id is null or hc.branch_id = p_branch_id)
+        and hc.status in ('draft', 'submitted', 'under_review')
+    ),
+    'low_stock', (
+      select case when p_branch_id is null then 0 else (
+        select count(*) from public.inventory_items i
+        where i.branch_id = p_branch_id and i.is_active
+          and (i.quantity_on_hand <= i.min_stock_level or (i.expiry_date is not null and i.expiry_date < current_date))
+      ) end
+    )
+  );
+end;
+$$;
+
+grant execute on function public.get_daily_closeout(uuid, date) to authenticated;
+
+-- AR aging
+create or replace function public.get_ar_aging(p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if not public.has_permission('billing.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  return coalesce((
+    select jsonb_agg(jsonb_build_object('label', bucket, 'value', amt) order by ord)
+    from (
+      select
+        case
+          when age(current_date, coalesce(inv.due_date, inv.created_at::date)) <= 30 then '0â€“30 days'
+          when age(current_date, coalesce(inv.due_date, inv.created_at::date)) <= 60 then '31â€“60 days'
+          else '60+ days'
+        end as bucket,
+        case
+          when age(current_date, coalesce(inv.due_date, inv.created_at::date)) <= 30 then 1
+          when age(current_date, coalesce(inv.due_date, inv.created_at::date)) <= 60 then 2
+          else 3
+        end as ord,
+        sum(inv.total_amount - inv.paid_amount) as amt
+      from public.invoices inv
+      where inv.branch_id = p_branch_id
+        and inv.status in ('draft', 'sent', 'partial')
+      group by 1, 2
+    ) x
+  ), '[]'::jsonb);
+end;
+$$;
+
+grant execute on function public.get_ar_aging(uuid) to authenticated;
+
+
+-- ===== 20260611040000_module_analytics_workflow_write.sql =====
+
+-- Module-specific analytics RPCs + workflow settings write
+
+-- ---------------------------------------------------------------------------
+-- Upsert branch workflow settings
+-- ---------------------------------------------------------------------------
+create or replace function public.upsert_branch_workflow_settings(
+  p_branch_id uuid,
+  p_settings jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_merged jsonb;
+  v_result jsonb;
+begin
+  if not public.has_permission('settings.manage', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  select coalesce(bws.settings, public._default_workflow_settings()) || coalesce(p_settings, '{}'::jsonb)
+  into v_merged
+  from public.branches b
+  left join public.branch_workflow_settings bws on bws.branch_id = b.id
+  where b.id = p_branch_id
+    and b.organization_id = v_org;
+
+  if v_merged is null then
+    raise exception 'Branch not found';
+  end if;
+
+  insert into public.branch_workflow_settings (branch_id, organization_id, settings, updated_at)
+  values (p_branch_id, v_org, v_merged, now())
+  on conflict (branch_id) do update
+  set settings = excluded.settings,
+      updated_at = now()
+  returning settings into v_result;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_org, p_branch_id, auth.uid(),
+    'workflow_settings.updated', 'branch', p_branch_id::text,
+    jsonb_build_object('settings', v_result)
+  );
+
+  return v_result;
+end;
+$$;
+
+grant execute on function public.upsert_branch_workflow_settings(uuid, jsonb) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Appointments analytics
+-- ---------------------------------------------------------------------------
+create or replace function public.get_appointments_analytics(
+  p_branch_id uuid,
+  p_period_days int default 7
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_start date;
+  v_end date := current_date;
+  v_hourly jsonb := '[]'::jsonb;
+  v_no_show jsonb := '[]'::jsonb;
+  v_providers jsonb;
+  d date;
+  v_cnt int;
+begin
+  if not public.has_permission('appointments.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  p_period_days := greatest(least(coalesce(p_period_days, 7), 90), 1);
+  v_start := v_end - (p_period_days - 1);
+
+  select coalesce(jsonb_agg(jsonb_build_object('label', h.hr, 'value', h.cnt) order by h.hr), '[]'::jsonb)
+  into v_hourly
+  from (
+    select to_char(a.scheduled_at at time zone 'Asia/Manila', 'HH24') || ':00' as hr,
+           count(*)::int as cnt
+    from public.appointments a
+    where a.organization_id = v_org
+      and a.branch_id = p_branch_id
+      and (a.scheduled_at at time zone 'Asia/Manila')::date between v_start and v_end
+      and a.status not in ('cancelled')
+    group by 1
+  ) h;
+
+  for d in select generate_series(v_start, v_end, '1 day'::interval)::date
+  loop
+    select count(*)::int into v_cnt
+    from public.appointments a
+    where a.organization_id = v_org
+      and a.branch_id = p_branch_id
+      and a.status = 'no_show'
+      and (a.scheduled_at at time zone 'Asia/Manila')::date = d;
+
+    v_no_show := v_no_show || jsonb_build_array(jsonb_build_object(
+      'date', d::text,
+      'label', to_char(d, 'Mon DD'),
+      'value', v_cnt
+    ));
+  end loop;
+
+  select coalesce(jsonb_agg(jsonb_build_object('label', coalesce(p.full_name, 'Unassigned'), 'value', pv.cnt) order by pv.cnt desc), '[]'::jsonb)
+  into v_providers
+  from (
+    select coalesce(a.provider_id::text, 'none') as pid, count(*)::int as cnt
+    from public.appointments a
+    where a.organization_id = v_org
+      and a.branch_id = p_branch_id
+      and (a.scheduled_at at time zone 'Asia/Manila')::date between v_start and v_end
+      and a.status not in ('cancelled', 'no_show')
+    group by 1
+  ) pv
+  left join public.profiles p on p.id::text = pv.pid and pv.pid <> 'none';
+
+  return jsonb_build_object(
+    'hourly_load', v_hourly,
+    'no_show_trend', v_no_show,
+    'provider_utilization', v_providers,
+    'occupancy_pct', (
+      select round(
+        100.0 * count(*) filter (where a.status in ('scheduled', 'confirmed', 'checked_in', 'completed'))
+        / nullif(count(*), 0),
+        1
+      )
+      from public.appointments a
+      where a.organization_id = v_org
+        and a.branch_id = p_branch_id
+        and (a.scheduled_at at time zone 'Asia/Manila')::date between v_start and v_end
+    )
+  );
+end;
+$$;
+
+grant execute on function public.get_appointments_analytics(uuid, int) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Waitlist analytics
+-- ---------------------------------------------------------------------------
+create or replace function public.get_waitlist_analytics(
+  p_branch_id uuid,
+  p_period_days int default 30
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_funnel jsonb;
+  v_conversion numeric;
+begin
+  if not public.has_permission('appointments.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  select coalesce(jsonb_agg(jsonb_build_object('label', s.status, 'value', s.cnt) order by
+    case s.status
+      when 'waiting' then 1
+      when 'contacted' then 2
+      when 'booked' then 3
+      when 'cancelled' then 4
+      when 'expired' then 5
+      else 6
+    end), '[]'::jsonb)
+  into v_funnel
+  from (
+    select status, count(*)::int as cnt
+    from public.waitlist_entries
+    where organization_id = v_org
+      and branch_id = p_branch_id
+      and created_at >= now() - (greatest(coalesce(p_period_days, 30), 1) || ' days')::interval
+    group by status
+  ) s;
+
+  select round(
+    100.0 * count(*) filter (where status = 'booked')
+    / nullif(count(*) filter (where status in ('waiting', 'contacted', 'booked')), 0),
+    1
+  )
+  into v_conversion
+  from public.waitlist_entries
+  where organization_id = v_org
+    and branch_id = p_branch_id
+    and created_at >= now() - (greatest(coalesce(p_period_days, 30), 1) || ' days')::interval;
+
+  return jsonb_build_object(
+    'status_funnel', v_funnel,
+    'conversion_pct', coalesce(v_conversion, 0),
+    'active_waiting', (
+      select count(*)::int from public.waitlist_entries
+      where organization_id = v_org and branch_id = p_branch_id and status = 'waiting'
+    )
+  );
+end;
+$$;
+
+grant execute on function public.get_waitlist_analytics(uuid, int) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Patients analytics
+-- ---------------------------------------------------------------------------
+create or replace function public.get_patients_analytics(
+  p_branch_id uuid,
+  p_period_days int default 30
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_start date;
+  v_end date := current_date;
+  v_new_patients jsonb := '[]'::jsonb;
+  v_consent_rate numeric;
+  d date;
+  v_cnt int;
+begin
+  if not public.has_permission('patients.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  p_period_days := greatest(least(coalesce(p_period_days, 30), 90), 1);
+  v_start := v_end - (p_period_days - 1);
+
+  for d in select generate_series(v_start, v_end, '1 day'::interval)::date
+  loop
+    select count(*)::int into v_cnt
+    from public.patients p
+    inner join public.patient_branch_links pbl on pbl.patient_id = p.id and pbl.branch_id = p_branch_id
+    where p.organization_id = v_org
+      and p.created_at::date = d;
+
+    v_new_patients := v_new_patients || jsonb_build_array(jsonb_build_object(
+      'date', d::text,
+      'label', to_char(d, 'Mon DD'),
+      'value', v_cnt
+    ));
+  end loop;
+
+  select round(
+    100.0 * count(*) filter (where pc.status = 'signed')
+    / nullif(count(*), 0),
+    1
+  )
+  into v_consent_rate
+  from public.patient_consents pc
+  inner join public.patient_branch_links pbl on pbl.patient_id = pc.patient_id and pbl.branch_id = p_branch_id
+  where pc.organization_id = v_org;
+
+  return jsonb_build_object(
+    'new_patients_trend', v_new_patients,
+    'consent_completion_pct', coalesce(v_consent_rate, 0),
+    'total_active', (
+      select count(*)::int
+      from public.patients p
+      inner join public.patient_branch_links pbl on pbl.patient_id = p.id and pbl.branch_id = p_branch_id
+      where p.organization_id = v_org and p.status = 'active'
+    )
+  );
+end;
+$$;
+
+grant execute on function public.get_patients_analytics(uuid, int) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Inventory analytics
+-- ---------------------------------------------------------------------------
+create or replace function public.get_inventory_analytics(p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_levels jsonb;
+begin
+  if not public.has_permission('settings.manage', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  select coalesce(jsonb_agg(jsonb_build_object('label', lvl.label, 'value', lvl.cnt)), '[]'::jsonb)
+  into v_levels
+  from (
+    select
+      case
+        when i.expiry_date is not null and i.expiry_date < current_date then 'Expired'
+        when i.quantity_on_hand <= 0 then 'Out of stock'
+        when i.quantity_on_hand <= i.min_stock_level then 'Low'
+        when i.expiry_date is not null and i.expiry_date <= current_date + 30 then 'Expiring soon'
+        else 'OK'
+      end as label,
+      count(*)::int as cnt
+    from public.inventory_items i
+    where i.organization_id = v_org
+      and i.branch_id = p_branch_id
+      and i.is_active = true
+    group by 1
+  ) lvl;
+
+  return jsonb_build_object(
+    'stock_levels', v_levels,
+    'low_stock_count', (
+      select count(*)::int
+      from public.inventory_items i
+      where i.organization_id = v_org
+        and i.branch_id = p_branch_id
+        and i.is_active = true
+        and i.quantity_on_hand <= i.min_stock_level
+    ),
+    'total_skus', (
+      select count(*)::int
+      from public.inventory_items i
+      where i.organization_id = v_org and i.branch_id = p_branch_id and i.is_active = true
+    )
+  );
+end;
+$$;
+
+grant execute on function public.get_inventory_analytics(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Audit analytics
+-- ---------------------------------------------------------------------------
+create or replace function public.get_audit_analytics(
+  p_branch_id uuid default null,
+  p_period_days int default 7
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_start date;
+  v_end date := current_date;
+  v_daily jsonb := '[]'::jsonb;
+  v_top_actions jsonb;
+  d date;
+  v_cnt int;
+begin
+  if not public.has_permission('audit.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  p_period_days := greatest(least(coalesce(p_period_days, 7), 90), 1);
+  v_start := v_end - (p_period_days - 1);
+
+  for d in select generate_series(v_start, v_end, '1 day'::interval)::date
+  loop
+    select count(*)::int into v_cnt
+    from public.organization_audit_logs oal
+    where oal.organization_id = v_org
+      and (p_branch_id is null or oal.branch_id = p_branch_id)
+      and oal.created_at::date = d;
+
+    v_daily := v_daily || jsonb_build_array(jsonb_build_object(
+      'date', d::text,
+      'label', to_char(d, 'Mon DD'),
+      'value', v_cnt
+    ));
+  end loop;
+
+  select coalesce(jsonb_agg(jsonb_build_object('label', a.action, 'value', a.cnt) order by a.cnt desc), '[]'::jsonb)
+  into v_top_actions
+  from (
+    select action, count(*)::int as cnt
+    from public.organization_audit_logs oal
+    where oal.organization_id = v_org
+      and (p_branch_id is null or oal.branch_id = p_branch_id)
+      and oal.created_at::date between v_start and v_end
+    group by action
+    order by cnt desc
+    limit 8
+  ) a;
+
+  return jsonb_build_object(
+    'daily_events', v_daily,
+    'top_actions', v_top_actions,
+    'total_events', (
+      select count(*)::int
+      from public.organization_audit_logs oal
+      where oal.organization_id = v_org
+        and (p_branch_id is null or oal.branch_id = p_branch_id)
+        and oal.created_at::date between v_start and v_end
+    )
+  );
+end;
+$$;
+
+grant execute on function public.get_audit_analytics(uuid, int) to authenticated;
+
+
+-- ===== 20260611050000_marathon_final.sql =====
+
+-- Marathon final: reminders, attention, analytics, BOM, closeout snapshots, webhooks support
+
+-- ---------------------------------------------------------------------------
+-- Appointment reminder dispatch log (T-24h / T-2h dedupe)
+-- ---------------------------------------------------------------------------
+create table if not exists public.appointment_reminder_dispatches (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  appointment_id uuid not null references public.appointments(id) on delete cascade,
+  reminder_type text not null check (reminder_type in ('24h', '2h', 'no_show')),
+  notification_log_id uuid,
+  created_at timestamptz not null default now(),
+  unique (appointment_id, reminder_type)
+);
+
+create index if not exists idx_appt_reminder_dispatches_branch
+  on public.appointment_reminder_dispatches(branch_id, created_at desc);
+
+alter table public.appointment_reminder_dispatches enable row level security;
+
+drop policy if exists appt_reminder_dispatches_select on public.appointment_reminder_dispatches;
+create policy appt_reminder_dispatches_select on public.appointment_reminder_dispatches
+  for select to authenticated using (
+    organization_id = public.current_user_org_id()
+    and public.has_permission('appointments.read', branch_id)
+  );
+
+-- ---------------------------------------------------------------------------
+-- Closeout snapshots
+-- ---------------------------------------------------------------------------
+create table if not exists public.closeout_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  branch_id uuid references public.branches(id) on delete set null,
+  snapshot_date date not null,
+  payload jsonb not null default '{}'::jsonb,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_closeout_snapshots_branch_date
+  on public.closeout_snapshots(branch_id, snapshot_date desc);
+
+alter table public.closeout_snapshots enable row level security;
+
+drop policy if exists closeout_snapshots_select on public.closeout_snapshots;
+create policy closeout_snapshots_select on public.closeout_snapshots
+  for select to authenticated using (
+    organization_id = public.current_user_org_id()
+    and public.user_is_org_admin()
+  );
+
+drop policy if exists closeout_snapshots_insert on public.closeout_snapshots;
+create policy closeout_snapshots_insert on public.closeout_snapshots
+  for insert to authenticated with check (
+    organization_id = public.current_user_org_id()
+    and public.user_is_org_admin()
+  );
+
+-- ---------------------------------------------------------------------------
+-- Procedure BOM (inventory deduct on completion)
+-- ---------------------------------------------------------------------------
+create table if not exists public.procedure_bom_lines (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  procedure_id uuid not null references public.procedures(id) on delete cascade,
+  inventory_item_id uuid not null references public.inventory_items(id) on delete cascade,
+  quantity numeric(12, 2) not null default 1 check (quantity > 0),
+  created_at timestamptz not null default now(),
+  unique (procedure_id, inventory_item_id)
+);
+
+alter table public.procedure_bom_lines enable row level security;
+
+drop policy if exists procedure_bom_select on public.procedure_bom_lines;
+create policy procedure_bom_select on public.procedure_bom_lines
+  for select to authenticated using (organization_id = public.current_user_org_id());
+
+drop policy if exists procedure_bom_write on public.procedure_bom_lines;
+create policy procedure_bom_write on public.procedure_bom_lines
+  for all to authenticated using (
+    organization_id = public.current_user_org_id()
+    and public.user_is_org_admin()
+  )
+  with check (organization_id = public.current_user_org_id());
+
+-- ---------------------------------------------------------------------------
+-- Payment reminder queue
+-- ---------------------------------------------------------------------------
+create table if not exists public.payment_reminder_queue (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  invoice_id uuid not null references public.invoices(id) on delete cascade,
+  patient_id uuid not null references public.patients(id) on delete cascade,
+  balance_amount numeric(12, 2) not null,
+  processed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_payment_reminder_pending
+  on public.payment_reminder_queue(branch_id, created_at)
+  where processed_at is null;
+
+alter table public.payment_reminder_queue enable row level security;
+
+drop policy if exists payment_reminder_queue_select on public.payment_reminder_queue;
+create policy payment_reminder_queue_select on public.payment_reminder_queue
+  for select to authenticated using (
+    organization_id = public.current_user_org_id()
+    and public.has_permission('billing.read', branch_id)
+  );
+
+-- ---------------------------------------------------------------------------
+-- Dashboard stats: extended KPIs
+-- ---------------------------------------------------------------------------
+create or replace function public.get_dashboard_stats(p_branch_id uuid default null)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_patients bigint;
+  v_today_appts bigint;
+  v_pending_consents bigint;
+  v_queue_waiting bigint;
+  v_open_invoices bigint;
+  v_today_collected numeric;
+  v_low_stock bigint;
+  v_missing_notes bigint;
+  v_hmo_draft bigint;
+  v_philhealth_pending bigint;
+begin
+  select count(*) into v_patients
+  from public.patients p
+  where p.organization_id = v_org and p.status = 'active';
+
+  select count(*) into v_today_appts
+  from public.appointments a
+  where a.organization_id = v_org
+    and (p_branch_id is null or a.branch_id = p_branch_id)
+    and (a.scheduled_at at time zone 'Asia/Manila')::date = (now() at time zone 'Asia/Manila')::date
+    and a.status in ('scheduled', 'confirmed', 'checked_in');
+
+  select count(*) into v_pending_consents
+  from public.patient_consents pc
+  where pc.organization_id = v_org
+    and pc.status = 'pending'
+    and (p_branch_id is null or pc.branch_id = p_branch_id);
+
+  select count(*) into v_queue_waiting
+  from public.queue_entries qe
+  where qe.organization_id = v_org
+    and (p_branch_id is null or qe.branch_id = p_branch_id)
+    and qe.status in ('waiting', 'ready');
+
+  select count(*) into v_open_invoices
+  from public.invoices inv
+  where inv.organization_id = v_org
+    and (p_branch_id is null or inv.branch_id = p_branch_id)
+    and inv.status in ('draft', 'sent', 'partial');
+
+  select coalesce(sum(ip.amount), 0) into v_today_collected
+  from public.invoice_payments ip
+  join public.invoices inv on inv.id = ip.invoice_id
+  where inv.organization_id = v_org
+    and (p_branch_id is null or inv.branch_id = p_branch_id)
+    and ip.created_at::date = current_date;
+
+  if p_branch_id is not null then
+    select count(*) into v_low_stock
+    from public.inventory_items i
+    where i.branch_id = p_branch_id
+      and i.organization_id = v_org
+      and i.is_active = true
+      and (
+        i.quantity_on_hand <= i.min_stock_level
+        or (i.expiry_date is not null and i.expiry_date < current_date)
+      );
+
+    select count(*) into v_missing_notes
+    from public.appointments a
+    where a.organization_id = v_org
+      and a.branch_id = p_branch_id
+      and a.status = 'completed'
+      and (a.scheduled_at at time zone 'Asia/Manila')::date >= (now() at time zone 'Asia/Manila')::date - 7
+      and not exists (
+        select 1 from public.clinical_notes cn
+        where cn.patient_id = a.patient_id
+          and cn.branch_id = a.branch_id
+          and cn.status = 'signed'
+          and (cn.appointment_id = a.id or cn.signed_at::date = (a.scheduled_at at time zone 'Asia/Manila')::date)
+      );
+  else
+    v_low_stock := 0;
+    v_missing_notes := 0;
+  end if;
+
+  select count(*) into v_hmo_draft
+  from public.hmo_claims hc
+  where hc.organization_id = v_org
+    and (p_branch_id is null or hc.branch_id = p_branch_id)
+    and hc.status = 'draft';
+
+  select count(*) into v_philhealth_pending
+  from public.philhealth_claims pc
+  where pc.organization_id = v_org
+    and (p_branch_id is null or pc.branch_id = p_branch_id)
+    and pc.status in ('draft', 'checklist_incomplete', 'ready', 'sync_failed');
+
+  return jsonb_build_object(
+    'active_patients', v_patients,
+    'today_appointments', v_today_appts,
+    'pending_consents', v_pending_consents,
+    'queue_waiting', v_queue_waiting,
+    'open_invoices', v_open_invoices,
+    'today_collected', v_today_collected,
+    'low_stock_items', v_low_stock,
+    'missing_clinical_notes', v_missing_notes,
+    'hmo_draft_claims', v_hmo_draft,
+    'philhealth_pending', v_philhealth_pending
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- PayMongo webhook completion (service role, no user permission)
+-- ---------------------------------------------------------------------------
+create or replace function public.complete_payment_intent_by_ref(
+  p_external_ref text,
+  p_provider text default 'paymongo'
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_intent record;
+  v_payment jsonb;
+begin
+  select * into v_intent
+  from public.payment_gateway_intents
+  where external_ref = p_external_ref
+    and provider = p_provider
+  for update;
+
+  if v_intent.id is null then
+    raise exception 'Payment intent not found';
+  end if;
+
+  if v_intent.status <> 'pending' then
+    return jsonb_build_object('status', v_intent.status, 'intent_id', v_intent.id, 'already_completed', true);
+  end if;
+
+  v_payment := public.record_invoice_payment(
+    v_intent.invoice_id,
+    v_intent.amount,
+    v_intent.provider,
+    'Webhook payment via ' || v_intent.provider || ' (' || v_intent.external_ref || ')'
+  );
+
+  update public.payment_gateway_intents
+  set status = 'completed', completed_at = now(),
+      metadata = coalesce(metadata, '{}'::jsonb) || jsonb_build_object('webhook_completed', true)
+  where id = v_intent.id;
+
+  perform public._sync_ortho_balance_for_invoice(v_intent.invoice_id);
+
+  insert into public.workflow_events (
+    organization_id, branch_id, event_type, entity_type, entity_id, payload
+  ) values (
+    v_intent.organization_id,
+    v_intent.branch_id,
+    'payment.completed',
+    'invoice',
+    v_intent.invoice_id::text,
+    jsonb_build_object('intent_id', v_intent.id, 'amount', v_intent.amount, 'provider', v_intent.provider)
+  );
+
+  return v_payment || jsonb_build_object('intent_id', v_intent.id, 'status', 'completed');
+end;
+$$;
+
+grant execute on function public.complete_payment_intent_by_ref(text, text) to service_role;
+
+-- ---------------------------------------------------------------------------
+-- Ortho balance sync after invoice payment
+-- ---------------------------------------------------------------------------
+create or replace function public._sync_ortho_balance_for_invoice(p_invoice_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_inv record;
+  v_case_id uuid;
+  v_balance jsonb;
+begin
+  select * into v_inv from public.invoices where id = p_invoice_id;
+  if v_inv.id is null then return; end if;
+
+  select oc.id into v_case_id
+  from public.ortho_cases oc
+  where oc.patient_id = v_inv.patient_id
+    and oc.branch_id = v_inv.branch_id
+    and oc.status = 'active'
+  order by oc.created_at desc
+  limit 1;
+
+  if v_case_id is null then return; end if;
+
+  v_balance := public.calculate_ortho_balance(v_case_id);
+
+  if public._workflow_enabled(v_inv.branch_id, 'auto_payment_reminder') then
+    perform public.emit_workflow_event(
+      v_inv.branch_id,
+      'ortho.balance_updated',
+      'ortho_case',
+      v_case_id::text,
+      v_balance
+    );
+  end if;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Procedure BOM deduct
+-- ---------------------------------------------------------------------------
+create or replace function public._deduct_procedure_bom_internal(
+  p_procedure_id uuid,
+  p_branch_id uuid,
+  p_notes text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_line record;
+  v_deducted int := 0;
+begin
+  for v_line in
+    select bl.*, i.name as item_name
+    from public.procedure_bom_lines bl
+    join public.inventory_items i on i.id = bl.inventory_item_id
+    where bl.procedure_id = p_procedure_id
+      and i.branch_id = p_branch_id
+      and i.is_active = true
+  loop
+    perform public.adjust_inventory_stock(
+      v_line.inventory_item_id,
+      'out',
+      v_line.quantity,
+      coalesce(p_notes, 'BOM deduct for procedure ' || p_procedure_id::text)
+    );
+    v_deducted := v_deducted + 1;
+  end loop;
+
+  return jsonb_build_object('deducted_lines', v_deducted);
+end;
+$$;
+
+create or replace function public.deduct_procedure_bom(
+  p_procedure_id uuid,
+  p_branch_id uuid,
+  p_notes text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.has_permission('settings.manage', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+  return public._deduct_procedure_bom_internal(p_procedure_id, p_branch_id, p_notes);
+end;
+$$;
+
+grant execute on function public.deduct_procedure_bom(uuid, uuid, text) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Bulk chart findings â†’ plan items (uses tooth_findings when present)
+-- ---------------------------------------------------------------------------
+create or replace function public.bulk_add_chart_findings_to_plan(p_plan_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_plan record;
+  v_added int := 0;
+  v_finding record;
+  v_proc_id uuid;
+  v_desc text;
+  v_price numeric;
+begin
+  select * into v_plan from public.treatment_plans where id = p_plan_id;
+  if v_plan.id is null then raise exception 'Plan not found'; end if;
+  if not public.has_permission('dental_chart.write', v_plan.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if to_regclass('public.tooth_findings') is null then
+    return jsonb_build_object('added', 0, 'message', 'tooth_findings table not available');
+  end if;
+
+  for v_finding in
+    select tf.*
+    from public.tooth_findings tf
+    join public.dental_charts dc on dc.id = tf.chart_id
+    where dc.patient_id = v_plan.patient_id
+      and dc.branch_id = v_plan.branch_id
+      and dc.status = 'active'
+      and coalesce(tf.status, 'active') = 'active'
+      and tf.condition is not null
+      and tf.condition not in ('present', 'missing_other')
+  loop
+    select p.id, p.name, public.get_procedure_effective_price(p.id, v_plan.branch_id)
+    into v_proc_id, v_desc, v_price
+    from public.procedures p
+    where p.organization_id = v_plan.organization_id
+      and p.is_active = true
+      and (
+        (v_finding.condition in ('decayed', 'missing_caries') and lower(p.name) like '%filling%')
+        or (v_finding.condition = 'indicated_extraction' and lower(p.name) like '%extraction%')
+        or (v_finding.restoration_type = 'jacket_crown' and lower(p.name) like '%crown%')
+      )
+    order by p.name
+    limit 1;
+
+    if v_proc_id is null then
+      v_desc := initcap(replace(v_finding.condition::text, '_', ' ')) || ' â€” Tooth ' || v_finding.tooth_number;
+      v_price := 0;
+    end if;
+
+    if not exists (
+      select 1 from public.treatment_plan_items tpi
+      where tpi.plan_id = p_plan_id
+        and tpi.tooth_number = v_finding.tooth_number::text
+        and tpi.description = coalesce(v_desc, tpi.description)
+    ) then
+      insert into public.treatment_plan_items (
+        plan_id, procedure_id, description, estimated_price, tooth_number, priority
+      ) values (
+        p_plan_id,
+        v_proc_id,
+        coalesce(v_desc, v_finding.condition::text),
+        coalesce(v_price, 0),
+        v_finding.tooth_number::text,
+        'restorative'
+      );
+      v_added := v_added + 1;
+    end if;
+  end loop;
+
+  if v_added > 0 then
+    perform public.calculate_treatment_estimate(p_plan_id);
+  end if;
+
+  return jsonb_build_object('added', v_added);
+end;
+$$;
+
+grant execute on function public.bulk_add_chart_findings_to_plan(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Closeout snapshot save / history
+-- ---------------------------------------------------------------------------
+create or replace function public.save_closeout_snapshot(
+  p_branch_id uuid default null,
+  p_date date default current_date
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_payload jsonb;
+  v_id uuid;
+begin
+  if not public.user_is_org_admin() then
+    raise exception 'Permission denied';
+  end if;
+
+  v_payload := public.get_daily_closeout(p_branch_id, p_date);
+
+  insert into public.closeout_snapshots (organization_id, branch_id, snapshot_date, payload, created_by)
+  values (v_org, p_branch_id, p_date, v_payload, auth.uid())
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
+
+grant execute on function public.save_closeout_snapshot(uuid, date) to authenticated;
+
+create or replace function public.get_closeout_history(
+  p_branch_id uuid default null,
+  p_limit int default 30
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if not public.user_is_org_admin() then
+    raise exception 'Permission denied';
+  end if;
+
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', cs.id,
+      'snapshot_date', cs.snapshot_date,
+      'branch_id', cs.branch_id,
+      'payload', cs.payload,
+      'created_at', cs.created_at
+    ) order by cs.snapshot_date desc, cs.created_at desc)
+    from (
+      select * from public.closeout_snapshots cs
+      where cs.organization_id = public.current_user_org_id()
+        and (p_branch_id is null or cs.branch_id = p_branch_id)
+      order by cs.snapshot_date desc, cs.created_at desc
+      limit greatest(p_limit, 1)
+    ) cs
+  ), '[]'::jsonb);
+end;
+$$;
+
+grant execute on function public.get_closeout_history(uuid, int) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Automation run log (workflow_events)
+-- ---------------------------------------------------------------------------
+create or replace function public.get_automation_run_log(
+  p_branch_id uuid default null,
+  p_limit int default 50
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if not (public.user_is_org_admin() or public.has_permission('audit.read', p_branch_id)) then
+    raise exception 'Permission denied';
+  end if;
+
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', we.id,
+      'event_type', we.event_type,
+      'entity_type', we.entity_type,
+      'entity_id', we.entity_id,
+      'branch_id', we.branch_id,
+      'payload', we.payload,
+      'created_at', we.created_at,
+      'processed_at', we.processed_at
+    ) order by we.created_at desc)
+    from (
+      select * from public.workflow_events we
+      where we.organization_id = public.current_user_org_id()
+        and (p_branch_id is null or we.branch_id = p_branch_id)
+      order by we.created_at desc
+      limit greatest(p_limit, 1)
+    ) we
+  ), '[]'::jsonb);
+end;
+$$;
+
+grant execute on function public.get_automation_run_log(uuid, int) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Branch benchmark (multi-branch owner)
+-- ---------------------------------------------------------------------------
+create or replace function public.get_branch_benchmark(p_period_days int default 30)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_start date;
+begin
+  if not public.user_is_org_admin() then
+    raise exception 'Permission denied';
+  end if;
+
+  p_period_days := greatest(least(coalesce(p_period_days, 30), 90), 1);
+  v_start := current_date - (p_period_days - 1);
+
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'branch_id', b.id,
+      'label', b.name,
+      'appointments', coalesce(a.cnt, 0),
+      'collected', coalesce(c.amt, 0),
+      'no_show', coalesce(n.cnt, 0),
+      'open_ar', coalesce(ar.amt, 0)
+    ) order by coalesce(c.amt, 0) desc)
+    from public.branches b
+    left join (
+      select branch_id, count(*)::int as cnt
+      from public.appointments
+      where organization_id = v_org
+        and (scheduled_at at time zone 'Asia/Manila')::date between v_start and current_date
+      group by branch_id
+    ) a on a.branch_id = b.id
+    left join (
+      select inv.branch_id, coalesce(sum(ip.amount), 0) as amt
+      from public.invoice_payments ip
+      join public.invoices inv on inv.id = ip.invoice_id
+      where inv.organization_id = v_org
+        and ip.created_at::date between v_start and current_date
+      group by inv.branch_id
+    ) c on c.branch_id = b.id
+    left join (
+      select branch_id, count(*)::int as cnt
+      from public.appointments
+      where organization_id = v_org
+        and status = 'no_show'
+        and (scheduled_at at time zone 'Asia/Manila')::date between v_start and current_date
+      group by branch_id
+    ) n on n.branch_id = b.id
+    left join (
+      select branch_id, coalesce(sum(total_amount - paid_amount), 0) as amt
+      from public.invoices
+      where organization_id = v_org
+        and status in ('draft', 'sent', 'partial')
+      group by branch_id
+    ) ar on ar.branch_id = b.id
+    where b.organization_id = v_org and b.is_active = true
+  ), '[]'::jsonb);
+end;
+$$;
+
+grant execute on function public.get_branch_benchmark(int) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- HMO / PhilHealth / Notification / Kiosk / Inventory movement analytics
+-- ---------------------------------------------------------------------------
+create or replace function public.get_hmo_pipeline_analytics(p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+begin
+  if not public.has_permission('hmo.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  return jsonb_build_object(
+    'status_funnel', (
+      select coalesce(jsonb_agg(jsonb_build_object('label', s.status, 'value', s.cnt) order by
+        case s.status
+          when 'draft' then 1 when 'submitted' then 2 when 'under_review' then 3
+          when 'approved' then 4 when 'paid' then 5 when 'rejected' then 6 else 7 end), '[]'::jsonb)
+      from (
+        select status, count(*)::int as cnt
+        from public.hmo_claims
+        where organization_id = v_org and branch_id = p_branch_id
+        group by status
+      ) s
+    ),
+    'pending_amount', (
+      select coalesce(sum(claimed_amount), 0)
+      from public.hmo_claims
+      where organization_id = v_org and branch_id = p_branch_id
+        and status in ('draft', 'submitted', 'under_review', 'approved')
+    )
+  );
+end;
+$$;
+
+grant execute on function public.get_hmo_pipeline_analytics(uuid) to authenticated;
+
+create or replace function public.get_philhealth_analytics(p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+begin
+  if not public.has_permission('billing.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  return jsonb_build_object(
+    'status_breakdown', (
+      select coalesce(jsonb_agg(jsonb_build_object('label', s.status, 'value', s.cnt)), '[]'::jsonb)
+      from (
+        select status, count(*)::int as cnt
+        from public.philhealth_claims
+        where organization_id = v_org and branch_id = p_branch_id
+        group by status
+      ) s
+    ),
+    'readiness_pct', (
+      select round(100.0 * count(*) filter (
+        where coalesce((checklist->>'complete')::boolean, false)
+          or status = 'ready'
+      ) / nullif(count(*), 0), 1)
+      from public.philhealth_claims
+      where organization_id = v_org and branch_id = p_branch_id
+        and status in ('draft', 'checklist_incomplete', 'ready')
+    )
+  );
+end;
+$$;
+
+grant execute on function public.get_philhealth_analytics(uuid) to authenticated;
+
+create or replace function public.get_notification_analytics(
+  p_branch_id uuid,
+  p_period_days int default 30
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_start timestamptz;
+  v_daily jsonb := '[]'::jsonb;
+  d date;
+  v_sent int;
+  v_failed int;
+begin
+  if not public.has_permission('notifications.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  v_start := now() - (greatest(coalesce(p_period_days, 30), 1) || ' days')::interval;
+
+  for d in select generate_series((v_start at time zone 'Asia/Manila')::date, current_date, '1 day'::interval)::date
+  loop
+    select
+      count(*) filter (where status in ('sent', 'delivered'))::int,
+      count(*) filter (where status = 'failed')::int
+    into v_sent, v_failed
+    from public.notification_logs nl
+    where nl.organization_id = v_org
+      and nl.branch_id = p_branch_id
+      and nl.created_at::date = d;
+
+    v_daily := v_daily || jsonb_build_array(jsonb_build_object(
+      'date', d::text,
+      'label', to_char(d, 'Mon DD'),
+      'value', v_sent,
+      'failed', v_failed
+    ));
+  end loop;
+
+  return jsonb_build_object(
+    'daily_delivery', v_daily,
+    'delivery_rate_pct', (
+      select round(100.0 * count(*) filter (where status in ('sent', 'delivered'))
+        / nullif(count(*) filter (where status not in ('dry_run', 'queued')), 0), 1)
+      from public.notification_logs
+      where organization_id = v_org and branch_id = p_branch_id
+        and created_at >= v_start
+    ),
+    'total_sent', (
+      select count(*)::int from public.notification_logs
+      where organization_id = v_org and branch_id = p_branch_id
+        and created_at >= v_start and status in ('sent', 'delivered')
+    )
+  );
+end;
+$$;
+
+grant execute on function public.get_notification_analytics(uuid, int) to authenticated;
+
+create or replace function public.get_kiosk_analytics(
+  p_branch_id uuid,
+  p_period_days int default 7
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_start date;
+  v_daily jsonb := '[]'::jsonb;
+  d date;
+  v_cnt int;
+begin
+  if not public.has_permission('queue.manage', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  p_period_days := greatest(least(coalesce(p_period_days, 7), 90), 1);
+  v_start := current_date - (p_period_days - 1);
+
+  for d in select generate_series(v_start, current_date, '1 day'::interval)::date
+  loop
+    select count(*)::int into v_cnt
+    from public.queue_entries qe
+    where qe.organization_id = v_org
+      and qe.branch_id = p_branch_id
+      and qe.notes = 'Kiosk check-in'
+      and qe.checked_in_at::date = d;
+
+    v_daily := v_daily || jsonb_build_array(jsonb_build_object(
+      'date', d::text,
+      'label', to_char(d, 'Mon DD'),
+      'value', v_cnt
+    ));
+  end loop;
+
+  return jsonb_build_object(
+    'daily_checkins', v_daily,
+    'total_period', (
+      select count(*)::int from public.queue_entries
+      where organization_id = v_org and branch_id = p_branch_id
+        and notes = 'Kiosk check-in'
+        and checked_in_at::date between v_start and current_date
+    ),
+    'intakes_period', (
+      select count(*)::int from public.patient_intakes pi
+      where pi.organization_id = v_org and pi.branch_id = p_branch_id
+        and coalesce(pi.payload->>'source', '') = 'kiosk'
+        and pi.created_at::date between v_start and current_date
+    )
+  );
+end;
+$$;
+
+grant execute on function public.get_kiosk_analytics(uuid, int) to authenticated;
+
+create or replace function public.get_inventory_movement_analytics(
+  p_branch_id uuid,
+  p_period_days int default 30
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_start timestamptz;
+  v_trend jsonb := '[]'::jsonb;
+  d date;
+  v_in numeric;
+  v_out numeric;
+begin
+  if not public.has_permission('settings.manage', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  v_start := now() - (greatest(coalesce(p_period_days, 30), 1) || ' days')::interval;
+
+  for d in select generate_series((v_start at time zone 'Asia/Manila')::date, current_date, '1 day'::interval)::date
+  loop
+    select
+      coalesce(sum(quantity) filter (where movement_type = 'in'), 0),
+      coalesce(sum(quantity) filter (where movement_type = 'out'), 0)
+    into v_in, v_out
+    from public.inventory_movements im
+    where im.organization_id = v_org
+      and im.branch_id = p_branch_id
+      and im.created_at::date = d;
+
+    v_trend := v_trend || jsonb_build_array(jsonb_build_object(
+      'date', d::text,
+      'label', to_char(d, 'Mon DD'),
+      'in', v_in,
+      'out', v_out,
+      'value', v_in - v_out
+    ));
+  end loop;
+
+  return jsonb_build_object('movement_trend', v_trend);
+end;
+$$;
+
+grant execute on function public.get_inventory_movement_analytics(uuid, int) to authenticated;
+
+create or replace function public.get_ortho_analytics(p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+begin
+  if not public.has_permission('dental_chart.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  return jsonb_build_object(
+    'active_cases', (
+      select count(*)::int from public.ortho_cases
+      where organization_id = v_org and branch_id = p_branch_id and status = 'active'
+    ),
+    'balance_distribution', (
+      select coalesce(jsonb_agg(jsonb_build_object('label', b.bucket, 'value', b.cnt)), '[]'::jsonb)
+      from (
+        select
+          case
+            when (public.calculate_ortho_balance(oc.id)->>'balance_due')::numeric <= 0 then 'Paid up'
+            when (public.calculate_ortho_balance(oc.id)->>'balance_due')::numeric <= 5000 then 'Under â‚±5k'
+            else 'Over â‚±5k'
+          end as bucket,
+          count(*)::int as cnt
+        from public.ortho_cases oc
+        where oc.organization_id = v_org and oc.branch_id = p_branch_id and oc.status = 'active'
+        group by 1
+      ) b
+    )
+  );
+end;
+$$;
+
+grant execute on function public.get_ortho_analytics(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Queue served â†’ optional BOM deduct hook
+-- ---------------------------------------------------------------------------
+create or replace function public._deduct_bom_on_queue_served(p_entry_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_entry record;
+  v_appt record;
+  v_item record;
+begin
+  select * into v_entry from public.queue_entries where id = p_entry_id;
+  if v_entry.id is null then return; end if;
+
+  if not public._workflow_enabled(v_entry.branch_id, 'auto_served_completes_appointment') then
+    return;
+  end if;
+
+  select a.* into v_appt
+  from public.appointments a
+  where a.patient_id = v_entry.patient_id
+    and a.branch_id = v_entry.branch_id
+    and a.status = 'completed'
+    and (a.scheduled_at at time zone 'Asia/Manila')::date = current_date
+  order by a.updated_at desc
+  limit 1;
+
+  if v_appt.id is null then return; end if;
+
+  for v_item in
+    select distinct tpi.procedure_id
+    from public.treatment_plan_items tpi
+    join public.treatment_plans tp on tp.id = tpi.plan_id
+    where tp.patient_id = v_entry.patient_id
+      and tp.branch_id = v_entry.branch_id
+      and tp.status = 'approved'
+      and tpi.procedure_id is not null
+    limit 3
+  loop
+    perform public._deduct_procedure_bom_internal(v_item.procedure_id, v_entry.branch_id, 'Auto BOM on queue served');
+  end loop;
+end;
+$$;
+
+-- Patch update_queue_status to call BOM deduct (re-read existing function tail in 20260611030000)
+-- We add a trigger instead to avoid replacing large function:
+create or replace function public._queue_served_bom_trigger_fn()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.status = 'served' and (old.status is distinct from 'served') then
+    perform public._deduct_bom_on_queue_served(new.id);
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_queue_served_bom on public.queue_entries;
+create trigger trg_queue_served_bom
+  after update of status on public.queue_entries
+  for each row
+  execute function public._queue_served_bom_trigger_fn();
+
+-- ---------------------------------------------------------------------------
+-- Enqueue overdue invoice payment reminders
+-- ---------------------------------------------------------------------------
+create or replace function public.enqueue_payment_reminders(p_branch_id uuid)
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_count int := 0;
+  v_inv record;
+begin
+  if not public._workflow_enabled(p_branch_id, 'auto_payment_reminder') then
+    return 0;
+  end if;
+
+  for v_inv in
+    select inv.id, inv.patient_id, inv.branch_id, inv.organization_id,
+           (inv.total_amount - inv.paid_amount) as balance
+    from public.invoices inv
+    where inv.branch_id = p_branch_id
+      and inv.status in ('sent', 'partial')
+      and (inv.total_amount - inv.paid_amount) > 0
+      and inv.updated_at < now() - interval '7 days'
+      and not exists (
+        select 1 from public.payment_reminder_queue prq
+        where prq.invoice_id = inv.id and prq.processed_at is null
+      )
+  loop
+    insert into public.payment_reminder_queue (
+      organization_id, branch_id, invoice_id, patient_id, balance_amount
+    ) values (
+      v_inv.organization_id, v_inv.branch_id, v_inv.id, v_inv.patient_id, v_inv.balance
+    );
+    v_count := v_count + 1;
+  end loop;
+
+  return v_count;
+end;
+$$;
+
+grant execute on function public.enqueue_payment_reminders(uuid) to service_role;
+
+-- ---------------------------------------------------------------------------
+-- Payment reminder batch (cron)
+-- ---------------------------------------------------------------------------
+create or replace function public.claim_payment_reminder_batch(p_limit int default 20)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', prq.id,
+      'branch_id', prq.branch_id,
+      'organization_id', prq.organization_id,
+      'invoice_id', prq.invoice_id,
+      'patient_id', prq.patient_id,
+      'balance_amount', prq.balance_amount
+    ))
+    from (
+      select * from public.payment_reminder_queue
+      where processed_at is null
+      order by created_at asc
+      limit greatest(coalesce(p_limit, 20), 1)
+      for update skip locked
+    ) prq
+  ), '[]'::jsonb);
+end;
+$$;
+
+grant execute on function public.claim_payment_reminder_batch(int) to service_role;
+
+create or replace function public.mark_payment_reminder_processed(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.payment_reminder_queue
+  set processed_at = now()
+  where id = p_id and processed_at is null;
+end;
+$$;
+
+grant execute on function public.mark_payment_reminder_processed(uuid) to service_role;
+
+-- Service role can insert reminder dispatch rows
+drop policy if exists appt_reminder_dispatches_service on public.appointment_reminder_dispatches;
+create policy appt_reminder_dispatches_service on public.appointment_reminder_dispatches
+  for insert to service_role with check (true);
+
+drop policy if exists payment_reminder_queue_service on public.payment_reminder_queue;
+create policy payment_reminder_queue_service on public.payment_reminder_queue
+  for all to service_role using (true) with check (true);
+
+
+-- ===== 20260611060000_marathon_phase2.sql =====
+
+-- Marathon phase 2: void sync, finance summary, chart conditions, closeout email queue
+
+-- ---------------------------------------------------------------------------
+-- void_invoice: sync draft HMO claims + workflow event
+-- ---------------------------------------------------------------------------
+create or replace function public.void_invoice(
+  p_invoice_id uuid,
+  p_reason text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_inv record;
+  v_voided_claims int := 0;
+begin
+  select *
+  into v_inv
+  from public.invoices
+  where id = p_invoice_id
+    and organization_id = public.current_user_org_id()
+  for update;
+
+  if v_inv.id is null then
+    raise exception 'Invoice not found';
+  end if;
+
+  if not public.has_permission('billing.write', v_inv.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_inv.status = 'void' then
+    raise exception 'Invoice is already void';
+  end if;
+
+  if coalesce(v_inv.paid_amount, 0) > 0 then
+    raise exception 'Cannot void invoice with recorded payments';
+  end if;
+
+  if p_reason is null or length(trim(p_reason)) = 0 then
+    raise exception 'Void reason is required';
+  end if;
+
+  update public.invoices
+  set status = 'void', updated_at = now()
+  where id = p_invoice_id;
+
+  update public.hmo_claims
+  set status = 'rejected',
+      rejection_reason = 'Invoice voided: ' || left(trim(p_reason), 200),
+      updated_at = now()
+  where invoice_id = p_invoice_id
+    and status in ('draft', 'submitted', 'under_review');
+
+  get diagnostics v_voided_claims = row_count;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_inv.organization_id,
+    v_inv.branch_id,
+    auth.uid(),
+    'invoice.voided',
+    'invoice',
+    p_invoice_id::text,
+    jsonb_build_object(
+      'reason', trim(p_reason),
+      'invoice_number', v_inv.invoice_number,
+      'total_amount', v_inv.total_amount,
+      'hmo_claims_voided', v_voided_claims
+    )
+  );
+
+  perform public.emit_workflow_event(
+    v_inv.branch_id,
+    'invoice.voided',
+    'invoice',
+    p_invoice_id::text,
+    jsonb_build_object('reason', trim(p_reason), 'hmo_claims_voided', v_voided_claims)
+  );
+
+  return jsonb_build_object(
+    'id', p_invoice_id,
+    'status', 'void',
+    'reason', trim(p_reason),
+    'hmo_claims_voided', v_voided_claims
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Finance summary for Reports Hub (HMO pending + open AR)
+-- ---------------------------------------------------------------------------
+create or replace function public.get_finance_summary_analytics(p_branch_id uuid default null)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+begin
+  if not (public.user_is_org_admin() or public.has_permission('billing.read', p_branch_id)) then
+    raise exception 'Permission denied';
+  end if;
+
+  return jsonb_build_object(
+    'open_ar', (
+      select coalesce(sum(total_amount - paid_amount), 0)
+      from public.invoices
+      where organization_id = v_org
+        and (p_branch_id is null or branch_id = p_branch_id)
+        and status in ('draft', 'sent', 'partial')
+    ),
+    'open_invoice_count', (
+      select count(*)::int
+      from public.invoices
+      where organization_id = v_org
+        and (p_branch_id is null or branch_id = p_branch_id)
+        and status in ('draft', 'sent', 'partial')
+    ),
+    'hmo_pending_amount', (
+      select coalesce(sum(claimed_amount), 0)
+      from public.hmo_claims
+      where organization_id = v_org
+        and (p_branch_id is null or branch_id = p_branch_id)
+        and status in ('draft', 'submitted', 'under_review', 'approved')
+    ),
+    'hmo_draft_count', (
+      select count(*)::int
+      from public.hmo_claims
+      where organization_id = v_org
+        and (p_branch_id is null or branch_id = p_branch_id)
+        and status = 'draft'
+    ),
+    'ar_aging', public.get_ar_aging(coalesce(p_branch_id, (
+      select b.id from public.branches b
+      where b.organization_id = v_org and b.is_active = true
+      order by b.created_at limit 1
+    )))
+  );
+end;
+$$;
+
+grant execute on function public.get_finance_summary_analytics(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Branch chart condition summary (when tooth_findings exists)
+-- ---------------------------------------------------------------------------
+create or replace function public.get_branch_chart_condition_analytics(p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+begin
+  if not public.has_permission('dental_chart.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if to_regclass('public.tooth_findings') is null then
+    return jsonb_build_object('conditions', '[]'::jsonb, 'total_findings', 0);
+  end if;
+
+  return jsonb_build_object(
+    'total_findings', (
+      select count(*)::int
+      from public.tooth_findings tf
+      join public.dental_charts dc on dc.id = tf.chart_id
+      where dc.organization_id = v_org
+        and dc.branch_id = p_branch_id
+        and dc.status = 'active'
+        and coalesce(tf.status, 'active') = 'active'
+    ),
+    'conditions', coalesce((
+      select jsonb_agg(jsonb_build_object('label', c.condition, 'value', c.cnt) order by c.cnt desc)
+      from (
+        select coalesce(tf.condition::text, 'unknown') as condition, count(*)::int as cnt
+        from public.tooth_findings tf
+        join public.dental_charts dc on dc.id = tf.chart_id
+        where dc.organization_id = v_org
+          and dc.branch_id = p_branch_id
+          and dc.status = 'active'
+          and coalesce(tf.status, 'active') = 'active'
+        group by 1
+      ) c
+    ), '[]'::jsonb)
+  );
+end;
+$$;
+
+grant execute on function public.get_branch_chart_condition_analytics(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Closeout email queue
+-- ---------------------------------------------------------------------------
+create table if not exists public.closeout_email_queue (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  branch_id uuid references public.branches(id) on delete set null,
+  recipient_email text not null,
+  snapshot_date date not null,
+  payload jsonb not null default '{}'::jsonb,
+  status text not null default 'pending'
+    check (status in ('pending', 'sent', 'failed', 'dry_run')),
+  error_message text,
+  sent_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_closeout_email_pending
+  on public.closeout_email_queue(status, created_at)
+  where status = 'pending';
+
+alter table public.closeout_email_queue enable row level security;
+
+drop policy if exists closeout_email_queue_admin on public.closeout_email_queue;
+create policy closeout_email_queue_admin on public.closeout_email_queue
+  for select to authenticated using (
+    organization_id = public.current_user_org_id()
+    and public.user_is_org_admin()
+  );
+
+drop policy if exists closeout_email_queue_service on public.closeout_email_queue;
+create policy closeout_email_queue_service on public.closeout_email_queue
+  for all to service_role using (true) with check (true);
+
+create or replace function public.enqueue_closeout_email_digest(p_date date default current_date)
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org record;
+  v_admin record;
+  v_payload jsonb;
+  v_count int := 0;
+begin
+  for v_org in
+    select distinct o.id as organization_id
+    from public.organizations o
+  loop
+    for v_admin in
+      select distinct p.email
+      from public.profiles p
+      join public.staff_branch_assignments sba on sba.profile_id = p.id
+      join public.roles r on r.id = sba.role_id
+      where p.organization_id = v_org.organization_id
+        and r.name in ('owner', 'admin')
+        and p.email is not null
+        and length(trim(p.email)) > 0
+    loop
+      v_payload := public.get_daily_closeout(null, p_date);
+
+      if not exists (
+        select 1 from public.closeout_email_queue
+        where organization_id = v_org.organization_id
+          and recipient_email = v_admin.email
+          and snapshot_date = p_date
+          and status in ('pending', 'sent', 'dry_run')
+      ) then
+        insert into public.closeout_email_queue (
+          organization_id, branch_id, recipient_email, snapshot_date, payload
+        ) values (
+          v_org.organization_id, null, v_admin.email, p_date, v_payload
+        );
+        v_count := v_count + 1;
+      end if;
+    end loop;
+  end loop;
+
+  return v_count;
+end;
+$$;
+
+grant execute on function public.enqueue_closeout_email_digest(date) to service_role;
+
+create or replace function public.claim_closeout_email_batch(p_limit int default 20)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', q.id,
+      'organization_id', q.organization_id,
+      'recipient_email', q.recipient_email,
+      'snapshot_date', q.snapshot_date,
+      'payload', q.payload
+    ))
+    from (
+      select * from public.closeout_email_queue
+      where status = 'pending'
+      order by created_at asc
+      limit greatest(coalesce(p_limit, 20), 1)
+      for update skip locked
+    ) q
+  ), '[]'::jsonb);
+end;
+$$;
+
+grant execute on function public.claim_closeout_email_batch(int) to service_role;
+
+create or replace function public.mark_closeout_email_sent(
+  p_id uuid,
+  p_status text default 'sent',
+  p_error text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.closeout_email_queue
+  set status = coalesce(p_status, 'sent'),
+      error_message = p_error,
+      sent_at = now()
+  where id = p_id;
+end;
+$$;
+
+grant execute on function public.mark_closeout_email_sent(uuid, text, text) to service_role;
+
+
+-- ===== 20260611070000_consent_workflow_realtime.sql =====
+
+-- Consent signed â†’ workflow event (checklist / dashboard refresh hooks)
+
+create or replace function public.lock_consent_via_signing_token(
+  p_token text,
+  p_signature_data text,
+  p_field_responses jsonb default null,
+  p_body_snapshot text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_token record;
+  v_parsed jsonb;
+  v_image text;
+  v_patient_id uuid;
+begin
+  if p_signature_data is null or length(trim(p_signature_data)) = 0 then
+    raise exception 'Signature required';
+  end if;
+
+  begin
+    v_parsed := p_signature_data::jsonb;
+  exception when others then
+    raise exception 'Invalid signature payload';
+  end;
+
+  v_image := nullif(trim(v_parsed->>'image'), '');
+  if v_image is null or length(v_image) < 100 then
+    raise exception 'Drawn signature image required';
+  end if;
+
+  if nullif(trim(v_parsed->>'name'), '') is null then
+    raise exception 'Signer printed name required';
+  end if;
+
+  select t.*, pc.id as cid, pc.patient_id, pc.status as cstatus, pc.organization_id, pc.branch_id, pc.template_slug
+  into v_token
+  from public.consent_signing_tokens t
+  join public.patient_consents pc on pc.id = t.patient_consent_id
+  where t.token = nullif(trim(p_token), '')
+    and t.used_at is null
+    and t.expires_at > now()
+  for update of t, pc;
+
+  if v_token.id is null then
+    raise exception 'Invalid or expired signing link';
+  end if;
+
+  if v_token.cstatus <> 'pending' then
+    raise exception 'Consent already signed or voided';
+  end if;
+
+  v_patient_id := v_token.patient_id;
+
+  update public.patient_consents
+  set
+    status = 'signed',
+    signed_at = now(),
+    signed_by = null,
+    signature_data = p_signature_data,
+    field_responses = p_field_responses,
+    body_snapshot = p_body_snapshot
+  where id = v_token.patient_consent_id;
+
+  update public.consent_signing_tokens
+  set used_at = now()
+  where id = v_token.id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_token.organization_id,
+    v_token.branch_id,
+    null,
+    'consent.signed_via_token',
+    'patient_consent',
+    v_token.patient_consent_id::text,
+    jsonb_build_object(
+      'template_slug', v_token.template_slug,
+      'channel', v_token.channel,
+      'signer_role', coalesce(v_parsed->>'signerRole', 'patient')
+    )
+  );
+
+  perform public.emit_workflow_event(
+    v_token.branch_id,
+    'consent.signed',
+    'patient',
+    v_patient_id::text,
+    jsonb_build_object(
+      'consent_id', v_token.patient_consent_id,
+      'template_slug', v_token.template_slug,
+      'channel', 'signing_token'
+    )
+  );
+end;
+$$;
+
+create or replace function public.lock_signed_consent(
+  p_consent_id uuid,
+  p_signature_data text,
+  p_field_responses jsonb default null,
+  p_body_snapshot text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_consent record;
+  v_parsed jsonb;
+  v_image text;
+begin
+  if p_signature_data is null or length(trim(p_signature_data)) = 0 then
+    raise exception 'Signature required';
+  end if;
+
+  begin
+    v_parsed := p_signature_data::jsonb;
+  exception when others then
+    raise exception 'Invalid signature payload';
+  end;
+
+  v_image := nullif(trim(v_parsed->>'image'), '');
+  if v_image is null or length(v_image) < 100 then
+    raise exception 'Drawn signature image required';
+  end if;
+
+  if nullif(trim(v_parsed->>'name'), '') is null then
+    raise exception 'Signer printed name required';
+  end if;
+
+  select *
+  into v_consent
+  from public.patient_consents
+  where id = p_consent_id
+    and organization_id = public.current_user_org_id()
+  for update;
+
+  if v_consent.id is null then
+    raise exception 'Consent not found';
+  end if;
+
+  if v_consent.status = 'signed' then
+    raise exception 'Consent already signed';
+  end if;
+
+  if v_consent.status = 'voided' then
+    raise exception 'Consent is voided';
+  end if;
+
+  if not public.has_permission('consents.manage', coalesce(v_consent.branch_id, (
+    select sba.branch_id from public.staff_branch_assignments sba
+    where sba.profile_id = auth.uid() limit 1
+  ))) then
+    raise exception 'Permission denied';
+  end if;
+
+  update public.patient_consents
+  set
+    status = 'signed',
+    signed_at = now(),
+    signed_by = auth.uid(),
+    signature_data = p_signature_data,
+    field_responses = coalesce(p_field_responses, field_responses),
+    body_snapshot = coalesce(p_body_snapshot, body_snapshot)
+  where id = p_consent_id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_consent.organization_id,
+    v_consent.branch_id,
+    auth.uid(),
+    'consent.signed',
+    'patient_consent',
+    p_consent_id::text,
+    jsonb_build_object(
+      'template_slug', v_consent.template_slug,
+      'signer_role', coalesce(v_parsed->>'signerRole', 'patient'),
+      'captured_at', coalesce(v_parsed->>'capturedAt', now()::text)
+    )
+  );
+
+  perform public.emit_workflow_event(
+    v_consent.branch_id,
+    'consent.signed',
+    'patient',
+    v_consent.patient_id::text,
+    jsonb_build_object(
+      'consent_id', p_consent_id,
+      'template_slug', v_consent.template_slug,
+      'channel', 'staff'
+    )
+  );
+end;
+$$;
+
+
+-- ===== 20260611080000_dashboard_overdue_kpi.sql =====
+
+-- Dashboard KPI: overdue invoices (past due date with balance)
+
+create or replace function public.get_dashboard_stats(p_branch_id uuid default null)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_patients bigint;
+  v_today_appts bigint;
+  v_pending_consents bigint;
+  v_queue_waiting bigint;
+  v_open_invoices bigint;
+  v_overdue_invoices bigint;
+  v_today_collected numeric;
+  v_low_stock bigint;
+  v_missing_notes bigint;
+  v_hmo_draft bigint;
+  v_philhealth_pending bigint;
+begin
+  select count(*) into v_patients
+  from public.patients p
+  where p.organization_id = v_org and p.status = 'active';
+
+  select count(*) into v_today_appts
+  from public.appointments a
+  where a.organization_id = v_org
+    and (p_branch_id is null or a.branch_id = p_branch_id)
+    and (a.scheduled_at at time zone 'Asia/Manila')::date = (now() at time zone 'Asia/Manila')::date
+    and a.status in ('scheduled', 'confirmed', 'checked_in');
+
+  select count(*) into v_pending_consents
+  from public.patient_consents pc
+  where pc.organization_id = v_org
+    and pc.status = 'pending'
+    and (p_branch_id is null or pc.branch_id = p_branch_id);
+
+  select count(*) into v_queue_waiting
+  from public.queue_entries qe
+  where qe.organization_id = v_org
+    and (p_branch_id is null or qe.branch_id = p_branch_id)
+    and qe.status in ('waiting', 'ready');
+
+  select count(*) into v_open_invoices
+  from public.invoices inv
+  where inv.organization_id = v_org
+    and (p_branch_id is null or inv.branch_id = p_branch_id)
+    and inv.status in ('draft', 'sent', 'partial');
+
+  select count(*) into v_overdue_invoices
+  from public.invoices inv
+  where inv.organization_id = v_org
+    and (p_branch_id is null or inv.branch_id = p_branch_id)
+    and inv.status in ('sent', 'partial')
+    and inv.due_date is not null
+    and inv.due_date < current_date
+    and (inv.total_amount - inv.paid_amount) > 0;
+
+  select coalesce(sum(ip.amount), 0) into v_today_collected
+  from public.invoice_payments ip
+  join public.invoices inv on inv.id = ip.invoice_id
+  where inv.organization_id = v_org
+    and (p_branch_id is null or inv.branch_id = p_branch_id)
+    and ip.created_at::date = current_date;
+
+  if p_branch_id is not null then
+    select count(*) into v_low_stock
+    from public.inventory_items i
+    where i.branch_id = p_branch_id
+      and i.organization_id = v_org
+      and i.is_active = true
+      and (
+        i.quantity_on_hand <= i.min_stock_level
+        or (i.expiry_date is not null and i.expiry_date < current_date)
+      );
+
+    select count(*) into v_missing_notes
+    from public.appointments a
+    where a.organization_id = v_org
+      and a.branch_id = p_branch_id
+      and a.status = 'completed'
+      and (a.scheduled_at at time zone 'Asia/Manila')::date >= (now() at time zone 'Asia/Manila')::date - 7
+      and not exists (
+        select 1 from public.clinical_notes cn
+        where cn.patient_id = a.patient_id
+          and cn.branch_id = a.branch_id
+          and cn.status = 'signed'
+          and (cn.appointment_id = a.id or cn.signed_at::date = (a.scheduled_at at time zone 'Asia/Manila')::date)
+      );
+  else
+    v_low_stock := 0;
+    v_missing_notes := 0;
+  end if;
+
+  select count(*) into v_hmo_draft
+  from public.hmo_claims hc
+  where hc.organization_id = v_org
+    and (p_branch_id is null or hc.branch_id = p_branch_id)
+    and hc.status = 'draft';
+
+  select count(*) into v_philhealth_pending
+  from public.philhealth_claims pc
+  where pc.organization_id = v_org
+    and (p_branch_id is null or pc.branch_id = p_branch_id)
+    and pc.status in ('draft', 'checklist_incomplete', 'ready', 'sync_failed');
+
+  return jsonb_build_object(
+    'active_patients', v_patients,
+    'today_appointments', v_today_appts,
+    'pending_consents', v_pending_consents,
+    'queue_waiting', v_queue_waiting,
+    'open_invoices', v_open_invoices,
+    'overdue_invoices', v_overdue_invoices,
+    'today_collected', v_today_collected,
+    'low_stock_items', v_low_stock,
+    'missing_clinical_notes', v_missing_notes,
+    'hmo_draft_claims', v_hmo_draft,
+    'philhealth_pending', v_philhealth_pending
+  );
+end;
+$$;
+
+
+-- ===== 20260611090000_dashboard_waitlist_kpi.sql =====
+
+-- Dashboard KPI: active waitlist entries awaiting contact
+
+create or replace function public.get_dashboard_stats(p_branch_id uuid default null)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_patients bigint;
+  v_today_appts bigint;
+  v_pending_consents bigint;
+  v_queue_waiting bigint;
+  v_waitlist_waiting bigint;
+  v_open_invoices bigint;
+  v_overdue_invoices bigint;
+  v_today_collected numeric;
+  v_low_stock bigint;
+  v_missing_notes bigint;
+  v_hmo_draft bigint;
+  v_philhealth_pending bigint;
+begin
+  select count(*) into v_patients
+  from public.patients p
+  where p.organization_id = v_org and p.status = 'active';
+
+  select count(*) into v_today_appts
+  from public.appointments a
+  where a.organization_id = v_org
+    and (p_branch_id is null or a.branch_id = p_branch_id)
+    and (a.scheduled_at at time zone 'Asia/Manila')::date = (now() at time zone 'Asia/Manila')::date
+    and a.status in ('scheduled', 'confirmed', 'checked_in');
+
+  select count(*) into v_pending_consents
+  from public.patient_consents pc
+  where pc.organization_id = v_org
+    and pc.status = 'pending'
+    and (p_branch_id is null or pc.branch_id = p_branch_id);
+
+  select count(*) into v_queue_waiting
+  from public.queue_entries qe
+  where qe.organization_id = v_org
+    and (p_branch_id is null or qe.branch_id = p_branch_id)
+    and qe.status in ('waiting', 'ready');
+
+  select count(*) into v_waitlist_waiting
+  from public.waitlist_entries we
+  where we.organization_id = v_org
+    and (p_branch_id is null or we.branch_id = p_branch_id)
+    and we.status in ('waiting', 'contacted');
+
+  select count(*) into v_open_invoices
+  from public.invoices inv
+  where inv.organization_id = v_org
+    and (p_branch_id is null or inv.branch_id = p_branch_id)
+    and inv.status in ('draft', 'sent', 'partial');
+
+  select count(*) into v_overdue_invoices
+  from public.invoices inv
+  where inv.organization_id = v_org
+    and (p_branch_id is null or inv.branch_id = p_branch_id)
+    and inv.status in ('sent', 'partial')
+    and inv.due_date is not null
+    and inv.due_date < current_date
+    and (inv.total_amount - inv.paid_amount) > 0;
+
+  select coalesce(sum(ip.amount), 0) into v_today_collected
+  from public.invoice_payments ip
+  join public.invoices inv on inv.id = ip.invoice_id
+  where inv.organization_id = v_org
+    and (p_branch_id is null or inv.branch_id = p_branch_id)
+    and ip.created_at::date = current_date;
+
+  if p_branch_id is not null then
+    select count(*) into v_low_stock
+    from public.inventory_items i
+    where i.branch_id = p_branch_id
+      and i.organization_id = v_org
+      and i.is_active = true
+      and (
+        i.quantity_on_hand <= i.min_stock_level
+        or (i.expiry_date is not null and i.expiry_date < current_date)
+      );
+
+    select count(*) into v_missing_notes
+    from public.appointments a
+    where a.organization_id = v_org
+      and a.branch_id = p_branch_id
+      and a.status = 'completed'
+      and (a.scheduled_at at time zone 'Asia/Manila')::date >= (now() at time zone 'Asia/Manila')::date - 7
+      and not exists (
+        select 1 from public.clinical_notes cn
+        where cn.patient_id = a.patient_id
+          and cn.branch_id = a.branch_id
+          and cn.status = 'signed'
+          and (cn.appointment_id = a.id or cn.signed_at::date = (a.scheduled_at at time zone 'Asia/Manila')::date)
+      );
+  else
+    v_low_stock := 0;
+    v_missing_notes := 0;
+  end if;
+
+  select count(*) into v_hmo_draft
+  from public.hmo_claims hc
+  where hc.organization_id = v_org
+    and (p_branch_id is null or hc.branch_id = p_branch_id)
+    and hc.status = 'draft';
+
+  select count(*) into v_philhealth_pending
+  from public.philhealth_claims pc
+  where pc.organization_id = v_org
+    and (p_branch_id is null or pc.branch_id = p_branch_id)
+    and pc.status in ('draft', 'checklist_incomplete', 'ready', 'sync_failed');
+
+  return jsonb_build_object(
+    'active_patients', v_patients,
+    'today_appointments', v_today_appts,
+    'pending_consents', v_pending_consents,
+    'queue_waiting', v_queue_waiting,
+    'waitlist_waiting', v_waitlist_waiting,
+    'open_invoices', v_open_invoices,
+    'overdue_invoices', v_overdue_invoices,
+    'today_collected', v_today_collected,
+    'low_stock_items', v_low_stock,
+    'missing_clinical_notes', v_missing_notes,
+    'hmo_draft_claims', v_hmo_draft,
+    'philhealth_pending', v_philhealth_pending
+  );
+end;
+$$;
+
+
+-- ===== 20260611100000_marathon_analytics_attention.sql =====
+
+-- Marathon: BOM workflow toggle + TV display heartbeat (VA-F3-04, VA-F4-24)
+
+-- ---------------------------------------------------------------------------
+-- Workflow: auto BOM deduct toggle
+-- ---------------------------------------------------------------------------
+create or replace function public._default_workflow_settings()
+returns jsonb
+language sql
+immutable
+as $$
+  select jsonb_build_object(
+    'auto_checkin_updates_appointment', true,
+    'auto_served_completes_appointment', true,
+    'consent_gate_checkin', true,
+    'auto_approve_creates_invoice', true,
+    'auto_hmo_claim_on_invoice', true,
+    'auto_waitlist_on_slot_open', true,
+    'auto_sms_reminders', true,
+    'auto_payment_reminder', true,
+    'auto_deduct_procedure_bom', true
+  );
+$$;
+
+alter table public.branch_workflow_settings
+  alter column settings set default public._default_workflow_settings();
+
+create or replace function public._deduct_bom_on_queue_served(p_entry_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_entry record;
+  v_appt record;
+  v_item record;
+begin
+  select * into v_entry from public.queue_entries where id = p_entry_id;
+  if v_entry.id is null then return; end if;
+
+  if not public._workflow_enabled(v_entry.branch_id, 'auto_deduct_procedure_bom') then
+    return;
+  end if;
+
+  select a.* into v_appt
+  from public.appointments a
+  where a.patient_id = v_entry.patient_id
+    and a.branch_id = v_entry.branch_id
+    and a.status = 'completed'
+    and (a.scheduled_at at time zone 'Asia/Manila')::date = current_date
+  order by a.updated_at desc
+  limit 1;
+
+  if v_appt.id is null then return; end if;
+
+  for v_item in
+    select distinct tpi.procedure_id
+    from public.treatment_plan_items tpi
+    join public.treatment_plans tp on tp.id = tpi.plan_id
+    where tp.patient_id = v_entry.patient_id
+      and tp.branch_id = v_entry.branch_id
+      and tp.status = 'approved'
+      and tpi.procedure_id is not null
+    limit 3
+  loop
+    perform public._deduct_procedure_bom_internal(v_item.procedure_id, v_entry.branch_id, 'Auto BOM on queue served');
+  end loop;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- TV display heartbeat (PII-free last refresh for owners)
+-- ---------------------------------------------------------------------------
+create table if not exists public.display_heartbeats (
+  token_id uuid primary key references public.branch_public_tokens(id) on delete cascade,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  last_seen_at timestamptz not null default now(),
+  seen_count bigint not null default 1
+);
+
+create index if not exists idx_display_heartbeats_branch
+  on public.display_heartbeats(branch_id, last_seen_at desc);
+
+alter table public.display_heartbeats enable row level security;
+
+drop policy if exists display_heartbeats_select on public.display_heartbeats;
+create policy display_heartbeats_select on public.display_heartbeats
+  for select to authenticated using (
+    organization_id = public.current_user_org_id()
+    and public.has_permission('queue.manage', branch_id)
+  );
+
+create or replace function public.record_display_heartbeat(p_token text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_t public.branch_public_tokens%rowtype;
+begin
+  select * into v_t
+  from public.branch_public_tokens
+  where token = p_token
+    and token_type = 'display'
+    and is_active = true
+  limit 1;
+
+  if v_t.id is null then
+    return;
+  end if;
+
+  insert into public.display_heartbeats (token_id, organization_id, branch_id, last_seen_at, seen_count)
+  values (v_t.id, v_t.organization_id, v_t.branch_id, now(), 1)
+  on conflict (token_id) do update set
+    last_seen_at = now(),
+    seen_count = public.display_heartbeats.seen_count + 1;
+end;
+$$;
+
+grant execute on function public.record_display_heartbeat(text) to anon, authenticated;
+
+create or replace function public.get_display_health_analytics(p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_active_tokens int;
+  v_last_heartbeat timestamptz;
+  v_last_queue_activity timestamptz;
+begin
+  if not public.has_permission('queue.manage', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  select count(*)::int
+  into v_active_tokens
+  from public.branch_public_tokens t
+  where t.organization_id = v_org
+    and t.branch_id = p_branch_id
+    and t.token_type = 'display'
+    and t.is_active = true
+    and (t.expires_at is null or t.expires_at > now());
+
+  select max(dh.last_seen_at)
+  into v_last_heartbeat
+  from public.display_heartbeats dh
+  where dh.organization_id = v_org
+    and dh.branch_id = p_branch_id;
+
+  select max(greatest(q.checked_in_at, q.called_at, q.served_at))
+  into v_last_queue_activity
+  from public.queue_entries q
+  where q.organization_id = v_org
+    and q.branch_id = p_branch_id
+    and q.checked_in_at >= (current_date - interval '7 days');
+
+  return jsonb_build_object(
+    'active_display_tokens', coalesce(v_active_tokens, 0),
+    'has_active_link', coalesce(v_active_tokens, 0) > 0,
+    'last_refresh_at', v_last_heartbeat,
+    'minutes_since_refresh', case
+      when v_last_heartbeat is null then null
+      else round(extract(epoch from (now() - v_last_heartbeat)) / 60.0)::int
+    end,
+    'is_online', v_last_heartbeat is not null and v_last_heartbeat >= now() - interval '5 minutes',
+    'last_queue_activity', v_last_queue_activity,
+    'minutes_since_activity', case
+      when v_last_queue_activity is null then null
+      else round(extract(epoch from (now() - v_last_queue_activity)) / 60.0)::int
+    end
+  );
+end;
+$$;
+
+grant execute on function public.get_display_health_analytics(uuid) to authenticated;
+
+
+-- ===== 20260611100000_ortho_display_analytics_polish.sql =====
+
+-- Ortho adjustment timeline + TV display token metrics (VA-F4-14, VA-F4-24)
+
+create or replace function public.get_ortho_analytics(p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+begin
+  if not public.has_permission('dental_chart.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  return jsonb_build_object(
+    'active_cases', (
+      select count(*)::int from public.ortho_cases
+      where organization_id = v_org and branch_id = p_branch_id and status = 'active'
+    ),
+    'balance_distribution', (
+      select coalesce(jsonb_agg(jsonb_build_object('label', b.bucket, 'value', b.cnt)), '[]'::jsonb)
+      from (
+        select
+          case
+            when (public.calculate_ortho_balance(oc.id)->>'balance_due')::numeric <= 0 then 'Paid up'
+            when (public.calculate_ortho_balance(oc.id)->>'balance_due')::numeric <= 5000 then 'Under â‚±5k'
+            else 'Over â‚±5k'
+          end as bucket,
+          count(*)::int as cnt
+        from public.ortho_cases oc
+        where oc.organization_id = v_org and oc.branch_id = p_branch_id and oc.status = 'active'
+        group by 1
+      ) b
+    ),
+    'adjustment_timeline', (
+      select coalesce(jsonb_agg(jsonb_build_object('label', d.label, 'value', d.cnt) order by d.sort_key), '[]'::jsonb)
+      from (
+        select
+          to_char(date_trunc('week', oa.adjustment_date), 'Mon DD') as label,
+          date_trunc('week', oa.adjustment_date) as sort_key,
+          count(*)::int as cnt
+        from public.ortho_adjustments oa
+        join public.ortho_cases oc on oc.id = oa.case_id
+        where oc.organization_id = v_org
+          and oc.branch_id = p_branch_id
+          and oa.adjustment_date >= (current_date - interval '84 days')
+        group by 1, 2
+        order by 2
+      ) d
+    )
+  );
+end;
+$$;
+
+grant execute on function public.get_ortho_analytics(uuid) to authenticated;
+
+create or replace function public.get_display_analytics(p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+begin
+  if not public.has_permission('queue.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  return jsonb_build_object(
+    'active_display_tokens', (
+      select count(*)::int
+      from public.branch_public_tokens t
+      where t.organization_id = v_org
+        and t.branch_id = p_branch_id
+        and t.token_type = 'display'
+        and t.is_active = true
+        and (t.expires_at is null or t.expires_at > now())
+    ),
+    'active_kiosk_tokens', (
+      select count(*)::int
+      from public.branch_public_tokens t
+      where t.organization_id = v_org
+        and t.branch_id = p_branch_id
+        and t.token_type = 'kiosk'
+        and t.is_active = true
+        and (t.expires_at is null or t.expires_at > now())
+    ),
+    'last_kiosk_session_at', (
+      select max(ks.created_at)
+      from public.kiosk_sessions ks
+      where ks.organization_id = v_org and ks.branch_id = p_branch_id
+    ),
+    'display_tokens_created_7d', (
+      select count(*)::int
+      from public.branch_public_tokens t
+      where t.organization_id = v_org
+        and t.branch_id = p_branch_id
+        and t.token_type = 'display'
+        and t.created_at >= now() - interval '7 days'
+    )
+  );
+end;
+$$;
+
+grant execute on function public.get_display_analytics(uuid) to authenticated;
+
+
+-- ===== 20260611120000_appointments_cancel_trend.sql =====
+
+-- VA-F4-05/06: schedule heatmap + cancel trend in appointments analytics
+
+create or replace function public.get_appointments_analytics(
+  p_branch_id uuid,
+  p_period_days int default 7
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_start date;
+  v_end date := current_date;
+  v_hourly jsonb := '[]'::jsonb;
+  v_no_show jsonb := '[]'::jsonb;
+  v_cancel jsonb := '[]'::jsonb;
+  v_heatmap jsonb := '[]'::jsonb;
+  v_providers jsonb;
+  d date;
+  v_cnt int;
+begin
+  if not public.has_permission('appointments.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  p_period_days := greatest(least(coalesce(p_period_days, 7), 90), 1);
+  v_start := v_end - (p_period_days - 1);
+
+  select coalesce(jsonb_agg(jsonb_build_object('label', h.hr, 'value', h.cnt) order by h.hr), '[]'::jsonb)
+  into v_hourly
+  from (
+    select to_char(a.scheduled_at at time zone 'Asia/Manila', 'HH24') || ':00' as hr,
+           count(*)::int as cnt
+    from public.appointments a
+    where a.organization_id = v_org
+      and a.branch_id = p_branch_id
+      and (a.scheduled_at at time zone 'Asia/Manila')::date between v_start and v_end
+      and a.status not in ('cancelled')
+    group by 1
+  ) h;
+
+  for d in select generate_series(v_start, v_end, '1 day'::interval)::date
+  loop
+    select count(*)::int into v_cnt
+    from public.appointments a
+    where a.organization_id = v_org
+      and a.branch_id = p_branch_id
+      and a.status = 'no_show'
+      and (a.scheduled_at at time zone 'Asia/Manila')::date = d;
+
+    v_no_show := v_no_show || jsonb_build_array(jsonb_build_object(
+      'date', d::text,
+      'label', to_char(d, 'Mon DD'),
+      'value', v_cnt
+    ));
+
+    select count(*)::int into v_cnt
+    from public.appointments a
+    where a.organization_id = v_org
+      and a.branch_id = p_branch_id
+      and a.status = 'cancelled'
+      and (a.updated_at at time zone 'Asia/Manila')::date = d;
+
+    v_cancel := v_cancel || jsonb_build_array(jsonb_build_object(
+      'date', d::text,
+      'label', to_char(d, 'Mon DD'),
+      'value', v_cnt
+    ));
+  end loop;
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'dow', hm.dow,
+    'hour', hm.hr,
+    'value', hm.cnt
+  ) order by hm.dow_ord, hm.hr), '[]'::jsonb)
+  into v_heatmap
+  from (
+    select
+      to_char(a.scheduled_at at time zone 'Asia/Manila', 'Dy') as dow,
+      extract(isodow from (a.scheduled_at at time zone 'Asia/Manila')::date)::int as dow_ord,
+      to_char(a.scheduled_at at time zone 'Asia/Manila', 'HH24') || ':00' as hr,
+      count(*)::int as cnt
+    from public.appointments a
+    where a.organization_id = v_org
+      and a.branch_id = p_branch_id
+      and (a.scheduled_at at time zone 'Asia/Manila')::date between v_start and v_end
+      and a.status not in ('cancelled', 'no_show')
+    group by 1, 2, 3
+  ) hm;
+
+  select coalesce(jsonb_agg(jsonb_build_object('label', coalesce(p.full_name, 'Unassigned'), 'value', pv.cnt) order by pv.cnt desc), '[]'::jsonb)
+  into v_providers
+  from (
+    select coalesce(a.provider_id::text, 'none') as pid, count(*)::int as cnt
+    from public.appointments a
+    where a.organization_id = v_org
+      and a.branch_id = p_branch_id
+      and (a.scheduled_at at time zone 'Asia/Manila')::date between v_start and v_end
+      and a.status not in ('cancelled', 'no_show')
+    group by 1
+  ) pv
+  left join public.profiles p on p.id::text = pv.pid and pv.pid <> 'none';
+
+  return jsonb_build_object(
+    'hourly_load', v_hourly,
+    'no_show_trend', v_no_show,
+    'cancel_trend', v_cancel,
+    'day_hour_heatmap', v_heatmap,
+    'provider_utilization', v_providers,
+    'occupancy_pct', (
+      select round(
+        100.0 * count(*) filter (where a.status in ('scheduled', 'confirmed', 'checked_in', 'completed'))
+        / nullif(count(*), 0),
+        1
+      )
+      from public.appointments a
+      where a.organization_id = v_org
+        and a.branch_id = p_branch_id
+        and (a.scheduled_at at time zone 'Asia/Manila')::date between v_start and v_end
+    )
+  );
+end;
+$$;
+
+grant execute on function public.get_appointments_analytics(uuid, int) to authenticated;
+
+
+-- ===== 20260611140000_display_health_active_7d.sql =====
+
+-- VA-F4-24: active display count seen in last 7 days
+
+create or replace function public.get_display_health_analytics(p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_active_tokens int;
+  v_active_displays_7d int;
+  v_last_heartbeat timestamptz;
+  v_last_queue_activity timestamptz;
+begin
+  if not public.has_permission('queue.manage', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  select count(*)::int
+  into v_active_tokens
+  from public.branch_public_tokens t
+  where t.organization_id = v_org
+    and t.branch_id = p_branch_id
+    and t.token_type = 'display'
+    and t.is_active = true
+    and (t.expires_at is null or t.expires_at > now());
+
+  select count(*)::int
+  into v_active_displays_7d
+  from public.display_heartbeats dh
+  where dh.organization_id = v_org
+    and dh.branch_id = p_branch_id
+    and dh.last_seen_at >= now() - interval '7 days';
+
+  select max(dh.last_seen_at)
+  into v_last_heartbeat
+  from public.display_heartbeats dh
+  where dh.organization_id = v_org
+    and dh.branch_id = p_branch_id;
+
+  select max(greatest(q.checked_in_at, q.called_at, q.served_at))
+  into v_last_queue_activity
+  from public.queue_entries q
+  where q.organization_id = v_org
+    and q.branch_id = p_branch_id
+    and q.checked_in_at >= (current_date - interval '7 days');
+
+  return jsonb_build_object(
+    'active_display_tokens', coalesce(v_active_tokens, 0),
+    'active_displays_7d', coalesce(v_active_displays_7d, 0),
+    'has_active_link', coalesce(v_active_tokens, 0) > 0,
+    'last_refresh_at', v_last_heartbeat,
+    'minutes_since_refresh', case
+      when v_last_heartbeat is null then null
+      else round(extract(epoch from (now() - v_last_heartbeat)) / 60.0)::int
+    end,
+    'is_online', v_last_heartbeat is not null and v_last_heartbeat >= now() - interval '5 minutes',
+    'last_queue_activity', v_last_queue_activity,
+    'minutes_since_activity', case
+      when v_last_queue_activity is null then null
+      else round(extract(epoch from (now() - v_last_queue_activity)) / 60.0)::int
+    end
+  );
+end;
+$$;
+
+grant execute on function public.get_display_health_analytics(uuid) to authenticated;
+
+
+-- ===== 20260611180000_get_branch_analytics_summary_alias.sql =====
+
+-- Alias for docs/verify script compatibility. App uses get_branch_benchmark directly.
+create or replace function public.get_branch_analytics_summary(p_period_days int default 7)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.get_branch_benchmark(p_period_days);
+$$;
+
+grant execute on function public.get_branch_analytics_summary(int) to authenticated;
+
+
+-- ===== 20260611200000_seed_demo_showcase_rpc.sql =====
+
+-- Demo showcase seed â€” idempotent RPC for landing page live previews
+-- Run via SQL Editor: select public.seed_demo_showcase_data(null);
+
+create or replace function public.seed_demo_showcase_data(p_branch_id uuid default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_branch_id uuid := p_branch_id;
+  v_org_id uuid;
+  v_manila_today date := (now() at time zone 'Asia/Manila')::date;
+  v_hmo_provider uuid;
+  v_proc_fill uuid;
+  v_proc_exam uuid;
+  v_proc_proph uuid;
+  v_chart_id uuid := 'de0000b1-0000-4000-8000-000000000001'::uuid;
+  v_patient1 uuid := 'de000001-0000-4000-8000-000000000001'::uuid;
+begin
+  if v_branch_id is null then
+    select b.id, b.organization_id
+    into v_branch_id, v_org_id
+    from public.branches b
+    order by b.created_at nulls last, b.id
+    limit 1;
+  else
+    select b.organization_id into v_org_id
+    from public.branches b
+    where b.id = v_branch_id;
+  end if;
+
+  if v_branch_id is null or v_org_id is null then
+    raise exception 'No branch found â€” bootstrap a clinic first';
+  end if;
+
+  perform public.seed_default_procedures(v_org_id);
+  perform public.seed_hmo_providers(v_org_id);
+
+  select id into v_hmo_provider
+  from public.hmo_providers
+  where organization_id = v_org_id
+  order by name
+  limit 1;
+
+  select id into v_proc_exam
+  from public.procedures
+  where organization_id = v_org_id and code = 'EXAM'
+  limit 1;
+
+  select id into v_proc_proph
+  from public.procedures
+  where organization_id = v_org_id and code = 'PROPH'
+  limit 1;
+
+  select id into v_proc_fill
+  from public.procedures
+  where organization_id = v_org_id and code = 'FILL'
+  limit 1;
+
+  -- Patients (Filipino demo names)
+  insert into public.patients (id, organization_id, first_name, last_name, date_of_birth, gender, phone, email, address, status)
+  values
+    (v_patient1, v_org_id, 'Maria', 'Santos', '1988-03-14', 'female', '+639171234001', 'maria.santos@example.ph', 'Quezon City, Metro Manila', 'active'),
+    ('de000002-0000-4000-8000-000000000002'::uuid, v_org_id, 'Juan', 'Reyes', '1992-07-22', 'male', '+639171234002', 'juan.reyes@example.ph', 'Makati City, Metro Manila', 'active'),
+    ('de000003-0000-4000-8000-000000000003'::uuid, v_org_id, 'Ana', 'Cruz', '1995-11-05', 'female', '+639171234003', 'ana.cruz@example.ph', 'Pasig City, Metro Manila', 'active'),
+    ('de000004-0000-4000-8000-000000000004'::uuid, v_org_id, 'Jose', 'Garcia', '1980-01-18', 'male', '+639171234004', 'jose.garcia@example.ph', 'Taguig City, Metro Manila', 'active'),
+    ('de000005-0000-4000-8000-000000000005'::uuid, v_org_id, 'Liza', 'Mendoza', '1998-09-30', 'female', '+639171234005', 'liza.mendoza@example.ph', 'Manila City', 'active'),
+    ('de000006-0000-4000-8000-000000000006'::uuid, v_org_id, 'Carlo', 'Ramos', '1986-06-12', 'male', '+639171234006', 'carlo.ramos@example.ph', 'Mandaluyong City', 'active'),
+    ('de000007-0000-4000-8000-000000000007'::uuid, v_org_id, 'Patricia', 'Villanueva', '1990-04-08', 'female', '+639171234007', 'patricia.v@example.ph', 'Paranaque City', 'active'),
+    ('de000008-0000-4000-8000-000000000008'::uuid, v_org_id, 'Miguel', 'Torres', '1975-12-21', 'male', '+639171234008', 'miguel.torres@example.ph', 'Las Pinas City', 'active'),
+    ('de000009-0000-4000-8000-000000000009'::uuid, v_org_id, 'Rosa', 'Aquino', '1993-02-27', 'female', '+639171234009', 'rosa.aquino@example.ph', 'Caloocan City', 'active'),
+    ('de00000a-0000-4000-8000-00000000000a'::uuid, v_org_id, 'Diego', 'Fernandez', '1984-08-16', 'male', '+639171234010', 'diego.f@example.ph', 'San Juan City', 'active'),
+    ('de00000b-0000-4000-8000-00000000000b'::uuid, v_org_id, 'Elena', 'Bautista', '1999-05-03', 'female', '+639171234011', 'elena.b@example.ph', 'Marikina City', 'active'),
+    ('de00000c-0000-4000-8000-00000000000c'::uuid, v_org_id, 'Mark', 'Dela Cruz', '1991-10-11', 'male', '+639171234012', 'mark.delacruz@example.ph', 'Valenzuela City', 'active')
+  on conflict (id) do update set
+    first_name = excluded.first_name,
+    last_name = excluded.last_name,
+    phone = excluded.phone,
+    email = excluded.email,
+    status = excluded.status,
+    updated_at = now();
+
+  insert into public.patient_branch_links (patient_id, branch_id, first_visit_at, last_visit_at)
+  select p.id, v_branch_id, now() - interval '30 days', now() - interval '2 days'
+  from public.patients p
+  where p.id in (
+    v_patient1,
+    'de000002-0000-4000-8000-000000000002'::uuid,
+    'de000003-0000-4000-8000-000000000003'::uuid,
+    'de000004-0000-4000-8000-000000000004'::uuid,
+    'de000005-0000-4000-8000-000000000005'::uuid,
+    'de000006-0000-4000-8000-000000000006'::uuid,
+    'de000007-0000-4000-8000-000000000007'::uuid,
+    'de000008-0000-4000-8000-000000000008'::uuid,
+    'de000009-0000-4000-8000-000000000009'::uuid,
+    'de00000a-0000-4000-8000-00000000000a'::uuid,
+    'de00000b-0000-4000-8000-00000000000b'::uuid,
+    'de00000c-0000-4000-8000-00000000000c'::uuid
+  )
+  on conflict (patient_id, branch_id) do update set
+    last_visit_at = excluded.last_visit_at;
+
+  -- Today's appointments (Asia/Manila)
+  insert into public.appointments (id, organization_id, branch_id, patient_id, scheduled_at, duration_minutes, purpose, status)
+  values
+    ('de000101-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, v_patient1,
+      (v_manila_today + time '09:00') at time zone 'Asia/Manila', 30, 'Check-up & cleaning', 'confirmed'),
+    ('de000102-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'de000002-0000-4000-8000-000000000002'::uuid,
+      (v_manila_today + time '09:30') at time zone 'Asia/Manila', 45, 'Composite filling #36', 'scheduled'),
+    ('de000103-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, 'de000003-0000-4000-8000-000000000003'::uuid,
+      (v_manila_today + time '10:00') at time zone 'Asia/Manila', 30, 'Follow-up', 'checked_in'),
+    ('de000104-0000-4000-8000-000000000004'::uuid, v_org_id, v_branch_id, 'de000004-0000-4000-8000-000000000004'::uuid,
+      (v_manila_today + time '08:00') at time zone 'Asia/Manila', 30, 'Oral exam', 'completed'),
+    ('de000105-0000-4000-8000-000000000005'::uuid, v_org_id, v_branch_id, 'de000005-0000-4000-8000-000000000005'::uuid,
+      (v_manila_today + time '08:30') at time zone 'Asia/Manila', 45, 'Root canal consult', 'completed'),
+    ('de000106-0000-4000-8000-000000000006'::uuid, v_org_id, v_branch_id, 'de000006-0000-4000-8000-000000000006'::uuid,
+      (v_manila_today + time '11:00') at time zone 'Asia/Manila', 30, 'Prophylaxis', 'scheduled'),
+    ('de000107-0000-4000-8000-000000000007'::uuid, v_org_id, v_branch_id, 'de000007-0000-4000-8000-000000000007'::uuid,
+      (v_manila_today + time '14:00') at time zone 'Asia/Manila', 30, 'Crown prep', 'confirmed')
+  on conflict (id) do update set
+    scheduled_at = excluded.scheduled_at,
+    status = excluded.status,
+    purpose = excluded.purpose,
+    updated_at = now();
+
+  -- Queue (8 active)
+  insert into public.queue_entries (
+    id, organization_id, branch_id, patient_id, appointment_id, display_code, status, chair_label, checked_in_at, called_at
+  )
+  values
+    ('de000201-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, v_patient1, 'de000101-0000-4000-8000-000000000001'::uuid, 'Q001', 'in_chair', 'Chair 2', now() - interval '45 minutes', now() - interval '40 minutes'),
+    ('de000201-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'de000002-0000-4000-8000-000000000002'::uuid, 'de000102-0000-4000-8000-000000000002'::uuid, 'Q002', 'now_serving', null, now() - interval '35 minutes', now() - interval '5 minutes'),
+    ('de000201-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, 'de000003-0000-4000-8000-000000000003'::uuid, 'de000103-0000-4000-8000-000000000003'::uuid, 'Q003', 'ready', null, now() - interval '25 minutes', null),
+    ('de000201-0000-4000-8000-000000000004'::uuid, v_org_id, v_branch_id, 'de000004-0000-4000-8000-000000000004'::uuid, null, 'Q004', 'waiting', null, now() - interval '20 minutes', null),
+    ('de000201-0000-4000-8000-000000000005'::uuid, v_org_id, v_branch_id, 'de000005-0000-4000-8000-000000000005'::uuid, null, 'Q005', 'waiting', null, now() - interval '18 minutes', null),
+    ('de000201-0000-4000-8000-000000000006'::uuid, v_org_id, v_branch_id, 'de000006-0000-4000-8000-000000000006'::uuid, null, 'Q006', 'waiting', null, now() - interval '15 minutes', null),
+    ('de000201-0000-4000-8000-000000000007'::uuid, v_org_id, v_branch_id, 'de000007-0000-4000-8000-000000000007'::uuid, null, 'Q007', 'ready', null, now() - interval '12 minutes', null),
+    ('de000201-0000-4000-8000-000000000008'::uuid, v_org_id, v_branch_id, 'de000008-0000-4000-8000-000000000008'::uuid, null, 'Q008', 'waiting', null, now() - interval '8 minutes', null)
+  on conflict (id) do update set
+    status = excluded.status,
+    display_code = excluded.display_code,
+    chair_label = excluded.chair_label,
+    checked_in_at = excluded.checked_in_at,
+    called_at = excluded.called_at,
+    updated_at = now();
+
+  -- Pending consents
+  insert into public.patient_consents (id, patient_id, organization_id, branch_id, template_slug, template_name, status)
+  values
+    ('de000401-0000-4000-8000-000000000001'::uuid, v_patient1, v_org_id, v_branch_id, 'dpa-consent', 'Data Privacy Act (DPA) Consent', 'pending'),
+    ('de000401-0000-4000-8000-000000000002'::uuid, 'de000002-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'general-treatment', 'General Treatment Consent', 'pending'),
+    ('de000401-0000-4000-8000-000000000003'::uuid, 'de000003-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, 'ortho-agreement', 'Orthodontic Agreement', 'pending')
+  on conflict (patient_id, template_slug) do update set
+    status = excluded.status,
+    branch_id = excluded.branch_id;
+
+  -- Waitlist (if table exists)
+  if to_regclass('public.waitlist_entries') is not null then
+    insert into public.waitlist_entries (id, organization_id, branch_id, patient_id, status, urgency, preferred_date, notes)
+    values
+      ('de000501-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, 'de000009-0000-4000-8000-000000000009'::uuid, 'waiting', 'urgent', v_manila_today + 1, 'Pain â€” wants earliest slot'),
+      ('de000501-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'de00000a-0000-4000-8000-00000000000a'::uuid, 'contacted', 'normal', v_manila_today + 3, 'Callback for cleaning'),
+      ('de000501-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, 'de00000b-0000-4000-8000-00000000000b'::uuid, 'waiting', 'normal', v_manila_today + 5, 'Ortho consult â€” flexible schedule')
+    on conflict (id) do update set
+      status = excluded.status,
+      preferred_date = excluded.preferred_date,
+      updated_at = now();
+  end if;
+
+  -- Treatment plan
+  insert into public.treatment_plans (id, organization_id, branch_id, patient_id, title, status, total_estimated, notes)
+  values (
+    'de000a01-0000-4000-8000-000000000001'::uuid,
+    v_org_id,
+    v_branch_id,
+    v_patient1,
+    'Restorative plan â€” Maria Santos',
+    'proposed',
+    18500,
+    'Demo treatment plan for showcase'
+  )
+  on conflict (id) do update set
+    title = excluded.title,
+    status = excluded.status,
+    total_estimated = excluded.total_estimated,
+    updated_at = now();
+
+  insert into public.treatment_plan_items (id, plan_id, procedure_id, tooth_number, description, estimated_price, priority, status)
+  values
+    ('de000a02-0000-4000-8000-000000000001'::uuid, 'de000a01-0000-4000-8000-000000000001'::uuid, v_proc_fill, '36', 'Composite filling #36', 3500, 'restorative', 'planned'),
+    ('de000a02-0000-4000-8000-000000000002'::uuid, 'de000a01-0000-4000-8000-000000000001'::uuid, v_proc_proph, null, 'Prophylaxis / Cleaning', 2500, 'restorative', 'planned')
+  on conflict (id) do update set
+    description = excluded.description,
+    estimated_price = excluded.estimated_price;
+
+  -- Invoices (mix open / partial / paid + overdue)
+  insert into public.invoices (id, organization_id, branch_id, patient_id, treatment_plan_id, invoice_number, total_amount, paid_amount, status, due_date)
+  values
+    ('de000301-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, v_patient1, 'de000a01-0000-4000-8000-000000000001'::uuid, 'DEMO-INV-001', 8500, 0, 'sent', v_manila_today + 14),
+    ('de000301-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'de000002-0000-4000-8000-000000000002'::uuid, null, 'DEMO-INV-002', 12000, 5000, 'partial', v_manila_today - 3),
+    ('de000301-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, 'de000003-0000-4000-8000-000000000003'::uuid, null, 'DEMO-INV-003', 3500, 3500, 'paid', v_manila_today),
+    ('de000301-0000-4000-8000-000000000004'::uuid, v_org_id, v_branch_id, 'de000004-0000-4000-8000-000000000004'::uuid, null, 'DEMO-INV-004', 5000, 0, 'draft', v_manila_today + 7),
+    ('de000301-0000-4000-8000-000000000005'::uuid, v_org_id, v_branch_id, 'de000005-0000-4000-8000-000000000005'::uuid, null, 'DEMO-INV-005', 15000, 8000, 'partial', v_manila_today - 7),
+    ('de000301-0000-4000-8000-000000000006'::uuid, v_org_id, v_branch_id, 'de000006-0000-4000-8000-000000000006'::uuid, null, 'DEMO-INV-006', 2500, 2500, 'paid', v_manila_today)
+  on conflict (id) do update set
+    total_amount = excluded.total_amount,
+    paid_amount = excluded.paid_amount,
+    status = excluded.status,
+    due_date = excluded.due_date,
+    updated_at = now();
+
+  if to_regclass('public.invoice_line_items') is not null then
+    insert into public.invoice_line_items (id, invoice_id, organization_id, procedure_id, description, tooth_number, quantity, unit_price, line_total, sort_order)
+    values
+      ('de000311-0000-4000-8000-000000000001'::uuid, 'de000301-0000-4000-8000-000000000001'::uuid, v_org_id, v_proc_exam, 'Oral Examination', null, 1, 500, 500, 0),
+      ('de000311-0000-4000-8000-000000000002'::uuid, 'de000301-0000-4000-8000-000000000001'::uuid, v_org_id, v_proc_proph, 'Prophylaxis / Cleaning', null, 1, 2500, 2500, 1),
+      ('de000311-0000-4000-8000-000000000003'::uuid, 'de000301-0000-4000-8000-000000000001'::uuid, v_org_id, v_proc_fill, 'Composite Filling', '36', 1, 5500, 5500, 2)
+    on conflict (id) do update set
+      line_total = excluded.line_total,
+      unit_price = excluded.unit_price;
+  end if;
+
+  -- Payments today (today_collected KPI)
+  insert into public.invoice_payments (id, invoice_id, organization_id, amount, payment_method, notes, created_at)
+  values
+    ('de000321-0000-4000-8000-000000000001'::uuid, 'de000301-0000-4000-8000-000000000003'::uuid, v_org_id, 3500, 'gcash', 'Demo payment â€” full', now() - interval '2 hours'),
+    ('de000321-0000-4000-8000-000000000002'::uuid, 'de000301-0000-4000-8000-000000000006'::uuid, v_org_id, 2500, 'cash', 'Demo payment â€” cleaning', now() - interval '1 hour'),
+    ('de000321-0000-4000-8000-000000000003'::uuid, 'de000301-0000-4000-8000-000000000002'::uuid, v_org_id, 5000, 'card', 'Demo partial payment', now() - interval '30 minutes')
+  on conflict (id) do update set
+    amount = excluded.amount,
+    created_at = excluded.created_at;
+
+  -- Clinical notes: signed for Maria; completed appts without signed notes for KPI
+  insert into public.clinical_notes (
+    id, patient_id, organization_id, branch_id, appointment_id, title, subjective, objective, assessment, plan, status, signed_at
+  )
+  values
+    ('de000601-0000-4000-8000-000000000001'::uuid, v_patient1, v_org_id, v_branch_id, 'de000101-0000-4000-8000-000000000001'::uuid,
+      'Routine check-up', 'No complaints', 'Mild plaque #36', 'Gingivitis', 'Prophylaxis + filling', 'signed', now() - interval '1 hour'),
+    ('de000601-0000-4000-8000-000000000002'::uuid, 'de000006-0000-4000-8000-000000000006'::uuid, v_org_id, v_branch_id, null,
+      'Draft note', 'Sensitivity cold', 'Pending exam', null, null, 'draft', null)
+  on conflict (id) do update set
+    status = excluded.status,
+    signed_at = excluded.signed_at,
+    updated_at = now();
+
+  -- Low stock inventory
+  insert into public.inventory_items (id, organization_id, branch_id, name, sku, category, unit, quantity_on_hand, min_stock_level, is_active)
+  values
+    ('de000701-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, 'Composite resin A2', 'COMP-A2', 'restorative', 'syringe', 2, 5, true),
+    ('de000701-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'Nitrile gloves (M)', 'GLV-M', 'consumable', 'box', 1, 10, true),
+    ('de000701-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, 'Prophy paste', 'PROPHY-01', 'preventive', 'jar', 3, 5, true)
+  on conflict (id) do update set
+    quantity_on_hand = excluded.quantity_on_hand,
+    min_stock_level = excluded.min_stock_level,
+    updated_at = now();
+
+  -- HMO draft claims
+  insert into public.hmo_claims (id, organization_id, branch_id, patient_id, invoice_id, provider_id, claim_number, member_id, claimed_amount, status)
+  values
+    ('de000801-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, v_patient1, 'de000301-0000-4000-8000-000000000001'::uuid, v_hmo_provider, 'DEMO-HMO-001', 'MAX-123456', 8500, 'draft'),
+    ('de000801-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'de000002-0000-4000-8000-000000000002'::uuid, 'de000301-0000-4000-8000-000000000002'::uuid, v_hmo_provider, 'DEMO-HMO-002', 'MAX-789012', 12000, 'draft')
+  on conflict (id) do update set
+    status = excluded.status,
+    claimed_amount = excluded.claimed_amount,
+    updated_at = now();
+
+  -- PhilHealth pending claims
+  insert into public.philhealth_claims (id, organization_id, branch_id, patient_id, philhealth_id, case_rate_code, status, checklist, notes)
+  values
+    ('de000901-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, 'de000008-0000-4000-8000-000000000008'::uuid, '12-345678901-2', 'PROPH', 'checklist_incomplete', '{"member_id": true, "diagnosis": false}'::jsonb, 'Demo PhilHealth claim'),
+    ('de000901-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'de000009-0000-4000-8000-000000000009'::uuid, '12-987654321-0', 'FILL', 'ready', '{"member_id": true, "diagnosis": true}'::jsonb, 'Ready for sync stub')
+  on conflict (id) do update set
+    status = excluded.status,
+    checklist = excluded.checklist,
+    updated_at = now();
+
+  -- Odontogram (when dental_charts + tooth_findings exist)
+  if to_regclass('public.dental_charts') is not null and to_regclass('public.tooth_findings') is not null then
+    insert into public.dental_charts (id, organization_id, branch_id, patient_id, status)
+    values (v_chart_id, v_org_id, v_branch_id, v_patient1, 'active')
+    on conflict (id) do update set status = excluded.status, updated_at = now();
+
+    insert into public.tooth_findings (id, chart_id, patient_id, organization_id, branch_id, tooth_number, dentition_type, condition, surfaces, restoration_type, status)
+    values
+      ('de000c01-0000-4000-8000-000000000001'::uuid, v_chart_id, v_patient1, v_org_id, v_branch_id, '36', 'permanent', 'decayed', array['center','top']::text[], null, 'active'),
+      ('de000c01-0000-4000-8000-000000000002'::uuid, v_chart_id, v_patient1, v_org_id, v_branch_id, '26', 'permanent', 'present', array[]::text[], 'composite', 'active'),
+      ('de000c01-0000-4000-8000-000000000003'::uuid, v_chart_id, v_patient1, v_org_id, v_branch_id, '46', 'permanent', 'decayed', array['center']::text[], null, 'active'),
+      ('de000c01-0000-4000-8000-000000000004'::uuid, v_chart_id, v_patient1, v_org_id, v_branch_id, '11', 'permanent', 'present', array[]::text[], 'jacket_crown', 'active'),
+      ('de000c01-0000-4000-8000-000000000005'::uuid, v_chart_id, v_patient1, v_org_id, v_branch_id, '38', 'permanent', 'indicated_extraction', array[]::text[], null, 'active')
+    on conflict (id) do update set
+      condition = excluded.condition,
+      surfaces = excluded.surfaces,
+      restoration_type = excluded.restoration_type,
+      updated_at = now();
+  end if;
+
+  return jsonb_build_object(
+    'status', 'ok',
+    'branch_id', v_branch_id,
+    'organization_id', v_org_id,
+    'manila_date', v_manila_today,
+    'demo_patient_ids', jsonb_build_array(
+      v_patient1::text,
+      'de000002-0000-4000-8000-000000000002',
+      'de000003-0000-4000-8000-000000000003'
+    ),
+    'hint', 'Set LANDING_SHOWCASE_BRANCH_ID=' || v_branch_id::text || ' in .env.local for public landing previews'
+  );
+end;
+$$;
+
+grant execute on function public.seed_demo_showcase_data(uuid) to authenticated;
+grant execute on function public.seed_demo_showcase_data(uuid) to service_role;
+
+
+-- ===== 20260611210000_seed_demo_showcase_full.sql =====
+
+-- Full demo showcase seed
+-- Source: scripts/seed-demo-showcase.sql
+
+create or replace function public.seed_demo_showcase_data(p_branch_id uuid default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_branch_id uuid := p_branch_id;
+  v_org_id uuid;
+  v_manila_today date := (now() at time zone 'Asia/Manila')::date;
+  v_hmo_provider uuid;
+  v_proc_fill uuid;
+  v_proc_exam uuid;
+  v_proc_proph uuid;
+  v_chart_id uuid := 'de0000b1-0000-4000-8000-000000000001'::uuid;
+  v_patient1 uuid := 'de000001-0000-4000-8000-000000000001'::uuid;
+  v_branch2_id uuid := 'de0000d1-0000-4000-8000-000000000002'::uuid;
+  v_branch3_id uuid := 'de0000d1-0000-4000-8000-000000000003'::uuid;
+  v_ortho_case1 uuid := 'de000d01-0000-4000-8000-000000000001'::uuid;
+  v_ortho_case2 uuid := 'de000d01-0000-4000-8000-000000000002'::uuid;
+  v_provider_id uuid;
+  v_role_dentist uuid;
+  v_role_receptionist uuid;
+  v_sig_stub text := 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+begin
+  if v_branch_id is null then
+    select b.id, b.organization_id
+    into v_branch_id, v_org_id
+    from public.branches b
+    order by b.created_at nulls last, b.id
+    limit 1;
+  else
+    select b.organization_id into v_org_id
+    from public.branches b
+    where b.id = v_branch_id;
+  end if;
+
+  if v_branch_id is null or v_org_id is null then
+    raise exception 'No branch found Ã¢â‚¬â€ bootstrap a clinic first';
+  end if;
+
+  perform public.seed_default_procedures(v_org_id);
+  perform public.seed_hmo_providers(v_org_id);
+
+  if to_regprocedure('public.seed_notification_templates(uuid)') is not null then
+    perform public.seed_notification_templates(v_org_id);
+  end if;
+
+  select r.id into v_role_dentist
+  from public.roles r
+  where r.name = 'dentist'
+  limit 1;
+
+  select r.id into v_role_receptionist
+  from public.roles r
+  where r.name = 'receptionist'
+  limit 1;
+
+  select p.id into v_provider_id
+  from public.profiles p
+  join public.staff_branch_assignments sba on sba.profile_id = p.id and sba.branch_id = v_branch_id
+  join public.roles r on r.id = sba.role_id
+  where p.organization_id = v_org_id and r.name in ('dentist', 'owner', 'admin')
+  order by case r.name when 'dentist' then 0 when 'owner' then 1 else 2 end
+  limit 1;
+
+  if v_provider_id is null then
+    select p.id into v_provider_id
+    from public.profiles p
+    where p.organization_id = v_org_id
+    order by p.created_at nulls last
+    limit 1;
+  end if;
+
+  select id into v_hmo_provider
+  from public.hmo_providers
+  where organization_id = v_org_id
+  order by name
+  limit 1;
+
+  select id into v_proc_exam
+  from public.procedures
+  where organization_id = v_org_id and code = 'EXAM'
+  limit 1;
+
+  select id into v_proc_proph
+  from public.procedures
+  where organization_id = v_org_id and code = 'PROPH'
+  limit 1;
+
+  select id into v_proc_fill
+  from public.procedures
+  where organization_id = v_org_id and code = 'FILL'
+  limit 1;
+
+  -- Patients (Filipino demo names)
+  insert into public.patients (id, organization_id, first_name, last_name, date_of_birth, gender, phone, email, address, status)
+  values
+    (v_patient1, v_org_id, 'Maria', 'Santos', '1988-03-14', 'female', '+639171234001', 'maria.santos@example.ph', 'Quezon City, Metro Manila', 'active'),
+    ('de000002-0000-4000-8000-000000000002'::uuid, v_org_id, 'Juan', 'Reyes', '1992-07-22', 'male', '+639171234002', 'juan.reyes@example.ph', 'Makati City, Metro Manila', 'active'),
+    ('de000003-0000-4000-8000-000000000003'::uuid, v_org_id, 'Ana', 'Cruz', '1995-11-05', 'female', '+639171234003', 'ana.cruz@example.ph', 'Pasig City, Metro Manila', 'active'),
+    ('de000004-0000-4000-8000-000000000004'::uuid, v_org_id, 'Jose', 'Garcia', '1980-01-18', 'male', '+639171234004', 'jose.garcia@example.ph', 'Taguig City, Metro Manila', 'active'),
+    ('de000005-0000-4000-8000-000000000005'::uuid, v_org_id, 'Liza', 'Mendoza', '1998-09-30', 'female', '+639171234005', 'liza.mendoza@example.ph', 'Manila City', 'active'),
+    ('de000006-0000-4000-8000-000000000006'::uuid, v_org_id, 'Carlo', 'Ramos', '1986-06-12', 'male', '+639171234006', 'carlo.ramos@example.ph', 'Mandaluyong City', 'active'),
+    ('de000007-0000-4000-8000-000000000007'::uuid, v_org_id, 'Patricia', 'Villanueva', '1990-04-08', 'female', '+639171234007', 'patricia.v@example.ph', 'Paranaque City', 'active'),
+    ('de000008-0000-4000-8000-000000000008'::uuid, v_org_id, 'Miguel', 'Torres', '1975-12-21', 'male', '+639171234008', 'miguel.torres@example.ph', 'Las Pinas City', 'active'),
+    ('de000009-0000-4000-8000-000000000009'::uuid, v_org_id, 'Rosa', 'Aquino', '1993-02-27', 'female', '+639171234009', 'rosa.aquino@example.ph', 'Caloocan City', 'active'),
+    ('de00000a-0000-4000-8000-00000000000a'::uuid, v_org_id, 'Diego', 'Fernandez', '1984-08-16', 'male', '+639171234010', 'diego.f@example.ph', 'San Juan City', 'active'),
+    ('de00000b-0000-4000-8000-00000000000b'::uuid, v_org_id, 'Elena', 'Bautista', '1999-05-03', 'female', '+639171234011', 'elena.b@example.ph', 'Marikina City', 'active'),
+    ('de00000c-0000-4000-8000-00000000000c'::uuid, v_org_id, 'Mark', 'Dela Cruz', '1991-10-11', 'male', '+639171234012', 'mark.delacruz@example.ph', 'Valenzuela City', 'active')
+  on conflict (id) do update set
+    first_name = excluded.first_name,
+    last_name = excluded.last_name,
+    phone = excluded.phone,
+    email = excluded.email,
+    status = excluded.status,
+    updated_at = now();
+
+  insert into public.patient_branch_links (patient_id, branch_id, first_visit_at, last_visit_at)
+  select p.id, v_branch_id, now() - interval '30 days', now() - interval '2 days'
+  from public.patients p
+  where p.id in (
+    v_patient1,
+    'de000002-0000-4000-8000-000000000002'::uuid,
+    'de000003-0000-4000-8000-000000000003'::uuid,
+    'de000004-0000-4000-8000-000000000004'::uuid,
+    'de000005-0000-4000-8000-000000000005'::uuid,
+    'de000006-0000-4000-8000-000000000006'::uuid,
+    'de000007-0000-4000-8000-000000000007'::uuid,
+    'de000008-0000-4000-8000-000000000008'::uuid,
+    'de000009-0000-4000-8000-000000000009'::uuid,
+    'de00000a-0000-4000-8000-00000000000a'::uuid,
+    'de00000b-0000-4000-8000-00000000000b'::uuid,
+    'de00000c-0000-4000-8000-00000000000c'::uuid
+  )
+  on conflict (patient_id, branch_id) do update set
+    last_visit_at = excluded.last_visit_at;
+
+  -- Today's appointments (Asia/Manila)
+  insert into public.appointments (id, organization_id, branch_id, patient_id, scheduled_at, duration_minutes, purpose, status)
+  values
+    ('de000101-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, v_patient1,
+      (v_manila_today + time '09:00') at time zone 'Asia/Manila', 30, 'Check-up & cleaning', 'confirmed'),
+    ('de000102-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'de000002-0000-4000-8000-000000000002'::uuid,
+      (v_manila_today + time '09:30') at time zone 'Asia/Manila', 45, 'Composite filling #36', 'scheduled'),
+    ('de000103-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, 'de000003-0000-4000-8000-000000000003'::uuid,
+      (v_manila_today + time '10:00') at time zone 'Asia/Manila', 30, 'Follow-up', 'checked_in'),
+    ('de000104-0000-4000-8000-000000000004'::uuid, v_org_id, v_branch_id, 'de000004-0000-4000-8000-000000000004'::uuid,
+      (v_manila_today + time '08:00') at time zone 'Asia/Manila', 30, 'Oral exam', 'completed'),
+    ('de000105-0000-4000-8000-000000000005'::uuid, v_org_id, v_branch_id, 'de000005-0000-4000-8000-000000000005'::uuid,
+      (v_manila_today + time '08:30') at time zone 'Asia/Manila', 45, 'Root canal consult', 'completed'),
+    ('de000106-0000-4000-8000-000000000006'::uuid, v_org_id, v_branch_id, 'de000006-0000-4000-8000-000000000006'::uuid,
+      (v_manila_today + time '11:00') at time zone 'Asia/Manila', 30, 'Prophylaxis', 'scheduled'),
+    ('de000107-0000-4000-8000-000000000007'::uuid, v_org_id, v_branch_id, 'de000007-0000-4000-8000-000000000007'::uuid,
+      (v_manila_today + time '14:00') at time zone 'Asia/Manila', 30, 'Crown prep', 'confirmed')
+  on conflict (id) do update set
+    scheduled_at = excluded.scheduled_at,
+    status = excluded.status,
+    purpose = excluded.purpose,
+    updated_at = now();
+
+  -- Week calendar spread (past + future days for appointments page & analytics)
+  insert into public.appointments (id, organization_id, branch_id, patient_id, scheduled_at, duration_minutes, purpose, status)
+  values
+    ('de000108-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, 'de000009-0000-4000-8000-000000000009'::uuid,
+      ((v_manila_today - 1) + time '10:00') at time zone 'Asia/Manila', 30, 'Follow-up cleaning', 'completed'),
+    ('de000108-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'de00000a-0000-4000-8000-00000000000a'::uuid,
+      ((v_manila_today - 2) + time '11:30') at time zone 'Asia/Manila', 45, 'Extraction consult', 'cancelled'),
+    ('de000108-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, 'de00000b-0000-4000-8000-00000000000b'::uuid,
+      ((v_manila_today - 4) + time '09:00') at time zone 'Asia/Manila', 30, 'Ortho adjustment', 'no_show'),
+    ('de000108-0000-4000-8000-000000000004'::uuid, v_org_id, v_branch_id, 'de00000c-0000-4000-8000-00000000000c'::uuid,
+      ((v_manila_today - 3) + time '15:00') at time zone 'Asia/Manila', 30, 'Oral exam', 'completed'),
+    ('de000108-0000-4000-8000-000000000005'::uuid, v_org_id, v_branch_id, v_patient1,
+      ((v_manila_today + 1) + time '09:30') at time zone 'Asia/Manila', 30, 'Post-op check', 'scheduled'),
+    ('de000108-0000-4000-8000-000000000006'::uuid, v_org_id, v_branch_id, 'de000002-0000-4000-8000-000000000002'::uuid,
+      ((v_manila_today + 1) + time '14:00') at time zone 'Asia/Manila', 45, 'Filling #46', 'confirmed'),
+    ('de000108-0000-4000-8000-000000000007'::uuid, v_org_id, v_branch_id, 'de000003-0000-4000-8000-000000000003'::uuid,
+      ((v_manila_today + 2) + time '10:30') at time zone 'Asia/Manila', 30, 'Prophylaxis', 'scheduled'),
+    ('de000108-0000-4000-8000-000000000008'::uuid, v_org_id, v_branch_id, 'de000004-0000-4000-8000-000000000004'::uuid,
+      ((v_manila_today + 3) + time '11:00') at time zone 'Asia/Manila', 60, 'Root canal', 'confirmed'),
+    ('de000108-0000-4000-8000-000000000009'::uuid, v_org_id, v_branch_id, 'de000005-0000-4000-8000-000000000005'::uuid,
+      ((v_manila_today + 4) + time '08:30') at time zone 'Asia/Manila', 30, 'Whitening consult', 'scheduled'),
+    ('de000108-0000-4000-8000-00000000000a'::uuid, v_org_id, v_branch_id, 'de000007-0000-4000-8000-000000000007'::uuid,
+      ((v_manila_today - 5) + time '13:00') at time zone 'Asia/Manila', 30, 'Crown delivery', 'completed'),
+    ('de000108-0000-4000-8000-00000000000b'::uuid, v_org_id, v_branch_id, 'de000008-0000-4000-8000-000000000008'::uuid,
+      ((v_manila_today - 6) + time '16:00') at time zone 'Asia/Manila', 30, 'Denture adjustment', 'completed'),
+    ('de000108-0000-4000-8000-00000000000c'::uuid, v_org_id, v_branch_id, 'de000006-0000-4000-8000-000000000006'::uuid,
+      ((v_manila_today + 5) + time '09:00') at time zone 'Asia/Manila', 30, 'Recall exam', 'scheduled')
+  on conflict (id) do update set
+    scheduled_at = excluded.scheduled_at,
+    status = excluded.status,
+    purpose = excluded.purpose,
+    updated_at = now();
+
+  -- Queue (8 active)
+  insert into public.queue_entries (
+    id, organization_id, branch_id, patient_id, appointment_id, display_code, status, chair_label, checked_in_at, called_at
+  )
+  values
+    ('de000201-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, v_patient1, 'de000101-0000-4000-8000-000000000001'::uuid, 'Q001', 'in_chair', 'Chair 2', now() - interval '45 minutes', now() - interval '40 minutes'),
+    ('de000201-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'de000002-0000-4000-8000-000000000002'::uuid, 'de000102-0000-4000-8000-000000000002'::uuid, 'Q002', 'now_serving', null, now() - interval '35 minutes', now() - interval '5 minutes'),
+    ('de000201-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, 'de000003-0000-4000-8000-000000000003'::uuid, 'de000103-0000-4000-8000-000000000003'::uuid, 'Q003', 'ready', null, now() - interval '25 minutes', null),
+    ('de000201-0000-4000-8000-000000000004'::uuid, v_org_id, v_branch_id, 'de000004-0000-4000-8000-000000000004'::uuid, null, 'Q004', 'waiting', null, now() - interval '20 minutes', null),
+    ('de000201-0000-4000-8000-000000000005'::uuid, v_org_id, v_branch_id, 'de000005-0000-4000-8000-000000000005'::uuid, null, 'Q005', 'waiting', null, now() - interval '18 minutes', null),
+    ('de000201-0000-4000-8000-000000000006'::uuid, v_org_id, v_branch_id, 'de000006-0000-4000-8000-000000000006'::uuid, null, 'Q006', 'waiting', null, now() - interval '15 minutes', null),
+    ('de000201-0000-4000-8000-000000000007'::uuid, v_org_id, v_branch_id, 'de000007-0000-4000-8000-000000000007'::uuid, null, 'Q007', 'ready', null, now() - interval '12 minutes', null),
+    ('de000201-0000-4000-8000-000000000008'::uuid, v_org_id, v_branch_id, 'de000008-0000-4000-8000-000000000008'::uuid, null, 'Q008', 'waiting', null, now() - interval '8 minutes', null)
+  on conflict (id) do update set
+    status = excluded.status,
+    display_code = excluded.display_code,
+    chair_label = excluded.chair_label,
+    checked_in_at = excluded.checked_in_at,
+    called_at = excluded.called_at,
+    updated_at = now();
+
+  -- Consents: pending + signed mix
+  insert into public.patient_consents (
+    id, patient_id, organization_id, branch_id, template_slug, template_name, status,
+    signed_at, signature_data, field_responses, body_snapshot
+  )
+  values
+    ('de000401-0000-4000-8000-000000000001'::uuid, v_patient1, v_org_id, v_branch_id, 'dpa-consent', 'Data Privacy Act (DPA) Consent', 'pending', null, null, null, null),
+    ('de000401-0000-4000-8000-000000000002'::uuid, 'de000002-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'general-treatment', 'General Treatment Consent', 'signed',
+      now() - interval '3 days', v_sig_stub,
+      '{"emergency_contact": "Juan Reyes / +639171234002", "procedure_acknowledged": true, "questions_answered": true, "patient_initials": "JR"}'::jsonb,
+      'General Treatment Consent â€” signed for showcase demo.'),
+    ('de000401-0000-4000-8000-000000000003'::uuid, 'de000003-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, 'ortho-agreement', 'Orthodontic Agreement', 'pending', null, null, null, null),
+    ('de000401-0000-4000-8000-000000000004'::uuid, 'de000004-0000-4000-8000-000000000004'::uuid, v_org_id, v_branch_id, 'dpa-consent', 'Data Privacy Act (DPA) Consent', 'signed',
+      now() - interval '14 days', v_sig_stub, '{}'::jsonb, 'DPA Consent â€” signed for showcase demo.'),
+    ('de000401-0000-4000-8000-000000000005'::uuid, 'de000005-0000-4000-8000-000000000005'::uuid, v_org_id, v_branch_id, 'general-treatment', 'General Treatment Consent', 'signed',
+      now() - interval '7 days', v_sig_stub,
+      '{"emergency_contact": "Liza Mendoza / +639171234005", "procedure_acknowledged": true}'::jsonb,
+      'General Treatment Consent â€” signed for showcase demo.'),
+    ('de000401-0000-4000-8000-000000000006'::uuid, 'de000006-0000-4000-8000-000000000006'::uuid, v_org_id, v_branch_id, 'dpa-consent', 'Data Privacy Act (DPA) Consent', 'pending', null, null, null, null)
+  on conflict (patient_id, template_slug) do update set
+    status = excluded.status,
+    branch_id = excluded.branch_id,
+    signed_at = excluded.signed_at,
+    signature_data = excluded.signature_data,
+    field_responses = excluded.field_responses,
+    body_snapshot = excluded.body_snapshot;
+
+  -- Waitlist (if table exists)
+  if to_regclass('public.waitlist_entries') is not null then
+    insert into public.waitlist_entries (id, organization_id, branch_id, patient_id, status, urgency, preferred_date, notes)
+    values
+      ('de000501-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, 'de000009-0000-4000-8000-000000000009'::uuid, 'waiting', 'urgent', v_manila_today + 1, 'Pain Ã¢â‚¬â€ wants earliest slot'),
+      ('de000501-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'de00000a-0000-4000-8000-00000000000a'::uuid, 'contacted', 'normal', v_manila_today + 3, 'Callback for cleaning'),
+      ('de000501-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, 'de00000b-0000-4000-8000-00000000000b'::uuid, 'waiting', 'normal', v_manila_today + 5, 'Ortho consult Ã¢â‚¬â€ flexible schedule')
+    on conflict (id) do update set
+      status = excluded.status,
+      preferred_date = excluded.preferred_date,
+      updated_at = now();
+  end if;
+
+  -- Treatment plan
+  insert into public.treatment_plans (id, organization_id, branch_id, patient_id, title, status, total_estimated, notes)
+  values (
+    'de000a01-0000-4000-8000-000000000001'::uuid,
+    v_org_id,
+    v_branch_id,
+    v_patient1,
+    'Restorative plan Ã¢â‚¬â€ Maria Santos',
+    'proposed',
+    18500,
+    'Demo treatment plan for showcase'
+  )
+  on conflict (id) do update set
+    title = excluded.title,
+    status = excluded.status,
+    total_estimated = excluded.total_estimated,
+    updated_at = now();
+
+  insert into public.treatment_plan_items (id, plan_id, procedure_id, tooth_number, description, estimated_price, priority, status)
+  values
+    ('de000a02-0000-4000-8000-000000000001'::uuid, 'de000a01-0000-4000-8000-000000000001'::uuid, v_proc_fill, '36', 'Composite filling #36', 3500, 'restorative', 'planned'),
+    ('de000a02-0000-4000-8000-000000000002'::uuid, 'de000a01-0000-4000-8000-000000000001'::uuid, v_proc_proph, null, 'Prophylaxis / Cleaning', 2500, 'restorative', 'planned')
+  on conflict (id) do update set
+    description = excluded.description,
+    estimated_price = excluded.estimated_price;
+
+  -- Invoices (mix open / partial / paid + overdue)
+  insert into public.invoices (id, organization_id, branch_id, patient_id, treatment_plan_id, invoice_number, total_amount, paid_amount, status, due_date)
+  values
+    ('de000301-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, v_patient1, 'de000a01-0000-4000-8000-000000000001'::uuid, 'DEMO-INV-001', 8500, 0, 'sent', v_manila_today + 14),
+    ('de000301-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'de000002-0000-4000-8000-000000000002'::uuid, null, 'DEMO-INV-002', 12000, 5000, 'partial', v_manila_today - 3),
+    ('de000301-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, 'de000003-0000-4000-8000-000000000003'::uuid, null, 'DEMO-INV-003', 3500, 3500, 'paid', v_manila_today),
+    ('de000301-0000-4000-8000-000000000004'::uuid, v_org_id, v_branch_id, 'de000004-0000-4000-8000-000000000004'::uuid, null, 'DEMO-INV-004', 5000, 0, 'draft', v_manila_today + 7),
+    ('de000301-0000-4000-8000-000000000005'::uuid, v_org_id, v_branch_id, 'de000005-0000-4000-8000-000000000005'::uuid, null, 'DEMO-INV-005', 15000, 8000, 'partial', v_manila_today - 7),
+    ('de000301-0000-4000-8000-000000000006'::uuid, v_org_id, v_branch_id, 'de000006-0000-4000-8000-000000000006'::uuid, null, 'DEMO-INV-006', 2500, 2500, 'paid', v_manila_today)
+  on conflict (id) do update set
+    total_amount = excluded.total_amount,
+    paid_amount = excluded.paid_amount,
+    status = excluded.status,
+    due_date = excluded.due_date,
+    updated_at = now();
+
+  if to_regclass('public.invoice_line_items') is not null then
+    insert into public.invoice_line_items (id, invoice_id, organization_id, procedure_id, description, tooth_number, quantity, unit_price, line_total, sort_order)
+    values
+      ('de000311-0000-4000-8000-000000000001'::uuid, 'de000301-0000-4000-8000-000000000001'::uuid, v_org_id, v_proc_exam, 'Oral Examination', null, 1, 500, 500, 0),
+      ('de000311-0000-4000-8000-000000000002'::uuid, 'de000301-0000-4000-8000-000000000001'::uuid, v_org_id, v_proc_proph, 'Prophylaxis / Cleaning', null, 1, 2500, 2500, 1),
+      ('de000311-0000-4000-8000-000000000003'::uuid, 'de000301-0000-4000-8000-000000000001'::uuid, v_org_id, v_proc_fill, 'Composite Filling', '36', 1, 5500, 5500, 2)
+    on conflict (id) do update set
+      line_total = excluded.line_total,
+      unit_price = excluded.unit_price;
+  end if;
+
+  -- Payments today (today_collected KPI)
+  insert into public.invoice_payments (id, invoice_id, organization_id, amount, payment_method, notes, created_at)
+  values
+    ('de000321-0000-4000-8000-000000000001'::uuid, 'de000301-0000-4000-8000-000000000003'::uuid, v_org_id, 3500, 'gcash', 'Demo payment Ã¢â‚¬â€ full', now() - interval '2 hours'),
+    ('de000321-0000-4000-8000-000000000002'::uuid, 'de000301-0000-4000-8000-000000000006'::uuid, v_org_id, 2500, 'cash', 'Demo payment Ã¢â‚¬â€ cleaning', now() - interval '1 hour'),
+    ('de000321-0000-4000-8000-000000000003'::uuid, 'de000301-0000-4000-8000-000000000002'::uuid, v_org_id, 5000, 'card', 'Demo partial payment', now() - interval '30 minutes'),
+    ('de000322-0000-4000-8000-000000000001'::uuid, 'de000301-0000-4000-8000-000000000005'::uuid, v_org_id, 3000, 'gcash', 'Demo payment â€” day -1', (v_manila_today - 1) + time '17:00'),
+    ('de000322-0000-4000-8000-000000000002'::uuid, 'de000301-0000-4000-8000-000000000002'::uuid, v_org_id, 2000, 'cash', 'Demo payment â€” day -2', (v_manila_today - 2) + time '16:30'),
+    ('de000322-0000-4000-8000-000000000003'::uuid, 'de000301-0000-4000-8000-000000000001'::uuid, v_org_id, 1500, 'card', 'Demo payment â€” day -3', (v_manila_today - 3) + time '15:00'),
+    ('de000322-0000-4000-8000-000000000004'::uuid, 'de000301-0000-4000-8000-000000000006'::uuid, v_org_id, 2500, 'gcash', 'Demo payment â€” day -4', (v_manila_today - 4) + time '12:00'),
+    ('de000322-0000-4000-8000-000000000005'::uuid, 'de000301-0000-4000-8000-000000000003'::uuid, v_org_id, 1000, 'cash', 'Demo payment â€” day -5', (v_manila_today - 5) + time '11:00'),
+    ('de000322-0000-4000-8000-000000000006'::uuid, 'de000301-0000-4000-8000-000000000005'::uuid, v_org_id, 4000, 'card', 'Demo payment â€” day -6', (v_manila_today - 6) + time '14:00'),
+    ('de000322-0000-4000-8000-000000000007'::uuid, 'de000301-0000-4000-8000-000000000002'::uuid, v_org_id, 2500, 'gcash', 'Demo payment â€” day -7', (v_manila_today - 7) + time '10:30')
+  on conflict (id) do update set
+    amount = excluded.amount,
+    created_at = excluded.created_at;
+
+  -- Clinical notes: signed for Maria; completed appts without signed notes for KPI
+  insert into public.clinical_notes (
+    id, patient_id, organization_id, branch_id, appointment_id, title, subjective, objective, assessment, plan, status, signed_at
+  )
+  values
+    ('de000601-0000-4000-8000-000000000001'::uuid, v_patient1, v_org_id, v_branch_id, 'de000101-0000-4000-8000-000000000001'::uuid,
+      'Routine check-up', 'No complaints', 'Mild plaque #36', 'Gingivitis', 'Prophylaxis + filling', 'signed', now() - interval '1 hour'),
+    ('de000601-0000-4000-8000-000000000002'::uuid, 'de000006-0000-4000-8000-000000000006'::uuid, v_org_id, v_branch_id, null,
+      'Draft note', 'Sensitivity cold', 'Pending exam', null, null, 'draft', null)
+  on conflict (id) do update set
+    status = excluded.status,
+    signed_at = excluded.signed_at,
+    updated_at = now();
+
+  -- Low stock inventory
+  insert into public.inventory_items (id, organization_id, branch_id, name, sku, category, unit, quantity_on_hand, min_stock_level, is_active)
+  values
+    ('de000701-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, 'Composite resin A2', 'COMP-A2', 'restorative', 'syringe', 2, 5, true),
+    ('de000701-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'Nitrile gloves (M)', 'GLV-M', 'consumable', 'box', 1, 10, true),
+    ('de000701-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, 'Prophy paste', 'PROPHY-01', 'preventive', 'jar', 3, 5, true)
+  on conflict (id) do update set
+    quantity_on_hand = excluded.quantity_on_hand,
+    min_stock_level = excluded.min_stock_level,
+    updated_at = now();
+
+  -- HMO draft claims
+  insert into public.hmo_claims (id, organization_id, branch_id, patient_id, invoice_id, provider_id, claim_number, member_id, claimed_amount, status)
+  values
+    ('de000801-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, v_patient1, 'de000301-0000-4000-8000-000000000001'::uuid, v_hmo_provider, 'DEMO-HMO-001', 'MAX-123456', 8500, 'draft'),
+    ('de000801-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'de000002-0000-4000-8000-000000000002'::uuid, 'de000301-0000-4000-8000-000000000002'::uuid, v_hmo_provider, 'DEMO-HMO-002', 'MAX-789012', 12000, 'draft')
+  on conflict (id) do update set
+    status = excluded.status,
+    claimed_amount = excluded.claimed_amount,
+    updated_at = now();
+
+  -- PhilHealth pending claims
+  insert into public.philhealth_claims (id, organization_id, branch_id, patient_id, philhealth_id, case_rate_code, status, checklist, notes)
+  values
+    ('de000901-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, 'de000008-0000-4000-8000-000000000008'::uuid, '12-345678901-2', 'PROPH', 'checklist_incomplete', '{"member_id": true, "diagnosis": false}'::jsonb, 'Demo PhilHealth claim'),
+    ('de000901-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'de000009-0000-4000-8000-000000000009'::uuid, '12-987654321-0', 'FILL', 'ready', '{"member_id": true, "diagnosis": true}'::jsonb, 'Ready for sync stub')
+  on conflict (id) do update set
+    status = excluded.status,
+    checklist = excluded.checklist,
+    updated_at = now();
+
+  -- Medical histories (versioned + risk flags)
+  if to_regclass('public.patient_medical_histories') is not null then
+    insert into public.patient_medical_histories (id, patient_id, organization_id, version, allergies, medications, conditions, notes, created_by)
+    values
+      ('de000e01-0000-4000-8000-000000000001'::uuid, v_patient1, v_org_id, 1,
+        '["Penicillin"]'::jsonb, '["Metformin 500mg"]'::jsonb, '["Type 2 Diabetes"]'::jsonb, 'Initial intake', v_provider_id),
+      ('de000e01-0000-4000-8000-000000000002'::uuid, v_patient1, v_org_id, 2,
+        '["Penicillin", "Latex"]'::jsonb, '["Metformin 500mg", "Losartan 50mg"]'::jsonb, '["Type 2 Diabetes", "Hypertension"]'::jsonb, 'Updated at recall', v_provider_id),
+      ('de000e01-0000-4000-8000-000000000003'::uuid, 'de000002-0000-4000-8000-000000000002'::uuid, v_org_id, 1,
+        '[]'::jsonb, '["Amlodipine 5mg"]'::jsonb, '["Hypertension"]'::jsonb, null, v_provider_id),
+      ('de000e01-0000-4000-8000-000000000004'::uuid, 'de000008-0000-4000-8000-000000000008'::uuid, v_org_id, 1,
+        '["Aspirin"]'::jsonb, '[]'::jsonb, '["Asthma"]'::jsonb, 'PhilHealth member', v_provider_id),
+      ('de000e01-0000-4000-8000-000000000005'::uuid, 'de00000b-0000-4000-8000-00000000000b'::uuid, v_org_id, 1,
+        '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, 'No significant history', v_provider_id)
+    on conflict (id) do update set
+      allergies = excluded.allergies,
+      medications = excluded.medications,
+      conditions = excluded.conditions,
+      notes = excluded.notes;
+  end if;
+
+  -- Insurance profiles
+  if to_regclass('public.patient_insurance_profiles') is not null then
+    insert into public.patient_insurance_profiles (id, organization_id, patient_id, payer_type, payer_name, member_id, plan_name, is_primary, notes)
+    values
+      ('de001001-0000-4000-8000-000000000001'::uuid, v_org_id, v_patient1, 'hmo', 'Maxicare', 'MAX-123456', 'Executive Plan', true, 'Primary HMO'),
+      ('de001001-0000-4000-8000-000000000002'::uuid, v_org_id, 'de000008-0000-4000-8000-000000000008'::uuid, 'philhealth', 'PhilHealth', '12-345678901-2', 'Member', true, 'PhilHealth PROPH case rate'),
+      ('de001001-0000-4000-8000-000000000003'::uuid, v_org_id, 'de000004-0000-4000-8000-000000000004'::uuid, 'private', 'Self-pay', null, null, true, 'Cash / card'),
+      ('de001001-0000-4000-8000-000000000004'::uuid, v_org_id, 'de000002-0000-4000-8000-000000000002'::uuid, 'hmo', 'Intellicare', 'INT-445566', 'Corporate', true, 'Employer HMO')
+    on conflict (patient_id, payer_type) do update set
+      payer_name = excluded.payer_name,
+      member_id = excluded.member_id,
+      plan_name = excluded.plan_name,
+      notes = excluded.notes,
+      updated_at = now();
+  end if;
+
+  -- Patient documents (metadata â€” preview needs storage upload separately)
+  if to_regclass('public.patient_documents') is not null then
+    insert into public.patient_documents (id, organization_id, branch_id, patient_id, file_name, file_type, file_size, storage_path, category, notes, uploaded_by)
+    values
+      ('de000f01-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, v_patient1, 'panoramic-xray-2026.jpg', 'image/jpeg', 245000,
+        v_org_id::text || '/' || v_patient1::text || '/panoramic-xray-2026.jpg', 'xray', 'Initial panoramic', v_provider_id),
+      ('de000f01-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, v_patient1, 'valid-id.jpg', 'image/jpeg', 120000,
+        v_org_id::text || '/' || v_patient1::text || '/valid-id.jpg', 'id', 'Government ID on file', v_provider_id),
+      ('de000f01-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, 'de000002-0000-4000-8000-000000000002'::uuid, 'periapical-36.png', 'image/png', 89000,
+        v_org_id::text || '/de000002-0000-4000-8000-000000000002/periapical-36.png', 'xray', 'Tooth #36 PA', v_provider_id),
+      ('de000f01-0000-4000-8000-000000000004'::uuid, v_org_id, v_branch_id, 'de000008-0000-4000-8000-000000000008'::uuid, 'hmo-letter.pdf', 'application/pdf', 56000,
+        v_org_id::text || '/de000008-0000-4000-8000-000000000008/hmo-letter.pdf', 'insurance', 'LOA from HMO', v_provider_id),
+      ('de000f01-0000-4000-8000-000000000005'::uuid, v_org_id, v_branch_id, 'de000007-0000-4000-8000-000000000007'::uuid, 'referral-endo.pdf', 'application/pdf', 42000,
+        v_org_id::text || '/de000007-0000-4000-8000-000000000007/referral-endo.pdf', 'referral', 'Endo referral', v_provider_id)
+    on conflict (id) do update set
+      file_name = excluded.file_name,
+      category = excluded.category,
+      notes = excluded.notes;
+  end if;
+
+  -- Ortho cases + adjustment timeline
+  if to_regclass('public.ortho_cases') is not null then
+    insert into public.ortho_cases (id, organization_id, branch_id, patient_id, status, appliance_type, start_date, contract_amount, notes, created_by)
+    values
+      (v_ortho_case1, v_org_id, v_branch_id, 'de00000b-0000-4000-8000-00000000000b'::uuid, 'active', 'Metal braces', v_manila_today - 180, 85000, '18-month contract â€” showcase', v_provider_id),
+      (v_ortho_case2, v_org_id, v_branch_id, 'de000007-0000-4000-8000-000000000007'::uuid, 'active', 'Clear aligners', v_manila_today - 90, 120000, 'Invisalign-style plan', v_provider_id)
+    on conflict (id) do update set
+      status = excluded.status,
+      contract_amount = excluded.contract_amount,
+      notes = excluded.notes,
+      updated_at = now();
+
+    insert into public.ortho_adjustments (id, organization_id, branch_id, case_id, adjustment_date, procedure, next_procedure, next_visit_date, payment_amount, notes, created_by)
+    values
+      ('de000d02-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, v_ortho_case1, v_manila_today - 60, 'Wire change U/L', 'Elastic training', v_manila_today - 30, 3500, null, v_provider_id),
+      ('de000d02-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, v_ortho_case1, v_manila_today - 30, 'Elastic training', 'Wire change', v_manila_today, 3500, null, v_provider_id),
+      ('de000d02-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, v_ortho_case1, v_manila_today - 7, 'Monthly adjustment', 'Wire change', v_manila_today + 21, 3500, 'Good cooperation', v_provider_id),
+      ('de000d02-0000-4000-8000-000000000004'::uuid, v_org_id, v_branch_id, v_ortho_case2, v_manila_today - 45, 'Aligner set #3', 'Aligner set #4', v_manila_today - 15, 8000, null, v_provider_id),
+      ('de000d02-0000-4000-8000-000000000005'::uuid, v_org_id, v_branch_id, v_ortho_case2, v_manila_today - 15, 'Aligner set #4', 'Aligner set #5', v_manila_today + 15, 8000, null, v_provider_id),
+      ('de000d02-0000-4000-8000-000000000006'::uuid, v_org_id, v_branch_id, v_ortho_case2, v_manila_today - 1, 'IPR #12-22', 'Aligner set #5', v_manila_today + 14, 0, 'Minor IPR', v_provider_id)
+    on conflict (id) do update set
+      procedure = excluded.procedure,
+      payment_amount = excluded.payment_amount,
+      adjustment_date = excluded.adjustment_date;
+  end if;
+
+  -- Kiosk intake drafts (patients page panel)
+  if to_regclass('public.patient_intakes') is not null then
+    insert into public.patient_intakes (id, organization_id, branch_id, patient_id, status, payload, created_at)
+    values
+      ('de001301-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, null, 'draft',
+        '{"first_name": "Sofia", "last_name": "Navarro", "phone": "+639178880001", "email": "sofia.n@example.ph", "date_of_birth": "1997-04-12", "medical_alerts": "Latex allergy"}'::jsonb,
+        now() - interval '2 hours'),
+      ('de001301-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, null, 'draft',
+        '{"first_name": "Rafael", "last_name": "Lim", "phone": "+639178880002", "gender": "male", "address": "BGC, Taguig"}'::jsonb,
+        now() - interval '45 minutes'),
+      ('de001301-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, null, 'draft',
+        '{"first_name": "Grace", "last_name": "Tan", "phone": "+639178880003", "purpose": "Walk-in toothache"}'::jsonb,
+        now() - interval '20 minutes'),
+      ('de001301-0000-4000-8000-000000000004'::uuid, v_org_id, v_branch_id, null, 'draft',
+        '{"first_name": "Kevin", "last_name": "Ong", "phone": "+639178880004", "referral": "Ortho consult"}'::jsonb,
+        now() - interval '10 minutes')
+    on conflict (id) do update set
+      payload = excluded.payload,
+      status = excluded.status;
+  end if;
+
+  -- Audit trail (settings/audit + analytics)
+  if to_regclass('public.organization_audit_logs') is not null then
+    insert into public.organization_audit_logs (id, organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata, created_at)
+    values
+      ('de001101-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, v_provider_id, 'patient.create', 'patient', v_patient1::text, '{"source": "demo_seed"}'::jsonb, now() - interval '6 days'),
+      ('de001101-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, v_provider_id, 'appointment.check_in', 'appointment', 'de000103-0000-4000-8000-000000000003', '{}'::jsonb, now() - interval '25 minutes'),
+      ('de001101-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, v_provider_id, 'invoice.payment', 'invoice', 'de000301-0000-4000-8000-000000000003', '{"amount": 3500, "method": "gcash"}'::jsonb, now() - interval '2 hours'),
+      ('de001101-0000-4000-8000-000000000004'::uuid, v_org_id, v_branch_id, v_provider_id, 'consent.signed', 'patient_consent', 'de000401-0000-4000-8000-000000000002', '{"template": "general-treatment"}'::jsonb, now() - interval '3 days'),
+      ('de001101-0000-4000-8000-000000000005'::uuid, v_org_id, v_branch_id, v_provider_id, 'inventory.adjust', 'inventory_item', 'de000701-0000-4000-8000-000000000001', '{"delta": -1}'::jsonb, now() - interval '1 day'),
+      ('de001101-0000-4000-8000-000000000006'::uuid, v_org_id, v_branch_id, v_provider_id, 'treatment_plan.create', 'treatment_plan', 'de000a01-0000-4000-8000-000000000001', '{}'::jsonb, now() - interval '5 days'),
+      ('de001101-0000-4000-8000-000000000007'::uuid, v_org_id, v_branch_id, v_provider_id, 'hmo_claim.draft', 'hmo_claim', 'de000801-0000-4000-8000-000000000001', '{}'::jsonb, now() - interval '4 days'),
+      ('de001101-0000-4000-8000-000000000008'::uuid, v_org_id, v_branch_id, v_provider_id, 'queue.check_in', 'queue_entry', 'de000201-0000-4000-8000-000000000004', '{}'::jsonb, now() - interval '20 minutes'),
+      ('de001101-0000-4000-8000-000000000009'::uuid, v_org_id, v_branch_id, v_provider_id, 'patient.update', 'patient', 'de000003-0000-4000-8000-000000000003'::text, '{"field": "phone"}'::jsonb, now() - interval '2 days'),
+      ('de001101-0000-4000-8000-00000000000a'::uuid, v_org_id, v_branch_id, v_provider_id, 'clinical_note.sign', 'clinical_note', 'de000601-0000-4000-8000-000000000001', '{}'::jsonb, now() - interval '1 hour')
+    on conflict (id) do update set
+      action = excluded.action,
+      metadata = excluded.metadata,
+      created_at = excluded.created_at;
+  end if;
+
+  if to_regclass('public.session_audit_logs') is not null and v_provider_id is not null then
+    insert into public.session_audit_logs (id, profile_id, organization_id, event_type, ip_address, created_at)
+    values
+      ('de001102-0000-4000-8000-000000000001'::uuid, v_provider_id, v_org_id, 'login', '203.177.0.1', now() - interval '8 hours'),
+      ('de001102-0000-4000-8000-000000000002'::uuid, v_provider_id, v_org_id, 'logout', '203.177.0.1', now() - interval '7 hours'),
+      ('de001102-0000-4000-8000-000000000003'::uuid, v_provider_id, v_org_id, 'login', '203.177.0.1', now() - interval '30 minutes')
+    on conflict (id) do update set
+      event_type = excluded.event_type,
+      created_at = excluded.created_at;
+  end if;
+
+  -- Notification logs (settings/notifications)
+  if to_regclass('public.notification_logs') is not null then
+    insert into public.notification_logs (id, organization_id, branch_id, patient_id, template_key, recipient_phone, body_preview, status, created_at)
+    values
+      ('de001201-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, v_patient1, 'appointment_reminder_24h', '+639171234001', 'Reminder: appt tomorrow 9:00 AM at Dentali.', 'delivered', now() - interval '1 day'),
+      ('de001201-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'de000002-0000-4000-8000-000000000002'::uuid, 'appointment_reminder_2h', '+639171234002', 'Your appointment is in 2 hours.', 'sent', now() - interval '3 hours'),
+      ('de001201-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, 'de000003-0000-4000-8000-000000000003'::uuid, 'payment_receipt', '+639171234003', 'Payment received: PHP 3,500. Thank you!', 'delivered', now() - interval '2 hours'),
+      ('de001201-0000-4000-8000-000000000004'::uuid, v_org_id, v_branch_id, 'de000009-0000-4000-8000-000000000009'::uuid, 'waitlist_slot', '+639171234009', 'A slot opened Thu 2pm â€” reply YES to book.', 'failed', now() - interval '5 hours'),
+      ('de001201-0000-4000-8000-000000000005'::uuid, v_org_id, v_branch_id, 'de000007-0000-4000-8000-000000000007'::uuid, 'appointment_reminder_24h', '+639171234007', 'Reminder: crown prep tomorrow.', 'dry_run', now() - interval '12 hours'),
+      ('de001201-0000-4000-8000-000000000006'::uuid, v_org_id, v_branch_id, v_patient1, 'consent_signing_link', '+639171234001', 'Sign your consent: https://dentali.ph/sign/demo', 'sent', now() - interval '6 hours')
+    on conflict (id) do update set
+      status = excluded.status,
+      body_preview = excluded.body_preview,
+      created_at = excluded.created_at;
+  end if;
+
+  -- Staff invitations (settings/staff pending section)
+  if to_regclass('public.staff_invitations') is not null and v_role_dentist is not null then
+    insert into public.staff_invitations (id, organization_id, branch_id, role_id, email, full_name, status, invited_by)
+    values
+      ('de001401-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, v_role_dentist, 'dr.santos.demo@example.ph', 'Dr. Paolo Santos', 'pending', v_provider_id),
+      ('de001401-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, coalesce(v_role_receptionist, v_role_dentist), 'reception.demo@example.ph', 'Aira Mendoza', 'pending', v_provider_id)
+    on conflict (id) do update set
+      email = excluded.email,
+      full_name = excluded.full_name,
+      status = excluded.status;
+  end if;
+
+  -- Extra branches + clinic hours (multi-branch settings & benchmark)
+  insert into public.branches (id, organization_id, name, address, contact_number, is_active)
+  values
+    (v_branch2_id, v_org_id, 'Dentali Makati Branch', 'Ayala Ave, Makati City, Metro Manila', '+63288123456', true),
+    (v_branch3_id, v_org_id, 'Dentali QC Branch', 'Timog Ave, Quezon City, Metro Manila', '+63289876543', true)
+  on conflict (id) do update set
+    name = excluded.name,
+    address = excluded.address,
+    contact_number = excluded.contact_number,
+    is_active = excluded.is_active,
+    updated_at = now();
+
+  if to_regprocedure('public.ensure_branch_clinic_hours(uuid)') is not null then
+    perform public.ensure_branch_clinic_hours(v_branch_id);
+    perform public.ensure_branch_clinic_hours(v_branch2_id);
+    perform public.ensure_branch_clinic_hours(v_branch3_id);
+  end if;
+
+  if to_regclass('public.clinic_hours') is not null then
+    insert into public.clinic_hours (branch_id, day_of_week, open_time, close_time, is_closed)
+    values
+      (v_branch_id, 6, '09:00'::time, '13:00'::time, false)
+    on conflict (branch_id, day_of_week) do update set
+      open_time = excluded.open_time,
+      close_time = excluded.close_time,
+      is_closed = excluded.is_closed;
+  end if;
+
+  -- Branch 2 sample appointments for benchmark
+  insert into public.appointments (id, organization_id, branch_id, patient_id, scheduled_at, duration_minutes, purpose, status)
+  values
+    ('de001601-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch2_id, 'de000009-0000-4000-8000-000000000009'::uuid,
+      (v_manila_today + time '10:00') at time zone 'Asia/Manila', 30, 'Makati â€” cleaning', 'scheduled'),
+    ('de001601-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch2_id, 'de00000a-0000-4000-8000-00000000000a'::uuid,
+      (v_manila_today + time '11:00') at time zone 'Asia/Manila', 45, 'Makati â€” extraction', 'confirmed'),
+    ('de001601-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch3_id, 'de00000c-0000-4000-8000-00000000000c'::uuid,
+      (v_manila_today + time '14:30') at time zone 'Asia/Manila', 30, 'QC â€” check-up', 'scheduled')
+  on conflict (id) do update set
+    scheduled_at = excluded.scheduled_at,
+    status = excluded.status;
+
+  -- Provider availability grid (appointments page)
+  if to_regclass('public.provider_availability') is not null and v_provider_id is not null then
+    insert into public.provider_availability (id, organization_id, branch_id, provider_id, day_of_week, start_time, end_time, slot_minutes, is_available)
+    values
+      ('de001701-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, v_provider_id, 1, '09:00', '18:00', 30, true),
+      ('de001701-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, v_provider_id, 2, '09:00', '18:00', 30, true),
+      ('de001701-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, v_provider_id, 3, '09:00', '18:00', 30, true),
+      ('de001701-0000-4000-8000-000000000004'::uuid, v_org_id, v_branch_id, v_provider_id, 4, '09:00', '18:00', 30, true),
+      ('de001701-0000-4000-8000-000000000005'::uuid, v_org_id, v_branch_id, v_provider_id, 5, '09:00', '17:00', 30, true),
+      ('de001701-0000-4000-8000-000000000006'::uuid, v_org_id, v_branch_id, v_provider_id, 6, '09:00', '13:00', 30, true),
+      ('de001701-0000-4000-8000-000000000007'::uuid, v_org_id, v_branch_id, v_provider_id, 0, '09:00', '12:00', 30, false)
+    on conflict (branch_id, provider_id, day_of_week) do update set
+      start_time = excluded.start_time,
+      end_time = excluded.end_time,
+      is_available = excluded.is_available;
+  end if;
+
+  -- Closeout history (reports/closeout)
+  if to_regclass('public.closeout_snapshots') is not null then
+    insert into public.closeout_snapshots (id, organization_id, branch_id, snapshot_date, payload, created_by, created_at)
+    values
+      ('de001501-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, v_manila_today - 1,
+        jsonb_build_object('appointments_completed', 8, 'collected', 18500, 'open_invoices', 4), v_provider_id, (v_manila_today - 1) + time '18:30'),
+      ('de001501-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, v_manila_today - 2,
+        jsonb_build_object('appointments_completed', 6, 'collected', 12200, 'open_invoices', 5), v_provider_id, (v_manila_today - 2) + time '18:15'),
+      ('de001501-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, v_manila_today - 3,
+        jsonb_build_object('appointments_completed', 9, 'collected', 21000, 'open_invoices', 3), v_provider_id, (v_manila_today - 3) + time '18:45'),
+      ('de001501-0000-4000-8000-000000000004'::uuid, v_org_id, v_branch_id, v_manila_today - 4,
+        jsonb_build_object('appointments_completed', 5, 'collected', 9800, 'open_invoices', 6), v_provider_id, (v_manila_today - 4) + time '18:00'),
+      ('de001501-0000-4000-8000-000000000005'::uuid, v_org_id, v_branch_id, v_manila_today - 5,
+        jsonb_build_object('appointments_completed', 7, 'collected', 15600, 'open_invoices', 4), v_provider_id, (v_manila_today - 5) + time '18:20')
+    on conflict (id) do update set
+      payload = excluded.payload,
+      snapshot_date = excluded.snapshot_date;
+  end if;
+
+  -- Well-stocked inventory alongside low-stock items
+  insert into public.inventory_items (id, organization_id, branch_id, name, sku, category, unit, quantity_on_hand, min_stock_level, is_active)
+  values
+    ('de000702-0000-4000-8000-000000000001'::uuid, v_org_id, v_branch_id, 'Dental mirrors', 'MIR-01', 'instrument', 'pc', 24, 10, true),
+    ('de000702-0000-4000-8000-000000000002'::uuid, v_org_id, v_branch_id, 'Anesthetic cartridges', 'ANES-2', 'anesthetic', 'box', 18, 8, true),
+    ('de000702-0000-4000-8000-000000000003'::uuid, v_org_id, v_branch_id, 'Face masks', 'MASK-3', 'consumable', 'box', 15, 5, true)
+  on conflict (id) do update set
+    quantity_on_hand = excluded.quantity_on_hand,
+    updated_at = now();
+
+  -- Odontogram (when dental_charts + tooth_findings exist)
+  if to_regclass('public.dental_charts') is not null and to_regclass('public.tooth_findings') is not null then
+    insert into public.dental_charts (id, organization_id, branch_id, patient_id, status)
+    values (v_chart_id, v_org_id, v_branch_id, v_patient1, 'active')
+    on conflict (id) do update set status = excluded.status, updated_at = now();
+
+    insert into public.tooth_findings (id, chart_id, patient_id, organization_id, branch_id, tooth_number, dentition_type, condition, surfaces, restoration_type, status)
+    values
+      ('de000c01-0000-4000-8000-000000000001'::uuid, v_chart_id, v_patient1, v_org_id, v_branch_id, '36', 'permanent', 'decayed', array['center','top']::text[], null, 'active'),
+      ('de000c01-0000-4000-8000-000000000002'::uuid, v_chart_id, v_patient1, v_org_id, v_branch_id, '26', 'permanent', 'present', array[]::text[], 'composite', 'active'),
+      ('de000c01-0000-4000-8000-000000000003'::uuid, v_chart_id, v_patient1, v_org_id, v_branch_id, '46', 'permanent', 'decayed', array['center']::text[], null, 'active'),
+      ('de000c01-0000-4000-8000-000000000004'::uuid, v_chart_id, v_patient1, v_org_id, v_branch_id, '11', 'permanent', 'present', array[]::text[], 'jacket_crown', 'active'),
+      ('de000c01-0000-4000-8000-000000000005'::uuid, v_chart_id, v_patient1, v_org_id, v_branch_id, '38', 'permanent', 'indicated_extraction', array[]::text[], null, 'active')
+    on conflict (id) do update set
+      condition = excluded.condition,
+      surfaces = excluded.surfaces,
+      restoration_type = excluded.restoration_type,
+      updated_at = now();
+  end if;
+
+  return jsonb_build_object(
+    'status', 'ok',
+    'branch_id', v_branch_id,
+    'organization_id', v_org_id,
+    'manila_date', v_manila_today,
+    'demo_patient_ids', jsonb_build_array(
+      v_patient1::text,
+      'de000002-0000-4000-8000-000000000002',
+      'de000003-0000-4000-8000-000000000003',
+      'de00000b-0000-4000-8000-00000000000b',
+      'de000007-0000-4000-8000-000000000007'
+    ),
+    'demo_branch_ids', jsonb_build_array(v_branch_id::text, v_branch2_id::text, v_branch3_id::text),
+    'modules_seeded', jsonb_build_array(
+      'patients', 'appointments', 'queue', 'waitlist', 'consents', 'treatment_plans',
+      'invoices', 'payments', 'clinical_notes', 'inventory', 'hmo', 'philhealth',
+      'odontogram', 'medical_history', 'insurance', 'documents', 'ortho', 'intakes',
+      'audit', 'notifications', 'staff_invitations', 'branches', 'provider_availability', 'closeout'
+    ),
+    'hint', 'Set LANDING_SHOWCASE_BRANCH_ID=' || v_branch_id::text || ' in .env.local for public landing previews'
+  );
+end;
+$$;
+
+grant execute on function public.seed_demo_showcase_data(uuid) to authenticated;
+grant execute on function public.seed_demo_showcase_data(uuid) to service_role;
+
+
+-- ===== 20260612160000_dental_chart_odontogram.sql =====
+
+-- Dental chart / odontogram tables + RPCs (get_patient_odontogram, upsert_tooth_finding)
+
+create table if not exists public.dental_charts (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  patient_id uuid not null references public.patients(id) on delete cascade,
+  status text not null default 'active' check (status in ('active', 'locked')),
+  created_by uuid references public.profiles(id),
+  updated_by uuid references public.profiles(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index if not exists idx_dental_charts_active_patient_branch
+  on public.dental_charts (patient_id, branch_id)
+  where status = 'active';
+
+create index if not exists idx_dental_charts_branch on public.dental_charts (branch_id, patient_id);
+
+create table if not exists public.tooth_findings (
+  id uuid primary key default gen_random_uuid(),
+  chart_id uuid not null references public.dental_charts(id) on delete cascade,
+  patient_id uuid not null references public.patients(id) on delete cascade,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  tooth_number text not null,
+  dentition_type text not null default 'permanent' check (dentition_type in ('permanent', 'primary')),
+  condition text,
+  surfaces text[] not null default '{}',
+  restoration_type text,
+  surgery_type text,
+  notes text,
+  status text not null default 'active' check (status in ('active', 'voided')),
+  created_by uuid references public.profiles(id),
+  updated_by uuid references public.profiles(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index if not exists idx_tooth_findings_active_tooth
+  on public.tooth_findings (chart_id, tooth_number)
+  where status = 'active';
+
+create index if not exists idx_tooth_findings_branch on public.tooth_findings (branch_id, status);
+
+create table if not exists public.dental_chart_audit_events (
+  id uuid primary key default gen_random_uuid(),
+  chart_id uuid not null references public.dental_charts(id) on delete cascade,
+  patient_id uuid not null references public.patients(id) on delete cascade,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  action text not null check (action in ('INSERT', 'UPDATE', 'VOID')),
+  tooth_number text,
+  before_json jsonb,
+  after_json jsonb,
+  actor_user_id uuid references public.profiles(id),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_dental_chart_audit_patient
+  on public.dental_chart_audit_events (patient_id, created_at desc);
+
+alter table public.dental_charts enable row level security;
+alter table public.tooth_findings enable row level security;
+alter table public.dental_chart_audit_events enable row level security;
+
+drop policy if exists dental_charts_select on public.dental_charts;
+create policy dental_charts_select on public.dental_charts for select using (
+  organization_id = public.current_user_org_id()
+  and public.has_permission('dental_chart.read', branch_id)
+);
+
+drop policy if exists dental_charts_insert on public.dental_charts;
+create policy dental_charts_insert on public.dental_charts for insert with check (
+  organization_id = public.current_user_org_id()
+  and public.has_permission('dental_chart.write', branch_id)
+);
+
+drop policy if exists dental_charts_update on public.dental_charts;
+create policy dental_charts_update on public.dental_charts for update using (
+  organization_id = public.current_user_org_id()
+  and public.has_permission('dental_chart.write', branch_id)
+);
+
+drop policy if exists tooth_findings_select on public.tooth_findings;
+create policy tooth_findings_select on public.tooth_findings for select using (
+  organization_id = public.current_user_org_id()
+  and public.has_permission('dental_chart.read', branch_id)
+);
+
+drop policy if exists tooth_findings_insert on public.tooth_findings;
+create policy tooth_findings_insert on public.tooth_findings for insert with check (
+  organization_id = public.current_user_org_id()
+  and public.has_permission('dental_chart.write', branch_id)
+);
+
+drop policy if exists tooth_findings_update on public.tooth_findings;
+create policy tooth_findings_update on public.tooth_findings for update using (
+  organization_id = public.current_user_org_id()
+  and public.has_permission('dental_chart.write', branch_id)
+);
+
+drop policy if exists dental_chart_audit_select on public.dental_chart_audit_events;
+create policy dental_chart_audit_select on public.dental_chart_audit_events for select using (
+  organization_id = public.current_user_org_id()
+  and public.has_permission('dental_chart.read', branch_id)
+);
+
+-- ---------------------------------------------------------------------------
+-- get_patient_odontogram
+-- (DROP required when an older signature used parameter defaults)
+-- ---------------------------------------------------------------------------
+drop function if exists public.get_patient_odontogram(uuid, uuid);
+
+create or replace function public.get_patient_odontogram(p_patient_id uuid, p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_chart record;
+  v_findings jsonb;
+begin
+  if p_branch_id is not null and not public.has_permission('dental_chart.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  select * into v_chart
+  from public.dental_charts dc
+  where dc.patient_id = p_patient_id
+    and dc.organization_id = v_org
+    and (p_branch_id is null or dc.branch_id = p_branch_id)
+    and dc.status = 'active'
+  order by dc.updated_at desc
+  limit 1;
+
+  if v_chart.id is null then
+    return null;
+  end if;
+
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'id', tf.id,
+      'tooth_number', tf.tooth_number,
+      'dentition_type', tf.dentition_type,
+      'condition', tf.condition,
+      'surfaces', tf.surfaces,
+      'restoration_type', tf.restoration_type,
+      'surgery_type', tf.surgery_type,
+      'notes', tf.notes,
+      'status', tf.status,
+      'created_at', tf.created_at,
+      'updated_at', tf.updated_at
+    ) order by tf.tooth_number
+  ), '[]'::jsonb)
+  into v_findings
+  from public.tooth_findings tf
+  where tf.chart_id = v_chart.id
+    and tf.status = 'active';
+
+  return jsonb_build_object(
+    'id', v_chart.id,
+    'patient_id', v_chart.patient_id,
+    'branch_id', v_chart.branch_id,
+    'findings', v_findings
+  );
+end;
+$$;
+
+grant execute on function public.get_patient_odontogram(uuid, uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- upsert_tooth_finding
+-- ---------------------------------------------------------------------------
+drop function if exists public.upsert_tooth_finding(
+  uuid, uuid, uuid, uuid, text, text, text, text[], text, text, text, uuid
+);
+
+create or replace function public.upsert_tooth_finding(
+  p_organization_id uuid,
+  p_branch_id uuid,
+  p_chart_id uuid,
+  p_patient_id uuid,
+  p_tooth_number text,
+  p_dentition_type text,
+  p_condition text,
+  p_surfaces text[],
+  p_restoration_type text,
+  p_surgery_type text,
+  p_notes text,
+  p_actor_user_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_existing record;
+  v_row public.tooth_findings%rowtype;
+  v_before jsonb;
+  v_after jsonb;
+begin
+  if not public.has_permission('dental_chart.write', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if p_organization_id <> public.current_user_org_id() then
+    raise exception 'Organization mismatch';
+  end if;
+
+  select * into v_existing
+  from public.tooth_findings
+  where chart_id = p_chart_id
+    and tooth_number = p_tooth_number
+    and status = 'active'
+  limit 1;
+
+  if v_existing.id is not null then
+    v_before := jsonb_build_object(
+      'tooth_number', v_existing.tooth_number,
+      'condition', v_existing.condition,
+      'surfaces', v_existing.surfaces,
+      'restoration_type', v_existing.restoration_type,
+      'surgery_type', v_existing.surgery_type,
+      'notes', v_existing.notes
+    );
+
+    update public.tooth_findings
+    set
+      condition = p_condition,
+      dentition_type = coalesce(p_dentition_type, dentition_type),
+      surfaces = coalesce(p_surfaces, '{}'),
+      restoration_type = p_restoration_type,
+      surgery_type = p_surgery_type,
+      notes = p_notes,
+      updated_by = p_actor_user_id,
+      updated_at = now()
+    where id = v_existing.id
+    returning * into v_row;
+
+    v_after := jsonb_build_object(
+      'tooth_number', v_row.tooth_number,
+      'condition', v_row.condition,
+      'surfaces', v_row.surfaces,
+      'restoration_type', v_row.restoration_type,
+      'surgery_type', v_row.surgery_type,
+      'notes', v_row.notes
+    );
+
+    insert into public.dental_chart_audit_events (
+      chart_id, patient_id, organization_id, branch_id,
+      action, tooth_number, before_json, after_json, actor_user_id
+    ) values (
+      p_chart_id, p_patient_id, p_organization_id, p_branch_id,
+      'UPDATE', p_tooth_number, v_before, v_after, p_actor_user_id
+    );
+  else
+    insert into public.tooth_findings (
+      chart_id, patient_id, organization_id, branch_id,
+      tooth_number, dentition_type, condition, surfaces,
+      restoration_type, surgery_type, notes,
+      created_by, updated_by
+    ) values (
+      p_chart_id, p_patient_id, p_organization_id, p_branch_id,
+      p_tooth_number, coalesce(p_dentition_type, 'permanent'), p_condition,
+      coalesce(p_surfaces, '{}'),
+      p_restoration_type, p_surgery_type, p_notes,
+      p_actor_user_id, p_actor_user_id
+    )
+    returning * into v_row;
+
+    v_after := jsonb_build_object(
+      'tooth_number', v_row.tooth_number,
+      'condition', v_row.condition,
+      'surfaces', v_row.surfaces,
+      'restoration_type', v_row.restoration_type,
+      'surgery_type', v_row.surgery_type,
+      'notes', v_row.notes
+    );
+
+    insert into public.dental_chart_audit_events (
+      chart_id, patient_id, organization_id, branch_id,
+      action, tooth_number, before_json, after_json, actor_user_id
+    ) values (
+      p_chart_id, p_patient_id, p_organization_id, p_branch_id,
+      'INSERT', p_tooth_number, null, v_after, p_actor_user_id
+    );
+  end if;
+
+  update public.dental_charts
+  set updated_by = p_actor_user_id, updated_at = now()
+  where id = p_chart_id;
+
+  return jsonb_build_object(
+    'id', v_row.id,
+    'tooth_number', v_row.tooth_number,
+    'dentition_type', v_row.dentition_type,
+    'condition', v_row.condition,
+    'surfaces', v_row.surfaces,
+    'restoration_type', v_row.restoration_type,
+    'surgery_type', v_row.surgery_type,
+    'notes', v_row.notes,
+    'status', v_row.status,
+    'created_at', v_row.created_at,
+    'updated_at', v_row.updated_at
+  );
+end;
+$$;
+
+grant execute on function public.upsert_tooth_finding(
+  uuid, uuid, uuid, uuid, text, text, text, text[], text, text, text, uuid
+) to authenticated;
+
+
+-- ===== 20260612200000_display_masked_names.sql =====
+
+-- TV display: heavily masked patient names (no full PHI on public token)
+
+create or replace function public._mask_patient_display_name(p_first text, p_last text)
+returns text
+language sql
+immutable
+set search_path = public
+as $$
+  select case
+    when coalesce(trim(p_first), '') = '' and coalesce(trim(p_last), '') = '' then null
+    when coalesce(trim(p_last), '') = '' then upper(left(trim(p_first), 1)) || '***'
+    when coalesce(trim(p_first), '') = '' then upper(left(trim(p_last), 1)) || '***'
+    else upper(left(trim(p_first), 1)) || '*** ' || upper(left(trim(p_last), 1)) || '***'
+  end;
+$$;
+
+create or replace function public.get_public_queue_display(p_token text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_t public.branch_public_tokens%rowtype;
+  v_branch_name text;
+  v_now_serving jsonb;
+  v_waiting jsonb;
+begin
+  select * into v_t
+  from public.branch_public_tokens
+  where token = p_token
+    and token_type = 'display'
+    and is_active = true
+    and (expires_at is null or expires_at > now());
+
+  if not found then
+    raise exception 'Invalid display link';
+  end if;
+
+  select name into v_branch_name from public.branches where id = v_t.branch_id;
+
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'display_code', qe.display_code,
+        'masked_name', public._mask_patient_display_name(p.first_name, p.last_name)
+      )
+      order by qe.called_at nulls last
+    ),
+    '[]'::jsonb
+  )
+  into v_now_serving
+  from public.queue_entries qe
+  left join public.patients p on p.id = qe.patient_id
+  where qe.branch_id = v_t.branch_id and qe.status = 'now_serving';
+
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'display_code', qe.display_code,
+        'masked_name', public._mask_patient_display_name(p.first_name, p.last_name)
+      )
+      order by qe.checked_in_at
+    ),
+    '[]'::jsonb
+  )
+  into v_waiting
+  from public.queue_entries qe
+  left join public.patients p on p.id = qe.patient_id
+  where qe.branch_id = v_t.branch_id and qe.status in ('waiting', 'ready');
+
+  return jsonb_build_object(
+    'branch_id', v_t.branch_id,
+    'branch_name', v_branch_name,
+    'now_serving', v_now_serving,
+    'waiting', v_waiting,
+    'updated_at', now()
+  );
+end;
+$$;
+
+
+-- ===== 20260612210000_periodontal_chart.sql =====
+
+-- Periodontal pocket chart JSON on dental_charts + RPC sync
+
+alter table public.dental_charts
+  add column if not exists periodontal_data jsonb not null default '{}'::jsonb;
+
+comment on column public.dental_charts.periodontal_data is
+  '6-site pocket depths per tooth (FDI keys). See app periodontal-types.';
+
+-- ---------------------------------------------------------------------------
+-- get_patient_periodontal
+-- ---------------------------------------------------------------------------
+drop function if exists public.get_patient_periodontal(uuid, uuid);
+
+create or replace function public.get_patient_periodontal(p_patient_id uuid, p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_chart record;
+begin
+  if p_branch_id is not null and not public.has_permission('dental_chart.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  select id, patient_id, branch_id, periodontal_data
+  into v_chart
+  from public.dental_charts dc
+  where dc.patient_id = p_patient_id
+    and dc.organization_id = v_org
+    and (p_branch_id is null or dc.branch_id = p_branch_id)
+    and dc.status = 'active'
+  order by dc.updated_at desc
+  limit 1;
+
+  if v_chart.id is null then
+    return null;
+  end if;
+
+  return jsonb_build_object(
+    'chart_id', v_chart.id,
+    'patient_id', v_chart.patient_id,
+    'branch_id', v_chart.branch_id,
+    'data', coalesce(v_chart.periodontal_data, '{}'::jsonb)
+  );
+end;
+$$;
+
+grant execute on function public.get_patient_periodontal(uuid, uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- upsert_patient_periodontal
+-- ---------------------------------------------------------------------------
+drop function if exists public.upsert_patient_periodontal(uuid, uuid, uuid, jsonb, uuid);
+
+create or replace function public.upsert_patient_periodontal(
+  p_patient_id uuid,
+  p_branch_id uuid,
+  p_organization_id uuid,
+  p_data jsonb,
+  p_actor_user_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_chart_id uuid;
+  v_chart record;
+begin
+  if not public.has_permission('dental_chart.write', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if p_organization_id <> public.current_user_org_id() then
+    raise exception 'Organization mismatch';
+  end if;
+
+  select id into v_chart_id
+  from public.dental_charts
+  where patient_id = p_patient_id
+    and branch_id = p_branch_id
+    and organization_id = p_organization_id
+    and status = 'active'
+  order by updated_at desc
+  limit 1;
+
+  if v_chart_id is null then
+    insert into public.dental_charts (
+      organization_id, branch_id, patient_id, periodontal_data, created_by, updated_by
+    ) values (
+      p_organization_id, p_branch_id, p_patient_id, coalesce(p_data, '{}'::jsonb),
+      p_actor_user_id, p_actor_user_id
+    )
+    returning id into v_chart_id;
+  else
+    update public.dental_charts
+    set
+      periodontal_data = coalesce(p_data, '{}'::jsonb),
+      updated_by = p_actor_user_id,
+      updated_at = now()
+    where id = v_chart_id;
+  end if;
+
+  select id, patient_id, branch_id, periodontal_data
+  into v_chart
+  from public.dental_charts
+  where id = v_chart_id;
+
+  return jsonb_build_object(
+    'chart_id', v_chart.id,
+    'patient_id', v_chart.patient_id,
+    'branch_id', v_chart.branch_id,
+    'data', coalesce(v_chart.periodontal_data, '{}'::jsonb)
+  );
+end;
+$$;
+
+grant execute on function public.upsert_patient_periodontal(uuid, uuid, uuid, jsonb, uuid) to authenticated;
+
+
+-- ===== 20260612220000_recall_owner_automation.sql =====
+
+-- P3 automation: hygiene recall SMS + owner daily digest SMS
+-- Depends on: workflow settings, notification_templates, patient_branch_links
+
+-- ---------------------------------------------------------------------------
+-- Workflow defaults (new keys)
+-- ---------------------------------------------------------------------------
+create or replace function public._default_workflow_settings()
+returns jsonb
+language sql
+immutable
+as $$
+  select jsonb_build_object(
+    'auto_checkin_updates_appointment', true,
+    'auto_served_completes_appointment', true,
+    'consent_gate_checkin', true,
+    'auto_approve_creates_invoice', true,
+    'auto_hmo_claim_on_invoice', true,
+    'auto_waitlist_on_slot_open', true,
+    'auto_sms_reminders', true,
+    'auto_payment_reminder', true,
+    'auto_hygiene_recall', true,
+    'auto_owner_digest_sms', false
+  );
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Internal closeout payload (service role / cron safe â€” no auth.uid() org)
+-- ---------------------------------------------------------------------------
+create or replace function public._build_daily_closeout_payload(
+  p_org_id uuid,
+  p_branch_id uuid default null,
+  p_date date default current_date
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if p_org_id is null then
+    return '{}'::jsonb;
+  end if;
+
+  return jsonb_build_object(
+    'date', p_date,
+    'collected', (
+      select coalesce(sum(ip.amount), 0)
+      from public.invoice_payments ip
+      join public.invoices inv on inv.id = ip.invoice_id
+      where inv.organization_id = p_org_id
+        and (p_branch_id is null or inv.branch_id = p_branch_id)
+        and ip.created_at::date = p_date
+    ),
+    'open_balance', (
+      select coalesce(sum(inv.total_amount - inv.paid_amount), 0)
+      from public.invoices inv
+      where inv.organization_id = p_org_id
+        and (p_branch_id is null or inv.branch_id = p_branch_id)
+        and inv.status in ('draft', 'sent', 'partial')
+    ),
+    'open_invoice_count', (
+      select count(*)
+      from public.invoices inv
+      where inv.organization_id = p_org_id
+        and (p_branch_id is null or inv.branch_id = p_branch_id)
+        and inv.status in ('draft', 'sent', 'partial')
+    ),
+    'appointments_completed', (
+      select count(*)
+      from public.appointments a
+      where a.organization_id = p_org_id
+        and (p_branch_id is null or a.branch_id = p_branch_id)
+        and a.status = 'completed'
+        and (a.scheduled_at at time zone 'Asia/Manila')::date = p_date
+    ),
+    'no_show', (
+      select count(*)
+      from public.appointments a
+      where a.organization_id = p_org_id
+        and (p_branch_id is null or a.branch_id = p_branch_id)
+        and a.status = 'no_show'
+        and (a.scheduled_at at time zone 'Asia/Manila')::date = p_date
+    ),
+    'pending_consents', (
+      select count(*)
+      from public.patient_consents pc
+      where pc.organization_id = p_org_id
+        and (p_branch_id is null or pc.branch_id = p_branch_id)
+        and pc.status = 'pending'
+    ),
+    'hmo_pending', (
+      select count(*)
+      from public.hmo_claims hc
+      where hc.organization_id = p_org_id
+        and (p_branch_id is null or hc.branch_id = p_branch_id)
+        and hc.status in ('draft', 'submitted', 'under_review')
+    ),
+    'low_stock', (
+      select case when p_branch_id is null then 0 else (
+        select count(*) from public.inventory_items i
+        where i.branch_id = p_branch_id and i.is_active
+          and (i.quantity_on_hand <= i.min_stock_level
+            or (i.expiry_date is not null and i.expiry_date < current_date))
+      ) end
+    )
+  );
+end;
+$$;
+
+grant execute on function public._build_daily_closeout_payload(uuid, uuid, date) to service_role;
+
+-- Authenticated wrapper keeps existing permission model
+create or replace function public.get_daily_closeout(
+  p_branch_id uuid default null,
+  p_date date default current_date
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+begin
+  if not public.user_is_org_admin() then
+    raise exception 'Permission denied';
+  end if;
+
+  return public._build_daily_closeout_payload(v_org, p_branch_id, p_date);
+end;
+$$;
+
+grant execute on function public.get_daily_closeout(uuid, date) to authenticated;
+
+-- Fix closeout email enqueue to use internal builder
+create or replace function public.enqueue_closeout_email_digest(p_date date default current_date)
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org record;
+  v_admin record;
+  v_payload jsonb;
+  v_count int := 0;
+begin
+  for v_org in
+    select distinct o.id as organization_id
+    from public.organizations o
+  loop
+    for v_admin in
+      select distinct p.email
+      from public.profiles p
+      join public.staff_branch_assignments sba on sba.profile_id = p.id
+      join public.roles r on r.id = sba.role_id
+      where p.organization_id = v_org.organization_id
+        and r.name in ('owner', 'admin')
+        and p.email is not null
+        and length(trim(p.email)) > 0
+    loop
+      v_payload := public._build_daily_closeout_payload(v_org.organization_id, null, p_date);
+
+      if not exists (
+        select 1 from public.closeout_email_queue
+        where organization_id = v_org.organization_id
+          and recipient_email = v_admin.email
+          and snapshot_date = p_date
+          and status in ('pending', 'sent', 'dry_run')
+      ) then
+        insert into public.closeout_email_queue (
+          organization_id, branch_id, recipient_email, snapshot_date, payload
+        ) values (
+          v_org.organization_id, null, v_admin.email, p_date, v_payload
+        );
+        v_count := v_count + 1;
+      end if;
+    end loop;
+  end loop;
+
+  return v_count;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Hygiene recall queue
+-- ---------------------------------------------------------------------------
+create table if not exists public.patient_recall_queue (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  patient_id uuid not null references public.patients(id) on delete cascade,
+  last_visit_date date not null,
+  processed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_patient_recall_queue_pending
+  on public.patient_recall_queue(branch_id, created_at)
+  where processed_at is null;
+
+alter table public.patient_recall_queue enable row level security;
+
+drop policy if exists patient_recall_queue_select on public.patient_recall_queue;
+create policy patient_recall_queue_select on public.patient_recall_queue
+  for select to authenticated using (
+    organization_id = public.current_user_org_id()
+    and public.has_permission('patients.read', branch_id)
+  );
+
+drop policy if exists patient_recall_queue_service on public.patient_recall_queue;
+create policy patient_recall_queue_service on public.patient_recall_queue
+  for all to service_role using (true) with check (true);
+
+create table if not exists public.patient_recall_dispatches (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  patient_id uuid not null references public.patients(id) on delete cascade,
+  last_visit_date date not null,
+  sent_at timestamptz not null default now()
+);
+
+create index if not exists idx_patient_recall_dispatches_recent
+  on public.patient_recall_dispatches(patient_id, branch_id, sent_at desc);
+
+alter table public.patient_recall_dispatches enable row level security;
+
+drop policy if exists patient_recall_dispatches_select on public.patient_recall_dispatches;
+create policy patient_recall_dispatches_select on public.patient_recall_dispatches
+  for select to authenticated using (
+    organization_id = public.current_user_org_id()
+    and public.has_permission('patients.read', branch_id)
+  );
+
+drop policy if exists patient_recall_dispatches_service on public.patient_recall_dispatches;
+create policy patient_recall_dispatches_service on public.patient_recall_dispatches
+  for all to service_role using (true) with check (true);
+
+create or replace function public.enqueue_hygiene_recalls(
+  p_branch_id uuid,
+  p_months int default 6
+)
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_count int := 0;
+  v_row record;
+  v_cutoff date := (current_date - make_interval(months => greatest(p_months, 1)));
+  v_window_start date := v_cutoff - 7;
+begin
+  if not public._workflow_enabled(p_branch_id, 'auto_hygiene_recall') then
+    return 0;
+  end if;
+
+  for v_row in
+    select
+      b.organization_id,
+      pbl.branch_id,
+      pbl.patient_id,
+      pbl.last_visit_at::date as last_visit_date
+    from public.patient_branch_links pbl
+    join public.patients p on p.id = pbl.patient_id
+    join public.branches b on b.id = pbl.branch_id
+    where pbl.branch_id = p_branch_id
+      and b.is_active
+      and p.status = 'active'
+      and pbl.last_visit_at is not null
+      and pbl.last_visit_at::date >= v_window_start
+      and pbl.last_visit_at::date <= v_cutoff
+      and coalesce(length(trim(p.phone)), 0) > 0
+      and not exists (
+        select 1 from public.appointments a
+        where a.patient_id = pbl.patient_id
+          and a.branch_id = p_branch_id
+          and a.status in ('scheduled', 'confirmed', 'checked_in')
+          and a.scheduled_at >= now()
+      )
+      and not exists (
+        select 1 from public.patient_recall_dispatches d
+        where d.patient_id = pbl.patient_id
+          and d.branch_id = p_branch_id
+          and d.sent_at > now() - interval '150 days'
+      )
+      and not exists (
+        select 1 from public.patient_recall_queue q
+        where q.patient_id = pbl.patient_id
+          and q.branch_id = p_branch_id
+          and q.processed_at is null
+      )
+  loop
+    insert into public.patient_recall_queue (
+      organization_id, branch_id, patient_id, last_visit_date
+    ) values (
+      v_row.organization_id, v_row.branch_id, v_row.patient_id, v_row.last_visit_date
+    );
+    v_count := v_count + 1;
+  end loop;
+
+  return v_count;
+end;
+$$;
+
+grant execute on function public.enqueue_hygiene_recalls(uuid, int) to service_role;
+
+create or replace function public.claim_hygiene_recall_batch(p_limit int default 20)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', q.id,
+      'branch_id', q.branch_id,
+      'organization_id', q.organization_id,
+      'patient_id', q.patient_id,
+      'last_visit_date', q.last_visit_date
+    ))
+    from (
+      select * from public.patient_recall_queue
+      where processed_at is null
+      order by created_at asc
+      limit greatest(coalesce(p_limit, 20), 1)
+      for update skip locked
+    ) q
+  ), '[]'::jsonb);
+end;
+$$;
+
+grant execute on function public.claim_hygiene_recall_batch(int) to service_role;
+
+create or replace function public.mark_hygiene_recall_processed(
+  p_id uuid,
+  p_dispatched boolean default true
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_row public.patient_recall_queue%rowtype;
+begin
+  select * into v_row
+  from public.patient_recall_queue
+  where id = p_id and processed_at is null
+  for update;
+
+  if not found then
+    return;
+  end if;
+
+  update public.patient_recall_queue
+  set processed_at = now()
+  where id = p_id;
+
+  if p_dispatched then
+    insert into public.patient_recall_dispatches (
+      organization_id, branch_id, patient_id, last_visit_date
+    ) values (
+      v_row.organization_id, v_row.branch_id, v_row.patient_id, v_row.last_visit_date
+    );
+  end if;
+end;
+$$;
+
+grant execute on function public.mark_hygiene_recall_processed(uuid, boolean) to service_role;
+
+-- ---------------------------------------------------------------------------
+-- Owner digest SMS queue
+-- ---------------------------------------------------------------------------
+create table if not exists public.owner_digest_sms_queue (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  recipient_phone text not null,
+  recipient_profile_id uuid references public.profiles(id) on delete set null,
+  snapshot_date date not null,
+  payload jsonb not null default '{}'::jsonb,
+  status text not null default 'pending'
+    check (status in ('pending', 'sent', 'dry_run', 'failed', 'skipped')),
+  error_message text,
+  sent_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_owner_digest_sms_pending
+  on public.owner_digest_sms_queue(branch_id, snapshot_date)
+  where status = 'pending';
+
+alter table public.owner_digest_sms_queue enable row level security;
+
+drop policy if exists owner_digest_sms_queue_admin on public.owner_digest_sms_queue;
+create policy owner_digest_sms_queue_admin on public.owner_digest_sms_queue
+  for select to authenticated using (
+    organization_id = public.current_user_org_id()
+    and public.user_is_org_admin()
+  );
+
+drop policy if exists owner_digest_sms_queue_service on public.owner_digest_sms_queue;
+create policy owner_digest_sms_queue_service on public.owner_digest_sms_queue
+  for all to service_role using (true) with check (true);
+
+create or replace function public.enqueue_owner_digest_sms(p_date date default current_date)
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_branch record;
+  v_owner record;
+  v_payload jsonb;
+  v_count int := 0;
+begin
+  for v_branch in
+    select b.id as branch_id, b.organization_id
+    from public.branches b
+    where b.is_active
+      and public._workflow_enabled(b.id, 'auto_owner_digest_sms')
+  loop
+    v_payload := public._build_daily_closeout_payload(v_branch.organization_id, v_branch.branch_id, p_date);
+
+    for v_owner in
+      select distinct p.id as profile_id, sp.phone_number
+      from public.profiles p
+      join public.staff_profiles sp on sp.profile_id = p.id
+      join public.staff_branch_assignments sba on sba.profile_id = p.id
+      join public.roles r on r.id = sba.role_id
+      where p.organization_id = v_branch.organization_id
+        and sba.branch_id = v_branch.branch_id
+        and r.name in ('owner', 'admin')
+        and coalesce(sp.is_active, true)
+        and sp.phone_number is not null
+        and length(trim(sp.phone_number)) > 0
+    loop
+      if not exists (
+        select 1 from public.owner_digest_sms_queue q
+        where q.branch_id = v_branch.branch_id
+          and q.recipient_phone = trim(v_owner.phone_number)
+          and q.snapshot_date = p_date
+          and q.status in ('pending', 'sent', 'dry_run')
+      ) then
+        insert into public.owner_digest_sms_queue (
+          organization_id,
+          branch_id,
+          recipient_phone,
+          recipient_profile_id,
+          snapshot_date,
+          payload
+        ) values (
+          v_branch.organization_id,
+          v_branch.branch_id,
+          trim(v_owner.phone_number),
+          v_owner.profile_id,
+          p_date,
+          v_payload
+        );
+        v_count := v_count + 1;
+      end if;
+    end loop;
+  end loop;
+
+  return v_count;
+end;
+$$;
+
+grant execute on function public.enqueue_owner_digest_sms(date) to service_role;
+
+create or replace function public.claim_owner_digest_sms_batch(p_limit int default 20)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', q.id,
+      'organization_id', q.organization_id,
+      'branch_id', q.branch_id,
+      'recipient_phone', q.recipient_phone,
+      'snapshot_date', q.snapshot_date,
+      'payload', q.payload
+    ))
+    from (
+      select * from public.owner_digest_sms_queue
+      where status = 'pending'
+      order by created_at asc
+      limit greatest(coalesce(p_limit, 20), 1)
+      for update skip locked
+    ) q
+  ), '[]'::jsonb);
+end;
+$$;
+
+grant execute on function public.claim_owner_digest_sms_batch(int) to service_role;
+
+create or replace function public.mark_owner_digest_sms_sent(
+  p_id uuid,
+  p_status text default 'sent',
+  p_error text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.owner_digest_sms_queue
+  set status = coalesce(p_status, 'sent'),
+      error_message = p_error,
+      sent_at = now()
+  where id = p_id;
+end;
+$$;
+
+grant execute on function public.mark_owner_digest_sms_sent(uuid, text, text) to service_role;
+
+-- ---------------------------------------------------------------------------
+-- Notification templates (new orgs + backfill existing orgs)
+-- ---------------------------------------------------------------------------
+create or replace function public.seed_notification_templates(p_org_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if exists (select 1 from public.notification_templates where organization_id = p_org_id limit 1) then
+    return;
+  end if;
+
+  insert into public.notification_templates (organization_id, template_key, name, body) values
+    (p_org_id, 'appointment_reminder',
+     'Appointment reminder',
+     'Hi {{patient_name}}, reminder: your appointment at {{clinic_name}} is on {{appointment_date}} at {{appointment_time}}.'),
+    (p_org_id, 'waitlist_slot',
+     'Waitlist slot available',
+     'Hi {{patient_name}}, a slot opened at {{clinic_name}}. Please call us to confirm your appointment.'),
+    (p_org_id, 'payment_reminder',
+     'Payment reminder',
+     'Hi {{patient_name}}, you have an outstanding balance of {{amount}} at {{clinic_name}}. Thank you.'),
+    (p_org_id, 'queue_called',
+     'Queue called',
+     '{{clinic_name}}: Queue number {{queue_code}} â€” please proceed to the front desk.'),
+    (p_org_id, 'hygiene_recall',
+     'Hygiene recall (6 months)',
+     'Hi {{patient_name}}, it has been 6 months since your visit at {{clinic_name}}. Book your check-up: {{booking_link}}'),
+    (p_org_id, 'owner_daily_digest',
+     'Owner daily digest SMS',
+     '{{clinic_name}} {{date}}: Collected {{collected}}, open {{open_balance}}, done {{appointments_completed}}, no-shows {{no_show}}.');
+end;
+$$;
+
+insert into public.notification_templates (organization_id, template_key, name, body)
+select
+  o.id,
+  v.template_key,
+  v.name,
+  v.body
+from public.organizations o
+cross join (
+  values
+    (
+      'hygiene_recall',
+      'Hygiene recall (6 months)',
+      'Hi {{patient_name}}, it has been 6 months since your visit at {{clinic_name}}. Book your check-up: {{booking_link}}'
+    ),
+    (
+      'owner_daily_digest',
+      'Owner daily digest SMS',
+      '{{clinic_name}} {{date}}: Collected {{collected}}, open {{open_balance}}, done {{appointments_completed}}, no-shows {{no_show}}.'
+    )
+) as v(template_key, name, body)
+where not exists (
+  select 1 from public.notification_templates nt
+  where nt.organization_id = o.id and nt.template_key = v.template_key
+);
+
+
+-- ===== 20260612230000_staff_phone_digest.sql =====
+
+-- Staff phone for owner digest SMS + get_org_staff enrichment
+
+-- ---------------------------------------------------------------------------
+-- get_org_staff: include phone + owner/admin flag
+-- ---------------------------------------------------------------------------
+drop function if exists public.get_org_staff();
+
+create or replace function public.get_org_staff()
+returns table (
+  profile_id uuid,
+  full_name text,
+  email text,
+  is_active boolean,
+  role_name text,
+  branch_names text[],
+  phone_number text,
+  is_owner_or_admin boolean
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    p.id,
+    p.full_name,
+    p.email,
+    coalesce(sp.is_active, true),
+    coalesce(max(r.name), 'staff'),
+    array_agg(distinct b.name order by b.name) filter (where b.name is not null),
+    nullif(trim(sp.phone_number), ''),
+    coalesce(bool_or(r.name in ('owner', 'admin')), false)
+  from public.profiles p
+  left join public.staff_profiles sp on sp.profile_id = p.id
+  left join public.staff_branch_assignments sba on sba.profile_id = p.id
+  left join public.roles r on r.id = sba.role_id
+  left join public.branches b on b.id = sba.branch_id
+  where p.organization_id = public.current_user_org_id()
+  group by p.id, p.full_name, p.email, sp.is_active, sp.phone_number
+  order by p.full_name;
+$$;
+
+grant execute on function public.get_org_staff() to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Branch owner digest readiness (workflow / notifications UI)
+-- ---------------------------------------------------------------------------
+create or replace function public.get_owner_digest_readiness(p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_workflow_on boolean;
+  v_owners int := 0;
+  v_with_phone int := 0;
+begin
+  if p_branch_id is null then
+    return jsonb_build_object('ready', false, 'reason', 'no_branch');
+  end if;
+
+  if not public.user_has_branch_access(p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  v_workflow_on := public._workflow_enabled(p_branch_id, 'auto_owner_digest_sms');
+
+  select
+    count(distinct p.id),
+    count(distinct p.id) filter (where coalesce(length(trim(sp.phone_number)), 0) > 0)
+  into v_owners, v_with_phone
+  from public.profiles p
+  join public.staff_profiles sp on sp.profile_id = p.id
+  join public.staff_branch_assignments sba on sba.profile_id = p.id
+  join public.roles r on r.id = sba.role_id
+  where p.organization_id = v_org
+    and sba.branch_id = p_branch_id
+    and r.name in ('owner', 'admin')
+    and coalesce(sp.is_active, true);
+
+  return jsonb_build_object(
+    'workflow_enabled', v_workflow_on,
+    'owner_admin_count', v_owners,
+    'with_phone_count', v_with_phone,
+    'missing_phone_count', greatest(v_owners - v_with_phone, 0),
+    'ready', not v_workflow_on or (v_owners > 0 and v_with_phone > 0)
+  );
+end;
+$$;
+
+grant execute on function public.get_owner_digest_readiness(uuid) to authenticated;
+
+
+-- ===== 20260612240000_marketing_leads.sql =====
+
+-- Public marketing lead capture (quote / contact forms on landing pages)
+
+create table if not exists public.marketing_leads (
+  id uuid primary key default gen_random_uuid(),
+  lead_type text not null default 'quote' check (lead_type in ('quote', 'contact')),
+  full_name text not null,
+  email text not null,
+  phone text,
+  clinic_name text,
+  branch_count integer,
+  message text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists marketing_leads_created_at_idx on public.marketing_leads (created_at desc);
+create index if not exists marketing_leads_email_idx on public.marketing_leads (email);
+
+alter table public.marketing_leads enable row level security;
+
+create policy marketing_leads_service_read on public.marketing_leads
+  for select
+  to service_role
+  using (true);
+
+create or replace function public.submit_marketing_lead(p_payload jsonb)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id uuid;
+  v_name text;
+  v_email text;
+begin
+  v_name := nullif(trim(p_payload->>'full_name'), '');
+  v_email := nullif(lower(trim(p_payload->>'email')), '');
+
+  if v_name is null then
+    raise exception 'full_name is required';
+  end if;
+  if v_email is null then
+    raise exception 'email is required';
+  end if;
+
+  insert into public.marketing_leads (
+    lead_type,
+    full_name,
+    email,
+    phone,
+    clinic_name,
+    branch_count,
+    message,
+    metadata
+  )
+  values (
+    coalesce(nullif(trim(p_payload->>'lead_type'), ''), 'quote'),
+    v_name,
+    v_email,
+    nullif(trim(p_payload->>'phone'), ''),
+    nullif(trim(p_payload->>'clinic_name'), ''),
+    nullif(trim(p_payload->>'branch_count'), '')::integer,
+    nullif(trim(p_payload->>'message'), ''),
+    coalesce(p_payload->'metadata', '{}'::jsonb)
+  )
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
+
+revoke all on function public.submit_marketing_lead(jsonb) from public;
+grant execute on function public.submit_marketing_lead(jsonb) to anon, authenticated, service_role;
+
+
+-- ===== 20260612250000_sterilization_compliance.sql =====
+
+-- Module 24: Sterilization / compliance cycle logs
+
+create table if not exists public.compliance_cycles (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  cycle_type text not null default 'sterilization'
+    check (cycle_type in ('sterilization')),
+  equipment_name text not null,
+  load_description text,
+  cycle_method text not null default 'gravity'
+    check (cycle_method in ('gravity', 'pre_vacuum', 'statim', 'other')),
+  started_at timestamptz not null,
+  completed_at timestamptz,
+  duration_minutes integer check (duration_minutes is null or duration_minutes > 0),
+  temperature_c numeric(5, 1),
+  biological_indicator text not null default 'not_used'
+    check (biological_indicator in ('pass', 'fail', 'pending', 'not_used')),
+  chemical_indicator text not null default 'pending'
+    check (chemical_indicator in ('pass', 'fail', 'pending', 'not_used')),
+  result_status text not null default 'pending'
+    check (result_status in ('pass', 'fail', 'pending', 'aborted')),
+  operator_name text,
+  notes text,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_compliance_cycles_branch_started
+  on public.compliance_cycles (branch_id, started_at desc);
+
+create index if not exists idx_compliance_cycles_org_started
+  on public.compliance_cycles (organization_id, started_at desc);
+
+alter table public.compliance_cycles enable row level security;
+
+drop policy if exists compliance_cycles_select on public.compliance_cycles;
+create policy compliance_cycles_select on public.compliance_cycles
+  for select to authenticated using (
+    organization_id = public.current_user_org_id()
+    and public.user_has_branch_access(branch_id)
+    and public.has_permission('compliance.read', branch_id)
+  );
+
+drop policy if exists compliance_cycles_insert on public.compliance_cycles;
+create policy compliance_cycles_insert on public.compliance_cycles
+  for insert to authenticated with check (
+    organization_id = public.current_user_org_id()
+    and public.user_has_branch_access(branch_id)
+    and public.has_permission('compliance.write', branch_id)
+  );
+
+-- Append-only: no update/delete policies for compliance records
+
+insert into public.permissions (name, description) values
+  ('compliance.read', 'View sterilization and compliance logs'),
+  ('compliance.write', 'Log sterilization cycles')
+on conflict (name) do nothing;
+
+insert into public.role_permissions (role_id, permission_id)
+select r.id, p.id
+from public.roles r
+cross join public.permissions p
+where r.name in ('owner', 'admin')
+  and p.name in ('compliance.read', 'compliance.write')
+on conflict do nothing;
+
+insert into public.role_permissions (role_id, permission_id)
+select r.id, p.id
+from public.roles r
+cross join public.permissions p
+where r.name in ('dentist', 'assistant')
+  and p.name in ('compliance.read', 'compliance.write')
+on conflict do nothing;
+
+insert into public.role_permissions (role_id, permission_id)
+select r.id, p.id
+from public.roles r
+cross join public.permissions p
+where r.name = 'receptionist'
+  and p.name = 'compliance.read'
+on conflict do nothing;
+
+create or replace function public._evaluate_compliance_result(
+  p_biological text,
+  p_chemical text,
+  p_result text
+)
+returns text
+language plpgsql
+immutable
+as $$
+begin
+  if p_result in ('fail', 'aborted') then
+    return p_result;
+  end if;
+  if p_biological = 'fail' or p_chemical = 'fail' then
+    return 'fail';
+  end if;
+  if p_biological = 'pending' or p_chemical = 'pending' then
+    return 'pending';
+  end if;
+  if p_biological in ('pass', 'not_used') and p_chemical = 'pass' then
+    return 'pass';
+  end if;
+  if p_biological = 'pass' and p_chemical = 'not_used' then
+    return 'pass';
+  end if;
+  return coalesce(p_result, 'pending');
+end;
+$$;
+
+create or replace function public.log_compliance_cycle(
+  p_branch_id uuid,
+  p_equipment_name text,
+  p_load_description text default null,
+  p_cycle_method text default 'gravity',
+  p_started_at timestamptz default now(),
+  p_completed_at timestamptz default null,
+  p_duration_minutes integer default null,
+  p_temperature_c numeric default null,
+  p_biological_indicator text default 'not_used',
+  p_chemical_indicator text default 'pending',
+  p_result_status text default 'pending',
+  p_operator_name text default null,
+  p_notes text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid;
+  v_id uuid;
+  v_result text;
+begin
+  if p_equipment_name is null or trim(p_equipment_name) = '' then
+    raise exception 'Equipment name is required';
+  end if;
+
+  select organization_id into v_org
+  from public.branches
+  where id = p_branch_id;
+
+  if v_org is null then
+    raise exception 'Branch not found';
+  end if;
+
+  if v_org <> public.current_user_org_id() then
+    raise exception 'Branch not in organization';
+  end if;
+
+  if not public.has_permission('compliance.write', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  v_result := public._evaluate_compliance_result(
+    coalesce(p_biological_indicator, 'not_used'),
+    coalesce(p_chemical_indicator, 'pending'),
+    coalesce(p_result_status, 'pending')
+  );
+
+  insert into public.compliance_cycles (
+    organization_id,
+    branch_id,
+    equipment_name,
+    load_description,
+    cycle_method,
+    started_at,
+    completed_at,
+    duration_minutes,
+    temperature_c,
+    biological_indicator,
+    chemical_indicator,
+    result_status,
+    operator_name,
+    notes,
+    created_by
+  )
+  values (
+    v_org,
+    p_branch_id,
+    trim(p_equipment_name),
+    nullif(trim(coalesce(p_load_description, '')), ''),
+    coalesce(p_cycle_method, 'gravity'),
+    coalesce(p_started_at, now()),
+    p_completed_at,
+    p_duration_minutes,
+    p_temperature_c,
+    coalesce(p_biological_indicator, 'not_used'),
+    coalesce(p_chemical_indicator, 'pending'),
+    v_result,
+    nullif(trim(coalesce(p_operator_name, '')), ''),
+    nullif(trim(coalesce(p_notes, '')), ''),
+    auth.uid()
+  )
+  returning id into v_id;
+
+  insert into public.organization_audit_logs (
+    organization_id,
+    branch_id,
+    profile_id,
+    action,
+    entity_type,
+    entity_id,
+    metadata
+  )
+  values (
+    v_org,
+    p_branch_id,
+    auth.uid(),
+    'compliance.cycle_logged',
+    'compliance_cycle',
+    v_id,
+    jsonb_build_object(
+      'equipment_name', trim(p_equipment_name),
+      'result_status', v_result,
+      'cycle_method', coalesce(p_cycle_method, 'gravity')
+    )
+  );
+
+  return v_id;
+end;
+$$;
+
+grant execute on function public.log_compliance_cycle(
+  uuid, text, text, text, timestamptz, timestamptz, integer, numeric, text, text, text, text, text
+) to authenticated;
+
+create or replace function public.get_compliance_cycles(
+  p_branch_id uuid,
+  p_limit integer default 100,
+  p_since timestamptz default null
+)
+returns table (
+  id uuid,
+  branch_id uuid,
+  equipment_name text,
+  load_description text,
+  cycle_method text,
+  started_at timestamptz,
+  completed_at timestamptz,
+  duration_minutes integer,
+  temperature_c numeric,
+  biological_indicator text,
+  chemical_indicator text,
+  result_status text,
+  operator_name text,
+  notes text,
+  created_by uuid,
+  created_at timestamptz,
+  logged_by_name text
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if not public.user_has_branch_access(p_branch_id) then
+    raise exception 'Branch access denied';
+  end if;
+
+  if not public.has_permission('compliance.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  return query
+  select
+    c.id,
+    c.branch_id,
+    c.equipment_name,
+    c.load_description,
+    c.cycle_method,
+    c.started_at,
+    c.completed_at,
+    c.duration_minutes,
+    c.temperature_c,
+    c.biological_indicator,
+    c.chemical_indicator,
+    c.result_status,
+    c.operator_name,
+    c.notes,
+    c.created_by,
+    c.created_at,
+    coalesce(p.full_name, p.email, 'Staff') as logged_by_name
+  from public.compliance_cycles c
+  left join public.profiles p on p.id = c.created_by
+  where c.branch_id = p_branch_id
+    and (p_since is null or c.started_at >= p_since)
+  order by c.started_at desc
+  limit greatest(1, least(coalesce(p_limit, 100), 500));
+end;
+$$;
+
+grant execute on function public.get_compliance_cycles(uuid, integer, timestamptz) to authenticated;
+
+create or replace function public.get_compliance_summary(p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_since timestamptz := now() - interval '30 days';
+  v_result jsonb;
+begin
+  if not public.user_has_branch_access(p_branch_id) then
+    raise exception 'Branch access denied';
+  end if;
+
+  if not public.has_permission('compliance.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  select jsonb_build_object(
+    'total_30d', count(*) filter (where started_at >= v_since),
+    'passed_30d', count(*) filter (where started_at >= v_since and result_status = 'pass'),
+    'failed_30d', count(*) filter (where started_at >= v_since and result_status = 'fail'),
+    'pending_30d', count(*) filter (where started_at >= v_since and result_status = 'pending'),
+    'last_cycle_at', max(started_at),
+    'last_pass_at', max(started_at) filter (where result_status = 'pass')
+  )
+  into v_result
+  from public.compliance_cycles
+  where branch_id = p_branch_id;
+
+  return coalesce(v_result, '{}'::jsonb);
+end;
+$$;
+
+grant execute on function public.get_compliance_summary(uuid) to authenticated;
+
+
+-- ===== 20260613180000_merge_dpa_general_consent.sql =====
+
+-- Disable the separate dpa-consent template
+update public.consent_templates
+set is_active = false, is_default = false
+where organization_id is null and slug = 'dpa-consent';
+
+-- Merge DPA into general-treatment template
+update public.consent_templates
+set
+  name = 'Data Privacy & General Treatment Consent',
+  description = 'Combined consent for data processing (DPA) and general dental treatment',
+  source_asset = 'PDA',
+  body = 'DATA PRIVACY CONSENT (Republic Act No. 10173):
+I consent to the collection, use, and processing of my personal and health information in accordance with the Data Privacy Act of 2012.
+
+GENERAL TREATMENT CONSENT:
+I consent to dental examination, diagnosis, and treatment as recommended by my dental provider at {{clinic_name}}.
+
+Patient: {{patient_name}}
+Date of birth: {{patient_dob}}
+Date: {{today_date}}',
+  fields = '[
+    {"id":"data_use_ack","type":"yes_no","label":"I consent to collection and use of my personal and health information per the Data Privacy Act","required":true},
+    {"id":"procedure_acknowledged","type":"yes_no","label":"I understand the proposed treatment and alternatives were explained","required":true},
+    {"id":"questions_answered","type":"checkbox","label":"I had the opportunity to ask questions and they were answered","required":true},
+    {"id":"patient_initials","type":"initials","label":"Patient initials","required":true}
+  ]'::jsonb
+where organization_id is null and slug = 'general-treatment';
+
+-- ===== 20260613190000_fix_inventory_rls.sql =====
+
+-- Drop the old overly restrictive policy
+drop policy if exists inventory_items_all on public.inventory_items;
+
+-- Allow all authenticated users with branch access to view inventory items
+create policy inventory_items_select on public.inventory_items
+  for select to authenticated using (
+    organization_id = public.current_user_org_id()
+    and public.user_has_branch_access(branch_id)
+  );
+
+-- Only allow users with settings.manage permission to insert/update/delete inventory items
+create policy inventory_items_insert on public.inventory_items
+  for insert to authenticated with check (
+    organization_id = public.current_user_org_id()
+    and public.user_has_branch_access(branch_id)
+    and public.has_permission('settings.manage', branch_id)
+  );
+
+create policy inventory_items_update on public.inventory_items
+  for update to authenticated using (
+    organization_id = public.current_user_org_id()
+    and public.user_has_branch_access(branch_id)
+    and public.has_permission('settings.manage', branch_id)
+  ) with check (
+    organization_id = public.current_user_org_id()
+    and public.user_has_branch_access(branch_id)
+    and public.has_permission('settings.manage', branch_id)
+  );
+
+create policy inventory_items_delete on public.inventory_items
+  for delete to authenticated using (
+    organization_id = public.current_user_org_id()
+    and public.user_has_branch_access(branch_id)
+    and public.has_permission('settings.manage', branch_id)
+  );
+
+-- ===== 20260613200000_add_invoice_series.sql =====
+
+-- Add series column to invoices table
+alter table public.invoices
+  add column if not exists series text not null default 'INV';
+
+
+-- ===== 20260613210000_fix_procedure_catalog_stable.sql =====
+
+-- Redefine get_procedure_catalog as volatile (removing stable classification) so it can safely execute INSERT
+create or replace function public.get_procedure_catalog(p_branch_id uuid)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  v_org_id uuid;
+  v_categories jsonb;
+  v_procedures jsonb;
+begin
+  select b.organization_id into v_org_id
+  from public.branches b
+  where b.id = p_branch_id
+    and b.organization_id = public.current_user_org_id();
+
+  if v_org_id is null then
+    raise exception 'Branch not found';
+  end if;
+
+  if not public.has_permission('settings.manage', p_branch_id)
+    and not public.has_permission('billing.read', p_branch_id)
+    and not public.has_permission('appointments.read', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  perform public.ensure_procedure_categories(v_org_id);
+
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'id', pc.id,
+      'slug', pc.slug,
+      'name', pc.name,
+      'sort_order', pc.sort_order
+    ) order by pc.sort_order, pc.name
+  ), '[]'::jsonb)
+  into v_categories
+  from public.procedure_categories pc
+  where pc.organization_id = v_org_id
+    and pc.is_active;
+
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'id', p.id,
+      'code', p.code,
+      'name', p.name,
+      'category', p.category,
+      'base_price', p.base_price,
+      'effective_price', public.get_effective_procedure_price(p.id, p_branch_id),
+      'branch_override', (
+        select bpp.price_override
+        from public.branch_procedure_prices bpp
+        where bpp.procedure_id = p.id
+          and bpp.branch_id = p_branch_id
+          limit 1
+      ),
+      'tooth_required', p.tooth_required,
+      'is_active', p.is_active
+    ) order by p.name
+  ), '[]'::jsonb)
+  into v_procedures
+  from public.procedures p
+  where p.organization_id = v_org_id
+    and p.is_active;
+
+  return jsonb_build_object(
+    'branch_id', p_branch_id,
+    'categories', v_categories,
+    'procedures', v_procedures
+  );
+end;
+$$;
+
+-- ===== 20260613220000_fix_staff_creation_rls.sql =====
+
+-- Migration: Fix RLS Policies for Direct Staff/Provider Creation
+-- Target: Resolve RLS inserts violations on public.profiles, public.staff_profiles, and public.staff_branch_assignments
+
+-- ---------------------------------------------------------------------------
+-- 1. Redefine public.profiles policies
+-- ---------------------------------------------------------------------------
+drop policy if exists profile_insert on public.profiles;
+create policy profile_insert on public.profiles
+  for insert with check (
+    id = auth.uid()
+    or (
+      organization_id = public.current_user_org_id()
+      and public.user_is_org_admin()
+    )
+  );
+
+drop policy if exists profile_update on public.profiles;
+create policy profile_update on public.profiles
+  for update using (
+    id = auth.uid()
+    or (
+      organization_id = public.current_user_org_id()
+      and public.user_is_org_admin()
+    )
+  );
+
+-- ---------------------------------------------------------------------------
+-- 2. Redefine public.staff_profiles policies
+-- ---------------------------------------------------------------------------
+drop policy if exists sp_insert on public.staff_profiles;
+create policy sp_insert on public.staff_profiles
+  for insert with check (
+    public.user_is_org_admin()
+  );
+
+drop policy if exists sp_update on public.staff_profiles;
+create policy sp_update on public.staff_profiles
+  for update using (
+    profile_id = auth.uid()
+    or public.user_is_org_admin()
+  );
+
+-- ---------------------------------------------------------------------------
+-- 3. Redefine public.staff_branch_assignments policies
+-- ---------------------------------------------------------------------------
+drop policy if exists sba_insert on public.staff_branch_assignments;
+create policy sba_insert on public.staff_branch_assignments
+  for insert with check (
+    public.user_is_org_admin()
+  );
+
+drop policy if exists sba_update on public.staff_branch_assignments;
+create policy sba_update on public.staff_branch_assignments
+  for update using (
+    profile_id = auth.uid()
+    or public.user_is_org_admin()
+  );
+
+
+-- ===== 20260613230000_fix_appointment_slots.sql =====
+
+-- Migration: Fix Appointment Slots â€” Remove current_user_org_id() dependency
+-- Root cause: security definer functions call current_user_org_id() which relies
+-- on profiles RLS, causing circular dependency and returning NULL for some users.
+-- Fix: Resolve org_id directly from branches table (no RLS needed in security definer).
+
+-- ---------------------------------------------------------------------------
+-- 1. ensure_provider_availability_defaults: bypass current_user_org_id()
+-- ---------------------------------------------------------------------------
+create or replace function public.ensure_provider_availability_defaults(
+  p_branch_id uuid,
+  p_provider_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org_id uuid;
+  v_hour record;
+begin
+  -- Resolve org_id directly from branches (no RLS in security definer)
+  select b.organization_id into v_org_id
+  from public.branches b
+  where b.id = p_branch_id;
+
+  if v_org_id is null then
+    raise exception 'Branch not found';
+  end if;
+
+  -- Ensure clinic hours exist for this branch
+  perform public.ensure_branch_clinic_hours(p_branch_id);
+
+  -- Copy clinic hours into provider_availability for each day
+  for v_hour in
+    select ch.day_of_week, ch.open_time, ch.close_time, ch.is_closed
+    from public.clinic_hours ch
+    where ch.branch_id = p_branch_id
+  loop
+    insert into public.provider_availability (
+      organization_id, branch_id, provider_id, day_of_week,
+      start_time, end_time, slot_minutes, is_available
+    ) values (
+      v_org_id, p_branch_id, p_provider_id, v_hour.day_of_week,
+      coalesce(v_hour.open_time, '09:00'::time),
+      coalesce(v_hour.close_time, '17:00'::time),
+      30,
+      not coalesce(v_hour.is_closed, false)
+    )
+    on conflict (branch_id, provider_id, day_of_week) do nothing;
+  end loop;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 2. get_available_appointment_slots: bypass current_user_org_id()
+-- ---------------------------------------------------------------------------
+create or replace function public.get_available_appointment_slots(
+  p_branch_id uuid,
+  p_provider_id uuid,
+  p_date date
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org_id uuid;
+  v_dow smallint;
+  v_avail record;
+  v_slots jsonb := '[]'::jsonb;
+  v_cursor time;
+  v_end time;
+  v_slot interval;
+  v_ts timestamptz;
+  v_taken boolean;
+begin
+  -- Resolve org from branches directly
+  select b.organization_id into v_org_id
+  from public.branches b
+  where b.id = p_branch_id;
+
+  if v_org_id is null then
+    return jsonb_build_object('date', p_date, 'slots', v_slots);
+  end if;
+
+  -- Auto-provision defaults for this provider if not yet created
+  perform public.ensure_provider_availability_defaults(p_branch_id, p_provider_id);
+
+  -- PostgreSQL dow: 0=Sunday, 1=Monday ... 6=Saturday (matches clinic_hours)
+  v_dow := extract(dow from p_date)::smallint;
+
+  select pa.start_time, pa.end_time, pa.slot_minutes, pa.is_available
+  into v_avail
+  from public.provider_availability pa
+  where pa.branch_id = p_branch_id
+    and pa.provider_id = p_provider_id
+    and pa.day_of_week = v_dow
+    and pa.organization_id = v_org_id;
+
+  if v_avail is null or not v_avail.is_available then
+    return jsonb_build_object('date', p_date, 'slots', v_slots);
+  end if;
+
+  v_cursor := v_avail.start_time;
+  v_end := v_avail.end_time;
+  v_slot := make_interval(mins => v_avail.slot_minutes);
+
+  while v_cursor < v_end loop
+    v_ts := (p_date + v_cursor) at time zone 'Asia/Manila';
+    select exists (
+      select 1 from public.appointments a
+      where a.branch_id = p_branch_id
+        and coalesce(a.provider_id, p_provider_id) = p_provider_id
+        and a.scheduled_at = v_ts
+        and a.status not in ('cancelled', 'no_show')
+    ) into v_taken;
+
+    v_slots := v_slots || jsonb_build_array(jsonb_build_object(
+      'time', to_char(v_cursor, 'HH24:MI'),
+      'available', not v_taken
+    ));
+
+    v_cursor := v_cursor + v_slot;
+  end loop;
+
+  return jsonb_build_object(
+    'date', p_date,
+    'provider_id', p_provider_id,
+    'slots', v_slots
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 3. get_branch_provider_availability: bypass current_user_org_id()
+-- ---------------------------------------------------------------------------
+create or replace function public.get_branch_provider_availability(p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org_id uuid;
+  v_result jsonb;
+begin
+  -- Resolve org from branches directly
+  select b.organization_id into v_org_id
+  from public.branches b
+  where b.id = p_branch_id;
+
+  if v_org_id is null then
+    return jsonb_build_object('branch_id', p_branch_id, 'rows', '[]'::jsonb);
+  end if;
+
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'provider_id', pa.provider_id,
+      'provider_name', coalesce(p.full_name, p.email, 'Provider'),
+      'day_of_week', pa.day_of_week,
+      'start_time', to_char(pa.start_time, 'HH24:MI'),
+      'end_time', to_char(pa.end_time, 'HH24:MI'),
+      'slot_minutes', pa.slot_minutes,
+      'is_available', pa.is_available
+    ) order by pa.provider_id, pa.day_of_week
+  ), '[]'::jsonb)
+  into v_result
+  from public.provider_availability pa
+  join public.profiles p on p.id = pa.provider_id
+  where pa.branch_id = p_branch_id
+    and pa.organization_id = v_org_id;
+
+  return jsonb_build_object('branch_id', p_branch_id, 'rows', v_result);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 4. ensure_branch_clinic_hours: also remove org check
+-- ---------------------------------------------------------------------------
+create or replace function public.ensure_branch_clinic_hours(p_branch_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  d integer;
+begin
+  for d in 0..6 loop
+    insert into public.clinic_hours (branch_id, day_of_week, open_time, close_time, is_closed)
+    values (
+      p_branch_id,
+      d,
+      case when d in (0, 6) then null else '09:00'::time end,
+      case when d in (0, 6) then null else '18:00'::time end,
+      d in (0, 6)
+    )
+    on conflict (branch_id, day_of_week) do nothing;
+  end loop;
+end;
+$$;
+
+-- Grant execute
+grant execute on function public.ensure_provider_availability_defaults(uuid, uuid) to authenticated;
+grant execute on function public.get_branch_provider_availability(uuid) to authenticated;
+grant execute on function public.get_available_appointment_slots(uuid, uuid, date) to authenticated;
+grant execute on function public.ensure_branch_clinic_hours(uuid) to authenticated;
+
+
+-- ===== 20260613240000_inventory_automations.sql =====
+
+-- Inventory enhancements
+ALTER TABLE inventory_items 
+ADD COLUMN IF NOT EXISTS supplier text,
+ADD COLUMN IF NOT EXISTS brand text,
+ADD COLUMN IF NOT EXISTS unit_cost numeric DEFAULT 0;
+
+-- Lab Cases Module
+CREATE TABLE IF NOT EXISTS lab_cases (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL,
+  branch_id uuid NOT NULL,
+  patient_id uuid NOT NULL,
+  provider_id uuid,
+  lab_name text NOT NULL,
+  case_type text NOT NULL,
+  sent_date date NOT NULL,
+  expected_date date,
+  received_date date,
+  status text NOT NULL DEFAULT 'pending',
+  cost numeric DEFAULT 0,
+  notes text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Odontogram to Inventory Mapping
+CREATE TABLE IF NOT EXISTS procedure_inventory_links (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL,
+  procedure_code text NOT NULL,
+  inventory_item_id uuid NOT NULL,
+  quantity_required numeric NOT NULL DEFAULT 1,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Doctor Commissions
+ALTER TABLE staff_profiles
+ADD COLUMN IF NOT EXISTS commission_rate numeric DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS provider_commissions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL,
+  branch_id uuid NOT NULL,
+  provider_id uuid NOT NULL,
+  invoice_id uuid NOT NULL,
+  amount numeric NOT NULL,
+  calculated_at timestamptz DEFAULT now()
+);
+
+
+-- ===== 20260613250000_chair_time_tracking.sql =====
+
+-- Add in_chair_at to queue_entries
+alter table public.queue_entries add column if not exists in_chair_at timestamptz;
+
+-- Update the update_queue_status function to set in_chair_at
+create or replace function public.update_queue_status(
+  p_entry_id uuid,
+  p_status text,
+  p_chair_label text default null
+)
+returns jsonb
+language plpgsql
+security definer
+as $$
+declare
+  v_entry public.queue_entries%rowtype;
+  v_app_id uuid;
+  v_branch_id uuid;
+  v_patient_id uuid;
+  v_old_status text;
+  v_in_chair_at timestamptz;
+  v_completed_at timestamptz;
+begin
+  select * into v_entry from public.queue_entries where id = p_entry_id;
+  if not found then
+    return jsonb_build_object('error', 'Entry not found');
+  end if;
+
+  v_app_id := v_entry.appointment_id;
+  v_branch_id := v_entry.branch_id;
+  v_patient_id := v_entry.patient_id;
+  v_old_status := v_entry.status;
+  
+  -- Keep existing timestamps unless we are transitioning into the state
+  v_in_chair_at := v_entry.in_chair_at;
+  v_completed_at := v_entry.completed_at;
+
+  if p_status = 'in_chair' and v_old_status != 'in_chair' then
+    v_in_chair_at := now();
+  end if;
+
+  if p_status = 'served' and v_old_status != 'served' then
+    v_completed_at := now();
+  end if;
+
+  update public.queue_entries
+  set 
+    status = p_status,
+    chair_label = coalesce(p_chair_label, chair_label),
+    called_at = case when p_status = 'now_serving' then now() else called_at end,
+    in_chair_at = v_in_chair_at,
+    completed_at = v_completed_at,
+    updated_at = now()
+  where id = p_entry_id;
+
+  -- 1) Auto-Complete Appointment
+  if p_status = 'served' and v_app_id is not null then
+    -- Check workflow settings
+    declare
+      v_auto_served boolean;
+    begin
+      select (settings->>'auto_served_completes_appointment')::boolean into v_auto_served
+      from public.workflow_settings
+      where branch_id = v_branch_id;
+
+      if coalesce(v_auto_served, true) then
+        update public.appointments
+        set status = 'completed', updated_at = now()
+        where id = v_app_id;
+      end if;
+    exception when others then null;
+    end;
+  end if;
+
+  return jsonb_build_object('success', true);
+end;
+$$;
+
+
+-- ===== 20260613260000_fix_kiosk_phone_match.sql =====
+
+-- Fix Kiosk checkin phone match for Philippine phone prefixes (09 vs 639)
+create or replace function public.submit_kiosk_checkin(
+  p_session_id uuid,
+  p_phone text,
+  p_last_name text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.kiosk_sessions%rowtype;
+  v_patient_id uuid;
+  v_code text;
+  v_entry_id uuid;
+  v_phone_norm text;
+begin
+  select * into v_session from public.kiosk_sessions where id = p_session_id;
+  if not found or v_session.expires_at < now() then
+    raise exception 'Kiosk session expired. Please refresh the page.';
+  end if;
+
+  -- Extract only digits, and take the last 10 digits
+  v_phone_norm := right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 10);
+  
+  if v_phone_norm = '' or trim(coalesce(p_last_name, '')) = '' then
+    raise exception 'Phone and last name are required';
+  end if;
+
+  select p.id into v_patient_id
+  from public.patients p
+  inner join public.patient_branch_links pbl on pbl.patient_id = p.id and pbl.branch_id = v_session.branch_id
+  where p.organization_id = v_session.organization_id
+    and p.status = 'active'
+    and lower(p.last_name) = lower(trim(p_last_name))
+    and right(regexp_replace(coalesce(p.phone, ''), '\D', '', 'g'), 10) = v_phone_norm
+  limit 1;
+
+  if v_patient_id is null then
+    raise exception 'We could not find your record. Please check with the front desk.';
+  end if;
+
+  if exists (
+    select 1 from public.queue_entries
+    where branch_id = v_session.branch_id
+      and patient_id = v_patient_id
+      and status in ('waiting', 'ready', 'now_serving', 'in_chair')
+  ) then
+    raise exception 'You are already checked in. Please wait to be called.';
+  end if;
+
+  v_code := public._next_queue_display_code(v_session.branch_id);
+
+  insert into public.queue_entries (
+    organization_id, branch_id, patient_id, display_code, notes
+  ) values (
+    v_session.organization_id, v_session.branch_id, v_patient_id, v_code, 'Kiosk check-in'
+  )
+  returning id into v_entry_id;
+
+  return jsonb_build_object('entry_id', v_entry_id, 'display_code', v_code);
+end;
+$$;
+
+
+-- ===== 20260613270000_fix_random_bytes_and_encoding.sql =====
+
+-- Fix missing pgcrypto gen_random_bytes by switching to native gen_random_uuid()
+-- Fix corrupted ANSI characters in consent templates
+
+-- 1. Fix default tokens for branch_public_tokens
+alter table public.branch_public_tokens 
+  alter column token set default replace(gen_random_uuid()::text, '-', '');
+
+-- 2. Fix default tokens for consent_signing_tokens
+alter table public.consent_signing_tokens 
+  alter column token set default replace(gen_random_uuid()::text, '-', '');
+
+-- 3. Fix generate_consent_signing_token RPC
+create or replace function public.generate_consent_signing_token(
+  p_consent_id uuid,
+  p_channel text default 'link'
+)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_consent public.patient_consents%rowtype;
+  v_token text;
+begin
+  select * into v_consent from public.patient_consents where id = p_consent_id;
+  if not found then
+    raise exception 'Consent not found';
+  end if;
+
+  if v_consent.status = 'signed' then
+    raise exception 'Consent is already signed';
+  end if;
+
+  v_token := replace(gen_random_uuid()::text, '-', '');
+
+  insert into public.consent_signing_tokens (
+    patient_consent_id, token, channel, expires_at, created_by
+  ) values (
+    p_consent_id,
+    v_token,
+    p_channel,
+    now() + interval '7 days',
+    public.current_user_id()
+  );
+
+  return v_token;
+end;
+$$;
+
+-- 4. Fix generate_branch_public_token RPC
+create or replace function public.generate_branch_public_token(
+  p_branch_id uuid,
+  p_token_type text,
+  p_label text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_token text;
+  v_id uuid;
+begin
+  if p_token_type not in ('kiosk', 'display') then
+    raise exception 'Invalid token type';
+  end if;
+
+  if not public.has_permission('queue.manage', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  -- Expire existing tokens for this type/branch
+  update public.branch_public_tokens
+  set is_active = false
+  where branch_id = p_branch_id
+    and token_type = p_token_type
+    and is_active = true;
+
+  v_token := replace(gen_random_uuid()::text, '-', '');
+
+  insert into public.branch_public_tokens (
+    organization_id, branch_id, token, token_type, label, expires_at, created_by
+  ) values (
+    v_org, p_branch_id, v_token, p_token_type, p_label, now() + interval '24 hours', public.current_user_id()
+  ) returning id into v_id;
+
+  return jsonb_build_object('id', v_id, 'token', v_token, 'token_type', p_token_type);
+end;
+$$;
+
+-- 5. Fix Character Encoding (ANSI Ã¢â‚¬â€œ to standard UTF-8 hyphen -)
+update public.consent_templates
+set 
+  name = replace(name, 'Ã¢â‚¬â€œ', '-'),
+  body = replace(body, 'Ã¢â‚¬â€œ', '-');
+
+-- 6. Fix create_consent_signing_token RPC
+create or replace function public.create_consent_signing_token(
+  p_consent_id uuid,
+  p_channel text default 'qr',
+  p_ttl_hours int default 72
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_consent record;
+  v_token text;
+begin
+  select * into v_consent
+  from public.patient_consents
+  where id = p_consent_id
+    and organization_id = public.current_user_org_id();
+
+  if v_consent.id is null then
+    raise exception 'Consent not found';
+  end if;
+
+  if v_consent.status <> 'pending' then
+    raise exception 'Consent is not pending';
+  end if;
+
+  if not public.has_permission('consents.manage', coalesce(v_consent.branch_id, (
+    select sba.branch_id from public.staff_branch_assignments sba
+    where sba.profile_id = auth.uid() limit 1
+  ))) then
+    raise exception 'Permission denied';
+  end if;
+
+  v_token := replace(gen_random_uuid()::text, '-', '');
+
+  insert into public.consent_signing_tokens (
+    patient_consent_id, token, channel, expires_at, created_by
+  ) values (
+    p_consent_id,
+    v_token,
+    coalesce(nullif(trim(p_channel), ''), 'qr'),
+    now() + make_interval(hours => greatest(p_ttl_hours, 1)),
+    auth.uid()
+  );
+
+  return jsonb_build_object(
+    'token', v_token,
+    'expires_at', (now() + make_interval(hours => greatest(p_ttl_hours, 1)))::text
+  );
+end;
+$$;
+
+
+-- ===== 20260613270000_kiosk_enhancements.sql =====
+
+-- Add mood to queue_entries
+alter table public.queue_entries add column if not exists patient_mood text;
+
+-- RPC to update mood
+create or replace function public.update_queue_entry_mood(
+  p_entry_id uuid,
+  p_mood text
+) returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.queue_entries
+  set patient_mood = p_mood
+  where id = p_entry_id;
+end;
+$$;
+
+-- RPC to get live queue stats for kiosk
+create or replace function public.get_kiosk_queue_stats(
+  p_branch_id uuid
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_serving jsonb;
+  v_wait_count int;
+begin
+  -- get array of display codes currently serving (status IN ('now_serving', 'in_chair'))
+  select coalesce(jsonb_agg(display_code order by created_at asc), '[]'::jsonb)
+  into v_serving
+  from public.queue_entries
+  where branch_id = p_branch_id
+    and status in ('now_serving', 'in_chair')
+    and cast(created_at at time zone 'Asia/Manila' as date) = cast(now() at time zone 'Asia/Manila' as date);
+
+  -- get count of waiting patients
+  select count(*)
+  into v_wait_count
+  from public.queue_entries
+  where branch_id = p_branch_id
+    and status in ('waiting', 'ready')
+    and cast(created_at at time zone 'Asia/Manila' as date) = cast(now() at time zone 'Asia/Manila' as date);
+
+  return jsonb_build_object(
+    'serving', coalesce(v_serving, '[]'::jsonb),
+    'waitCount', coalesce(v_wait_count, 0)
+  );
+end;
+$$;
+
+
+-- ===== 20260613280000_strict_kiosk_block.sql =====
+
+create or replace function public.submit_kiosk_checkin(
+  p_session_id uuid,
+  p_phone text,
+  p_last_name text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.kiosk_sessions%rowtype;
+  v_patient_id uuid;
+  v_code text;
+  v_entry_id uuid;
+  v_phone_norm text;
+  v_active_count int;
+begin
+  select * into v_session from public.kiosk_sessions where id = p_session_id;
+  if not found or v_session.expires_at < now() then
+    raise exception 'Kiosk session expired. Please refresh the page.';
+  end if;
+
+  -- Extract only digits, and take the last 10 digits
+  v_phone_norm := right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 10);
+  
+  if v_phone_norm = '' or trim(coalesce(p_last_name, '')) = '' then
+    raise exception 'Phone and last name are required';
+  end if;
+
+  select p.id into v_patient_id
+  from public.patients p
+  inner join public.patient_branch_links pbl on pbl.patient_id = p.id and pbl.branch_id = v_session.branch_id
+  where p.organization_id = v_session.organization_id
+    and p.status = 'active'
+    and lower(p.last_name) = lower(trim(p_last_name))
+    and right(regexp_replace(coalesce(p.phone, ''), '\D', '', 'g'), 10) = v_phone_norm
+  limit 1;
+
+  if v_patient_id is null then
+    raise exception 'We could not find your record. Please check with the front desk.';
+  end if;
+
+  -- STRICT BLOCK: Check if patient is already in queue today
+  select count(*) into v_active_count
+  from public.queue_entries
+  where branch_id = v_session.branch_id
+    and patient_id = v_patient_id
+    and status in ('waiting', 'ready', 'now_serving', 'in_chair')
+    and cast(created_at at time zone 'Asia/Manila' as date) = cast(now() at time zone 'Asia/Manila' as date);
+
+  if v_active_count > 0 then
+    raise exception 'You are already checked in. Please wait to be called.';
+  end if;
+
+  v_code := public._next_queue_display_code(v_session.branch_id);
+
+  insert into public.queue_entries (
+    organization_id, branch_id, patient_id, display_code, notes
+  ) values (
+    v_session.organization_id, v_session.branch_id, v_patient_id, v_code, 'Kiosk check-in'
+  )
+  returning id into v_entry_id;
+
+  return jsonb_build_object('entry_id', v_entry_id, 'display_code', v_code);
+end;
+$$;
+
+
+-- ===== 20260613290000_portal_features.sql =====
+
+-- 1. Drop existing constraint on branch_public_tokens and recreate with 'portal'
+alter table public.branch_public_tokens drop constraint if exists branch_public_tokens_token_type_check;
+alter table public.branch_public_tokens add constraint branch_public_tokens_token_type_check check (token_type in ('kiosk', 'display', 'portal'));
+
+-- 2. Update generate_branch_public_token to accept 'portal'
+create or replace function public.generate_branch_public_token(
+  p_branch_id uuid,
+  p_token_type text,
+  p_label text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_token text;
+  v_id uuid;
+begin
+  if p_token_type not in ('kiosk', 'display', 'portal') then
+    raise exception 'Invalid token type';
+  end if;
+
+  if not public.has_permission('queue.manage', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  insert into public.branch_public_tokens (
+    organization_id, branch_id, token_type, label, created_by
+  ) values (
+    v_org, p_branch_id, p_token_type, p_label, auth.uid()
+  )
+  returning id, token into v_id, v_token;
+
+  return jsonb_build_object('id', v_id, 'token', v_token, 'token_type', p_token_type);
+end;
+$$;
+
+-- 3. Update create_kiosk_session to allow 'portal' tokens
+create or replace function public.create_kiosk_session(p_token text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_t public.branch_public_tokens%rowtype;
+  v_branch_name text;
+  v_session_id uuid;
+begin
+  select * into v_t
+  from public.branch_public_tokens
+  where token = p_token
+    and token_type in ('kiosk', 'portal')
+    and is_active = true
+    and (expires_at is null or expires_at > now());
+
+  if not found then
+    raise exception 'Invalid or expired link';
+  end if;
+
+  select name into v_branch_name from public.branches where id = v_t.branch_id;
+
+  insert into public.kiosk_sessions (organization_id, branch_id, token_id, expires_at)
+  values (v_t.organization_id, v_t.branch_id, v_t.id, now() + interval '24 hours')
+  returning id into v_session_id;
+
+  return jsonb_build_object(
+    'session_id', v_session_id,
+    'branch_id', v_t.branch_id,
+    'branch_name', v_branch_name,
+    'expires_at', (now() + interval '24 hours'),
+    'token_type', v_t.token_type
+  );
+end;
+$$;
+
+-- 4. Create submit_portal_appointment for existing patients
+create or replace function public.submit_portal_appointment(
+  p_session_id uuid,
+  p_phone text,
+  p_last_name text,
+  p_provider_id uuid,
+  p_date date,
+  p_time time
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.kiosk_sessions%rowtype;
+  v_patient_id uuid;
+  v_appointment_id uuid;
+  v_phone_norm text;
+  v_scheduled_at timestamptz;
+begin
+  select * into v_session from public.kiosk_sessions where id = p_session_id;
+  if not found or v_session.expires_at < now() then
+    raise exception 'Session expired. Please refresh the page.';
+  end if;
+
+  v_phone_norm := right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 10);
+  
+  if v_phone_norm = '' or trim(coalesce(p_last_name, '')) = '' then
+    raise exception 'Phone and last name are required';
+  end if;
+
+  select p.id into v_patient_id
+  from public.patients p
+  inner join public.patient_branch_links pbl on pbl.patient_id = p.id and pbl.branch_id = v_session.branch_id
+  where p.organization_id = v_session.organization_id
+    and p.status = 'active'
+    and lower(p.last_name) = lower(trim(p_last_name))
+    and right(regexp_replace(coalesce(p.phone, ''), '\D', '', 'g'), 10) = v_phone_norm
+  limit 1;
+
+  if v_patient_id is null then
+    raise exception 'We could not find your record. Please use New Patient Registration.';
+  end if;
+
+  -- Combine date and time into timestamp (assumes Asia/Manila, can be adjusted)
+  v_scheduled_at := (p_date || ' ' || p_time || ' +08')::timestamptz;
+
+  -- Create appointment
+  insert into public.appointments (
+    organization_id, branch_id, patient_id, provider_id, scheduled_at, duration_minutes, purpose, status
+  ) values (
+    v_session.organization_id, v_session.branch_id, v_patient_id, p_provider_id, v_scheduled_at, 30, 'Portal Booking', 'scheduled'
+  )
+  returning id into v_appointment_id;
+
+  return jsonb_build_object('appointment_id', v_appointment_id);
+end;
+$$;
+
+-- Grant permissions
+grant execute on function public.submit_portal_appointment(uuid, text, text, uuid, date, time) to anon, authenticated;
+
+
+-- ===== 20260613300000_verify_portal_patient.sql =====
+
+-- Verify existing patient before portal booking flow continues
+create or replace function public.verify_portal_patient(
+  p_session_id uuid,
+  p_phone text,
+  p_last_name text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.kiosk_sessions%rowtype;
+  v_patient_id uuid;
+  v_phone_norm text;
+begin
+  select * into v_session from public.kiosk_sessions where id = p_session_id;
+  if not found or v_session.expires_at < now() then
+    raise exception 'Session expired. Please refresh the page.';
+  end if;
+
+  v_phone_norm := right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 10);
+
+  if v_phone_norm = '' or trim(coalesce(p_last_name, '')) = '' then
+    raise exception 'Phone and last name are required';
+  end if;
+
+  select p.id into v_patient_id
+  from public.patients p
+  inner join public.patient_branch_links pbl on pbl.patient_id = p.id and pbl.branch_id = v_session.branch_id
+  where p.organization_id = v_session.organization_id
+    and p.status = 'active'
+    and lower(p.last_name) = lower(trim(p_last_name))
+    and right(regexp_replace(coalesce(p.phone, ''), '\D', '', 'g'), 10) = v_phone_norm
+  limit 1;
+
+  if v_patient_id is null then
+    raise exception 'We could not find your record. Online booking is only for registered patients. Please visit the clinic to register first.';
+  end if;
+
+  return jsonb_build_object('patient_id', v_patient_id);
+end;
+$$;
+
+grant execute on function public.verify_portal_patient(uuid, text, text) to anon, authenticated;
+
+-- Keep booking RPC message aligned with early verification
+create or replace function public.submit_portal_appointment(
+  p_session_id uuid,
+  p_phone text,
+  p_last_name text,
+  p_provider_id uuid,
+  p_date date,
+  p_time time
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.kiosk_sessions%rowtype;
+  v_patient_id uuid;
+  v_appointment_id uuid;
+  v_phone_norm text;
+  v_scheduled_at timestamptz;
+begin
+  select * into v_session from public.kiosk_sessions where id = p_session_id;
+  if not found or v_session.expires_at < now() then
+    raise exception 'Session expired. Please refresh the page.';
+  end if;
+
+  v_phone_norm := right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 10);
+
+  if v_phone_norm = '' or trim(coalesce(p_last_name, '')) = '' then
+    raise exception 'Phone and last name are required';
+  end if;
+
+  select p.id into v_patient_id
+  from public.patients p
+  inner join public.patient_branch_links pbl on pbl.patient_id = p.id and pbl.branch_id = v_session.branch_id
+  where p.organization_id = v_session.organization_id
+    and p.status = 'active'
+    and lower(p.last_name) = lower(trim(p_last_name))
+    and right(regexp_replace(coalesce(p.phone, ''), '\D', '', 'g'), 10) = v_phone_norm
+  limit 1;
+
+  if v_patient_id is null then
+    raise exception 'We could not find your record. Online booking is only for registered patients. Please visit the clinic to register first.';
+  end if;
+
+  v_scheduled_at := (p_date || ' ' || p_time || ' +08')::timestamptz;
+
+  insert into public.appointments (
+    organization_id, branch_id, patient_id, provider_id, scheduled_at, duration_minutes, purpose, status
+  ) values (
+    v_session.organization_id, v_session.branch_id, v_patient_id, p_provider_id, v_scheduled_at, 30, 'Portal Booking', 'scheduled'
+  )
+  returning id into v_appointment_id;
+
+  return jsonb_build_object('appointment_id', v_appointment_id);
+end;
+$$;
+
+
+-- ===== 20260614080000_fix_portal_verify_org_wide.sql =====
+
+-- Fix verify_portal_patient and submit_portal_appointment to check organization-wide instead of strict branch link constraint.
+-- If the matching patient is found in the organization but not linked to the branch, automatically create the link.
+
+create or replace function public.verify_portal_patient(
+  p_session_id uuid,
+  p_phone text,
+  p_last_name text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.kiosk_sessions%rowtype;
+  v_patient_id uuid;
+  v_phone_norm text;
+begin
+  select * into v_session from public.kiosk_sessions where id = p_session_id;
+  if not found or v_session.expires_at < now() then
+    raise exception 'Session expired. Please refresh the page.';
+  end if;
+
+  v_phone_norm := right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 10);
+
+  if v_phone_norm = '' or trim(coalesce(p_last_name, '')) = '' then
+    raise exception 'Phone and last name are required';
+  end if;
+
+  -- Find patient within the organization (instead of strictly requiring branch link first)
+  select p.id into v_patient_id
+  from public.patients p
+  where p.organization_id = v_session.organization_id
+    and p.status = 'active'
+    and lower(p.last_name) = lower(trim(p_last_name))
+    and right(regexp_replace(coalesce(p.phone, ''), '\D', '', 'g'), 10) = v_phone_norm
+  limit 1;
+
+  if v_patient_id is null then
+    raise exception 'We could not find your record. Online booking is only for registered patients. Please visit the clinic to register first.';
+  end if;
+
+  -- Automatically link to the branch if they exist in the org but aren't linked yet
+  insert into public.patient_branch_links (patient_id, branch_id)
+  values (v_patient_id, v_session.branch_id)
+  on conflict (patient_id, branch_id) do nothing;
+
+  return jsonb_build_object('patient_id', v_patient_id);
+end;
+$$;
+
+create or replace function public.submit_portal_appointment(
+  p_session_id uuid,
+  p_phone text,
+  p_last_name text,
+  p_provider_id uuid,
+  p_date date,
+  p_time time
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.kiosk_sessions%rowtype;
+  v_patient_id uuid;
+  v_appointment_id uuid;
+  v_phone_norm text;
+  v_scheduled_at timestamptz;
+begin
+  select * into v_session from public.kiosk_sessions where id = p_session_id;
+  if not found or v_session.expires_at < now() then
+    raise exception 'Session expired. Please refresh the page.';
+  end if;
+
+  v_phone_norm := right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 10);
+
+  if v_phone_norm = '' or trim(coalesce(p_last_name, '')) = '' then
+    raise exception 'Phone and last name are required';
+  end if;
+
+  select p.id into v_patient_id
+  from public.patients p
+  where p.organization_id = v_session.organization_id
+    and p.status = 'active'
+    and lower(p.last_name) = lower(trim(p_last_name))
+    and right(regexp_replace(coalesce(p.phone, ''), '\D', '', 'g'), 10) = v_phone_norm
+  limit 1;
+
+  if v_patient_id is null then
+    raise exception 'We could not find your record. Please use New Patient Registration.';
+  end if;
+
+  -- Ensure they are linked to this branch
+  insert into public.patient_branch_links (patient_id, branch_id)
+  values (v_patient_id, v_session.branch_id)
+  on conflict (patient_id, branch_id) do nothing;
+
+  v_scheduled_at := (p_date || ' ' || p_time || ' +08')::timestamptz;
+
+  insert into public.appointments (
+    organization_id, branch_id, patient_id, provider_id, scheduled_at, duration_minutes, purpose, status
+  ) values (
+    v_session.organization_id, v_session.branch_id, v_patient_id, p_provider_id, v_scheduled_at, 30, 'Portal Booking', 'scheduled'
+  )
+  returning id into v_appointment_id;
+
+  return jsonb_build_object('appointment_id', v_appointment_id);
+end;
+$$;
+
+
+-- ===== 20260614090000_financial_closeout_lock.sql =====
+
+-- Migration: Lock invoices and payments on closed days (closeout locked)
+-- Enforces strict accounting controls to prevent employees/users from modifying financial records after daily closeout.
+
+create or replace function public.check_closeout_lock()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_date date;
+  v_branch_id uuid;
+  v_org_id uuid;
+begin
+  -- Internal recalculations (line totals, payment sync, one-off backfills) set this for the transaction.
+  if coalesce(current_setting('app.bypass_closeout_lock', true), '') = 'true' then
+    if TG_OP = 'DELETE' then
+      return old;
+    else
+      return new;
+    end if;
+  end if;
+
+  if TG_OP = 'DELETE' then
+    if TG_TABLE_NAME = 'invoices' then
+      v_date := old.created_at::date;
+      v_branch_id := old.branch_id;
+      v_org_id := old.organization_id;
+    elsif TG_TABLE_NAME = 'invoice_payments' then
+      v_date := old.created_at::date;
+      v_org_id := old.organization_id;
+      select branch_id into v_branch_id from public.invoices where id = old.invoice_id;
+    end if;
+  else
+    if TG_TABLE_NAME = 'invoices' then
+      v_date := new.created_at::date;
+      v_branch_id := new.branch_id;
+      v_org_id := new.organization_id;
+    elsif TG_TABLE_NAME = 'invoice_payments' then
+      v_date := new.created_at::date;
+      v_org_id := new.organization_id;
+      select branch_id into v_branch_id from public.invoices where id = new.invoice_id;
+    end if;
+  end if;
+
+  if exists (
+    select 1 from public.closeout_snapshots
+    where organization_id = v_org_id
+      and (branch_id is null or branch_id = v_branch_id)
+      and snapshot_date = v_date
+  ) then
+    raise exception 'This calendar day has been closed out. Financial records for closed days cannot be modified or deleted.';
+  end if;
+
+  if TG_OP = 'DELETE' then
+    return old;
+  else
+    return new;
+  end if;
+end;
+$$;
+
+-- Drop triggers if they exist to avoid duplicate issues on re-run
+drop trigger if exists trg_invoices_closeout_lock on public.invoices;
+drop trigger if exists trg_invoice_payments_closeout_lock on public.invoice_payments;
+
+-- Attach triggers
+create trigger trg_invoices_closeout_lock
+  before update or delete on public.invoices
+  for each row execute function public.check_closeout_lock();
+
+create trigger trg_invoice_payments_closeout_lock
+  before update or delete on public.invoice_payments
+  for each row execute function public.check_closeout_lock();
+
+
+-- ===== 20260614100000_portal_kiosk_source_notes.sql =====
+
+-- Migration: Dynamically detect intake registration source and refine portal booking purpose
+-- Enables bilingual clarity by using standard terminology for check-ins, bookings, and intakes.
+
+create or replace function public.submit_kiosk_intake(
+  p_session_id uuid,
+  p_payload jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.kiosk_sessions%rowtype;
+  v_intake_id uuid;
+  v_payload jsonb;
+  v_token_type text;
+  v_source text;
+begin
+  select * into v_session from public.kiosk_sessions where id = p_session_id;
+  if not found or v_session.expires_at < now() then
+    raise exception 'Kiosk session expired. Please refresh the page.';
+  end if;
+
+  if nullif(trim(p_payload->>'first_name'), '') is null
+    or nullif(trim(p_payload->>'last_name'), '') is null then
+    raise exception 'first_name and last_name are required';
+  end if;
+
+  -- Detect source based on token type
+  select token_type into v_token_type 
+  from public.branch_public_tokens 
+  where id = v_session.token_id;
+
+  if v_token_type = 'portal' then
+    v_source := 'portal';
+  else
+    v_source := 'kiosk';
+  end if;
+
+  v_payload := coalesce(p_payload, '{}'::jsonb) || jsonb_build_object(
+    'source', v_source,
+    'submitted_at', now()
+  );
+
+  insert into public.patient_intakes (
+    organization_id, branch_id, status, payload
+  ) values (
+    v_session.organization_id,
+    v_session.branch_id,
+    'draft',
+    v_payload
+  )
+  returning id into v_intake_id;
+
+  return jsonb_build_object(
+    'intake_id', v_intake_id,
+    'status', 'draft',
+    'branch_id', v_session.branch_id
+  );
+end;
+$$;
+
+grant execute on function public.submit_kiosk_intake(uuid, jsonb) to anon, authenticated, service_role;
+
+
+-- Refine submit_portal_appointment purpose for dual-language clarity
+create or replace function public.submit_portal_appointment(
+  p_session_id uuid,
+  p_phone text,
+  p_last_name text,
+  p_provider_id uuid,
+  p_date date,
+  p_time time
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.kiosk_sessions%rowtype;
+  v_patient_id uuid;
+  v_appointment_id uuid;
+  v_phone_norm text;
+  v_scheduled_at timestamptz;
+begin
+  select * into v_session from public.kiosk_sessions where id = p_session_id;
+  if not found or v_session.expires_at < now() then
+    raise exception 'Session expired. Please refresh the page.';
+  end if;
+
+  v_phone_norm := right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 10);
+
+  if v_phone_norm = '' or trim(coalesce(p_last_name, '')) = '' then
+    raise exception 'Phone and last name are required';
+  end if;
+
+  select p.id into v_patient_id
+  from public.patients p
+  where p.organization_id = v_session.organization_id
+    and p.status = 'active'
+    and lower(p.last_name) = lower(trim(p_last_name))
+    and right(regexp_replace(coalesce(p.phone, ''), '\D', '', 'g'), 10) = v_phone_norm
+  limit 1;
+
+  if v_patient_id is null then
+    raise exception 'We could not find your record. Please use New Patient Registration.';
+  end if;
+
+  -- Ensure they are linked to this branch
+  insert into public.patient_branch_links (patient_id, branch_id)
+  values (v_patient_id, v_session.branch_id)
+  on conflict (patient_id, branch_id) do nothing;
+
+  v_scheduled_at := (p_date || ' ' || p_time || ' +08')::timestamptz;
+
+  insert into public.appointments (
+    organization_id, branch_id, patient_id, provider_id, scheduled_at, duration_minutes, purpose, status
+  ) values (
+    v_session.organization_id, 
+    v_session.branch_id, 
+    v_patient_id, 
+    p_provider_id, 
+    v_scheduled_at, 
+    30, 
+    'Portal Booking / Online Randevu', 
+    'scheduled'
+  )
+  returning id into v_appointment_id;
+
+  return jsonb_build_object('appointment_id', v_appointment_id);
+end;
+$$;
+
+
+-- ===== 20260614110000_portal_booking_purpose.sql =====
+
+-- Drop old signature of submit_portal_appointment
+drop function if exists public.submit_portal_appointment(uuid, text, text, uuid, date, time);
+
+-- Create new signature with p_purpose parameter
+create or replace function public.submit_portal_appointment(
+  p_session_id uuid,
+  p_phone text,
+  p_last_name text,
+  p_provider_id uuid,
+  p_date date,
+  p_time time,
+  p_purpose text default 'Portal Booking / Online Randevu'
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.kiosk_sessions%rowtype;
+  v_patient_id uuid;
+  v_appointment_id uuid;
+  v_phone_norm text;
+  v_scheduled_at timestamptz;
+begin
+  select * into v_session from public.kiosk_sessions where id = p_session_id;
+  if not found or v_session.expires_at < now() then
+    raise exception 'Session expired. Please refresh the page.';
+  end if;
+
+  v_phone_norm := right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 10);
+
+  if v_phone_norm = '' or trim(coalesce(p_last_name, '')) = '' then
+    raise exception 'Phone and last name are required';
+  end if;
+
+  select p.id into v_patient_id
+  from public.patients p
+  where p.organization_id = v_session.organization_id
+    and p.status = 'active'
+    and lower(p.last_name) = lower(trim(p_last_name))
+    and right(regexp_replace(coalesce(p.phone, ''), '\D', '', 'g'), 10) = v_phone_norm
+  limit 1;
+
+  if v_patient_id is null then
+    raise exception 'We could not find your record. Please use New Patient Registration.';
+  end if;
+
+  -- Ensure they are linked to this branch
+  insert into public.patient_branch_links (patient_id, branch_id)
+  values (v_patient_id, v_session.branch_id)
+  on conflict (patient_id, branch_id) do nothing;
+
+  v_scheduled_at := (p_date || ' ' || p_time || ' +08')::timestamptz;
+
+  insert into public.appointments (
+    organization_id, branch_id, patient_id, provider_id, scheduled_at, duration_minutes, purpose, status
+  ) values (
+    v_session.organization_id, 
+    v_session.branch_id, 
+    v_patient_id, 
+    p_provider_id, 
+    v_scheduled_at, 
+    30, 
+    coalesce(p_purpose, 'Portal Booking / Online Randevu'), 
+    'scheduled'
+  )
+  returning id into v_appointment_id;
+
+  return jsonb_build_object('appointment_id', v_appointment_id);
+end;
+$$;
+
+grant execute on function public.submit_portal_appointment(uuid, text, text, uuid, date, time, text) to anon, authenticated, service_role;
+
+
+-- ===== 20260614120000_queue_priority_call_next.sql =====
+
+-- Drop and recreate call_next_patient to prioritize scheduled appointments over walk-ins/others
+create or replace function public.call_next_patient(p_branch_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_entry_id uuid;
+  v_code text;
+begin
+  if not public.has_permission('queue.manage', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  select id, display_code into v_entry_id, v_code
+  from public.queue_entries
+  where branch_id = p_branch_id
+    and status in ('waiting', 'ready')
+  order by 
+    case when appointment_id is not null then 0 else 1 end asc,
+    checked_in_at asc
+  limit 1
+  for update skip locked;
+
+  if v_entry_id is null then
+    return jsonb_build_object('found', false);
+  end if;
+
+  update public.queue_entries
+  set status = 'now_serving',
+      called_at = now(),
+      updated_by = auth.uid(),
+      updated_at = now()
+  where id = v_entry_id;
+
+  return jsonb_build_object('found', true, 'id', v_entry_id, 'display_code', v_code);
+end;
+$$;
+
+grant execute on function public.call_next_patient(uuid) to authenticated;
+
+
+-- ===== 20260615120000_fix_display_queue_lab.sql =====
+
+-- Fix TV display sync: show called patients (now_serving + in_chair), faster recall, lab_cases RLS
+
+-- ---------------------------------------------------------------------------
+-- TV display: include in_chair patients, today's queue only, expose called_at
+-- ---------------------------------------------------------------------------
+create or replace function public.get_public_queue_display(p_token text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_t public.branch_public_tokens%rowtype;
+  v_branch_name text;
+  v_now_serving jsonb;
+  v_waiting jsonb;
+  v_today date;
+begin
+  select * into v_t
+  from public.branch_public_tokens
+  where token = p_token
+    and token_type = 'display'
+    and is_active = true
+    and (expires_at is null or expires_at > now());
+
+  if not found then
+    raise exception 'Invalid display link';
+  end if;
+
+  v_today := cast(now() at time zone 'Asia/Manila' as date);
+
+  select name into v_branch_name from public.branches where id = v_t.branch_id;
+
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'display_code', qe.display_code,
+        'masked_name', public._mask_patient_display_name(p.first_name, p.last_name),
+        'called_at', qe.called_at
+      )
+      order by qe.called_at desc nulls last
+    ),
+    '[]'::jsonb
+  )
+  into v_now_serving
+  from public.queue_entries qe
+  left join public.patients p on p.id = qe.patient_id
+  where qe.branch_id = v_t.branch_id
+    and qe.status in ('now_serving', 'in_chair')
+    and cast(qe.checked_in_at at time zone 'Asia/Manila' as date) = v_today;
+
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'display_code', qe.display_code,
+        'masked_name', public._mask_patient_display_name(p.first_name, p.last_name)
+      )
+      order by qe.checked_in_at
+    ),
+    '[]'::jsonb
+  )
+  into v_waiting
+  from public.queue_entries qe
+  left join public.patients p on p.id = qe.patient_id
+  where qe.branch_id = v_t.branch_id
+    and qe.status in ('waiting', 'ready')
+    and cast(qe.checked_in_at at time zone 'Asia/Manila' as date) = v_today;
+
+  return jsonb_build_object(
+    'branch_id', v_t.branch_id,
+    'branch_name', v_branch_name,
+    'now_serving', v_now_serving,
+    'waiting', v_waiting,
+    'updated_at', now()
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Announce / recall: refresh called_at so TV display + voice re-trigger
+-- ---------------------------------------------------------------------------
+create or replace function public.recall_queue_patient(p_entry_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_entry public.queue_entries%rowtype;
+begin
+  select * into v_entry from public.queue_entries where id = p_entry_id;
+  if not found then
+    raise exception 'Queue entry not found';
+  end if;
+
+  if not public.has_permission('queue.manage', v_entry.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_entry.status not in ('now_serving', 'in_chair') then
+    raise exception 'Patient must be currently serving to announce';
+  end if;
+
+  update public.queue_entries
+  set called_at = now(),
+      updated_at = now()
+  where id = p_entry_id;
+
+  return jsonb_build_object('success', true, 'display_code', v_entry.display_code);
+end;
+$$;
+
+grant execute on function public.recall_queue_patient(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Queue status: merge permission checks, called_at refresh, chair tracking
+-- ---------------------------------------------------------------------------
+create or replace function public.update_queue_status(
+  p_entry_id uuid,
+  p_status text,
+  p_chair_label text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_entry public.queue_entries%rowtype;
+  v_in_chair_at timestamptz;
+  v_completed_at timestamptz;
+begin
+  select * into v_entry from public.queue_entries where id = p_entry_id;
+  if not found then
+    raise exception 'Queue entry not found';
+  end if;
+
+  if not public.has_permission('queue.manage', v_entry.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if p_status not in ('waiting', 'ready', 'now_serving', 'in_chair', 'served', 'cancelled') then
+    raise exception 'Invalid status';
+  end if;
+
+  v_in_chair_at := v_entry.in_chair_at;
+  v_completed_at := v_entry.completed_at;
+
+  if p_status = 'in_chair' and v_entry.status is distinct from 'in_chair' then
+    v_in_chair_at := now();
+  end if;
+
+  if p_status = 'served' and v_entry.status is distinct from 'served' then
+    v_completed_at := now();
+  end if;
+
+  update public.queue_entries
+  set status = p_status,
+      chair_label = coalesce(p_chair_label, chair_label),
+      called_at = case when p_status = 'now_serving' then now() else called_at end,
+      in_chair_at = v_in_chair_at,
+      completed_at = v_completed_at,
+      updated_by = auth.uid(),
+      updated_at = now()
+  where id = p_entry_id;
+
+  if p_status = 'served'
+    and v_entry.appointment_id is not null
+    and public._workflow_enabled(v_entry.branch_id, 'auto_served_completes_appointment') then
+    update public.appointments
+    set status = 'completed', updated_at = now()
+    where id = v_entry.appointment_id
+      and status in ('checked_in', 'scheduled', 'confirmed');
+  end if;
+
+  perform public.emit_workflow_event(
+    v_entry.branch_id, 'queue.status_changed', 'queue_entry', p_entry_id::text,
+    jsonb_build_object('status', p_status, 'appointment_id', v_entry.appointment_id)
+  );
+
+  return jsonb_build_object('id', p_entry_id, 'status', p_status);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Lab cases: RLS so inserts are visible immediately after create
+-- ---------------------------------------------------------------------------
+alter table public.lab_cases enable row level security;
+
+drop policy if exists lab_cases_select on public.lab_cases;
+create policy lab_cases_select on public.lab_cases
+  for select to authenticated
+  using (organization_id = public.current_user_org_id());
+
+drop policy if exists lab_cases_insert on public.lab_cases;
+create policy lab_cases_insert on public.lab_cases
+  for insert to authenticated
+  with check (
+    organization_id = public.current_user_org_id()
+    and public.user_has_branch_access(branch_id)
+  );
+
+drop policy if exists lab_cases_update on public.lab_cases;
+create policy lab_cases_update on public.lab_cases
+  for update to authenticated
+  using (organization_id = public.current_user_org_id())
+  with check (organization_id = public.current_user_org_id());
+
+
+-- ===== 20260615130000_appointments_treatment_enhancements.sql =====
+
+-- booking_source on appointments, portal booking update, treatment plan item helpers
+
+alter table public.appointments
+  add column if not exists booking_source text not null default 'staff'
+  check (booking_source in ('staff', 'portal', 'kiosk', 'phone', 'walk_in'));
+
+comment on column public.appointments.booking_source is
+  'How the appointment was booked: staff dashboard, patient portal, kiosk, phone, or walk-in.';
+
+-- Backfill portal bookings from legacy bilingual purpose strings
+update public.appointments
+set booking_source = 'portal'
+where booking_source = 'staff'
+  and (
+    purpose ilike '%portal%'
+    or purpose ilike '%online randevu%'
+  );
+
+-- Portal appointment booking sets booking_source
+create or replace function public.submit_portal_appointment(
+  p_session_id uuid,
+  p_phone text,
+  p_last_name text,
+  p_provider_id uuid,
+  p_date date,
+  p_time time,
+  p_purpose text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.kiosk_sessions%rowtype;
+  v_patient_id uuid;
+  v_appointment_id uuid;
+  v_phone_norm text;
+  v_scheduled_at timestamptz;
+  v_purpose text;
+begin
+  select * into v_session from public.kiosk_sessions where id = p_session_id;
+  if not found or v_session.expires_at < now() then
+    raise exception 'Session expired. Please refresh the page.';
+  end if;
+
+  v_phone_norm := right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 10);
+
+  if v_phone_norm = '' or trim(coalesce(p_last_name, '')) = '' then
+    raise exception 'Phone and last name are required';
+  end if;
+
+  select p.id into v_patient_id
+  from public.patients p
+  where p.organization_id = v_session.organization_id
+    and p.status = 'active'
+    and lower(p.last_name) = lower(trim(p_last_name))
+    and right(regexp_replace(coalesce(p.phone, ''), '\D', '', 'g'), 10) = v_phone_norm
+  limit 1;
+
+  if v_patient_id is null then
+    raise exception 'We could not find your record. Please use New Patient Registration.';
+  end if;
+
+  insert into public.patient_branch_links (patient_id, branch_id)
+  values (v_patient_id, v_session.branch_id)
+  on conflict (patient_id, branch_id) do nothing;
+
+  v_scheduled_at := (p_date || ' ' || p_time || ' +08')::timestamptz;
+  v_purpose := nullif(trim(coalesce(p_purpose, '')), '');
+
+  insert into public.appointments (
+    organization_id, branch_id, patient_id, provider_id,
+    scheduled_at, duration_minutes, purpose, status, booking_source
+  ) values (
+    v_session.organization_id,
+    v_session.branch_id,
+    v_patient_id,
+    p_provider_id,
+    v_scheduled_at,
+    30,
+    coalesce(v_purpose, 'Online booking'),
+    'scheduled',
+    'portal'
+  )
+  returning id into v_appointment_id;
+
+  return jsonb_build_object('appointment_id', v_appointment_id);
+end;
+$$;
+
+grant execute on function public.submit_portal_appointment(uuid, text, text, uuid, date, time, text) to anon, authenticated, service_role;
+
+
+-- ===== 20260615140000_branch_public_token_controls.sql =====
+
+-- List, revoke, and auto-replace branch public tokens (TV / kiosk / portal links)
+
+create or replace function public.list_branch_public_tokens(p_branch_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+begin
+  if not public.has_permission('queue.manage', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  return coalesce((
+    select jsonb_agg(row_to_json(x)::jsonb order by x.created_at desc)
+    from (
+      select
+        t.id,
+        t.token_type,
+        t.label,
+        t.is_active,
+        t.created_at,
+        t.expires_at,
+        right(t.token, 8) as token_suffix,
+        dh.last_seen_at as last_display_ping_at,
+        dh.seen_count as display_ping_count,
+        (
+          select max(ks.created_at)
+          from public.kiosk_sessions ks
+          where ks.token_id = t.id
+        ) as last_kiosk_session_at
+      from public.branch_public_tokens t
+      left join public.display_heartbeats dh on dh.token_id = t.id
+      where t.organization_id = v_org
+        and t.branch_id = p_branch_id
+        and t.is_active = true
+        and (t.expires_at is null or t.expires_at > now())
+    ) x
+  ), '[]'::jsonb);
+end;
+$$;
+
+create or replace function public.revoke_branch_public_token(p_token_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_t public.branch_public_tokens%rowtype;
+begin
+  select * into v_t
+  from public.branch_public_tokens
+  where id = p_token_id
+    and organization_id = v_org;
+
+  if not found then
+    raise exception 'Token not found';
+  end if;
+
+  if not public.has_permission('queue.manage', v_t.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  update public.branch_public_tokens
+  set is_active = false
+  where id = p_token_id;
+
+  return jsonb_build_object('id', p_token_id, 'revoked', true);
+end;
+$$;
+
+-- Revoke tokens of a type, optionally keeping the N most recently created (or most recently pinged for display)
+create or replace function public.revoke_branch_public_tokens(
+  p_branch_id uuid,
+  p_token_type text,
+  p_keep_count int default 1,
+  p_prefer_recent_ping boolean default true
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_keep_ids uuid[];
+  v_revoked int;
+begin
+  if p_token_type not in ('kiosk', 'display', 'portal') then
+    raise exception 'Invalid token type';
+  end if;
+
+  if not public.has_permission('queue.manage', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  p_keep_count := greatest(coalesce(p_keep_count, 1), 0);
+
+  if p_keep_count = 0 then
+    update public.branch_public_tokens
+    set is_active = false
+    where organization_id = v_org
+      and branch_id = p_branch_id
+      and token_type = p_token_type
+      and is_active = true;
+    get diagnostics v_revoked = row_count;
+    return jsonb_build_object('revoked', v_revoked, 'kept', 0);
+  end if;
+
+  if p_token_type = 'display' and p_prefer_recent_ping then
+    select coalesce(array_agg(id), '{}')
+    into v_keep_ids
+    from (
+      select t.id
+      from public.branch_public_tokens t
+      left join public.display_heartbeats dh on dh.token_id = t.id
+      where t.organization_id = v_org
+        and t.branch_id = p_branch_id
+        and t.token_type = p_token_type
+        and t.is_active = true
+        and (t.expires_at is null or t.expires_at > now())
+      order by dh.last_seen_at desc nulls last, t.created_at desc
+      limit p_keep_count
+    ) keepers;
+  else
+    select coalesce(array_agg(id), '{}')
+    into v_keep_ids
+    from (
+      select t.id
+      from public.branch_public_tokens t
+      where t.organization_id = v_org
+        and t.branch_id = p_branch_id
+        and t.token_type = p_token_type
+        and t.is_active = true
+        and (t.expires_at is null or t.expires_at > now())
+      order by t.created_at desc
+      limit p_keep_count
+    ) keepers;
+  end if;
+
+  update public.branch_public_tokens
+  set is_active = false
+  where organization_id = v_org
+    and branch_id = p_branch_id
+    and token_type = p_token_type
+    and is_active = true
+    and id <> all(v_keep_ids);
+
+  get diagnostics v_revoked = row_count;
+
+  return jsonb_build_object(
+    'revoked', v_revoked,
+    'kept', coalesce(array_length(v_keep_ids, 1), 0)
+  );
+end;
+$$;
+
+-- New link replaces older links of the same type (keeps only the newly created token)
+drop function if exists public.generate_branch_public_token(uuid, text, text);
+
+create or replace function public.generate_branch_public_token(
+  p_branch_id uuid,
+  p_token_type text,
+  p_label text default null,
+  p_replace_existing boolean default true
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_token text;
+  v_id uuid;
+  v_revoked int := 0;
+begin
+  if p_token_type not in ('kiosk', 'display', 'portal') then
+    raise exception 'Invalid token type';
+  end if;
+
+  if not public.has_permission('queue.manage', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  insert into public.branch_public_tokens (
+    organization_id, branch_id, token_type, label, created_by
+  ) values (
+    v_org, p_branch_id, p_token_type, p_label, auth.uid()
+  )
+  returning id, token into v_id, v_token;
+
+  if coalesce(p_replace_existing, true) then
+    update public.branch_public_tokens
+    set is_active = false
+    where organization_id = v_org
+      and branch_id = p_branch_id
+      and token_type = p_token_type
+      and is_active = true
+      and id <> v_id;
+    get diagnostics v_revoked = row_count;
+  end if;
+
+  return jsonb_build_object(
+    'id', v_id,
+    'token', v_token,
+    'token_type', p_token_type,
+    'revoked_previous', v_revoked
+  );
+end;
+$$;
+
+grant execute on function public.list_branch_public_tokens(uuid) to authenticated;
+grant execute on function public.revoke_branch_public_token(uuid) to authenticated;
+grant execute on function public.revoke_branch_public_tokens(uuid, text, int, boolean) to authenticated;
+grant execute on function public.generate_branch_public_token(uuid, text, text, boolean) to authenticated;
+
+
+-- ===== 20260615150000_billing_integrity.sql =====
+
+-- Billing integrity: plan â†’ invoice always, lock approved plans, unified patient balance
+
+-- Block treatment plan item changes after approval (charges go through invoice)
+create or replace function public.guard_treatment_plan_items_mutation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_status text;
+begin
+  select tp.status
+  into v_status
+  from public.treatment_plans tp
+  where tp.id = coalesce(NEW.plan_id, OLD.plan_id);
+
+  if v_status in ('approved', 'in_progress', 'completed') then
+    raise exception 'Cannot modify items on an approved treatment plan. Update the linked invoice in Billing instead.';
+  end if;
+
+  return coalesce(NEW, OLD);
+end;
+$$;
+
+drop trigger if exists trg_guard_treatment_plan_items on public.treatment_plan_items;
+create trigger trg_guard_treatment_plan_items
+  before insert or update or delete on public.treatment_plan_items
+  for each row execute function public.guard_treatment_plan_items_mutation();
+
+-- Approve plan â†’ always create draft invoice (workflow flag only gates HMO automation)
+create or replace function public.approve_treatment_plan(p_plan_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_plan record;
+  v_estimate jsonb;
+  v_count bigint;
+  v_invoice_id uuid := null;
+  v_claim_id uuid := null;
+begin
+  select *
+  into v_plan
+  from public.treatment_plans
+  where id = p_plan_id
+    and organization_id = public.current_user_org_id()
+  for update;
+
+  if v_plan.id is null then
+    raise exception 'Plan not found';
+  end if;
+
+  if not public.has_permission('dental_chart.write', v_plan.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_plan.status not in ('draft', 'proposed') then
+    raise exception 'Plan cannot be approved from status %', v_plan.status;
+  end if;
+
+  select count(*) into v_count
+  from public.treatment_plan_items
+  where plan_id = p_plan_id;
+
+  if v_count = 0 then
+    raise exception 'Add at least one procedure before approving';
+  end if;
+
+  v_estimate := public.calculate_treatment_estimate(p_plan_id);
+
+  update public.treatment_plans
+  set status = 'approved', approved_at = now(), updated_at = now()
+  where id = p_plan_id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_plan.organization_id,
+    v_plan.branch_id,
+    auth.uid(),
+    'treatment_plan.approved',
+    'treatment_plan',
+    p_plan_id::text,
+    jsonb_build_object(
+      'total_estimated', v_estimate->'total_estimated',
+      'item_count', v_estimate->'item_count'
+    )
+  );
+
+  v_invoice_id := public._create_invoice_draft_from_plan(p_plan_id);
+
+  if public._workflow_enabled(v_plan.branch_id, 'auto_hmo_claim_on_invoice') and v_invoice_id is not null then
+    v_claim_id := public._auto_hmo_claim_for_invoice(v_invoice_id);
+  end if;
+
+  if public._workflow_enabled(v_plan.branch_id, 'auto_approve_creates_invoice') then
+    perform public.emit_workflow_event(
+      v_plan.branch_id,
+      'treatment_plan.approved',
+      'treatment_plan',
+      p_plan_id::text,
+      jsonb_build_object('invoice_id', v_invoice_id, 'hmo_claim_id', v_claim_id)
+    );
+  end if;
+
+  return v_estimate || jsonb_build_object(
+    'status', 'approved',
+    'approved_at', now(),
+    'invoice_id', v_invoice_id,
+    'hmo_claim_id', v_claim_id
+  );
+end;
+$$;
+
+-- Unified patient balance: invoices + active ortho contract remainder
+create or replace function public.get_patient_balance(p_patient_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_patient record;
+  v_invoice_open numeric;
+  v_total_billed numeric;
+  v_total_paid numeric;
+  v_open_count bigint;
+  v_ortho_open numeric;
+begin
+  select p.id, p.organization_id
+  into v_patient
+  from public.patients p
+  where p.id = p_patient_id
+    and p.organization_id = public.current_user_org_id();
+
+  if v_patient.id is null then
+    raise exception 'Patient not found';
+  end if;
+
+  if not public.has_permission('billing.read', (
+    select sba.branch_id from public.staff_branch_assignments sba
+    where sba.profile_id = auth.uid() limit 1
+  )) then
+    raise exception 'Permission denied';
+  end if;
+
+  select
+    coalesce(sum(greatest(inv.total_amount - inv.paid_amount, 0)), 0),
+    coalesce(sum(inv.total_amount), 0),
+    coalesce(sum(inv.paid_amount), 0),
+    count(*) filter (where inv.status in ('draft', 'sent', 'partial'))
+  into v_invoice_open, v_total_billed, v_total_paid, v_open_count
+  from public.invoices inv
+  where inv.patient_id = p_patient_id
+    and inv.organization_id = v_patient.organization_id
+    and inv.status <> 'void';
+
+  select coalesce(sum(greatest(
+    oc.contract_amount - coalesce((
+      select sum(oa.payment_amount)
+      from public.ortho_adjustments oa
+      where oa.case_id = oc.id
+    ), 0),
+    0
+  )), 0)
+  into v_ortho_open
+  from public.ortho_cases oc
+  where oc.patient_id = p_patient_id
+    and oc.organization_id = v_patient.organization_id
+    and oc.status = 'active';
+
+  return jsonb_build_object(
+    'patient_id', p_patient_id,
+    'open_balance', v_invoice_open + v_ortho_open,
+    'invoice_open_balance', v_invoice_open,
+    'ortho_open_balance', v_ortho_open,
+    'total_billed', v_total_billed,
+    'total_paid', v_total_paid,
+    'open_invoice_count', v_open_count
+  );
+end;
+$$;
+
+-- Staff billing gate: surface gaps before checkout
+create or replace function public.get_patient_billing_gate(p_patient_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_patient record;
+  v_balance jsonb;
+  v_missing jsonb;
+  v_primary_invoice uuid;
+begin
+  select p.id, p.organization_id
+  into v_patient
+  from public.patients p
+  where p.id = p_patient_id
+    and p.organization_id = public.current_user_org_id();
+
+  if v_patient.id is null then
+    raise exception 'Patient not found';
+  end if;
+
+  if not public.has_permission('billing.read', (
+    select sba.branch_id from public.staff_branch_assignments sba
+    where sba.profile_id = auth.uid() limit 1
+  )) then
+    raise exception 'Permission denied';
+  end if;
+
+  v_balance := public.get_patient_balance(p_patient_id);
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'plan_id', tp.id,
+    'title', tp.title,
+    'total_estimated', tp.total_estimated
+  ) order by tp.approved_at desc nulls last), '[]'::jsonb)
+  into v_missing
+  from public.treatment_plans tp
+  where tp.patient_id = p_patient_id
+    and tp.organization_id = v_patient.organization_id
+    and tp.status in ('approved', 'in_progress')
+    and exists (
+      select 1 from public.treatment_plan_items i
+      where i.plan_id = tp.id and i.status <> 'cancelled'
+    )
+    and not exists (
+      select 1 from public.invoices inv
+      where inv.treatment_plan_id = tp.id and inv.status <> 'void'
+    );
+
+  select inv.id
+  into v_primary_invoice
+  from public.invoices inv
+  where inv.patient_id = p_patient_id
+    and inv.organization_id = v_patient.organization_id
+    and inv.status in ('draft', 'sent', 'partial')
+    and inv.total_amount > inv.paid_amount
+  order by
+    case inv.status when 'draft' then 0 when 'partial' then 1 else 2 end,
+    inv.created_at desc
+  limit 1;
+
+  return v_balance || jsonb_build_object(
+    'approved_plans_missing_invoice', v_missing,
+    'primary_open_invoice_id', v_primary_invoice,
+    'has_billing_gap', (
+      jsonb_array_length(v_missing) > 0
+      or (v_balance->>'open_balance')::numeric > 0
+    ),
+    'can_checkout', (
+      jsonb_array_length(v_missing) = 0
+      and (v_balance->>'open_balance')::numeric <= 0
+    )
+  );
+end;
+$$;
+
+grant execute on function public.get_patient_billing_gate(uuid) to authenticated;
+
+
+-- ===== 20260615160000_workflow_gaps_closure.sql =====
+
+-- Workflow gaps: validated staff booking, billing gate enforcement, unapprove plan, backfill invoices
+
+-- ---------------------------------------------------------------------------
+-- Workflow defaults: block services when billing gap (override with force flag)
+-- ---------------------------------------------------------------------------
+create or replace function public._default_workflow_settings()
+returns jsonb
+language sql
+immutable
+as $$
+  select jsonb_build_object(
+    'auto_checkin_updates_appointment', true,
+    'auto_served_completes_appointment', true,
+    'consent_gate_checkin', true,
+    'auto_approve_creates_invoice', true,
+    'auto_hmo_claim_on_invoice', true,
+    'auto_waitlist_on_slot_open', true,
+    'auto_sms_reminders', true,
+    'auto_payment_reminder', true,
+    'billing_gate_block_services', true
+  );
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Billing clearance (internal â€” no billing.read permission required)
+-- ---------------------------------------------------------------------------
+create or replace function public._assert_patient_billing_clear(
+  p_patient_id uuid,
+  p_branch_id uuid,
+  p_force boolean default false,
+  p_context text default 'service'
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid;
+  v_invoice_open numeric := 0;
+  v_ortho_open numeric := 0;
+  v_missing bigint := 0;
+begin
+  if p_force then
+    insert into public.organization_audit_logs (
+      organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+    )
+    select
+      p.organization_id,
+      p_branch_id,
+      auth.uid(),
+      'billing.gate_override',
+      'patient',
+      p_patient_id::text,
+      jsonb_build_object('context', p_context)
+    from public.patients p
+    where p.id = p_patient_id;
+    return;
+  end if;
+
+  if not public._workflow_enabled(p_branch_id, 'billing_gate_block_services') then
+    return;
+  end if;
+
+  select p.organization_id into v_org
+  from public.patients p
+  where p.id = p_patient_id
+    and p.organization_id = public.current_user_org_id();
+
+  if v_org is null then
+    raise exception 'Patient not found';
+  end if;
+
+  select coalesce(sum(greatest(inv.total_amount - inv.paid_amount, 0)), 0)
+  into v_invoice_open
+  from public.invoices inv
+  where inv.patient_id = p_patient_id
+    and inv.organization_id = v_org
+    and inv.status <> 'void';
+
+  select coalesce(sum(greatest(
+    oc.contract_amount - coalesce((
+      select sum(oa.payment_amount) from public.ortho_adjustments oa where oa.case_id = oc.id
+    ), 0),
+    0
+  )), 0)
+  into v_ortho_open
+  from public.ortho_cases oc
+  where oc.patient_id = p_patient_id
+    and oc.organization_id = v_org
+    and oc.status = 'active';
+
+  select count(*) into v_missing
+  from public.treatment_plans tp
+  where tp.patient_id = p_patient_id
+    and tp.organization_id = v_org
+    and tp.status in ('approved', 'in_progress')
+    and exists (
+      select 1 from public.treatment_plan_items i
+      where i.plan_id = tp.id and i.status <> 'cancelled'
+    )
+    and not exists (
+      select 1 from public.invoices inv
+      where inv.treatment_plan_id = tp.id and inv.status <> 'void'
+    );
+
+  if v_missing > 0 or (v_invoice_open + v_ortho_open) > 0 then
+    raise exception 'Billing clearance required: collect outstanding balance or create missing plan invoice before proceeding. Use billing override to continue (logged).';
+  end if;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Staff appointment creation (validated slots + booking_source + billing gate)
+-- ---------------------------------------------------------------------------
+create or replace function public.create_appointment_validated(p_payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_branch_id uuid := (p_payload->>'branch_id')::uuid;
+  v_patient_id uuid := (p_payload->>'patient_id')::uuid;
+  v_provider_id uuid := nullif(p_payload->>'provider_id', '')::uuid;
+  v_org_id uuid := (p_payload->>'organization_id')::uuid;
+  v_scheduled_at timestamptz := (p_payload->>'scheduled_at')::timestamptz;
+  v_purpose text := nullif(trim(p_payload->>'purpose'), '');
+  v_duration integer := coalesce((p_payload->>'duration_minutes')::integer, 30);
+  v_booking_source text := coalesce(nullif(p_payload->>'booking_source', ''), 'staff');
+  v_force_billing boolean := coalesce((p_payload->>'force_billing_override')::boolean, false);
+  v_appt_date date;
+  v_appt_time time;
+  v_slot_taken boolean;
+  v_id uuid;
+begin
+  if v_branch_id is null or v_patient_id is null or v_org_id is null or v_scheduled_at is null then
+    raise exception 'branch_id, patient_id, organization_id, and scheduled_at are required';
+  end if;
+
+  if v_booking_source not in ('staff', 'portal', 'kiosk', 'phone', 'walk_in') then
+    raise exception 'Invalid booking_source';
+  end if;
+
+  if v_org_id <> public.current_user_org_id() then
+    raise exception 'Organization mismatch';
+  end if;
+
+  if not public.has_permission('appointments.write', v_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  perform public._assert_patient_billing_clear(v_patient_id, v_branch_id, v_force_billing, 'appointment_book');
+
+  if not exists (
+    select 1 from public.patients p
+    where p.id = v_patient_id and p.organization_id = v_org_id
+  ) then
+    raise exception 'Patient not found';
+  end if;
+
+  if v_provider_id is not null then
+    v_appt_date := (v_scheduled_at at time zone 'Asia/Manila')::date;
+    v_appt_time := (v_scheduled_at at time zone 'Asia/Manila')::time;
+
+    perform public.ensure_provider_availability_defaults(v_branch_id, v_provider_id);
+
+    if not exists (
+      select 1 from public.provider_availability pa
+      where pa.branch_id = v_branch_id
+        and pa.provider_id = v_provider_id
+        and pa.day_of_week = extract(dow from v_appt_date)::smallint
+        and pa.is_available
+        and v_appt_time >= pa.start_time
+        and v_appt_time < pa.end_time
+    ) then
+      raise exception 'Provider is not available at this time';
+    end if;
+
+    select exists (
+      select 1 from public.appointments a
+      where a.branch_id = v_branch_id
+        and coalesce(a.provider_id, v_provider_id) = v_provider_id
+        and a.scheduled_at = v_scheduled_at
+        and a.status not in ('cancelled', 'no_show')
+    ) into v_slot_taken;
+
+    if v_slot_taken then
+      raise exception 'Time slot is already booked';
+    end if;
+  end if;
+
+  insert into public.appointments (
+    organization_id, branch_id, patient_id, provider_id,
+    scheduled_at, duration_minutes, purpose, status, booking_source, created_by
+  ) values (
+    v_org_id, v_branch_id, v_patient_id, v_provider_id,
+    v_scheduled_at, v_duration, v_purpose, 'scheduled', v_booking_source, auth.uid()
+  )
+  returning id into v_id;
+
+  return jsonb_build_object(
+    'id', v_id,
+    'status', 'scheduled',
+    'scheduled_at', v_scheduled_at,
+    'booking_source', v_booking_source
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Check-in billing gate
+-- ---------------------------------------------------------------------------
+create or replace function public.check_in_patient(p_payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_branch_id uuid := (p_payload->>'branch_id')::uuid;
+  v_patient_id uuid := (p_payload->>'patient_id')::uuid;
+  v_appointment_id uuid := nullif(p_payload->>'appointment_id', '')::uuid;
+  v_notes text := nullif(p_payload->>'notes', '');
+  v_force boolean := coalesce((p_payload->>'force_checkin')::boolean, false);
+  v_force_billing boolean := coalesce((p_payload->>'force_billing_override')::boolean, false);
+  v_org uuid := public.current_user_org_id();
+  v_code text;
+  v_id uuid;
+  v_pending_consents int;
+begin
+  if v_branch_id is null or v_patient_id is null then
+    raise exception 'branch_id and patient_id are required';
+  end if;
+
+  if not public.has_permission('queue.manage', v_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  perform public._assert_patient_billing_clear(
+    v_patient_id,
+    v_branch_id,
+    v_force_billing,
+    'check_in'
+  );
+
+  if public._workflow_enabled(v_branch_id, 'consent_gate_checkin') and not v_force then
+    select count(*) into v_pending_consents
+    from public.patient_consents pc
+    where pc.patient_id = v_patient_id
+      and pc.organization_id = v_org
+      and pc.status = 'pending';
+
+    if v_pending_consents > 0 then
+      raise exception 'Pending consents must be signed before check-in. Set force_checkin to override (logged).';
+    end if;
+  end if;
+
+  if v_force and public._workflow_enabled(v_branch_id, 'consent_gate_checkin') then
+    insert into public.organization_audit_logs (
+      organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+    ) values (
+      v_org, v_branch_id, auth.uid(),
+      'checkin.consent_override', 'patient', v_patient_id::text,
+      jsonb_build_object('pending_consents', v_pending_consents)
+    );
+  end if;
+
+  if exists (
+    select 1 from public.queue_entries
+    where branch_id = v_branch_id
+      and patient_id = v_patient_id
+      and status in ('waiting', 'ready', 'now_serving', 'in_chair')
+  ) then
+    raise exception 'Patient is already in the queue';
+  end if;
+
+  if v_appointment_id is null and public._workflow_enabled(v_branch_id, 'auto_checkin_updates_appointment') then
+    select a.id into v_appointment_id
+    from public.appointments a
+    where a.branch_id = v_branch_id
+      and a.patient_id = v_patient_id
+      and (a.scheduled_at at time zone 'Asia/Manila')::date = (now() at time zone 'Asia/Manila')::date
+      and a.status in ('scheduled', 'confirmed')
+    order by a.scheduled_at
+    limit 1;
+  end if;
+
+  v_code := public._next_queue_display_code(v_branch_id);
+
+  insert into public.queue_entries (
+    organization_id, branch_id, patient_id, appointment_id,
+    display_code, notes, created_by
+  ) values (
+    v_org, v_branch_id, v_patient_id, v_appointment_id,
+    v_code, v_notes, auth.uid()
+  )
+  returning id into v_id;
+
+  if v_appointment_id is not null and public._workflow_enabled(v_branch_id, 'auto_checkin_updates_appointment') then
+    update public.appointments
+    set status = 'confirmed', updated_at = now()
+    where id = v_appointment_id;
+  end if;
+
+  return jsonb_build_object(
+    'id', v_id,
+    'display_code', v_code,
+    'appointment_id', v_appointment_id,
+    'status', 'waiting'
+  );
+end;
+$$;
+
+-- Drop legacy single-arg overload so RPC resolves to (uuid, boolean)
+drop function if exists public.check_in_appointment(uuid);
+
+create or replace function public.check_in_appointment(
+  p_appointment_id uuid,
+  p_force_billing_override boolean default false
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_appt record;
+  v_code text;
+  v_queue_id uuid;
+begin
+  select a.*
+  into v_appt
+  from public.appointments a
+  where a.id = p_appointment_id
+    and a.organization_id = public.current_user_org_id();
+
+  if v_appt.id is null then
+    raise exception 'Appointment not found';
+  end if;
+
+  if v_appt.status not in ('scheduled', 'confirmed') then
+    raise exception 'Appointment cannot be checked in';
+  end if;
+
+  if not public.has_permission('queue.manage', v_appt.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  perform public._assert_patient_billing_clear(
+    v_appt.patient_id,
+    v_appt.branch_id,
+    p_force_billing_override,
+    'appointment_check_in'
+  );
+
+  if exists (
+    select 1 from public.queue_entries qe
+    where qe.branch_id = v_appt.branch_id
+      and qe.patient_id = v_appt.patient_id
+      and qe.status in ('waiting', 'ready', 'now_serving', 'in_chair')
+  ) then
+    raise exception 'Patient is already in the queue';
+  end if;
+
+  v_code := public._next_queue_display_code(v_appt.branch_id);
+
+  insert into public.queue_entries (
+    organization_id, branch_id, patient_id, appointment_id,
+    display_code, notes, created_by
+  ) values (
+    v_appt.organization_id, v_appt.branch_id, v_appt.patient_id, v_appt.id,
+    v_code, coalesce(v_appt.purpose, 'Appointment check-in'), auth.uid()
+  )
+  returning id into v_queue_id;
+
+  update public.appointments
+  set status = 'confirmed', updated_at = now()
+  where id = v_appt.id;
+
+  return jsonb_build_object(
+    'queue_id', v_queue_id,
+    'display_code', v_code,
+    'appointment_id', v_appt.id,
+    'status', 'waiting'
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Unapprove treatment plan (revert to proposed; void unpaid draft invoice)
+-- ---------------------------------------------------------------------------
+create or replace function public.unapprove_treatment_plan(p_plan_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_plan record;
+  v_inv record;
+begin
+  select * into v_plan
+  from public.treatment_plans
+  where id = p_plan_id
+    and organization_id = public.current_user_org_id()
+  for update;
+
+  if v_plan.id is null then
+    raise exception 'Plan not found';
+  end if;
+
+  if not public.has_permission('dental_chart.write', v_plan.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_plan.status not in ('approved', 'in_progress') then
+    raise exception 'Only approved or in-progress plans can be unapproved';
+  end if;
+
+  select * into v_inv
+  from public.invoices
+  where treatment_plan_id = p_plan_id
+    and status <> 'void'
+  order by created_at desc
+  limit 1;
+
+  if v_inv.id is not null then
+    if coalesce(v_inv.paid_amount, 0) > 0 then
+      raise exception 'Cannot unapprove: invoice has payments. Adjust in Billing first.';
+    end if;
+    if v_inv.status = 'paid' then
+      raise exception 'Cannot unapprove: invoice is already paid';
+    end if;
+    perform public.void_invoice(v_inv.id, 'Treatment plan unapproved');
+  end if;
+
+  update public.treatment_plans
+  set status = 'proposed', approved_at = null, updated_at = now()
+  where id = p_plan_id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_plan.organization_id,
+    v_plan.branch_id,
+    auth.uid(),
+    'treatment_plan.unapproved',
+    'treatment_plan',
+    p_plan_id::text,
+    jsonb_build_object('voided_invoice_id', v_inv.id)
+  );
+
+  return jsonb_build_object(
+    'plan_id', p_plan_id,
+    'status', 'proposed',
+    'voided_invoice_id', v_inv.id
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Backfill draft invoices for approved plans missing invoices
+-- ---------------------------------------------------------------------------
+create or replace function public.backfill_patient_plan_invoices(
+  p_patient_id uuid default null,
+  p_branch_id uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_plan record;
+  v_created int := 0;
+  v_invoice_id uuid;
+begin
+  if p_branch_id is not null and not public.has_permission('billing.write', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  for v_plan in
+    select tp.id, tp.branch_id
+    from public.treatment_plans tp
+    where tp.organization_id = public.current_user_org_id()
+      and (p_patient_id is null or tp.patient_id = p_patient_id)
+      and (p_branch_id is null or tp.branch_id = p_branch_id)
+      and tp.status in ('approved', 'in_progress')
+      and exists (
+        select 1 from public.treatment_plan_items i
+        where i.plan_id = tp.id and i.status <> 'cancelled'
+      )
+      and not exists (
+        select 1 from public.invoices inv
+        where inv.treatment_plan_id = tp.id and inv.status <> 'void'
+      )
+  loop
+    if public.has_permission('billing.write', v_plan.branch_id) then
+      v_invoice_id := public._create_invoice_draft_from_plan(v_plan.id);
+      if v_invoice_id is not null then
+        v_created := v_created + 1;
+      end if;
+    end if;
+  end loop;
+
+  return jsonb_build_object('created', v_created);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Plan item guard: clearer message (unapprove to edit plan)
+-- ---------------------------------------------------------------------------
+create or replace function public.guard_treatment_plan_items_mutation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_status text;
+begin
+  select tp.status
+  into v_status
+  from public.treatment_plans tp
+  where tp.id = coalesce(NEW.plan_id, OLD.plan_id);
+
+  if v_status in ('approved', 'in_progress', 'completed') then
+    raise exception 'Cannot modify items on an approved plan. Unapprove the plan to edit procedures, or update the linked invoice in Billing.';
+  end if;
+
+  return coalesce(NEW, OLD);
+end;
+$$;
+
+-- Restrict line-item adds on paid invoices
+create or replace function public.add_invoice_line_item(
+  p_invoice_id uuid,
+  p_description text,
+  p_unit_price numeric,
+  p_quantity numeric default 1,
+  p_tooth_number text default null,
+  p_procedure_id uuid default null,
+  p_treatment_plan_item_id uuid default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_inv public.invoices%rowtype;
+  v_line_total numeric(12,2);
+  v_id uuid;
+  v_sort int;
+begin
+  select * into v_inv from public.invoices where id = p_invoice_id;
+  if not found then raise exception 'Invoice not found'; end if;
+  if v_inv.status in ('void', 'paid') then
+    raise exception 'Cannot add line items to a % invoice', v_inv.status;
+  end if;
+  if not public.has_permission('billing.write', v_inv.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  v_line_total := round(coalesce(p_quantity, 1) * coalesce(p_unit_price, 0), 2);
+
+  select coalesce(max(sort_order), 0) + 1 into v_sort
+  from public.invoice_line_items where invoice_id = p_invoice_id;
+
+  insert into public.invoice_line_items (
+    invoice_id, organization_id, procedure_id, treatment_plan_item_id,
+    description, tooth_number, quantity, unit_price, line_total, sort_order
+  ) values (
+    p_invoice_id, v_inv.organization_id, p_procedure_id, p_treatment_plan_item_id,
+    p_description, p_tooth_number, coalesce(p_quantity, 1), coalesce(p_unit_price, 0),
+    v_line_total, v_sort
+  )
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Grants (must run after all function definitions)
+-- ---------------------------------------------------------------------------
+grant execute on function public.unapprove_treatment_plan(uuid) to authenticated;
+grant execute on function public.backfill_patient_plan_invoices(uuid, uuid) to authenticated;
+grant execute on function public.check_in_appointment(uuid, boolean) to authenticated;
+grant execute on function public.create_appointment_validated(jsonb) to authenticated;
+grant execute on function public.check_in_patient(jsonb) to authenticated;
+
+
+-- ===== 20260615161000_workflow_gaps_grant_fix.sql =====
+
+-- Hotfix: run if 20260615160000 failed at premature GRANT (backfill function missing)
+-- Safe to re-run: uses CREATE OR REPLACE and idempotent grants.
+
+drop function if exists public.check_in_appointment(uuid);
+
+create or replace function public.backfill_patient_plan_invoices(
+  p_patient_id uuid default null,
+  p_branch_id uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_plan record;
+  v_created int := 0;
+  v_invoice_id uuid;
+begin
+  if p_branch_id is not null and not public.has_permission('billing.write', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  for v_plan in
+    select tp.id, tp.branch_id
+    from public.treatment_plans tp
+    where tp.organization_id = public.current_user_org_id()
+      and (p_patient_id is null or tp.patient_id = p_patient_id)
+      and (p_branch_id is null or tp.branch_id = p_branch_id)
+      and tp.status in ('approved', 'in_progress')
+      and exists (
+        select 1 from public.treatment_plan_items i
+        where i.plan_id = tp.id and i.status <> 'cancelled'
+      )
+      and not exists (
+        select 1 from public.invoices inv
+        where inv.treatment_plan_id = tp.id and inv.status <> 'void'
+      )
+  loop
+    if public.has_permission('billing.write', v_plan.branch_id) then
+      v_invoice_id := public._create_invoice_draft_from_plan(v_plan.id);
+      if v_invoice_id is not null then
+        v_created := v_created + 1;
+      end if;
+    end if;
+  end loop;
+
+  return jsonb_build_object('created', v_created);
+end;
+$$;
+
+grant execute on function public.unapprove_treatment_plan(uuid) to authenticated;
+grant execute on function public.backfill_patient_plan_invoices(uuid, uuid) to authenticated;
+grant execute on function public.check_in_appointment(uuid, boolean) to authenticated;
+
+
+-- ===== 20260615170000_workflow_controls_completion.sql =====
+
+-- Workflow controls completion: unified gates, checked_in status, audit, slot validation
+
+-- ---------------------------------------------------------------------------
+-- Shared: provider slot availability
+-- ---------------------------------------------------------------------------
+create or replace function public._assert_provider_slot_available(
+  p_branch_id uuid,
+  p_provider_id uuid,
+  p_scheduled_at timestamptz
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_appt_date date;
+  v_appt_time time;
+  v_slot_taken boolean;
+begin
+  if p_provider_id is null then
+    return;
+  end if;
+
+  v_appt_date := (p_scheduled_at at time zone 'Asia/Manila')::date;
+  v_appt_time := (p_scheduled_at at time zone 'Asia/Manila')::time;
+
+  perform public.ensure_provider_availability_defaults(p_branch_id, p_provider_id);
+
+  if not exists (
+    select 1 from public.provider_availability pa
+    where pa.branch_id = p_branch_id
+      and pa.provider_id = p_provider_id
+      and pa.day_of_week = extract(dow from v_appt_date)::smallint
+      and pa.is_available
+      and v_appt_time >= pa.start_time
+      and v_appt_time < pa.end_time
+  ) then
+    raise exception 'Provider is not available at this time';
+  end if;
+
+  select exists (
+    select 1 from public.appointments a
+    where a.branch_id = p_branch_id
+      and coalesce(a.provider_id, p_provider_id) = p_provider_id
+      and a.scheduled_at = p_scheduled_at
+      and a.status not in ('cancelled', 'no_show')
+  ) into v_slot_taken;
+
+  if v_slot_taken then
+    raise exception 'Time slot is already booked';
+  end if;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Staff appointment creation: audit trail
+-- ---------------------------------------------------------------------------
+create or replace function public.create_appointment_validated(p_payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_branch_id uuid := (p_payload->>'branch_id')::uuid;
+  v_patient_id uuid := (p_payload->>'patient_id')::uuid;
+  v_provider_id uuid := nullif(p_payload->>'provider_id', '')::uuid;
+  v_org_id uuid := (p_payload->>'organization_id')::uuid;
+  v_scheduled_at timestamptz := (p_payload->>'scheduled_at')::timestamptz;
+  v_purpose text := nullif(trim(p_payload->>'purpose'), '');
+  v_duration integer := coalesce((p_payload->>'duration_minutes')::integer, 30);
+  v_booking_source text := coalesce(nullif(p_payload->>'booking_source', ''), 'staff');
+  v_force_billing boolean := coalesce((p_payload->>'force_billing_override')::boolean, false);
+  v_id uuid;
+begin
+  if v_branch_id is null or v_patient_id is null or v_org_id is null or v_scheduled_at is null then
+    raise exception 'branch_id, patient_id, organization_id, and scheduled_at are required';
+  end if;
+
+  if v_booking_source not in ('staff', 'portal', 'kiosk', 'phone', 'walk_in') then
+    raise exception 'Invalid booking_source';
+  end if;
+
+  if v_org_id <> public.current_user_org_id() then
+    raise exception 'Organization mismatch';
+  end if;
+
+  if not public.has_permission('appointments.write', v_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  perform public._assert_patient_billing_clear(v_patient_id, v_branch_id, v_force_billing, 'appointment_book');
+
+  if not exists (
+    select 1 from public.patients p
+    where p.id = v_patient_id and p.organization_id = v_org_id
+  ) then
+    raise exception 'Patient not found';
+  end if;
+
+  perform public._assert_provider_slot_available(v_branch_id, v_provider_id, v_scheduled_at);
+
+  insert into public.appointments (
+    organization_id, branch_id, patient_id, provider_id,
+    scheduled_at, duration_minutes, purpose, status, booking_source, created_by
+  ) values (
+    v_org_id, v_branch_id, v_patient_id, v_provider_id,
+    v_scheduled_at, v_duration, v_purpose, 'scheduled', v_booking_source, auth.uid()
+  )
+  returning id into v_id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_org_id, v_branch_id, auth.uid(),
+    'appointment.create', 'appointment', v_id::text,
+    jsonb_build_object(
+      'patient_id', v_patient_id,
+      'scheduled_at', v_scheduled_at,
+      'booking_source', v_booking_source
+    )
+  );
+
+  return jsonb_build_object(
+    'id', v_id,
+    'status', 'scheduled',
+    'scheduled_at', v_scheduled_at,
+    'booking_source', v_booking_source
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Walk-in check-in: checked_in + workflow event
+-- ---------------------------------------------------------------------------
+create or replace function public.check_in_patient(p_payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_branch_id uuid := (p_payload->>'branch_id')::uuid;
+  v_patient_id uuid := (p_payload->>'patient_id')::uuid;
+  v_appointment_id uuid := nullif(p_payload->>'appointment_id', '')::uuid;
+  v_notes text := nullif(p_payload->>'notes', '');
+  v_force boolean := coalesce((p_payload->>'force_checkin')::boolean, false);
+  v_force_billing boolean := coalesce((p_payload->>'force_billing_override')::boolean, false);
+  v_org uuid := public.current_user_org_id();
+  v_code text;
+  v_id uuid;
+  v_pending_consents int;
+begin
+  if v_branch_id is null or v_patient_id is null then
+    raise exception 'branch_id and patient_id are required';
+  end if;
+
+  if not public.has_permission('queue.manage', v_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  perform public._assert_patient_billing_clear(
+    v_patient_id,
+    v_branch_id,
+    v_force_billing,
+    'check_in'
+  );
+
+  if public._workflow_enabled(v_branch_id, 'consent_gate_checkin') and not v_force then
+    select count(*) into v_pending_consents
+    from public.patient_consents pc
+    where pc.patient_id = v_patient_id
+      and pc.organization_id = v_org
+      and pc.status = 'pending';
+
+    if v_pending_consents > 0 then
+      raise exception 'Pending consents must be signed before check-in. Set force_checkin to override (logged).';
+    end if;
+  end if;
+
+  if v_force and public._workflow_enabled(v_branch_id, 'consent_gate_checkin') then
+    insert into public.organization_audit_logs (
+      organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+    ) values (
+      v_org, v_branch_id, auth.uid(),
+      'checkin.consent_override', 'patient', v_patient_id::text,
+      jsonb_build_object('pending_consents', v_pending_consents)
+    );
+  end if;
+
+  if exists (
+    select 1 from public.queue_entries
+    where branch_id = v_branch_id
+      and patient_id = v_patient_id
+      and status in ('waiting', 'ready', 'now_serving', 'in_chair')
+  ) then
+    raise exception 'Patient is already in the queue';
+  end if;
+
+  if v_appointment_id is null and public._workflow_enabled(v_branch_id, 'auto_checkin_updates_appointment') then
+    select a.id into v_appointment_id
+    from public.appointments a
+    where a.branch_id = v_branch_id
+      and a.patient_id = v_patient_id
+      and (a.scheduled_at at time zone 'Asia/Manila')::date = (now() at time zone 'Asia/Manila')::date
+      and a.status in ('scheduled', 'confirmed')
+    order by a.scheduled_at
+    limit 1;
+  end if;
+
+  v_code := public._next_queue_display_code(v_branch_id);
+
+  insert into public.queue_entries (
+    organization_id, branch_id, patient_id, appointment_id,
+    display_code, notes, created_by
+  ) values (
+    v_org, v_branch_id, v_patient_id, v_appointment_id,
+    v_code, v_notes, auth.uid()
+  )
+  returning id into v_id;
+
+  if v_appointment_id is not null and public._workflow_enabled(v_branch_id, 'auto_checkin_updates_appointment') then
+    update public.appointments
+    set status = 'checked_in', updated_at = now()
+    where id = v_appointment_id
+      and status in ('scheduled', 'confirmed');
+  end if;
+
+  perform public.emit_workflow_event(
+    v_branch_id, 'patient.checked_in', 'queue_entry', v_id::text,
+    jsonb_build_object('patient_id', v_patient_id, 'appointment_id', v_appointment_id, 'display_code', v_code)
+  );
+
+  return jsonb_build_object(
+    'id', v_id,
+    'display_code', v_code,
+    'appointment_id', v_appointment_id,
+    'status', 'waiting'
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Appointment check-in: consent gate + checked_in + workflow event
+-- ---------------------------------------------------------------------------
+drop function if exists public.check_in_appointment(uuid, boolean);
+
+create or replace function public.check_in_appointment(
+  p_appointment_id uuid,
+  p_force_billing_override boolean default false,
+  p_force_checkin boolean default false
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_appt record;
+  v_code text;
+  v_queue_id uuid;
+  v_pending_consents int;
+begin
+  select a.*
+  into v_appt
+  from public.appointments a
+  where a.id = p_appointment_id
+    and a.organization_id = public.current_user_org_id();
+
+  if v_appt.id is null then
+    raise exception 'Appointment not found';
+  end if;
+
+  if v_appt.status not in ('scheduled', 'confirmed') then
+    raise exception 'Appointment cannot be checked in';
+  end if;
+
+  if not public.has_permission('queue.manage', v_appt.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  perform public._assert_patient_billing_clear(
+    v_appt.patient_id,
+    v_appt.branch_id,
+    p_force_billing_override,
+    'appointment_check_in'
+  );
+
+  if public._workflow_enabled(v_appt.branch_id, 'consent_gate_checkin') and not p_force_checkin then
+    select count(*) into v_pending_consents
+    from public.patient_consents pc
+    where pc.patient_id = v_appt.patient_id
+      and pc.organization_id = v_appt.organization_id
+      and pc.status = 'pending';
+
+    if v_pending_consents > 0 then
+      raise exception 'Pending consents must be signed before check-in. Set force_checkin to override (logged).';
+    end if;
+  end if;
+
+  if p_force_checkin and public._workflow_enabled(v_appt.branch_id, 'consent_gate_checkin') then
+    insert into public.organization_audit_logs (
+      organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+    ) values (
+      v_appt.organization_id, v_appt.branch_id, auth.uid(),
+      'checkin.consent_override', 'patient', v_appt.patient_id::text,
+      jsonb_build_object('appointment_id', v_appt.id, 'pending_consents', v_pending_consents)
+    );
+  end if;
+
+  if exists (
+    select 1 from public.queue_entries qe
+    where qe.branch_id = v_appt.branch_id
+      and qe.patient_id = v_appt.patient_id
+      and qe.status in ('waiting', 'ready', 'now_serving', 'in_chair')
+  ) then
+    raise exception 'Patient is already in the queue';
+  end if;
+
+  v_code := public._next_queue_display_code(v_appt.branch_id);
+
+  insert into public.queue_entries (
+    organization_id, branch_id, patient_id, appointment_id,
+    display_code, notes, created_by
+  ) values (
+    v_appt.organization_id, v_appt.branch_id, v_appt.patient_id, v_appt.id,
+    v_code, coalesce(v_appt.purpose, 'Appointment check-in'), auth.uid()
+  )
+  returning id into v_queue_id;
+
+  update public.appointments
+  set status = 'checked_in', updated_at = now()
+  where id = v_appt.id
+    and status in ('scheduled', 'confirmed');
+
+  perform public.emit_workflow_event(
+    v_appt.branch_id, 'patient.checked_in', 'queue_entry', v_queue_id::text,
+    jsonb_build_object(
+      'patient_id', v_appt.patient_id,
+      'appointment_id', v_appt.id,
+      'display_code', v_code
+    )
+  );
+
+  return jsonb_build_object(
+    'queue_id', v_queue_id,
+    'display_code', v_code,
+    'appointment_id', v_appt.id,
+    'status', 'waiting'
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Waitlist booking: validated creation + billing gate
+-- ---------------------------------------------------------------------------
+create or replace function public.book_waitlist_entry(
+  p_entry_id uuid,
+  p_scheduled_at timestamptz,
+  p_purpose text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_entry public.waitlist_entries%rowtype;
+  v_appt_result jsonb;
+  v_appt_id uuid;
+begin
+  select * into v_entry from public.waitlist_entries where id = p_entry_id;
+  if not found then
+    raise exception 'Waitlist entry not found';
+  end if;
+
+  if not public.has_permission('appointments.write', v_entry.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_entry.status not in ('waiting', 'contacted') then
+    raise exception 'Entry cannot be booked in status %', v_entry.status;
+  end if;
+
+  v_appt_result := public.create_appointment_validated(jsonb_build_object(
+    'organization_id', v_entry.organization_id,
+    'branch_id', v_entry.branch_id,
+    'patient_id', v_entry.patient_id,
+    'scheduled_at', p_scheduled_at,
+    'purpose', coalesce(p_purpose, v_entry.notes),
+    'booking_source', 'staff'
+  ));
+
+  v_appt_id := (v_appt_result->>'id')::uuid;
+
+  update public.waitlist_entries
+  set status = 'booked',
+      appointment_id = v_appt_id,
+      updated_by = auth.uid(),
+      updated_at = now()
+  where id = p_entry_id;
+
+  return jsonb_build_object('entry_id', p_entry_id, 'appointment_id', v_appt_id);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Portal booking: slot validation + audit (no staff billing gate for self-service)
+-- ---------------------------------------------------------------------------
+create or replace function public.submit_portal_appointment(
+  p_session_id uuid,
+  p_phone text,
+  p_last_name text,
+  p_provider_id uuid,
+  p_date date,
+  p_time time,
+  p_purpose text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.kiosk_sessions%rowtype;
+  v_patient_id uuid;
+  v_appointment_id uuid;
+  v_phone_norm text;
+  v_scheduled_at timestamptz;
+  v_purpose text;
+begin
+  select * into v_session from public.kiosk_sessions where id = p_session_id;
+  if not found or v_session.expires_at < now() then
+    raise exception 'Session expired. Please refresh the page.';
+  end if;
+
+  v_phone_norm := right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 10);
+
+  if v_phone_norm = '' or trim(coalesce(p_last_name, '')) = '' then
+    raise exception 'Phone and last name are required';
+  end if;
+
+  if p_provider_id is null then
+    raise exception 'Please select a provider';
+  end if;
+
+  select p.id into v_patient_id
+  from public.patients p
+  where p.organization_id = v_session.organization_id
+    and p.status = 'active'
+    and lower(p.last_name) = lower(trim(p_last_name))
+    and right(regexp_replace(coalesce(p.phone, ''), '\D', '', 'g'), 10) = v_phone_norm
+  limit 1;
+
+  if v_patient_id is null then
+    raise exception 'We could not find your record. Please use New Patient Registration.';
+  end if;
+
+  insert into public.patient_branch_links (patient_id, branch_id)
+  values (v_patient_id, v_session.branch_id)
+  on conflict (patient_id, branch_id) do nothing;
+
+  v_scheduled_at := (p_date || ' ' || p_time || ' +08')::timestamptz;
+  v_purpose := nullif(trim(coalesce(p_purpose, '')), '');
+
+  perform public._assert_provider_slot_available(v_session.branch_id, p_provider_id, v_scheduled_at);
+
+  insert into public.appointments (
+    organization_id, branch_id, patient_id, provider_id,
+    scheduled_at, duration_minutes, purpose, status, booking_source
+  ) values (
+    v_session.organization_id,
+    v_session.branch_id,
+    v_patient_id,
+    p_provider_id,
+    v_scheduled_at,
+    30,
+    coalesce(v_purpose, 'Online booking'),
+    'scheduled',
+    'portal'
+  )
+  returning id into v_appointment_id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_session.organization_id, v_session.branch_id, null,
+    'appointment.create', 'appointment', v_appointment_id::text,
+    jsonb_build_object(
+      'patient_id', v_patient_id,
+      'booking_source', 'portal',
+      'scheduled_at', v_scheduled_at
+    )
+  );
+
+  return jsonb_build_object('appointment_id', v_appointment_id);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Kiosk check-in: consent + billing block (no override â€” see front desk)
+-- ---------------------------------------------------------------------------
+create or replace function public.submit_kiosk_checkin(
+  p_session_id uuid,
+  p_phone text,
+  p_last_name text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.kiosk_sessions%rowtype;
+  v_patient_id uuid;
+  v_code text;
+  v_entry_id uuid;
+  v_phone_norm text;
+  v_active_count int;
+  v_pending_consents int;
+  v_appointment_id uuid;
+begin
+  select * into v_session from public.kiosk_sessions where id = p_session_id;
+  if not found or v_session.expires_at < now() then
+    raise exception 'Kiosk session expired. Please refresh the page.';
+  end if;
+
+  v_phone_norm := right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 10);
+
+  if v_phone_norm = '' or trim(coalesce(p_last_name, '')) = '' then
+    raise exception 'Phone and last name are required';
+  end if;
+
+  select p.id into v_patient_id
+  from public.patients p
+  inner join public.patient_branch_links pbl on pbl.patient_id = p.id and pbl.branch_id = v_session.branch_id
+  where p.organization_id = v_session.organization_id
+    and p.status = 'active'
+    and lower(p.last_name) = lower(trim(p_last_name))
+    and right(regexp_replace(coalesce(p.phone, ''), '\D', '', 'g'), 10) = v_phone_norm
+  limit 1;
+
+  if v_patient_id is null then
+    raise exception 'We could not find your record. Please check with the front desk.';
+  end if;
+
+  if public._workflow_enabled(v_session.branch_id, 'consent_gate_checkin') then
+    select count(*) into v_pending_consents
+    from public.patient_consents pc
+    where pc.patient_id = v_patient_id
+      and pc.organization_id = v_session.organization_id
+      and pc.status = 'pending';
+
+    if v_pending_consents > 0 then
+      raise exception 'Please see the front desk to sign required forms before check-in.';
+    end if;
+  end if;
+
+  if public._workflow_enabled(v_session.branch_id, 'billing_gate_block_services') then
+    perform public._assert_patient_billing_clear(
+      v_patient_id,
+      v_session.branch_id,
+      false,
+      'kiosk_check_in'
+    );
+  end if;
+
+  select count(*) into v_active_count
+  from public.queue_entries
+  where branch_id = v_session.branch_id
+    and patient_id = v_patient_id
+    and status in ('waiting', 'ready', 'now_serving', 'in_chair')
+    and cast(created_at at time zone 'Asia/Manila' as date) = cast(now() at time zone 'Asia/Manila' as date);
+
+  if v_active_count > 0 then
+    raise exception 'You are already checked in. Please wait to be called.';
+  end if;
+
+  if public._workflow_enabled(v_session.branch_id, 'auto_checkin_updates_appointment') then
+    select a.id into v_appointment_id
+    from public.appointments a
+    where a.branch_id = v_session.branch_id
+      and a.patient_id = v_patient_id
+      and (a.scheduled_at at time zone 'Asia/Manila')::date = (now() at time zone 'Asia/Manila')::date
+      and a.status in ('scheduled', 'confirmed')
+    order by a.scheduled_at
+    limit 1;
+  end if;
+
+  v_code := public._next_queue_display_code(v_session.branch_id);
+
+  insert into public.queue_entries (
+    organization_id, branch_id, patient_id, appointment_id, display_code, notes
+  ) values (
+    v_session.organization_id, v_session.branch_id, v_patient_id, v_appointment_id, v_code, 'Kiosk check-in'
+  )
+  returning id into v_entry_id;
+
+  if v_appointment_id is not null then
+    update public.appointments
+    set status = 'checked_in', updated_at = now()
+    where id = v_appointment_id
+      and status in ('scheduled', 'confirmed');
+  end if;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_session.organization_id, v_session.branch_id, null,
+    'queue.kiosk_check_in', 'queue_entry', v_entry_id::text,
+    jsonb_build_object('patient_id', v_patient_id, 'display_code', v_code)
+  );
+
+  perform public.emit_workflow_event(
+    v_session.branch_id, 'patient.checked_in', 'queue_entry', v_entry_id::text,
+    jsonb_build_object('patient_id', v_patient_id, 'display_code', v_code, 'source', 'kiosk')
+  );
+
+  return jsonb_build_object('entry_id', v_entry_id, 'display_code', v_code);
+end;
+$$;
+
+grant execute on function public.check_in_appointment(uuid, boolean, boolean) to authenticated;
+
+
+-- ===== 20260615180000_billing_mutation_rpc.sql =====
+
+-- Billing mutation RPCs: guarded line-item updates and payment deletion with audit
+
+create or replace function public._sync_invoice_payment_status(p_invoice_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_inv public.invoices%rowtype;
+  v_paid numeric(12,2);
+  v_new_status text;
+begin
+  select * into v_inv from public.invoices where id = p_invoice_id for update;
+  if not found then
+    raise exception 'Invoice not found';
+  end if;
+
+  select coalesce(sum(amount), 0) into v_paid
+  from public.invoice_payments
+  where invoice_id = p_invoice_id;
+
+  v_new_status := case
+    when v_inv.status = 'void' then 'void'
+    when v_paid >= v_inv.total_amount and v_inv.total_amount > 0 then 'paid'
+    when v_paid > 0 then 'partial'
+    when v_inv.status = 'draft' then 'draft'
+    else 'sent'
+  end;
+
+  if v_new_status = 'paid' then
+    v_paid := v_inv.total_amount;
+  end if;
+
+  update public.invoices
+  set paid_amount = v_paid,
+      status = v_new_status,
+      updated_at = now()
+  where id = p_invoice_id;
+end;
+$$;
+
+create or replace function public.update_invoice_line_item(
+  p_item_id uuid,
+  p_description text,
+  p_unit_price numeric,
+  p_quantity numeric default 1
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_item public.invoice_line_items%rowtype;
+  v_inv public.invoices%rowtype;
+  v_line_total numeric(12,2);
+begin
+  select * into v_item from public.invoice_line_items where id = p_item_id;
+  if not found then
+    raise exception 'Line item not found';
+  end if;
+
+  select * into v_inv from public.invoices where id = v_item.invoice_id;
+  if not found then
+    raise exception 'Invoice not found';
+  end if;
+
+  if v_inv.status in ('void', 'paid') then
+    raise exception 'Cannot edit line items on a % invoice', v_inv.status;
+  end if;
+
+  if not public.has_permission('billing.write', v_inv.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if nullif(trim(p_description), '') is null then
+    raise exception 'Description is required';
+  end if;
+
+  if coalesce(p_quantity, 0) <= 0 then
+    raise exception 'Quantity must be positive';
+  end if;
+
+  if coalesce(p_unit_price, 0) < 0 then
+    raise exception 'Unit price cannot be negative';
+  end if;
+
+  v_line_total := round(coalesce(p_quantity, 1) * coalesce(p_unit_price, 0), 2);
+
+  update public.invoice_line_items
+  set description = trim(p_description),
+      unit_price = coalesce(p_unit_price, 0),
+      quantity = coalesce(p_quantity, 1),
+      line_total = v_line_total
+  where id = p_item_id;
+
+  perform public._sync_invoice_payment_status(v_item.invoice_id);
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_inv.organization_id, v_inv.branch_id, auth.uid(),
+    'invoice.line_item_update', 'invoice', v_inv.id::text,
+    jsonb_build_object(
+      'line_item_id', p_item_id,
+      'description', trim(p_description),
+      'unit_price', coalesce(p_unit_price, 0),
+      'quantity', coalesce(p_quantity, 1),
+      'invoice_number', v_inv.invoice_number
+    )
+  );
+
+  return jsonb_build_object('invoice_id', v_inv.id, 'line_item_id', p_item_id);
+end;
+$$;
+
+create or replace function public.delete_invoice_payment(p_payment_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_payment public.invoice_payments%rowtype;
+  v_inv public.invoices%rowtype;
+begin
+  select * into v_payment from public.invoice_payments where id = p_payment_id;
+  if not found then
+    raise exception 'Payment not found';
+  end if;
+
+  select * into v_inv from public.invoices where id = v_payment.invoice_id;
+  if not found then
+    raise exception 'Invoice not found';
+  end if;
+
+  if v_inv.status = 'void' then
+    raise exception 'Cannot delete payments on a void invoice';
+  end if;
+
+  if not public.has_permission('billing.write', v_inv.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  delete from public.invoice_payments where id = p_payment_id;
+
+  perform public._sync_invoice_payment_status(v_payment.invoice_id);
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_inv.organization_id, v_inv.branch_id, auth.uid(),
+    'invoice.payment_delete', 'invoice', v_inv.id::text,
+    jsonb_build_object(
+      'payment_id', p_payment_id,
+      'amount', v_payment.amount,
+      'payment_method', v_payment.payment_method,
+      'invoice_number', v_inv.invoice_number
+    )
+  );
+
+  return jsonb_build_object('invoice_id', v_inv.id, 'payment_id', p_payment_id);
+end;
+$$;
+
+grant execute on function public.update_invoice_line_item(uuid, text, numeric, numeric) to authenticated;
+grant execute on function public.delete_invoice_payment(uuid) to authenticated;
+
+
+-- ===== 20260615190000_role_permissions_management.sql =====
+
+-- Org admins can customize role â†” permission mappings (except owner role).
+
+create or replace function public.user_is_org_owner()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.staff_branch_assignments sba
+    join public.roles r on r.id = sba.role_id
+    where sba.profile_id = auth.uid()
+      and r.name = 'owner'
+  );
+$$;
+
+create or replace function public.update_role_permissions(
+  p_role_id uuid,
+  p_permission_names text[]
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role public.roles%rowtype;
+  v_perm_id uuid;
+  v_name text;
+  v_added int := 0;
+begin
+  if not public.user_is_org_admin() then
+    raise exception 'Permission denied';
+  end if;
+
+  select * into v_role from public.roles where id = p_role_id;
+  if not found then
+    raise exception 'Role not found';
+  end if;
+
+  if v_role.name = 'owner' then
+    raise exception 'Owner role permissions cannot be changed';
+  end if;
+
+  if v_role.name = 'admin' and not public.user_is_org_owner() then
+    raise exception 'Only the clinic owner can change administrator permissions';
+  end if;
+
+  if p_permission_names is null then
+    p_permission_names := array[]::text[];
+  end if;
+
+  foreach v_name in array p_permission_names loop
+    if not exists (select 1 from public.permissions p where p.name = v_name) then
+      raise exception 'Unknown permission: %', v_name;
+    end if;
+  end loop;
+
+  delete from public.role_permissions where role_id = p_role_id;
+
+  foreach v_name in array p_permission_names loop
+    select p.id into v_perm_id from public.permissions p where p.name = v_name;
+    insert into public.role_permissions (role_id, permission_id)
+    values (p_role_id, v_perm_id)
+    on conflict do nothing;
+    v_added := v_added + 1;
+  end loop;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  )
+  select
+    public.current_user_org_id(),
+    null,
+    auth.uid(),
+    'role.permissions_update',
+    'role',
+    p_role_id::text,
+    jsonb_build_object(
+      'role_name', v_role.name,
+      'permission_count', v_added,
+      'permissions', to_jsonb(p_permission_names)
+    );
+
+  return jsonb_build_object(
+    'role_id', p_role_id,
+    'role_name', v_role.name,
+    'permission_count', v_added
+  );
+end;
+$$;
+
+grant execute on function public.update_role_permissions(uuid, text[]) to authenticated;
+grant execute on function public.user_is_org_owner() to authenticated;
+
+
+-- ===== 20260615200000_workflow_rpc_hardening.sql =====
+
+-- Harden remaining workflow bypasses: appointment status, manual invoice, check-in permissions
+
+create or replace function public._user_can_check_in(p_branch_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.has_permission('queue.manage', p_branch_id)
+      or public.has_permission('appointments.write', p_branch_id);
+$$;
+
+-- Allow front desk (queue.manage) and schedulers (appointments.write) to check in
+create or replace function public.check_in_patient(p_payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_branch_id uuid := (p_payload->>'branch_id')::uuid;
+  v_patient_id uuid := (p_payload->>'patient_id')::uuid;
+  v_appointment_id uuid := nullif(p_payload->>'appointment_id', '')::uuid;
+  v_notes text := nullif(p_payload->>'notes', '');
+  v_force boolean := coalesce((p_payload->>'force_checkin')::boolean, false);
+  v_force_billing boolean := coalesce((p_payload->>'force_billing_override')::boolean, false);
+  v_org uuid := public.current_user_org_id();
+  v_code text;
+  v_id uuid;
+  v_pending_consents int;
+begin
+  if v_branch_id is null or v_patient_id is null then
+    raise exception 'branch_id and patient_id are required';
+  end if;
+
+  if not public._user_can_check_in(v_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  perform public._assert_patient_billing_clear(
+    v_patient_id, v_branch_id, v_force_billing, 'check_in'
+  );
+
+  if public._workflow_enabled(v_branch_id, 'consent_gate_checkin') and not v_force then
+    select count(*) into v_pending_consents
+    from public.patient_consents pc
+    where pc.patient_id = v_patient_id
+      and pc.organization_id = v_org
+      and pc.status = 'pending';
+
+    if v_pending_consents > 0 then
+      raise exception 'Pending consents must be signed before check-in. Set force_checkin to override (logged).';
+    end if;
+  end if;
+
+  if v_force and public._workflow_enabled(v_branch_id, 'consent_gate_checkin') then
+    insert into public.organization_audit_logs (
+      organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+    ) values (
+      v_org, v_branch_id, auth.uid(),
+      'checkin.consent_override', 'patient', v_patient_id::text,
+      jsonb_build_object('pending_consents', v_pending_consents)
+    );
+  end if;
+
+  if exists (
+    select 1 from public.queue_entries
+    where branch_id = v_branch_id
+      and patient_id = v_patient_id
+      and status in ('waiting', 'ready', 'now_serving', 'in_chair')
+  ) then
+    raise exception 'Patient is already in the queue';
+  end if;
+
+  if v_appointment_id is null and public._workflow_enabled(v_branch_id, 'auto_checkin_updates_appointment') then
+    select a.id into v_appointment_id
+    from public.appointments a
+    where a.branch_id = v_branch_id
+      and a.patient_id = v_patient_id
+      and (a.scheduled_at at time zone 'Asia/Manila')::date = (now() at time zone 'Asia/Manila')::date
+      and a.status in ('scheduled', 'confirmed')
+    order by a.scheduled_at
+    limit 1;
+  end if;
+
+  v_code := public._next_queue_display_code(v_branch_id);
+
+  insert into public.queue_entries (
+    organization_id, branch_id, patient_id, appointment_id,
+    display_code, notes, created_by
+  ) values (
+    v_org, v_branch_id, v_patient_id, v_appointment_id,
+    v_code, v_notes, auth.uid()
+  )
+  returning id into v_id;
+
+  if v_appointment_id is not null and public._workflow_enabled(v_branch_id, 'auto_checkin_updates_appointment') then
+    update public.appointments
+    set status = 'checked_in', updated_at = now()
+    where id = v_appointment_id
+      and status in ('scheduled', 'confirmed');
+  end if;
+
+  perform public.emit_workflow_event(
+    v_branch_id, 'patient.checked_in', 'queue_entry', v_id::text,
+    jsonb_build_object('patient_id', v_patient_id, 'appointment_id', v_appointment_id, 'display_code', v_code)
+  );
+
+  return jsonb_build_object(
+    'id', v_id,
+    'display_code', v_code,
+    'appointment_id', v_appointment_id,
+    'status', 'waiting'
+  );
+end;
+$$;
+
+create or replace function public.check_in_appointment(
+  p_appointment_id uuid,
+  p_force_billing_override boolean default false,
+  p_force_checkin boolean default false
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_appt record;
+  v_code text;
+  v_queue_id uuid;
+  v_pending_consents int;
+begin
+  select a.* into v_appt
+  from public.appointments a
+  where a.id = p_appointment_id
+    and a.organization_id = public.current_user_org_id();
+
+  if v_appt.id is null then
+    raise exception 'Appointment not found';
+  end if;
+
+  if v_appt.status not in ('scheduled', 'confirmed') then
+    raise exception 'Appointment cannot be checked in';
+  end if;
+
+  if not public._user_can_check_in(v_appt.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  perform public._assert_patient_billing_clear(
+    v_appt.patient_id, v_appt.branch_id, p_force_billing_override, 'appointment_check_in'
+  );
+
+  if public._workflow_enabled(v_appt.branch_id, 'consent_gate_checkin') and not p_force_checkin then
+    select count(*) into v_pending_consents
+    from public.patient_consents pc
+    where pc.patient_id = v_appt.patient_id
+      and pc.organization_id = v_appt.organization_id
+      and pc.status = 'pending';
+
+    if v_pending_consents > 0 then
+      raise exception 'Pending consents must be signed before check-in. Set force_checkin to override (logged).';
+    end if;
+  end if;
+
+  if p_force_checkin and public._workflow_enabled(v_appt.branch_id, 'consent_gate_checkin') then
+    insert into public.organization_audit_logs (
+      organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+    ) values (
+      v_appt.organization_id, v_appt.branch_id, auth.uid(),
+      'checkin.consent_override', 'patient', v_appt.patient_id::text,
+      jsonb_build_object('appointment_id', v_appt.id, 'pending_consents', v_pending_consents)
+    );
+  end if;
+
+  if exists (
+    select 1 from public.queue_entries qe
+    where qe.branch_id = v_appt.branch_id
+      and qe.patient_id = v_appt.patient_id
+      and qe.status in ('waiting', 'ready', 'now_serving', 'in_chair')
+  ) then
+    raise exception 'Patient is already in the queue';
+  end if;
+
+  v_code := public._next_queue_display_code(v_appt.branch_id);
+
+  insert into public.queue_entries (
+    organization_id, branch_id, patient_id, appointment_id,
+    display_code, notes, created_by
+  ) values (
+    v_appt.organization_id, v_appt.branch_id, v_appt.patient_id, v_appt.id,
+    v_code, coalesce(v_appt.purpose, 'Appointment check-in'), auth.uid()
+  )
+  returning id into v_queue_id;
+
+  update public.appointments
+  set status = 'checked_in', updated_at = now()
+  where id = v_appt.id
+    and status in ('scheduled', 'confirmed');
+
+  perform public.emit_workflow_event(
+    v_appt.branch_id, 'patient.checked_in', 'queue_entry', v_queue_id::text,
+    jsonb_build_object(
+      'patient_id', v_appt.patient_id,
+      'appointment_id', v_appt.id,
+      'display_code', v_code
+    )
+  );
+
+  return jsonb_build_object(
+    'queue_id', v_queue_id,
+    'display_code', v_code,
+    'appointment_id', v_appt.id,
+    'status', 'waiting'
+  );
+end;
+$$;
+
+create or replace function public.update_appointment_status(
+  p_appointment_id uuid,
+  p_status text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_appt record;
+begin
+  if p_appointment_id is null then
+    raise exception 'appointment_id is required';
+  end if;
+
+  if p_status not in ('completed', 'cancelled', 'confirmed') then
+    raise exception 'Unsupported status transition: %', p_status;
+  end if;
+
+  select a.* into v_appt
+  from public.appointments a
+  where a.id = p_appointment_id
+    and a.organization_id = public.current_user_org_id();
+
+  if not found then
+    raise exception 'Appointment not found';
+  end if;
+
+  if not public.has_permission('appointments.write', v_appt.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if p_status = 'completed' and v_appt.status not in ('scheduled', 'confirmed', 'checked_in') then
+    raise exception 'Cannot mark appointment as completed from status %', v_appt.status;
+  end if;
+
+  if p_status = 'cancelled' and v_appt.status in ('completed', 'cancelled', 'no_show') then
+    raise exception 'Appointment cannot be cancelled';
+  end if;
+
+  if p_status = 'confirmed' and v_appt.status not in ('scheduled') then
+    raise exception 'Only scheduled appointments can be confirmed';
+  end if;
+
+  update public.appointments
+  set status = p_status, updated_at = now()
+  where id = p_appointment_id;
+
+  if p_status = 'cancelled' and public._workflow_enabled(v_appt.branch_id, 'auto_waitlist_on_slot_open') then
+    insert into public.slot_notification_queue (
+      organization_id, branch_id, slot_at, source_appointment_id
+    ) values (
+      v_appt.organization_id, v_appt.branch_id, v_appt.scheduled_at, p_appointment_id
+    );
+    perform public.emit_workflow_event(
+      v_appt.branch_id, 'slot.opened', 'appointment', p_appointment_id::text,
+      jsonb_build_object('slot_at', v_appt.scheduled_at, 'reason', 'cancelled')
+    );
+  end if;
+
+  if p_status = 'completed' then
+    perform public.emit_workflow_event(
+      v_appt.branch_id, 'appointment.completed', 'appointment', p_appointment_id::text,
+      jsonb_build_object('patient_id', v_appt.patient_id, 'scheduled_at', v_appt.scheduled_at)
+    );
+  end if;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_appt.organization_id, v_appt.branch_id, auth.uid(),
+    'appointment.status_change', 'appointment', p_appointment_id::text,
+    jsonb_build_object(
+      'previous_status', v_appt.status,
+      'new_status', p_status,
+      'patient_id', v_appt.patient_id,
+      'scheduled_at', v_appt.scheduled_at
+    )
+  );
+
+  return jsonb_build_object('id', p_appointment_id, 'status', p_status);
+end;
+$$;
+
+create or replace function public.create_manual_invoice(p_payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_branch_id uuid := (p_payload->>'branch_id')::uuid;
+  v_patient_id uuid := (p_payload->>'patient_id')::uuid;
+  v_org_id uuid := coalesce((p_payload->>'organization_id')::uuid, public.current_user_org_id());
+  v_total numeric(12,2) := (p_payload->>'total_amount')::numeric;
+  v_due_date date := nullif(p_payload->>'due_date', '')::date;
+  v_series text := coalesce(nullif(trim(p_payload->>'series'), ''), 'INV');
+  v_invoice_number text := nullif(trim(p_payload->>'invoice_number'), '');
+  v_description text := coalesce(nullif(trim(p_payload->>'description'), ''), 'Clinical services');
+  v_invoice_id uuid;
+  v_line_id uuid;
+begin
+  if v_branch_id is null or v_patient_id is null then
+    raise exception 'branch_id and patient_id are required';
+  end if;
+
+  if v_total is null or v_total <= 0 then
+    raise exception 'Amount must be greater than zero';
+  end if;
+
+  if v_org_id <> public.current_user_org_id() then
+    raise exception 'Organization mismatch';
+  end if;
+
+  if not public.has_permission('billing.write', v_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_invoice_number is null then
+    v_invoice_number := v_series || '-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8));
+  end if;
+
+  insert into public.invoices (
+    organization_id, branch_id, patient_id,
+    invoice_number, series, total_amount, status, due_date, created_by
+  ) values (
+    v_org_id, v_branch_id, v_patient_id,
+    v_invoice_number, v_series, 0, 'sent', v_due_date, auth.uid()
+  )
+  returning id into v_invoice_id;
+
+  v_line_id := public.add_invoice_line_item(
+    v_invoice_id, v_description, v_total, 1, null, null, null
+  );
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_org_id, v_branch_id, auth.uid(),
+    'invoice.create_manual', 'invoice', v_invoice_id::text,
+    jsonb_build_object(
+      'patient_id', v_patient_id,
+      'invoice_number', v_invoice_number,
+      'total_amount', v_total,
+      'line_item_id', v_line_id
+    )
+  );
+
+  return jsonb_build_object('id', v_invoice_id, 'invoice_number', v_invoice_number);
+end;
+$$;
+
+grant execute on function public._user_can_check_in(uuid) to authenticated;
+grant execute on function public.update_appointment_status(uuid, text) to authenticated;
+grant execute on function public.create_manual_invoice(jsonb) to authenticated;
+
+-- Appointment detail edits (provider, purpose, duration) with permission + audit
+create or replace function public.update_appointment_details(
+  p_appointment_id uuid,
+  p_payload jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_appt record;
+  v_purpose text;
+  v_duration int;
+begin
+  if p_appointment_id is null then
+    raise exception 'appointment_id is required';
+  end if;
+
+  select a.* into v_appt
+  from public.appointments a
+  where a.id = p_appointment_id
+    and a.organization_id = public.current_user_org_id();
+
+  if not found then
+    raise exception 'Appointment not found';
+  end if;
+
+  if not public.has_permission('appointments.write', v_appt.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_appt.status in ('completed', 'cancelled', 'no_show') then
+    raise exception 'Cannot edit appointment in status %', v_appt.status;
+  end if;
+
+  if p_payload ? 'duration_minutes' then
+    v_duration := nullif(p_payload->>'duration_minutes', '')::int;
+    if v_duration is not null and v_duration < 5 then
+      raise exception 'Duration must be at least 5 minutes';
+    end if;
+  end if;
+
+  if p_payload ? 'purpose' then
+    v_purpose := nullif(trim(p_payload->>'purpose'), '');
+  end if;
+
+  update public.appointments
+  set
+    provider_id = case
+      when p_payload ? 'provider_id' then nullif(p_payload->>'provider_id', '')::uuid
+      else provider_id
+    end,
+    purpose = case when p_payload ? 'purpose' then v_purpose else purpose end,
+    duration_minutes = case
+      when p_payload ? 'duration_minutes' then coalesce(v_duration, duration_minutes)
+      else duration_minutes
+    end,
+    updated_at = now()
+  where id = p_appointment_id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_appt.organization_id, v_appt.branch_id, auth.uid(),
+    'appointment.details_update', 'appointment', p_appointment_id::text,
+    p_payload
+  );
+
+  return jsonb_build_object('id', p_appointment_id);
+end;
+$$;
+
+-- Waitlist create/cancel with audit (RLS already enforces appointments.write)
+create or replace function public.create_waitlist_entry(p_payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_branch_id uuid := (p_payload->>'branch_id')::uuid;
+  v_patient_id uuid := (p_payload->>'patient_id')::uuid;
+  v_org_id uuid := coalesce((p_payload->>'organization_id')::uuid, public.current_user_org_id());
+  v_urgency text := coalesce(nullif(trim(p_payload->>'urgency'), ''), 'normal');
+  v_id uuid;
+begin
+  if v_branch_id is null or v_patient_id is null then
+    raise exception 'branch_id and patient_id are required';
+  end if;
+
+  if v_org_id <> public.current_user_org_id() then
+    raise exception 'Organization mismatch';
+  end if;
+
+  if not public.has_permission('appointments.write', v_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_urgency not in ('normal', 'urgent', 'high') then
+    raise exception 'Invalid urgency: %', v_urgency;
+  end if;
+
+  insert into public.waitlist_entries (
+    organization_id, branch_id, patient_id, urgency,
+    preferred_date, preferred_time_start, preferred_time_end,
+    notes, expires_at, created_by
+  ) values (
+    v_org_id, v_branch_id, v_patient_id, v_urgency,
+    nullif(p_payload->>'preferred_date', '')::date,
+    nullif(p_payload->>'preferred_time_start', '')::time,
+    nullif(p_payload->>'preferred_time_end', '')::time,
+    nullif(trim(p_payload->>'notes'), ''),
+    nullif(p_payload->>'expires_at', '')::timestamptz,
+    auth.uid()
+  )
+  returning id into v_id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_org_id, v_branch_id, auth.uid(),
+    'waitlist.create', 'waitlist_entry', v_id::text,
+    jsonb_build_object('patient_id', v_patient_id, 'urgency', v_urgency)
+  );
+
+  return jsonb_build_object('id', v_id);
+end;
+$$;
+
+create or replace function public.cancel_waitlist_entry(p_entry_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_entry public.waitlist_entries%rowtype;
+begin
+  select * into v_entry from public.waitlist_entries where id = p_entry_id;
+  if not found then
+    raise exception 'Waitlist entry not found';
+  end if;
+
+  if v_entry.organization_id <> public.current_user_org_id() then
+    raise exception 'Waitlist entry not found';
+  end if;
+
+  if not public.has_permission('appointments.write', v_entry.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_entry.status not in ('waiting', 'contacted') then
+    raise exception 'Entry cannot be cancelled in status %', v_entry.status;
+  end if;
+
+  update public.waitlist_entries
+  set status = 'cancelled', updated_by = auth.uid(), updated_at = now()
+  where id = p_entry_id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_entry.organization_id, v_entry.branch_id, auth.uid(),
+    'waitlist.cancel', 'waitlist_entry', p_entry_id::text,
+    jsonb_build_object('patient_id', v_entry.patient_id, 'previous_status', v_entry.status)
+  );
+
+  return jsonb_build_object('id', p_entry_id, 'status', 'cancelled');
+end;
+$$;
+
+grant execute on function public.update_appointment_details(uuid, jsonb) to authenticated;
+grant execute on function public.create_waitlist_entry(jsonb) to authenticated;
+grant execute on function public.cancel_waitlist_entry(uuid) to authenticated;
+
+
+-- ===== 20260615210000_queue_board_controls.sql =====
+
+-- Queue board: backward transitions, audit, reorder within waiting column
+
+create or replace function public.update_queue_status(
+  p_entry_id uuid,
+  p_status text,
+  p_chair_label text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_entry public.queue_entries%rowtype;
+  v_in_chair_at timestamptz;
+  v_completed_at timestamptz;
+  v_called_at timestamptz;
+  v_chair_label text;
+  v_backward boolean := false;
+begin
+  select * into v_entry from public.queue_entries where id = p_entry_id;
+  if not found then
+    raise exception 'Queue entry not found';
+  end if;
+
+  if not public.has_permission('queue.manage', v_entry.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if p_status not in ('waiting', 'ready', 'now_serving', 'in_chair', 'served', 'cancelled') then
+    raise exception 'Invalid status';
+  end if;
+
+  if p_status = v_entry.status and p_chair_label is null then
+    return jsonb_build_object('id', p_entry_id, 'status', p_status);
+  end if;
+
+  v_in_chair_at := v_entry.in_chair_at;
+  v_completed_at := v_entry.completed_at;
+  v_called_at := v_entry.called_at;
+  v_chair_label := coalesce(p_chair_label, v_entry.chair_label);
+
+  v_backward := (
+    (v_entry.status = 'in_chair' and p_status in ('now_serving', 'ready', 'waiting'))
+    or (v_entry.status = 'now_serving' and p_status in ('ready', 'waiting'))
+    or (v_entry.status = 'ready' and p_status = 'waiting')
+    or (v_entry.status = 'served' and p_status in ('in_chair', 'now_serving', 'ready', 'waiting'))
+  );
+
+  if p_status = 'in_chair' and v_entry.status is distinct from 'in_chair' then
+    v_in_chair_at := now();
+  elsif p_status in ('waiting', 'ready', 'now_serving') and v_entry.status = 'in_chair' then
+    v_in_chair_at := null;
+    if p_status in ('waiting', 'ready') then
+      v_chair_label := null;
+    end if;
+  end if;
+
+  if p_status = 'now_serving' then
+    v_called_at := now();
+  elsif p_status in ('waiting', 'ready') and v_entry.status in ('now_serving', 'in_chair') then
+    v_called_at := null;
+  end if;
+
+  if p_status = 'served' and v_entry.status is distinct from 'served' then
+    v_completed_at := now();
+  elsif p_status in ('waiting', 'ready', 'now_serving', 'in_chair') and v_entry.status = 'served' then
+    v_completed_at := null;
+  end if;
+
+  update public.queue_entries
+  set status = p_status,
+      chair_label = v_chair_label,
+      called_at = v_called_at,
+      in_chair_at = v_in_chair_at,
+      completed_at = v_completed_at,
+      updated_by = auth.uid(),
+      updated_at = now()
+  where id = p_entry_id;
+
+  if p_status = 'served'
+    and v_entry.appointment_id is not null
+    and public._workflow_enabled(v_entry.branch_id, 'auto_served_completes_appointment') then
+    update public.appointments
+    set status = 'completed', updated_at = now()
+    where id = v_entry.appointment_id
+      and status in ('checked_in', 'scheduled', 'confirmed');
+  end if;
+
+  if v_backward
+    and v_entry.status = 'served'
+    and v_entry.appointment_id is not null
+    and public._workflow_enabled(v_entry.branch_id, 'auto_served_completes_appointment') then
+    update public.appointments
+    set status = 'checked_in', updated_at = now()
+    where id = v_entry.appointment_id
+      and status = 'completed';
+  end if;
+
+  perform public.emit_workflow_event(
+    v_entry.branch_id, 'queue.status_changed', 'queue_entry', p_entry_id::text,
+    jsonb_build_object(
+      'status', p_status,
+      'previous_status', v_entry.status,
+      'backward', v_backward,
+      'appointment_id', v_entry.appointment_id
+    )
+  );
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_entry.organization_id, v_entry.branch_id, auth.uid(),
+    case when v_backward then 'queue.status_revert' else 'queue.status_change' end,
+    'queue_entry', p_entry_id::text,
+    jsonb_build_object(
+      'previous_status', v_entry.status,
+      'new_status', p_status,
+      'patient_id', v_entry.patient_id,
+      'display_code', v_entry.display_code,
+      'backward', v_backward
+    )
+  );
+
+  return jsonb_build_object('id', p_entry_id, 'status', p_status, 'backward', v_backward);
+end;
+$$;
+
+-- Reorder patients within the waiting column (waiting + ready)
+create or replace function public.reorder_queue_board(
+  p_branch_id uuid,
+  p_ordered_entry_ids uuid[]
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_base timestamptz;
+  v_i int;
+  v_id uuid;
+  v_count int;
+begin
+  if p_branch_id is null or p_ordered_entry_ids is null or array_length(p_ordered_entry_ids, 1) is null then
+    raise exception 'branch_id and ordered entry ids are required';
+  end if;
+
+  if not public.has_permission('queue.manage', p_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  select count(*) into v_count
+  from public.queue_entries qe
+  where qe.id = any(p_ordered_entry_ids)
+    and qe.branch_id = p_branch_id
+    and qe.organization_id = v_org
+    and qe.status in ('waiting', 'ready');
+
+  if v_count <> array_length(p_ordered_entry_ids, 1) then
+    raise exception 'Invalid queue reorder: entries must be waiting or ready in this branch';
+  end if;
+
+  v_base := now() - (array_length(p_ordered_entry_ids, 1) + 1) * interval '1 minute';
+
+  for v_i in 1..array_length(p_ordered_entry_ids, 1) loop
+    v_id := p_ordered_entry_ids[v_i];
+    update public.queue_entries
+    set checked_in_at = v_base + (v_i * interval '1 second'),
+        updated_at = now(),
+        updated_by = auth.uid()
+    where id = v_id;
+  end loop;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_org, p_branch_id, auth.uid(),
+    'queue.reorder', 'queue_board', p_branch_id::text,
+    jsonb_build_object('ordered_ids', to_jsonb(p_ordered_entry_ids))
+  );
+
+  return jsonb_build_object('ok', true, 'count', array_length(p_ordered_entry_ids, 1));
+end;
+$$;
+
+grant execute on function public.update_queue_status(uuid, text, text) to authenticated;
+grant execute on function public.reorder_queue_board(uuid, uuid[]) to authenticated;
+
+
+-- ===== 20260615220000_portal_slots_clinical_rpc.sql =====
+
+-- Portal anon slot access, consent ensure RPC, treatment plan CRUD with audit
+
+drop function if exists public.get_available_appointment_slots(uuid, uuid, date);
+
+create or replace function public.get_available_appointment_slots(
+  p_branch_id uuid,
+  p_provider_id uuid,
+  p_date date,
+  p_exclude_appointment_id uuid default null
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org_id uuid;
+  v_dow smallint;
+  v_avail record;
+  v_clinic record;
+  v_slots jsonb := '[]'::jsonb;
+  v_cursor time;
+  v_end time;
+  v_slot_mins int;
+  v_slot interval;
+  v_ts timestamptz;
+  v_taken boolean;
+begin
+  select b.organization_id into v_org_id
+  from public.branches b
+  where b.id = p_branch_id;
+
+  if v_org_id is null then
+    return jsonb_build_object('date', p_date, 'slots', v_slots);
+  end if;
+
+  perform public.ensure_provider_availability_defaults(p_branch_id, p_provider_id);
+
+  v_dow := extract(dow from p_date)::smallint;
+
+  select pa.start_time, pa.end_time, pa.slot_minutes, pa.is_available
+  into v_avail
+  from public.provider_availability pa
+  where pa.branch_id = p_branch_id
+    and pa.provider_id = p_provider_id
+    and pa.day_of_week = v_dow
+    and pa.organization_id = v_org_id;
+
+  if v_avail is null then
+    select ch.open_time, ch.close_time, ch.is_closed
+    into v_clinic
+    from public.clinic_hours ch
+    where ch.branch_id = p_branch_id
+      and ch.day_of_week = v_dow;
+
+    if v_clinic is null or coalesce(v_clinic.is_closed, false) then
+      return jsonb_build_object('date', p_date, 'slots', v_slots);
+    end if;
+
+    v_cursor := coalesce(v_clinic.open_time, '09:00'::time);
+    v_end := coalesce(v_clinic.close_time, '17:00'::time);
+    v_slot_mins := 30;
+  elsif not v_avail.is_available then
+    return jsonb_build_object('date', p_date, 'slots', v_slots);
+  else
+    v_cursor := v_avail.start_time;
+    v_end := v_avail.end_time;
+    v_slot_mins := coalesce(v_avail.slot_minutes, 30);
+  end if;
+
+  v_slot := make_interval(mins => v_slot_mins);
+
+  while v_cursor < v_end loop
+    v_ts := (p_date + v_cursor) at time zone 'Asia/Manila';
+    select exists (
+      select 1 from public.appointments a
+      where a.branch_id = p_branch_id
+        and coalesce(a.provider_id, p_provider_id) = p_provider_id
+        and a.scheduled_at = v_ts
+        and a.status not in ('cancelled', 'no_show')
+        and (p_exclude_appointment_id is null or a.id <> p_exclude_appointment_id)
+    ) into v_taken;
+
+    v_slots := v_slots || jsonb_build_array(jsonb_build_object(
+      'time', to_char(v_cursor, 'HH24:MI'),
+      'available', not v_taken
+    ));
+
+    v_cursor := v_cursor + v_slot;
+  end loop;
+
+  return jsonb_build_object(
+    'date', p_date,
+    'provider_id', p_provider_id,
+    'slots', v_slots
+  );
+end;
+$$;
+
+-- Consent: ensure pending record exists (staff)
+create or replace function public.ensure_patient_consent(p_payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_patient_id uuid := (p_payload->>'patient_id')::uuid;
+  v_org_id uuid := (p_payload->>'organization_id')::uuid;
+  v_branch_id uuid := nullif(p_payload->>'branch_id', '')::uuid;
+  v_slug text := nullif(trim(p_payload->>'template_slug'), '');
+  v_name text := nullif(trim(p_payload->>'template_name'), '');
+  v_existing record;
+  v_id uuid;
+begin
+  if v_patient_id is null or v_org_id is null or v_slug is null or v_name is null then
+    raise exception 'patient_id, organization_id, template_slug, and template_name are required';
+  end if;
+
+  if v_org_id <> public.current_user_org_id() then
+    raise exception 'Organization mismatch';
+  end if;
+
+  if v_branch_id is not null and not public.has_permission('consents.manage', v_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_branch_id is null then
+    select pbl.branch_id into v_branch_id
+    from public.patient_branch_links pbl
+    where pbl.patient_id = v_patient_id
+    limit 1;
+  end if;
+
+  if v_branch_id is not null and not public.has_permission('consents.manage', v_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  select pc.id, pc.status into v_existing
+  from public.patient_consents pc
+  where pc.patient_id = v_patient_id
+    and pc.template_slug = v_slug
+    and pc.organization_id = v_org_id
+  order by pc.created_at desc
+  limit 1;
+
+  if v_existing.id is not null and v_existing.status <> 'voided' then
+    return jsonb_build_object('id', v_existing.id, 'created', false);
+  end if;
+
+  if v_existing.id is not null and v_existing.status = 'voided' then
+    update public.patient_consents
+    set status = 'pending',
+        signature_data = null,
+        signed_at = null,
+        signed_by = null,
+        signed_pdf_path = null,
+        template_name = v_name,
+        updated_at = now()
+    where id = v_existing.id;
+
+    insert into public.organization_audit_logs (
+      organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+    ) values (
+      v_org_id, v_branch_id, auth.uid(),
+      'consent.reopen', 'patient_consent', v_existing.id::text,
+      jsonb_build_object('patient_id', v_patient_id, 'template_slug', v_slug)
+    );
+
+    return jsonb_build_object('id', v_existing.id, 'created', false, 'reopened', true);
+  end if;
+
+  insert into public.patient_consents (
+    patient_id, organization_id, branch_id, template_slug, template_name, status
+  ) values (
+    v_patient_id, v_org_id, v_branch_id, v_slug, v_name, 'pending'
+  )
+  returning id into v_id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_org_id, v_branch_id, auth.uid(),
+    'consent.ensure', 'patient_consent', v_id::text,
+    jsonb_build_object('patient_id', v_patient_id, 'template_slug', v_slug)
+  );
+
+  return jsonb_build_object('id', v_id, 'created', true);
+end;
+$$;
+
+-- Treatment plan create
+create or replace function public.create_treatment_plan(p_payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_branch_id uuid := (p_payload->>'branch_id')::uuid;
+  v_patient_id uuid := (p_payload->>'patient_id')::uuid;
+  v_org_id uuid := coalesce((p_payload->>'organization_id')::uuid, public.current_user_org_id());
+  v_title text := nullif(trim(p_payload->>'title'), '');
+  v_id uuid;
+begin
+  if v_branch_id is null or v_patient_id is null or v_title is null then
+    raise exception 'branch_id, patient_id, and title are required';
+  end if;
+
+  if v_org_id <> public.current_user_org_id() then
+    raise exception 'Organization mismatch';
+  end if;
+
+  if not public.has_permission('dental_chart.write', v_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  insert into public.treatment_plans (
+    organization_id, branch_id, patient_id, title, status, created_by
+  ) values (
+    v_org_id, v_branch_id, v_patient_id, v_title, 'proposed', auth.uid()
+  )
+  returning id into v_id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_org_id, v_branch_id, auth.uid(),
+    'treatment_plan.create', 'treatment_plan', v_id::text,
+    jsonb_build_object('patient_id', v_patient_id, 'title', v_title)
+  );
+
+  return jsonb_build_object('id', v_id);
+end;
+$$;
+
+create or replace function public.add_treatment_plan_item(p_payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_plan_id uuid := (p_payload->>'plan_id')::uuid;
+  v_plan record;
+  v_item_id uuid;
+  v_price numeric(12,2) := coalesce((p_payload->>'estimated_price')::numeric, 0);
+begin
+  if v_plan_id is null then
+    raise exception 'plan_id is required';
+  end if;
+
+  select tp.* into v_plan from public.treatment_plans tp where tp.id = v_plan_id;
+  if not found then
+    raise exception 'Treatment plan not found';
+  end if;
+
+  if v_plan.organization_id <> public.current_user_org_id() then
+    raise exception 'Treatment plan not found';
+  end if;
+
+  if not public.has_permission('dental_chart.write', v_plan.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_plan.status in ('approved', 'in_progress', 'completed') then
+    raise exception 'Cannot modify items on an approved plan. Unapprove the plan to edit procedures.';
+  end if;
+
+  insert into public.treatment_plan_items (
+    plan_id, procedure_id, description, estimated_price, tooth_number, priority
+  ) values (
+    v_plan_id,
+    nullif(p_payload->>'procedure_id', '')::uuid,
+    coalesce(nullif(trim(p_payload->>'description'), ''), 'Procedure'),
+    v_price,
+    nullif(trim(p_payload->>'tooth_number'), ''),
+    coalesce(nullif(trim(p_payload->>'priority'), ''), 'restorative')
+  )
+  returning id into v_item_id;
+
+  perform public.calculate_treatment_estimate(v_plan_id);
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_plan.organization_id, v_plan.branch_id, auth.uid(),
+    'treatment_plan.item_add', 'treatment_plan_item', v_item_id::text,
+    jsonb_build_object('plan_id', v_plan_id, 'description', p_payload->>'description')
+  );
+
+  return jsonb_build_object('id', v_item_id);
+end;
+$$;
+
+create or replace function public.update_treatment_plan_item(
+  p_item_id uuid,
+  p_plan_id uuid,
+  p_payload jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_plan record;
+begin
+  select tp.* into v_plan
+  from public.treatment_plans tp
+  join public.treatment_plan_items tpi on tpi.plan_id = tp.id
+  where tpi.id = p_item_id and tp.id = p_plan_id;
+
+  if not found then
+    raise exception 'Plan item not found';
+  end if;
+
+  if not public.has_permission('dental_chart.write', v_plan.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_plan.status in ('approved', 'in_progress', 'completed') then
+    raise exception 'Cannot modify items on an approved plan. Unapprove the plan to edit procedures.';
+  end if;
+
+  update public.treatment_plan_items
+  set
+    description = case when p_payload ? 'description' then nullif(trim(p_payload->>'description'), '') else description end,
+    estimated_price = case when p_payload ? 'estimated_price' then (p_payload->>'estimated_price')::numeric else estimated_price end,
+    tooth_number = case when p_payload ? 'tooth_number' then nullif(trim(p_payload->>'tooth_number'), '') else tooth_number end,
+    priority = case when p_payload ? 'priority' then coalesce(nullif(trim(p_payload->>'priority'), ''), priority) else priority end
+  where id = p_item_id and plan_id = p_plan_id;
+
+  perform public.calculate_treatment_estimate(p_plan_id);
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_plan.organization_id, v_plan.branch_id, auth.uid(),
+    'treatment_plan.item_update', 'treatment_plan_item', p_item_id::text,
+    jsonb_build_object('plan_id', p_plan_id)
+  );
+
+  return jsonb_build_object('id', p_item_id);
+end;
+$$;
+
+create or replace function public.delete_treatment_plan_item(
+  p_item_id uuid,
+  p_plan_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_plan record;
+begin
+  select tp.* into v_plan
+  from public.treatment_plans tp
+  join public.treatment_plan_items tpi on tpi.plan_id = tp.id
+  where tpi.id = p_item_id and tp.id = p_plan_id;
+
+  if not found then
+    raise exception 'Plan item not found';
+  end if;
+
+  if not public.has_permission('dental_chart.write', v_plan.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_plan.status in ('approved', 'in_progress', 'completed') then
+    raise exception 'Cannot modify items on an approved plan. Unapprove the plan to edit procedures.';
+  end if;
+
+  delete from public.treatment_plan_items where id = p_item_id and plan_id = p_plan_id;
+
+  perform public.calculate_treatment_estimate(p_plan_id);
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_plan.organization_id, v_plan.branch_id, auth.uid(),
+    'treatment_plan.item_delete', 'treatment_plan_item', p_item_id::text,
+    jsonb_build_object('plan_id', p_plan_id)
+  );
+
+  return jsonb_build_object('id', p_item_id, 'deleted', true);
+end;
+$$;
+
+grant execute on function public.get_available_appointment_slots(uuid, uuid, date, uuid) to authenticated, anon;
+grant execute on function public.get_branch_provider_availability(uuid) to authenticated, anon;
+grant execute on function public.ensure_patient_consent(jsonb) to authenticated;
+grant execute on function public.create_treatment_plan(jsonb) to authenticated;
+grant execute on function public.add_treatment_plan_item(jsonb) to authenticated;
+grant execute on function public.update_treatment_plan_item(uuid, uuid, jsonb) to authenticated;
+grant execute on function public.delete_treatment_plan_item(uuid, uuid) to authenticated;
+
+
+-- ===== 20260615230000_notebook_features.sql =====
+
+-- Notebook features: discounts, ortho billing, org preferences, prescriptions, consent scans
+
+-- ---------------------------------------------------------------------------
+-- 0. Closeout lock helpers (migration backfill + derived invoice totals)
+-- ---------------------------------------------------------------------------
+create or replace function public.check_closeout_lock()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_date date;
+  v_branch_id uuid;
+  v_org_id uuid;
+begin
+  if coalesce(current_setting('app.bypass_closeout_lock', true), '') = 'true' then
+    if TG_OP = 'DELETE' then
+      return old;
+    else
+      return new;
+    end if;
+  end if;
+
+  if TG_OP = 'DELETE' then
+    if TG_TABLE_NAME = 'invoices' then
+      v_date := old.created_at::date;
+      v_branch_id := old.branch_id;
+      v_org_id := old.organization_id;
+    elsif TG_TABLE_NAME = 'invoice_payments' then
+      v_date := old.created_at::date;
+      v_org_id := old.organization_id;
+      select branch_id into v_branch_id from public.invoices where id = old.invoice_id;
+    end if;
+  else
+    if TG_TABLE_NAME = 'invoices' then
+      v_date := new.created_at::date;
+      v_branch_id := new.branch_id;
+      v_org_id := new.organization_id;
+    elsif TG_TABLE_NAME = 'invoice_payments' then
+      v_date := new.created_at::date;
+      v_org_id := new.organization_id;
+      select branch_id into v_branch_id from public.invoices where id = new.invoice_id;
+    end if;
+  end if;
+
+  if exists (
+    select 1 from public.closeout_snapshots
+    where organization_id = v_org_id
+      and (branch_id is null or branch_id = v_branch_id)
+      and snapshot_date = v_date
+  ) then
+    raise exception 'This calendar day has been closed out. Financial records for closed days cannot be modified or deleted.';
+  end if;
+
+  if TG_OP = 'DELETE' then
+    return old;
+  else
+    return new;
+  end if;
+end;
+$$;
+
+create or replace function public.assert_invoice_closeout_editable(p_invoice_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_inv public.invoices%rowtype;
+begin
+  select * into v_inv from public.invoices where id = p_invoice_id;
+  if not found then
+    raise exception 'Invoice not found';
+  end if;
+
+  if exists (
+    select 1 from public.closeout_snapshots cs
+    where cs.organization_id = v_inv.organization_id
+      and (cs.branch_id is null or cs.branch_id = v_inv.branch_id)
+      and cs.snapshot_date = v_inv.created_at::date
+  ) then
+    raise exception 'This calendar day has been closed out. Financial records for closed days cannot be modified or deleted.';
+  end if;
+end;
+$$;
+
+create or replace function public._sync_invoice_payment_status(p_invoice_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_inv public.invoices%rowtype;
+  v_paid numeric(12,2);
+  v_new_status text;
+begin
+  select * into v_inv from public.invoices where id = p_invoice_id for update;
+  if not found then
+    raise exception 'Invoice not found';
+  end if;
+
+  select coalesce(sum(amount), 0) into v_paid
+  from public.invoice_payments
+  where invoice_id = p_invoice_id;
+
+  v_new_status := case
+    when v_inv.status = 'void' then 'void'
+    when v_paid >= v_inv.total_amount and v_inv.total_amount > 0 then 'paid'
+    when v_paid > 0 then 'partial'
+    when v_inv.status = 'draft' then 'draft'
+    else 'sent'
+  end;
+
+  if v_new_status = 'paid' then
+    v_paid := v_inv.total_amount;
+  end if;
+
+  perform set_config('app.bypass_closeout_lock', 'true', true);
+  update public.invoices
+  set paid_amount = v_paid,
+      status = v_new_status,
+      updated_at = now()
+  where id = p_invoice_id;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 1. Invoice discounts
+-- ---------------------------------------------------------------------------
+alter table public.invoices
+  add column if not exists discount_amount numeric(12,2) not null default 0 check (discount_amount >= 0),
+  add column if not exists subtotal_amount numeric(12,2) not null default 0 check (subtotal_amount >= 0);
+
+alter table public.invoice_line_items
+  add column if not exists discount_amount numeric(12,2) not null default 0 check (discount_amount >= 0);
+
+create or replace function public.recalc_invoice_total_from_lines()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_invoice_id uuid;
+  v_subtotal numeric(12,2);
+  v_discount numeric(12,2);
+begin
+  v_invoice_id := coalesce(NEW.invoice_id, OLD.invoice_id);
+
+  select coalesce(sum(line_total), 0) into v_subtotal
+  from public.invoice_line_items
+  where invoice_id = v_invoice_id;
+
+  select coalesce(discount_amount, 0) into v_discount
+  from public.invoices
+  where id = v_invoice_id;
+
+  perform set_config('app.bypass_closeout_lock', 'true', true);
+  update public.invoices
+  set subtotal_amount = v_subtotal,
+      total_amount = greatest(v_subtotal - v_discount, 0),
+      updated_at = now()
+  where id = v_invoice_id;
+
+  return coalesce(NEW, OLD);
+end;
+$$;
+
+create or replace function public.add_invoice_line_item(
+  p_invoice_id uuid,
+  p_description text,
+  p_unit_price numeric,
+  p_quantity numeric default 1,
+  p_tooth_number text default null,
+  p_procedure_id uuid default null,
+  p_treatment_plan_item_id uuid default null,
+  p_discount_amount numeric default 0
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_inv public.invoices%rowtype;
+  v_line_total numeric(12,2);
+  v_sort int;
+  v_id uuid;
+begin
+  select * into v_inv from public.invoices where id = p_invoice_id;
+  if not found then raise exception 'Invoice not found'; end if;
+  if v_inv.status in ('void', 'paid') then raise exception 'Cannot edit % invoice', v_inv.status; end if;
+  if not public.has_permission('billing.write', v_inv.branch_id) then raise exception 'Permission denied'; end if;
+  perform public.assert_invoice_closeout_editable(p_invoice_id);
+
+  v_line_total := greatest(
+    round(coalesce(p_quantity, 1) * coalesce(p_unit_price, 0) - coalesce(p_discount_amount, 0), 2),
+    0
+  );
+
+  select coalesce(max(sort_order), 0) + 1 into v_sort
+  from public.invoice_line_items where invoice_id = p_invoice_id;
+
+  insert into public.invoice_line_items (
+    invoice_id, organization_id, procedure_id, treatment_plan_item_id,
+    description, tooth_number, quantity, unit_price, discount_amount, line_total, sort_order
+  ) values (
+    p_invoice_id, v_inv.organization_id, p_procedure_id, p_treatment_plan_item_id,
+    p_description, p_tooth_number, coalesce(p_quantity, 1), coalesce(p_unit_price, 0),
+    coalesce(p_discount_amount, 0), v_line_total, v_sort
+  )
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
+
+create or replace function public.update_invoice_line_item(
+  p_item_id uuid,
+  p_description text,
+  p_unit_price numeric,
+  p_quantity numeric default 1,
+  p_discount_amount numeric default 0
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_item public.invoice_line_items%rowtype;
+  v_inv public.invoices%rowtype;
+  v_line_total numeric(12,2);
+begin
+  select * into v_item from public.invoice_line_items where id = p_item_id;
+  if not found then raise exception 'Line item not found'; end if;
+
+  select * into v_inv from public.invoices where id = v_item.invoice_id;
+  if v_inv.status in ('void', 'paid') then raise exception 'Cannot edit line items on a % invoice', v_inv.status; end if;
+  if not public.has_permission('billing.write', v_inv.branch_id) then raise exception 'Permission denied'; end if;
+  if nullif(trim(p_description), '') is null then raise exception 'Description is required'; end if;
+  if coalesce(p_quantity, 0) <= 0 then raise exception 'Quantity must be positive'; end if;
+  if coalesce(p_unit_price, 0) < 0 then raise exception 'Unit price cannot be negative'; end if;
+  if coalesce(p_discount_amount, 0) < 0 then raise exception 'Discount cannot be negative'; end if;
+  perform public.assert_invoice_closeout_editable(v_item.invoice_id);
+
+  v_line_total := greatest(
+    round(coalesce(p_quantity, 1) * coalesce(p_unit_price, 0) - coalesce(p_discount_amount, 0), 2),
+    0
+  );
+
+  update public.invoice_line_items
+  set description = trim(p_description),
+      unit_price = coalesce(p_unit_price, 0),
+      quantity = coalesce(p_quantity, 1),
+      discount_amount = coalesce(p_discount_amount, 0),
+      line_total = v_line_total
+  where id = p_item_id;
+
+  perform public._sync_invoice_payment_status(v_item.invoice_id);
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_inv.organization_id, v_inv.branch_id, auth.uid(),
+    'invoice.line_item_update', 'invoice', v_inv.id::text,
+    jsonb_build_object('line_item_id', p_item_id, 'discount_amount', coalesce(p_discount_amount, 0))
+  );
+
+  return jsonb_build_object('invoice_id', v_inv.id, 'line_item_id', p_item_id);
+end;
+$$;
+
+create or replace function public.update_invoice_discount(
+  p_invoice_id uuid,
+  p_discount_amount numeric
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_inv public.invoices%rowtype;
+  v_subtotal numeric(12,2);
+begin
+  select * into v_inv from public.invoices where id = p_invoice_id for update;
+  if not found then raise exception 'Invoice not found'; end if;
+  if v_inv.status in ('void', 'paid') then raise exception 'Cannot discount a % invoice', v_inv.status; end if;
+  if not public.has_permission('billing.write', v_inv.branch_id) then raise exception 'Permission denied'; end if;
+  if coalesce(p_discount_amount, 0) < 0 then raise exception 'Discount cannot be negative'; end if;
+
+  select coalesce(sum(line_total), 0) into v_subtotal
+  from public.invoice_line_items where invoice_id = p_invoice_id;
+
+  if coalesce(p_discount_amount, 0) > v_subtotal then
+    raise exception 'Discount cannot exceed subtotal';
+  end if;
+
+  perform public.assert_invoice_closeout_editable(p_invoice_id);
+
+  update public.invoices
+  set discount_amount = coalesce(p_discount_amount, 0),
+      subtotal_amount = v_subtotal,
+      total_amount = greatest(v_subtotal - coalesce(p_discount_amount, 0), 0),
+      updated_at = now()
+  where id = p_invoice_id;
+
+  perform public._sync_invoice_payment_status(p_invoice_id);
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_inv.organization_id, v_inv.branch_id, auth.uid(),
+    'invoice.discount_update', 'invoice', p_invoice_id::text,
+    jsonb_build_object('discount_amount', coalesce(p_discount_amount, 0), 'subtotal', v_subtotal)
+  );
+
+  return jsonb_build_object('id', p_invoice_id, 'total_amount', greatest(v_subtotal - coalesce(p_discount_amount, 0), 0));
+end;
+$$;
+
+-- Backfill subtotals (single transaction â€” bypass closeout for derived totals only)
+do $notebook_backfill$
+begin
+  perform set_config('app.bypass_closeout_lock', 'true', true);
+
+  update public.invoices inv
+  set subtotal_amount = coalesce((
+    select sum(line_total) from public.invoice_line_items li where li.invoice_id = inv.id
+  ), 0),
+  total_amount = greatest(
+    coalesce((select sum(line_total) from public.invoice_line_items li where li.invoice_id = inv.id), 0)
+    - coalesce(inv.discount_amount, 0),
+    0
+  );
+end;
+$notebook_backfill$;
+
+-- ---------------------------------------------------------------------------
+-- 2. Organization preferences (branch pricing, custom procedure pricing)
+-- ---------------------------------------------------------------------------
+alter table public.organization_settings
+  add column if not exists preferences jsonb not null default '{}'::jsonb;
+
+create or replace function public.get_organization_preferences()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_org_id uuid := public.current_user_org_id();
+  v_prefs jsonb;
+  v_branch_count int;
+begin
+  select coalesce(os.preferences, '{}'::jsonb) into v_prefs
+  from public.organization_settings os
+  where os.organization_id = v_org_id;
+
+  if v_prefs is null then
+    v_prefs := '{}'::jsonb;
+  end if;
+
+  select count(*)::int into v_branch_count
+  from public.branches b
+  where b.organization_id = v_org_id and b.is_active = true;
+
+  return v_prefs || jsonb_build_object(
+    'branch_count', v_branch_count,
+    'branch_procedure_pricing_enabled',
+      coalesce((v_prefs->>'branch_procedure_pricing_enabled')::boolean, v_branch_count > 1),
+    'custom_procedure_show_price',
+      coalesce((v_prefs->>'custom_procedure_show_price')::boolean, false)
+  );
+end;
+$$;
+
+create or replace function public.update_organization_preferences(p_preferences jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org_id uuid := public.current_user_org_id();
+  v_merged jsonb;
+begin
+  if not public.has_permission('settings.manage', (
+    select sba.branch_id from public.staff_branch_assignments sba
+    where sba.profile_id = auth.uid() limit 1
+  )) then
+    raise exception 'Permission denied';
+  end if;
+
+  insert into public.organization_settings (organization_id, preferences)
+  values (v_org_id, coalesce(p_preferences, '{}'::jsonb))
+  on conflict (organization_id) do update
+  set preferences = public.organization_settings.preferences || coalesce(p_preferences, '{}'::jsonb),
+      updated_at = now()
+  returning preferences into v_merged;
+
+  return v_merged;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 3. Ortho: revert adjustment + invoice from case
+-- ---------------------------------------------------------------------------
+alter table public.ortho_cases
+  add column if not exists linked_invoice_id uuid references public.invoices(id) on delete set null;
+
+create or replace function public.revert_ortho_adjustment(p_adjustment_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_adj public.ortho_adjustments%rowtype;
+  v_case public.ortho_cases%rowtype;
+begin
+  select * into v_adj from public.ortho_adjustments where id = p_adjustment_id;
+  if not found then raise exception 'Adjustment not found'; end if;
+
+  select * into v_case from public.ortho_cases where id = v_adj.case_id;
+  if v_case.status <> 'active' then raise exception 'Case is closed'; end if;
+  if not public.has_permission('dental_chart.write', v_case.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  delete from public.ortho_adjustments where id = p_adjustment_id;
+
+  update public.ortho_cases set updated_at = now(), updated_by = auth.uid() where id = v_case.id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_case.organization_id, v_case.branch_id, auth.uid(),
+    'ortho.adjustment_revert', 'ortho_case', v_case.id::text,
+    jsonb_build_object('adjustment_id', p_adjustment_id, 'procedure', v_adj.procedure)
+  );
+
+  return public.calculate_ortho_balance(v_case.id);
+end;
+$$;
+
+create or replace function public.create_invoice_from_ortho_case(p_case_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_case public.ortho_cases%rowtype;
+  v_balance jsonb;
+  v_balance_due numeric(12,2);
+  v_invoice_id uuid;
+  v_invoice_number text;
+  v_description text;
+begin
+  select * into v_case from public.ortho_cases where id = p_case_id;
+  if not found then raise exception 'Case not found'; end if;
+  if not public.has_permission('billing.write', v_case.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_case.linked_invoice_id is not null then
+    return jsonb_build_object('id', v_case.linked_invoice_id, 'existing', true);
+  end if;
+
+  v_balance := public.calculate_ortho_balance(p_case_id);
+  v_balance_due := (v_balance->>'balance')::numeric;
+
+  if v_balance_due <= 0 then
+    raise exception 'No outstanding ortho balance to invoice';
+  end if;
+
+  v_invoice_number := 'ORTHO-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8));
+  v_description := coalesce(
+    'Orthodontic treatment â€” ' || nullif(trim(v_case.appliance_type), ''),
+    'Orthodontic contract balance'
+  );
+
+  insert into public.invoices (
+    organization_id, branch_id, patient_id,
+    invoice_number, series, total_amount, subtotal_amount, status, created_by
+  ) values (
+    v_case.organization_id, v_case.branch_id, v_case.patient_id,
+    v_invoice_number, 'ORTHO', 0, 0, 'draft', auth.uid()
+  )
+  returning id into v_invoice_id;
+
+  perform public.add_invoice_line_item(
+    v_invoice_id, v_description, v_balance_due, 1, null, null, null, 0
+  );
+
+  update public.ortho_cases
+  set linked_invoice_id = v_invoice_id, updated_at = now(), updated_by = auth.uid()
+  where id = p_case_id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_case.organization_id, v_case.branch_id, auth.uid(),
+    'ortho.invoice_create', 'invoice', v_invoice_id::text,
+    jsonb_build_object('case_id', p_case_id, 'balance_due', v_balance_due)
+  );
+
+  return jsonb_build_object('id', v_invoice_id, 'invoice_number', v_invoice_number, 'existing', false);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 4. Scanned consent upload (paper PDF/photo)
+-- ---------------------------------------------------------------------------
+create or replace function public.register_scanned_consent(
+  p_consent_id uuid,
+  p_storage_path text,
+  p_file_size bigint default 0,
+  p_content_type text default 'application/pdf'
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_consent record;
+begin
+  if p_storage_path is null or length(trim(p_storage_path)) = 0 then
+    raise exception 'Storage path required';
+  end if;
+
+  select * into v_consent
+  from public.patient_consents
+  where id = p_consent_id and organization_id = public.current_user_org_id()
+  for update;
+
+  if v_consent.id is null then raise exception 'Consent not found'; end if;
+  if v_consent.status = 'voided' then raise exception 'Cannot attach scan to voided consent'; end if;
+
+  if not public.has_permission('consents.manage', coalesce(v_consent.branch_id, (
+    select sba.branch_id from public.staff_branch_assignments sba
+    where sba.profile_id = auth.uid() limit 1
+  ))) then
+    raise exception 'Permission denied';
+  end if;
+
+  update public.patient_consents
+  set signed_pdf_path = p_storage_path,
+      status = 'signed',
+      signed_at = coalesce(signed_at, now()),
+      signed_by = coalesce(signed_by, auth.uid())
+  where id = p_consent_id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_consent.organization_id, v_consent.branch_id, auth.uid(),
+    'consent.scan_uploaded', 'patient_consent', p_consent_id::text,
+    jsonb_build_object('storage_path', p_storage_path, 'file_size', p_file_size, 'content_type', p_content_type)
+  );
+
+  return jsonb_build_object('consent_id', p_consent_id, 'storage_path', p_storage_path);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 5. Prescriptions
+-- ---------------------------------------------------------------------------
+insert into public.permissions (name, description) values
+  ('prescriptions.read', 'View prescriptions'),
+  ('prescriptions.write', 'Create and sign prescriptions')
+on conflict (name) do nothing;
+
+insert into public.role_permissions (role_id, permission_id)
+select r.id, p.id from public.roles r cross join public.permissions p
+where r.name in ('owner', 'admin') and p.name in ('prescriptions.read', 'prescriptions.write')
+on conflict do nothing;
+
+insert into public.role_permissions (role_id, permission_id)
+select r.id, p.id from public.roles r cross join public.permissions p
+where r.name = 'dentist' and p.name in ('prescriptions.read', 'prescriptions.write')
+on conflict do nothing;
+
+insert into public.role_permissions (role_id, permission_id)
+select r.id, p.id from public.roles r cross join public.permissions p
+where r.name in ('assistant', 'receptionist') and p.name = 'prescriptions.read'
+on conflict do nothing;
+
+create table if not exists public.prescriptions (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  patient_id uuid not null references public.patients(id) on delete cascade,
+  prescriber_id uuid references public.profiles(id) on delete set null,
+  status text not null default 'draft' check (status in ('draft', 'signed', 'voided')),
+  diagnosis text,
+  general_instructions text,
+  signed_at timestamptz,
+  voided_at timestamptz,
+  void_reason text,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_prescriptions_patient on public.prescriptions(patient_id, created_at desc);
+
+create table if not exists public.prescription_items (
+  id uuid primary key default gen_random_uuid(),
+  prescription_id uuid not null references public.prescriptions(id) on delete cascade,
+  drug_name text not null,
+  strength text,
+  dosage text,
+  frequency text,
+  duration text,
+  quantity text,
+  instructions text,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_prescription_items_rx on public.prescription_items(prescription_id, sort_order);
+
+alter table public.prescriptions enable row level security;
+alter table public.prescription_items enable row level security;
+
+drop policy if exists prescriptions_select on public.prescriptions;
+drop policy if exists prescriptions_write on public.prescriptions;
+drop policy if exists prescription_items_select on public.prescription_items;
+drop policy if exists prescription_items_write on public.prescription_items;
+
+create policy prescriptions_select on public.prescriptions for select to authenticated using (
+  organization_id = public.current_user_org_id()
+  and public.user_has_branch_access(branch_id)
+  and public.has_permission('prescriptions.read', branch_id)
+);
+
+create policy prescriptions_write on public.prescriptions for all to authenticated using (
+  organization_id = public.current_user_org_id()
+  and public.user_has_branch_access(branch_id)
+  and public.has_permission('prescriptions.write', branch_id)
+) with check (
+  organization_id = public.current_user_org_id()
+  and public.has_permission('prescriptions.write', branch_id)
+);
+
+create policy prescription_items_select on public.prescription_items for select to authenticated using (
+  exists (
+    select 1 from public.prescriptions rx
+    where rx.id = prescription_items.prescription_id
+      and rx.organization_id = public.current_user_org_id()
+      and public.has_permission('prescriptions.read', rx.branch_id)
+  )
+);
+
+create policy prescription_items_write on public.prescription_items for all to authenticated using (
+  exists (
+    select 1 from public.prescriptions rx
+    where rx.id = prescription_items.prescription_id
+      and rx.status = 'draft'
+      and public.has_permission('prescriptions.write', rx.branch_id)
+  )
+) with check (true);
+
+create or replace function public.upsert_prescription_draft(p_payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id uuid := nullif(p_payload->>'id', '')::uuid;
+  v_branch_id uuid := (p_payload->>'branch_id')::uuid;
+  v_patient_id uuid := (p_payload->>'patient_id')::uuid;
+  v_org_id uuid := coalesce((p_payload->>'organization_id')::uuid, public.current_user_org_id());
+  v_item jsonb;
+  v_sort int := 0;
+begin
+  if v_branch_id is null or v_patient_id is null then
+    raise exception 'branch_id and patient_id are required';
+  end if;
+  if not public.has_permission('prescriptions.write', v_branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if v_id is null then
+    insert into public.prescriptions (
+      organization_id, branch_id, patient_id, prescriber_id,
+      diagnosis, general_instructions, created_by
+    ) values (
+      v_org_id, v_branch_id, v_patient_id, auth.uid(),
+      nullif(p_payload->>'diagnosis', ''),
+      nullif(p_payload->>'general_instructions', ''),
+      auth.uid()
+    )
+    returning id into v_id;
+  else
+    update public.prescriptions
+    set diagnosis = nullif(p_payload->>'diagnosis', ''),
+        general_instructions = nullif(p_payload->>'general_instructions', ''),
+        updated_at = now()
+    where id = v_id and status = 'draft' and organization_id = v_org_id;
+    if not found then raise exception 'Draft prescription not found or not editable'; end if;
+    delete from public.prescription_items where prescription_id = v_id;
+  end if;
+
+  for v_item in select * from jsonb_array_elements(coalesce(p_payload->'items', '[]'::jsonb))
+  loop
+    v_sort := v_sort + 1;
+    insert into public.prescription_items (
+      prescription_id, drug_name, strength, dosage, frequency, duration, quantity, instructions, sort_order
+    ) values (
+      v_id,
+      coalesce(v_item->>'drug_name', 'Medication'),
+      nullif(v_item->>'strength', ''),
+      nullif(v_item->>'dosage', ''),
+      nullif(v_item->>'frequency', ''),
+      nullif(v_item->>'duration', ''),
+      nullif(v_item->>'quantity', ''),
+      nullif(v_item->>'instructions', ''),
+      v_sort
+    );
+  end loop;
+
+  return jsonb_build_object('id', v_id);
+end;
+$$;
+
+create or replace function public.sign_prescription(p_prescription_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_rx public.prescriptions%rowtype;
+  v_item_count int;
+begin
+  select * into v_rx from public.prescriptions where id = p_prescription_id for update;
+  if not found then raise exception 'Prescription not found'; end if;
+  if v_rx.status <> 'draft' then raise exception 'Only draft prescriptions can be signed'; end if;
+  if not public.has_permission('prescriptions.write', v_rx.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  select count(*) into v_item_count from public.prescription_items where prescription_id = p_prescription_id;
+  if v_item_count = 0 then raise exception 'Add at least one medication'; end if;
+
+  update public.prescriptions
+  set status = 'signed',
+      prescriber_id = coalesce(prescriber_id, auth.uid()),
+      signed_at = now(),
+      updated_at = now()
+  where id = p_prescription_id;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_rx.organization_id, v_rx.branch_id, auth.uid(),
+    'prescription.sign', 'prescription', p_prescription_id::text,
+    jsonb_build_object('patient_id', v_rx.patient_id, 'item_count', v_item_count)
+  );
+
+  return jsonb_build_object('id', p_prescription_id, 'status', 'signed');
+end;
+$$;
+
+create or replace function public.void_prescription(p_prescription_id uuid, p_reason text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_rx public.prescriptions%rowtype;
+begin
+  select * into v_rx from public.prescriptions where id = p_prescription_id for update;
+  if not found then raise exception 'Prescription not found'; end if;
+  if v_rx.status = 'voided' then raise exception 'Already voided'; end if;
+  if not public.has_permission('prescriptions.write', v_rx.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  update public.prescriptions
+  set status = 'voided', voided_at = now(), void_reason = nullif(p_reason, ''), updated_at = now()
+  where id = p_prescription_id;
+
+  return jsonb_build_object('id', p_prescription_id, 'status', 'voided');
+end;
+$$;
+
+-- Grants at end
+grant execute on function public.assert_invoice_closeout_editable(uuid) to authenticated;
+grant execute on function public.update_invoice_discount(uuid, numeric) to authenticated;
+grant execute on function public.get_organization_preferences() to authenticated;
+grant execute on function public.update_organization_preferences(jsonb) to authenticated;
+grant execute on function public.revert_ortho_adjustment(uuid) to authenticated;
+grant execute on function public.create_invoice_from_ortho_case(uuid) to authenticated;
+grant execute on function public.register_scanned_consent(uuid, text, bigint, text) to authenticated;
+grant execute on function public.upsert_prescription_draft(jsonb) to authenticated;
+grant execute on function public.sign_prescription(uuid) to authenticated;
+grant execute on function public.void_prescription(uuid, text) to authenticated;
+
+
+-- ===== 20260615240000_fix_display_date_filter.sql =====
+
+-- Fix TV display sync: remove restrictive checked_in_at date filter for active queue entries
+-- This ensures that any active patients (waiting, ready, now_serving, in_chair) show up on the TV
+-- display even if they checked in on a previous day or if there are timezone/date differences.
+
+create or replace function public.get_public_queue_display(p_token text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_t public.branch_public_tokens%rowtype;
+  v_branch_name text;
+  v_now_serving jsonb;
+  v_waiting jsonb;
+  v_today date;
+begin
+  select * into v_t
+  from public.branch_public_tokens
+  where token = p_token
+    and token_type = 'display'
+    and is_active = true
+    and (expires_at is null or expires_at > now());
+
+  if not found then
+    raise exception 'Invalid display link';
+  end if;
+
+  v_today := cast(now() at time zone 'Asia/Manila' as date);
+
+  select name into v_branch_name from public.branches where id = v_t.branch_id;
+
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'display_code', qe.display_code,
+        'masked_name', public._mask_patient_display_name(p.first_name, p.last_name),
+        'called_at', qe.called_at
+      )
+      order by qe.called_at desc nulls last
+    ),
+    '[]'::jsonb
+  )
+  into v_now_serving
+  from public.queue_entries qe
+  left join public.patients p on p.id = qe.patient_id
+  where qe.branch_id = v_t.branch_id
+    and qe.status in ('now_serving', 'in_chair');
+
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'display_code', qe.display_code,
+        'masked_name', public._mask_patient_display_name(p.first_name, p.last_name)
+      )
+      order by qe.checked_in_at
+    ),
+    '[]'::jsonb
+  )
+  into v_waiting
+  from public.queue_entries qe
+  left join public.patients p on p.id = qe.patient_id
+  where qe.branch_id = v_t.branch_id
+    and qe.status in ('waiting', 'ready');
+
+  return jsonb_build_object(
+    'branch_id', v_t.branch_id,
+    'branch_name', v_branch_name,
+    'now_serving', v_now_serving,
+    'waiting', v_waiting,
+    'updated_at', now()
+  );
+end;
+$$;
 

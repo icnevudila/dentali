@@ -140,6 +140,11 @@ function DisplayContent() {
     }
   }, [])
 
+  const loadRef = React.useRef(load)
+  React.useEffect(() => {
+    loadRef.current = load
+  }, [load])
+
   React.useEffect(() => {
     if (!branchId || !token) return
 
@@ -154,20 +159,20 @@ function DisplayContent() {
           table: "queue_entries",
           filter: `branch_id=eq.${branchId}`,
         },
-        () => load(true)
+        () => loadRef.current(true)
       )
       .subscribe((status: any) => {
         setLiveConnected(status === "SUBSCRIBED")
       })
 
-    const interval = setInterval(() => load(true), 4_000)
+    const interval = setInterval(() => loadRef.current(true), 2_000)
 
     return () => {
       clearInterval(interval)
       setLiveConnected(false)
       supabase.removeChannel(channel)
     }
-  }, [branchId, token, load])
+  }, [branchId, token])
 
   const syncAgeSec =
     lastSyncAt != null ? Math.max(0, Math.floor((Date.now() - lastSyncAt) / 1000)) : null
