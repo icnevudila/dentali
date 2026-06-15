@@ -241,9 +241,11 @@ export async function acceptStaffInvitation(): Promise<{
 }
 
 export async function fetchStaffProfile(): Promise<{
+  id: string
   is_active: boolean
   full_name: string | null
   email: string | null
+  role_name: string | null
 } | null> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -261,9 +263,45 @@ export async function fetchStaffProfile(): Promise<{
     .eq("profile_id", user.id)
     .maybeSingle()
 
+  const { data: assignment } = await supabase
+    .from("staff_assignments")
+    .select("roles(name)")
+    .eq("profile_id", user.id)
+    .limit(1)
+    .maybeSingle()
+
+  const role = assignment?.roles as { name: string } | { name: string }[] | null
+  const roleName = Array.isArray(role) ? role[0]?.name : role?.name
+
   return {
+    id: user.id,
     is_active: staff?.is_active ?? true,
     full_name: profile?.full_name ?? null,
     email: profile?.email ?? user.email ?? null,
+    role_name: roleName ?? null,
   }
+}
+
+export type SessionAuditEntry = {
+  id: string
+  event_type: string
+  created_at: string
+}
+
+export async function fetchMySessionLogs(
+  limit = 5
+): Promise<{ data: SessionAuditEntry[]; error: string | null }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: [], error: null }
+
+  const { data, error } = await supabase
+    .from("session_audit_logs")
+    .select("id, event_type, created_at")
+    .eq("profile_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(limit)
+
+  if (error) return { data: [], error: error.message }
+  return { data: (data ?? []) as SessionAuditEntry[], error: null }
 }

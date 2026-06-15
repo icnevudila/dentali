@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
@@ -150,7 +151,11 @@ function formatAuditDetails(log: AuditLogRecord, t: (key: string, fallback: stri
 export default function AuditLogPage() {
   const { activeBranch } = useBranch()
   const { t } = useLocale()
-  const [source, setSource] = useState<AuditSource>("all")
+  const searchParams = useSearchParams()
+  const initialSource = searchParams?.get("source")
+  const [source, setSource] = useState<AuditSource>(
+    initialSource === "session" || initialSource === "organization" ? initialSource : "all"
+  )
   const [branchOnly, setBranchOnly] = useState(false)
   const [period, setPeriod] = useState<AuditPeriod>("7d")
   const [actionSearch, setActionSearch] = useState("")

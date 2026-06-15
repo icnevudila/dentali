@@ -10,8 +10,10 @@ import { ContentPanel } from "@/components/layout/ContentPanel"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { PermissionGate } from "@/components/auth/PermissionGate"
+import { PermissionDenied } from "@/components/auth/PermissionDenied"
 import { PERMISSIONS } from "@/lib/auth/permissions"
+import { useAuth } from "@/hooks/use-auth"
+import { usePermission } from "@/hooks/use-permission"
 import { fetchAllOrgBranches } from "@/lib/org/branch-service"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { logAuditEvent } from "@/lib/audit/audit-service"
@@ -28,6 +30,10 @@ import { Input } from "@/components/ui/input"
 export default function StaffDetailPage() {
   const params = useParams()
   const profileId = params.id as string
+  const { user, loading: authLoading } = useAuth()
+  const { hasPermission, loading: permLoading } = usePermission()
+  const canManageStaff = hasPermission(PERMISSIONS.STAFF_MANAGE)
+  const isSelf = user?.id === profileId
   const [member, setMember] = useState<Awaited<ReturnType<typeof getStaffMember>>["data"]>(null)
   const [branches, setBranches] = useState<Awaited<ReturnType<typeof fetchAllOrgBranches>>>([])
   const [roles, setRoles] = useState<Awaited<ReturnType<typeof fetchRolesList>>>([])
@@ -130,6 +136,14 @@ export default function StaffDetailPage() {
     setSaving(false)
   }
 
+  if (authLoading || permLoading) {
+    return <PageLoadingSkeleton variant="form" className="max-w-none px-0 py-0" />
+  }
+
+  if (!canManageStaff && !isSelf) {
+    return <PermissionDenied permission={PERMISSIONS.STAFF_MANAGE} />
+  }
+
   if (loading) {
     return <PageLoadingSkeleton variant="form" className="max-w-none px-0 py-0" />
   }
@@ -139,17 +153,16 @@ export default function StaffDetailPage() {
       <div className="text-center py-12">
         <p className="text-red-800">{error ?? "Staff not found"}</p>
         <Button variant="outline" className="mt-4" asChild>
-          <Link href="/settings/staff">Back</Link>
+          <Link href={isSelf ? "/settings/organization" : "/settings/staff"}>Back</Link>
         </Button>
       </div>
     )
   }
 
   return (
-    <PermissionGate permission={PERMISSIONS.STAFF_MANAGE}>
       <ModulePageShell
         icon={UserCog}
-        eyebrow="Settings · Staff"
+        eyebrow={isSelf && !canManageStaff ? "Account" : "Settings · Staff"}
         title={member.full_name ?? member.email}
         description={member.email}
         maxWidth=""
@@ -163,11 +176,13 @@ export default function StaffDetailPage() {
           </Badge>
         }
         actions={
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/settings/staff" aria-label="Back to staff">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
+          canManageStaff ? (
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/settings/staff" aria-label="Back to staff">
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            </Button>
+          ) : null
         }
       >
         <ContentPanel>
@@ -214,6 +229,7 @@ export default function StaffDetailPage() {
           </CardContent>
         </Card>
 
+        {canManageStaff ? (
         <Card className="border-0 shadow-none">
           <CardHeader><CardTitle className="text-base">Branch Assignments</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -265,8 +281,24 @@ export default function StaffDetailPage() {
             </div>
           </CardContent>
         </Card>
+        ) : (
+          member.assignments.length > 0 ? (
+            <Card className="border-0 shadow-none">
+              <CardHeader><CardTitle className="text-base">Your branches</CardTitle></CardHeader>
+              <CardContent>
+                <ul className="divide-y text-sm">
+                  {member.assignments.map((a) => (
+                    <li key={a.branch_id} className="py-3">
+                      <span className="font-medium">{a.branch_name}</span>
+                      <Badge variant="outline" className="ml-2">{a.role_name}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ) : null
+        )}
         </ContentPanel>
       </ModulePageShell>
-    </PermissionGate>
   )
 }

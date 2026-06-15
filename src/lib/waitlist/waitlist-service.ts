@@ -134,13 +134,17 @@ export async function markWaitlistContacted(
 export async function bookFromWaitlist(
   entryId: string,
   scheduledAt: string,
-  purpose?: string
+  purpose?: string,
+  providerId?: string,
+  forceBillingOverride?: boolean
 ): Promise<{ data: { appointment_id: string } | null; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("book_waitlist_entry", {
     p_entry_id: entryId,
     p_scheduled_at: scheduledAt,
     p_purpose: purpose || null,
+    p_provider_id: providerId || null,
+    p_force_billing_override: forceBillingOverride ?? false,
   })
 
   if (error) return { data: null, error: error.message }

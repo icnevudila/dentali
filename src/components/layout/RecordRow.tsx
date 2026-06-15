@@ -115,7 +115,13 @@ export function RecordRow({
         transitionTypes={transitionTypes}
         className={rowClass}
         style={style}
-        onClick={onClick}
+        onClick={(e) => {
+          const target = e.target as HTMLElement
+          if (target.closest("button, a[href], input, select, textarea, label")) {
+            e.preventDefault()
+          }
+          onClick?.()
+        }}
       >
         {inner}
       </Link>

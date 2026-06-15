@@ -60,10 +60,22 @@ export function WaitlistEntryList({
         return (
           <RecordRow
             key={entry.id}
-            href={`/patients/${entry.patient_id}`}
+            href={tab === "history" ? `/patients/${entry.patient_id}` : undefined}
             initials={patientInitials(parts[0] ?? "P", parts.slice(1).join(" ") || "?")}
             className={cn("border-l-4", urgencyStripe(entry.urgency))}
-            primary={name}
+            primary={
+              tab === "active" ? (
+                <Link
+                  href={`/patients/${entry.patient_id}`}
+                  className="font-medium hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {name}
+                </Link>
+              ) : (
+                name
+              )
+            }
             secondary={[entry.patient_phone, preference].filter(Boolean).join(" · ")}
             meta={
               <>
