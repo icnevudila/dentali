@@ -314,7 +314,6 @@ function KioskContent() {
 
         {step === "welcome" && (
           <div className="space-y-8 rounded-[2rem] border border-white bg-white/70 p-10 text-center shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-4 duration-500">
-            <PublicChannelBrand variant="hero" className="mb-2" />
             <div className="inline-flex rounded-full border border-primary-200 bg-primary-50/80 px-5 py-2 text-xs font-bold uppercase tracking-widest text-primary-700 shadow-sm">
               {branchName || t("kiosk.defaultClinic", "Our clinic")}
             </div>
