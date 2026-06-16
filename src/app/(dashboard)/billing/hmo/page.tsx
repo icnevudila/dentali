@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input"
 import { Building2, Plus, RotateCcw } from "lucide-react"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
-import { HmoAnalyticsPanel } from "@/components/analytics/HmoAnalyticsPanel"
+import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 
@@ -285,7 +285,17 @@ function HmoClaimsPageContent() {
         panel={false}
       >
         <div className="space-y-6">
-          {activeBranch ? <HmoAnalyticsPanel branchId={activeBranch.id} /> : null}
+          {activeBranch ? (
+            <ReportDrillLink
+              title={t("hmo.reportsTitle", "HMO pipeline analytics")}
+              description={t(
+                "hmo.reportsDescription",
+                "Claim volume and status trends are in Reports finance."
+              )}
+              href="/reports#finance"
+              linkLabel={t("hmo.openReports", "Open HMO reports")}
+            />
+          ) : null}
 
           {submitNote ? (
             <p className="rounded-md border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-800 animate-fade-rise">

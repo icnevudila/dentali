@@ -31,7 +31,7 @@ import { ClipboardList, Globe, MapPin, Monitor, Plus, Users } from "lucide-react
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
 import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
-import { PatientsAnalyticsPanel } from "@/components/analytics/PatientsAnalyticsPanel"
+import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import type { IntakeDraftCounts } from "@/lib/patients/intake-draft-review"
 
 const PAGE_SIZE = 20
@@ -346,7 +346,17 @@ function PatientsPageContent() {
 
           <MetricStrip items={metricItems} className="lg:grid-cols-3 xl:grid-cols-4" />
 
-          {activeBranch ? <PatientsAnalyticsPanel branchId={activeBranch.id} /> : null}
+          {activeBranch ? (
+            <ReportDrillLink
+              title={t("patients.reportsTitle", "Registry and consent analytics")}
+              description={t(
+                "patients.reportsDescription",
+                "Patient growth, intake completion, and consent trends live in Reports."
+              )}
+              href="/reports#clinical"
+              linkLabel={t("patients.openRegistryReports", "Open registry reports")}
+            />
+          ) : null}
 
           {activeBranch ? (
             <PatientIntakeDraftPanel

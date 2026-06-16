@@ -34,13 +34,11 @@ import {
   classifyTodayArrivals,
 } from "@/lib/queue/appointment-arrival"
 import { OpenEncounterCheckInDialog } from "@/components/queue/OpenEncounterCheckInDialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Megaphone, Plus, Users, Link2, Copy, Check, MapPin, Clock, UserCheck } from "lucide-react"
-import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
+import { Megaphone, Plus, Users, MapPin, Clock, UserCheck } from "lucide-react"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
-import { generateBranchPublicToken } from "@/lib/kiosk/kiosk-service"
 import { notify } from "@/lib/ui/notify"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
@@ -49,13 +47,11 @@ import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
 import { createClient } from "@/lib/supabase/client"
-import { QueueAnalyticsPanel } from "@/components/analytics/QueueAnalyticsPanel"
-import { KioskAnalyticsPanel } from "@/components/analytics/KioskAnalyticsPanel"
-import { DisplayAnalyticsPanel } from "@/components/analytics/DisplayAnalyticsPanel"
-import { BranchPublicTokensPanel } from "@/components/analytics/BranchPublicTokensPanel"
-import { QueueBoard, type QueueBoardArrival } from "@/components/queue/QueueBoard"
 import { VisitCheckoutWizard } from "@/components/queue/VisitCheckoutWizard"
 import { WalkInCheckInDialog } from "@/components/queue/WalkInCheckInDialog"
+import { QueueBoard, type QueueBoardArrival } from "@/components/queue/QueueBoard"
+import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
+import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
 
 type Tab = "board" | "history"
 
@@ -107,15 +103,6 @@ function QueuePageContent() {
   const [checkInNotes, setCheckInNotes] = React.useState("")
   const [checkingIn, setCheckingIn] = React.useState(false)
   const [callingNext, setCallingNext] = React.useState(false)
-  const [kioskUrl, setKioskUrl] = React.useState<string | null>(null)
-  const [displayUrl, setDisplayUrl] = React.useState<string | null>(null)
-  const [portalUrl, setPortalUrl] = React.useState<string | null>(null)
-  const [generatingLink, setGeneratingLink] = React.useState<"kiosk" | "display" | "portal" | null>(null)
-  const [tokenRevision, setTokenRevision] = React.useState(0)
-  const [copied, setCopied] = React.useState<string | null>(null)
-  const bumpTokenRevision = React.useCallback(() => {
-    setTokenRevision((v) => v + 1)
-  }, [])
   const [todayAppointments, setTodayAppointments] = React.useState<AppointmentRecord[]>([])
   const [apptCheckInId, setApptCheckInId] = React.useState<string | null>(null)
   const [consentOverridePending, setConsentOverridePending] = React.useState(false)
@@ -130,7 +117,6 @@ function QueuePageContent() {
   const [pendingCheckIn, setPendingCheckIn] = React.useState<PendingCheckInAction | null>(null)
   const [encounterResolving, setEncounterResolving] = React.useState(false)
 
-  const siteOrigin = typeof window !== "undefined" ? window.location.origin : ""
   const today = toDateKey(new Date())
 
   const openCheckInModal = () => {
@@ -151,38 +137,6 @@ function QueuePageContent() {
     setConsentOverridePending(false)
     setBillingOverridePending(false)
     setShowCheckIn(false)
-  }
-
-  const handleGenerateLink = async (type: "kiosk" | "display" | "portal") => {
-    if (!activeBranch) return
-    setGeneratingLink(type)
-    const { data, error: err } = await generateBranchPublicToken(activeBranch.id, type)
-    setGeneratingLink(null)
-    if (err) setError(err)
-    else if (data) {
-      if (data.revokedPrevious > 0) {
-        notify.info(
-          t("display.replacedPreviousLinks", "{n} previous link(s) closed automatically.").replace(
-            "{n}",
-            String(data.revokedPrevious)
-          )
-        )
-        bumpTokenRevision()
-      }
-      const url =
-        type === "display"
-          ? `${siteOrigin}/display?token=${data.token}&theme=light&names=1&voice=1`
-          : `${siteOrigin}/${type}?token=${data.token}`
-      if (type === "kiosk") setKioskUrl(url)
-      else if (type === "portal") setPortalUrl(url)
-      else setDisplayUrl(url)
-    }
-  }
-
-  const copyUrl = (url: string, key: string) => {
-    navigator.clipboard.writeText(url)
-    setCopied(key)
-    setTimeout(() => setCopied(null), 2000)
   }
 
   const applyOptimisticQueueAction = React.useCallback(
@@ -761,15 +715,24 @@ function QueuePageContent() {
                 }}
               />
             ) : null}
-          {activeBranch ? (
-            <div className="space-y-4 mt-8">
-              <div className="grid gap-4 lg:grid-cols-2">
-                <QueueAnalyticsPanel branchId={activeBranch.id} />
-                <KioskAnalyticsPanel branchId={activeBranch.id} />
-              </div>
-              <DisplayAnalyticsPanel branchId={activeBranch.id} refreshKey={tokenRevision} />
-            </div>
-          ) : null}
+            <ReportDrillLink
+              title={t("queue.reportsQueueTitle", "Queue trends and wait analytics")}
+              description={t(
+                "queue.reportsQueueDescription",
+                "Arrival speed, wait duration, and chair movement live in Reports — keep this screen for live flow only."
+              )}
+              href="/reports#operations"
+              linkLabel={t("queue.openQueueReports", "Open queue reports")}
+            />
+            <ReportDrillLink
+              title={t("queue.reportsDevicesTitle", "Kiosk, TV display, and portal links")}
+              description={t(
+                "queue.reportsDevicesDescription",
+                "Generate public links and monitor waiting-room screens from Reports."
+              )}
+              href="/reports#devices"
+              linkLabel={t("queue.openDeviceReports", "Manage patient-facing screens")}
+            />
         </div>
       ) : entries.length === 0 ? (
           <p className="text-center py-12 text-neutral-500">No completed queue entries today.</p>
@@ -816,76 +779,6 @@ function QueuePageContent() {
           </Card>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Link2 className="h-4 w-4" /> Kiosk, TV & Portal links
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-neutral-500">
-              Generate links for the patient tablet (kiosk), waiting room TV display, and online patient portal.
-              {t(
-                "display.generateReplaceHint",
-                " New links automatically close older links of the same type."
-              )}
-            </p>
-            {activeBranch ? (
-              <BranchPublicTokensPanel branchId={activeBranch.id} onChanged={bumpTokenRevision} />
-            ) : null}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!activeBranch || generatingLink === "kiosk"}
-                onClick={() => handleGenerateLink("kiosk")}
-              >
-                {generatingLink === "kiosk" ? "Generating…" : "Generate kiosk link"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!activeBranch || generatingLink === "display"}
-                onClick={() => handleGenerateLink("display")}
-              >
-                {generatingLink === "display" ? "Generating…" : "Generate TV link"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                disabled={!activeBranch || generatingLink === "portal"}
-                onClick={() => handleGenerateLink("portal")}
-              >
-                {generatingLink === "portal" ? "Generating…" : "🌐 Generate portal link"}
-              </Button>
-            </div>
-            {kioskUrl && (
-              <div className="flex items-center gap-2 text-sm bg-neutral-50 rounded-md px-3 py-2">
-                <span className="truncate flex-1 font-mono text-xs">{kioskUrl}</span>
-                <Button variant="ghost" size="icon" onClick={() => copyUrl(kioskUrl, "kiosk")}>
-                  {copied === "kiosk" ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
-            )}
-            {displayUrl && (
-              <div className="flex items-center gap-2 text-sm bg-neutral-50 rounded-md px-3 py-2">
-                <span className="truncate flex-1 font-mono text-xs">{displayUrl}</span>
-                <Button variant="ghost" size="icon" onClick={() => copyUrl(displayUrl, "display")}>
-                  {copied === "display" ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
-            )}
-            {portalUrl && (
-              <div className="flex items-center gap-2 text-sm bg-blue-50 rounded-md px-3 py-2 border border-blue-100">
-                <span className="truncate flex-1 font-mono text-xs text-blue-800">{portalUrl}</span>
-                <Button variant="ghost" size="icon" onClick={() => copyUrl(portalUrl, "portal")}>
-                  {copied === "portal" ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
         </ContentPanel>
       </DirectionalTransition>
     </PermissionGate>

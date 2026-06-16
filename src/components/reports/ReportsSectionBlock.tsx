@@ -11,6 +11,7 @@ type ReportsSectionBlockProps = {
   action?: ReactNode
   children: ReactNode
   className?: string
+  id?: string
 }
 
 export function ReportsSectionBlock({
@@ -21,9 +22,10 @@ export function ReportsSectionBlock({
   action,
   children,
   className,
+  id,
 }: ReportsSectionBlockProps) {
   return (
-    <section className={cn("space-y-3", className)}>
+    <section id={id} className={cn("space-y-3 scroll-mt-20", className)}>
       <SectionEyebrow icon={icon}>{eyebrow}</SectionEyebrow>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">

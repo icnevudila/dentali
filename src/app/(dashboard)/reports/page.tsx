@@ -374,6 +374,7 @@ export default function ReportsHubPage() {
 
       {activeBranch ? (
         <ReportsSectionBlock
+          id="operations"
           icon={Calendar}
           eyebrow={t("reports.operationsEyebrow", "Operations")}
           title={t("reports.operationsTitle", "Reception, queue, and patient flow")}
@@ -440,6 +441,7 @@ export default function ReportsHubPage() {
 
       {activeBranch ? (
         <ReportsSectionBlock
+          id="clinical"
           icon={Users}
           eyebrow={t("reports.clinicalEyebrow", "Clinical")}
           title={t("reports.clinicalTitle", "Patient and clinical quality")}
@@ -488,6 +490,7 @@ export default function ReportsHubPage() {
 
       {activeBranch ? (
         <ReportsSectionBlock
+          id="finance"
           icon={Wallet}
           eyebrow={t("reports.financeEyebrow", "Finance")}
           title={t("reports.financeTitle", "Revenue, AR, and claims")}
@@ -532,6 +535,7 @@ export default function ReportsHubPage() {
       ) : null}
 
       <ReportsSectionBlock
+        id="benchmark"
         icon={BarChart3}
         eyebrow={t("reports.benchmarkEyebrow", "Owner view")}
         title={t("reports.branchBenchmark", "Branch benchmark")}
@@ -553,6 +557,7 @@ export default function ReportsHubPage() {
 
       {activeBranch ? (
         <ReportsSectionBlock
+          id="compliance"
           icon={Shield}
           eyebrow={t("reports.complianceEyebrow", "Compliance")}
           title={t("reports.complianceTitle", "Audit, stock, and messaging health")}
@@ -605,6 +610,7 @@ export default function ReportsHubPage() {
 
       {activeBranch ? (
         <ReportsSectionBlock
+          id="devices"
           icon={Monitor}
           eyebrow={t("reports.devicesEyebrow", "Patient-facing")}
           title={t("reports.devicesTitle", "Kiosk, TV display, and public-link controls")}

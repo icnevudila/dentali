@@ -22,7 +22,7 @@ import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { AuditAnalyticsPanel } from "@/components/analytics/AuditAnalyticsPanel"
+import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 
 const SOURCE_TABS: { key: AuditSource; labelKey: string; fallback: string }[] = [
   { key: "all", labelKey: "settings.auditSourceAll", fallback: "All" },
@@ -257,7 +257,15 @@ export default function AuditLogPage() {
         panel={false}
       >
         <div className="space-y-4">
-          <AuditAnalyticsPanel branchId={branchOnly ? activeBranch?.id ?? null : null} />
+          <ReportDrillLink
+            title={t("audit.reportsTitle", "Audit activity analytics")}
+            description={t(
+              "audit.reportsDescription",
+              "Volume and pattern trends for sensitive actions are in Reports compliance."
+            )}
+            href="/reports#compliance"
+            linkLabel={t("audit.openReports", "Open audit reports")}
+          />
 
           <div className="flex flex-wrap gap-2">
             {SOURCE_TABS.map((tab) => (

@@ -32,7 +32,7 @@ import { IntegrationEnvBanner } from "@/components/layout/IntegrationEnvBanner"
 import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
-import { PhilHealthAnalyticsPanel } from "@/components/analytics/PhilHealthAnalyticsPanel"
+import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 
@@ -267,7 +267,17 @@ function PhilHealthPageContent() {
           )}
         />
 
-        {activeBranch ? <PhilHealthAnalyticsPanel branchId={activeBranch.id} /> : null}
+        {activeBranch ? (
+          <ReportDrillLink
+            title={t("philhealth.reportsTitle", "PhilHealth readiness analytics")}
+            description={t(
+              "philhealth.reportsDescription",
+              "Pending claim preparation trends are in Reports finance."
+            )}
+            href="/reports#finance"
+            linkLabel={t("philhealth.openReports", "Open PhilHealth reports")}
+          />
+        ) : null}
 
         {showForm && (
           <Card>

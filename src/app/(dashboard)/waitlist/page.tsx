@@ -32,7 +32,7 @@ import { StatusPipeline, waitlistPipelineSteps } from "@/components/visual/Statu
 import { WaitlistEntryList } from "@/components/waitlist/WaitlistEntryList"
 import { WaitlistBookDialog } from "@/components/waitlist/WaitlistBookDialog"
 import { WaitlistAddDialog } from "@/components/waitlist/WaitlistAddDialog"
-import { WaitlistAnalyticsPanel } from "@/components/analytics/WaitlistAnalyticsPanel"
+import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { notify } from "@/lib/ui/notify"
 
 type TabFilter = "active" | "history"
@@ -244,7 +244,15 @@ export default function WaitlistPage() {
         </div>
 
         {activeBranch && tab === "active" ? (
-          <WaitlistAnalyticsPanel branchId={activeBranch.id} />
+          <ReportDrillLink
+            title={t("waitlist.reportsTitle", "Waitlist recovery analytics")}
+            description={t(
+              "waitlist.reportsDescription",
+              "Conversion and contact trends for open waitlist demand are in Reports."
+            )}
+            href="/reports#operations"
+            linkLabel={t("waitlist.openReports", "Open waitlist reports")}
+          />
         ) : null}
 
         <WaitlistAddDialog

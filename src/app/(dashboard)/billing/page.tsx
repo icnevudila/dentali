@@ -25,16 +25,13 @@ import { ContentPanel } from "@/components/layout/ContentPanel"
 import { RecordRow } from "@/components/layout/RecordRow"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
-import { BillingArAgingPanel } from "@/components/analytics/BillingArAgingPanel"
-import { Sparkline } from "@/components/charts/ChartKit"
-import { useReportsSummary } from "@/hooks/use-reports-summary"
+import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 
 const STATUS_FILTERS: InvoiceStatusFilter[] = ["all", "open", "paid", "void"]
 
 function BillingPageContent() {
   const { activeBranch, branchRevision } = useBranch()
-  const { t, locale } = useLocale()
-  const { summary: reportsSummary, loading: reportsLoading } = useReportsSummary(7, locale)
+  const { t } = useLocale()
   const searchParams = useSearchParams()
   const patientFilter = searchParams.get("patient")
   const focusParam = searchParams.get("focus")
@@ -177,28 +174,17 @@ function BillingPageContent() {
 
         <MetricStrip items={metricItems} />
 
-        {activeBranch && reportsSummary ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200/80 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-            <div>
-              <p className="text-xs font-medium text-neutral-500">
-                {t("billing.collectionsSparkline", "Collections — last 7 days")}
-              </p>
-              <p className="mt-1 text-lg font-bold tabular-nums">
-                {reportsLoading
-                  ? "—"
-                  : `₱${reportsSummary.totals.collected.toLocaleString()}`}
-              </p>
-            </div>
-            <Sparkline
-              data={reportsSummary.dailyCollections.map((d) => d.value)}
-              color="#059669"
-              width={120}
-              height={32}
-            />
-          </div>
+        {activeBranch ? (
+          <ReportDrillLink
+            title={t("billing.reportsTitle", "Collections and AR analytics")}
+            description={t(
+              "billing.reportsDescription",
+              "Seven-day collections trends and accounts-receivable aging live in Reports finance."
+            )}
+            href="/reports#finance"
+            linkLabel={t("billing.openFinanceReports", "Open finance reports")}
+          />
         ) : null}
-
-        {activeBranch ? <BillingArAgingPanel branchId={activeBranch.id} /> : null}
 
         <ContentPanel padding="lg" className="space-y-6">
 

@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { DentistFilterBar } from "@/components/dentist/DentistFilterBar"
-import { DentistUpcomingSection } from "@/components/dentist/DentistUpcomingSection"
+import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { PatientSearchBar } from "@/components/patients/PatientSearchBar"
 import { PatientTable } from "@/components/patients/PatientTable"
 import { PageHeader } from "@/components/layout/PageHeader"
@@ -21,14 +21,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
-import type { AppointmentRecord } from "@/lib/appointments/types"
-import { fetchAppointments } from "@/lib/appointments/appointment-service"
 import { toDateKey } from "@/lib/appointments/week-calendar"
 import { fetchOdontogramFindingsForPatients } from "@/lib/odontogram/dental-chart-service"
 import {
   countDentistBoardEntries,
   filterDentistBoardByProvider,
-  filterUpcomingByProvider,
   parseDentistBoardFilter,
   searchDentistQueuePatients,
   sortDentistBoardEntries,
@@ -52,22 +49,6 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
     return () => clearTimeout(id)
   }, [value, delayMs])
   return debounced
-}
-
-function filterUpcomingAppointments(
-  appointments: AppointmentRecord[],
-  activeQueue: QueueEntry[]
-): AppointmentRecord[] {
-  const inQueue = new Set(activeQueue.map((e) => e.patient_id))
-  const now = Date.now()
-  return appointments
-    .filter(
-      (a) =>
-        ["scheduled", "confirmed"].includes(a.status) &&
-        !inQueue.has(a.patient_id) &&
-        new Date(a.scheduled_at).getTime() >= now - 30 * 60_000
-    )
-    .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
 }
 
 function DentistPageSkeleton() {
@@ -107,9 +88,7 @@ function DentistPageContent() {
   const [queueByPatientId, setQueueByPatientId] = React.useState<Record<string, QueueEntry>>({})
   const [total, setTotal] = React.useState(0)
   const [queueEntries, setQueueEntries] = React.useState<QueueEntry[]>([])
-  const [upcoming, setUpcoming] = React.useState<AppointmentRecord[]>([])
   const [loading, setLoading] = React.useState(true)
-  const [upcomingLoading, setUpcomingLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [chartFindingsByPatient, setChartFindingsByPatient] = React.useState<
     Record<string, ToothFinding[]>
@@ -197,11 +176,9 @@ function DentistPageContent() {
   const loadPatients = React.useCallback(async () => {
     if (!activeBranch) {
       setLoading(false)
-      setUpcomingLoading(false)
       setPatients([])
       setQueueByPatientId({})
       setQueueEntries([])
-      setUpcoming([])
       setTotal(0)
       setChartFindingsByPatient({})
       return
@@ -243,13 +220,6 @@ function DentistPageContent() {
     } else {
       setChartFindingsByPatient({})
     }
-
-    setUpcomingLoading(true)
-    const today = toDateKey(new Date())
-    const apptResult = await fetchAppointments(activeBranch.id, today)
-    const upcomingFiltered = filterUpcomingByProvider(apptResult.data, providerId)
-    setUpcoming(filterUpcomingAppointments(upcomingFiltered, sortedQueue))
-    setUpcomingLoading(false)
   }, [activeBranch, branchRevision, debouncedQuery, filter, page, providerId])
 
   React.useEffect(() => {
@@ -442,7 +412,15 @@ function DentistPageContent() {
               />
 
               {hasActiveBranch && filter === "all" ? (
-                <DentistUpcomingSection upcoming={upcoming} loading={upcomingLoading} />
+                <ReportDrillLink
+                  title={t("dentist.arrivalsLinkTitle", "Patients not checked in yet")}
+                  description={t(
+                    "dentist.arrivalsLinkDescription",
+                    "Scheduled arrivals and check-in happen on Queue. Today's full schedule is on Appointments."
+                  )}
+                  href="/queue"
+                  linkLabel={t("dentist.openQueueArrivals", "Open Queue check-in")}
+                />
               ) : null}
             </div>
           </div>

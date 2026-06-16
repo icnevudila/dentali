@@ -30,7 +30,7 @@ import { SmsPreviewBubble, VariableChips } from "@/components/notifications/SmsP
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { MapPin } from "lucide-react"
-import { NotificationAnalyticsPanel } from "@/components/analytics/NotificationAnalyticsPanel"
+import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 
 const SAMPLE_VARS: Record<string, string> = {
@@ -257,7 +257,17 @@ export default function NotificationsSettingsPage() {
         retryLabel={t("common.retry", "Retry")}
         panel={false}
       >
-        {activeBranch ? <NotificationAnalyticsPanel branchId={activeBranch.id} /> : null}
+        {activeBranch ? (
+          <ReportDrillLink
+            title={t("settings.notificationsReportsTitle", "SMS delivery analytics")}
+            description={t(
+              "settings.notificationsReportsDescription",
+              "Template usage and delivery health trends are in Reports compliance."
+            )}
+            href="/reports#compliance"
+            linkLabel={t("settings.notificationsOpenReports", "Open messaging reports")}
+          />
+        ) : null}
 
         {status?.dry_run_mode && (
           <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">

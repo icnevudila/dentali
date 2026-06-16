@@ -33,7 +33,7 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
 import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
-import { InventoryAnalyticsPanel } from "@/components/analytics/InventoryAnalyticsPanel"
+import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 
 const LEVEL_VARIANT: Record<string, "default" | "success" | "warning" | "danger"> = {
   ok: "success",
@@ -274,7 +274,17 @@ function InventoryPageContent() {
 
           <MetricStrip items={metricItems} className="lg:grid-cols-3" />
 
-          {activeBranch ? <InventoryAnalyticsPanel branchId={activeBranch.id} /> : null}
+          {activeBranch ? (
+            <ReportDrillLink
+              title={t("inventory.reportsTitle", "Stock risk analytics")}
+              description={t(
+                "inventory.reportsDescription",
+                "Low-stock trends and supply pressure are tracked in Reports compliance."
+              )}
+              href="/reports#compliance"
+              linkLabel={t("inventory.openReports", "Open inventory reports")}
+            />
+          ) : null}
 
           {error && (
             <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 animate-fade-rise">

@@ -67,8 +67,6 @@ import { DirectionalTransition } from "@/components/layout/DirectionalTransition
 import { useOperationalRefresh } from "@/hooks/use-operational-refresh"
 import { resolveBookingSource } from "@/lib/appointments/booking-source"
 import type { BookingSource } from "@/lib/appointments/booking-source"
-import { useGatedCheckIn } from "@/hooks/use-gated-check-in"
-import { OpenEncounterCheckInDialog } from "@/components/queue/OpenEncounterCheckInDialog"
 
 type ViewMode = "today" | "week"
 
@@ -162,22 +160,6 @@ function AppointmentsPageContent() {
   React.useEffect(() => {
     loadWeek()
   }, [loadWeek])
-
-  const {
-    apptCheckInId,
-    encounterPrompt,
-    encounterDialogOpen,
-    encounterResolving,
-    checkingIn: appointmentCheckInBusy,
-    pendingCheckIn,
-    checkInFromAppointment,
-    handleEncounterChoice,
-    closeEncounterDialog,
-  } = useGatedCheckIn({
-    branchId: activeBranch?.id,
-    onSuccess: loadWeek,
-    t,
-  })
 
   React.useEffect(() => {
     if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return
@@ -543,7 +525,7 @@ function AppointmentsPageContent() {
               <p className="mt-1 text-sky-900/80">
                 {t(
                   "appointments.checkInOnQueueHint",
-                  "Use Check in on a scheduled visit here, or open Queue — first column lists today's arrivals. Everyone enters Waiting first."
+                  "Open Queue — first column lists today's arrivals. Check in there; everyone enters Waiting first."
                 )}
               </p>
               <Button variant="outline" size="sm" className="mt-2" asChild>
@@ -860,14 +842,6 @@ function AppointmentsPageContent() {
           <PageLoadingSkeleton variant="block" />
         ) : (
           <>
-        <OpenEncounterCheckInDialog
-          open={encounterDialogOpen}
-          prompt={encounterPrompt}
-          patientName={pendingCheckIn?.patientName}
-          loading={encounterResolving || appointmentCheckInBusy}
-          onChoose={(choice) => void handleEncounterChoice(choice)}
-          onClose={closeEncounterDialog}
-        />
         <AppointmentWeekCalendar
             appointments={filteredWeekAppointments}
             weekStart={weekStart}
@@ -876,17 +850,6 @@ function AppointmentsPageContent() {
             onSelectDate={setSelectedDate}
             onStatusChange={handleStatus}
             onReschedule={canWriteAppts ? handleReschedule : undefined}
-            onCheckIn={
-              canCheckIn
-                ? (appt) =>
-                    void checkInFromAppointment({
-                      appointmentId: appt.id,
-                      patientId: appt.patient_id,
-                      patientName: appt.patient_name ?? undefined,
-                    })
-                : undefined
-            }
-            checkingInId={apptCheckInId}
             onRemind={canWriteAppts ? handleSendReminder : undefined}
             onEdit={canWriteAppts ? openEditDialog : undefined}
             updatingId={updatingId}

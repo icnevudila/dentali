@@ -18,14 +18,9 @@ import { DashboardVisualPanel } from "@/components/dashboard/DashboardVisualPane
 import { AttentionPanel } from "@/components/dashboard/AttentionPanel"
 import { DailyCloseoutCard } from "@/components/dashboard/DailyCloseoutCard"
 import { RoleDashboardCockpit } from "@/components/dashboard/RoleDashboardCockpit"
-import { OwnerBranchKpiGrid } from "@/components/dashboard/OwnerBranchKpiGrid"
 import { MonthlyAppointmentsSnapshot } from "@/components/analytics/MonthlyAppointmentsSnapshot"
-import { QueueAnalyticsPanel } from "@/components/analytics/QueueAnalyticsPanel"
-import { PatientsAnalyticsPanel } from "@/components/analytics/PatientsAnalyticsPanel"
-import { DisplayAnalyticsPanel } from "@/components/analytics/DisplayAnalyticsPanel"
-import { TvDisplayHealthPanel } from "@/components/analytics/TvDisplayHealthPanel"
 import { ReportsSectionBlock } from "@/components/reports/ReportsSectionBlock"
-import { ReportPanelCaption } from "@/components/reports/ReportPanelCaption"
+import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { useReportsSummary } from "@/hooks/use-reports-summary"
 import {
@@ -48,7 +43,7 @@ const DASHBOARD_PERIOD_OPTIONS = [7, 30, 90] as const
 type DashboardPeriodDays = (typeof DASHBOARD_PERIOD_OPTIONS)[number]
 
 export default function DashboardPage() {
-  const { activeBranch, availableBranches } = useBranch()
+  const { activeBranch } = useBranch()
   const { t, locale } = useLocale()
   const [chartPeriodDays, setChartPeriodDays] = React.useState<DashboardPeriodDays>(7)
   const { stats, loading, error, live, lastUpdated, reload } = useDashboardStats()
@@ -291,7 +286,7 @@ export default function DashboardPage() {
             title={t("dashboard.previewTitle", "Branch flow at a glance")}
             description={t(
               "dashboard.previewDescription",
-              "The monthly booking board sits above. Use this strip for queue pressure, patient record readiness, and patient-facing screen health before drilling into reports."
+              "Operational KPIs stay on this page. Full queue, registry, and display analytics live in Reports."
             )}
             action={
               <div className="flex flex-wrap gap-2">
@@ -303,33 +298,33 @@ export default function DashboardPage() {
             }
           >
             <div className="grid gap-4 xl:grid-cols-3">
-              <ReportPanelCaption
+              <ReportDrillLink
                 title={t("dashboard.previewQueueTitle", "Queue pressure")}
                 description={t(
                   "dashboard.previewQueueDescription",
-                  "See arrival speed, wait duration, and status movement so the front desk can rebalance chairs before the line builds up."
+                  "Arrival speed, wait duration, and status movement for front-desk rebalancing."
                 )}
-              >
-                <QueueAnalyticsPanel branchId={activeBranch.id} periodDays={chartPeriodDays} />
-              </ReportPanelCaption>
-              <ReportPanelCaption
+                href="/reports#operations"
+                linkLabel={t("dashboard.previewQueueLink", "Queue reports")}
+              />
+              <ReportDrillLink
                 title={t("dashboard.previewPatientsTitle", "Record readiness")}
                 description={t(
                   "dashboard.previewPatientsDescription",
-                  "Watch intake completion, registry quality, and patient growth so staff can catch incomplete files before the visit starts."
+                  "Intake completion, registry quality, and patient growth trends."
                 )}
-              >
-                <PatientsAnalyticsPanel branchId={activeBranch.id} periodDays={30} />
-              </ReportPanelCaption>
-              <ReportPanelCaption
+                href="/reports#clinical"
+                linkLabel={t("dashboard.previewPatientsLink", "Registry reports")}
+              />
+              <ReportDrillLink
                 title={t("dashboard.previewDisplayTitle", "Display and public flow")}
                 description={t(
                   "dashboard.previewDisplayDescription",
-                  "Confirm kiosk and waiting-room screens are healthy so patients see the right queue state and staff avoid manual explanations."
+                  "Kiosk traffic, TV display health, and public link management."
                 )}
-              >
-                <DisplayAnalyticsPanel branchId={activeBranch.id} />
-              </ReportPanelCaption>
+                href="/reports#devices"
+                linkLabel={t("dashboard.previewDisplayLink", "Device reports")}
+              />
             </div>
           </ReportsSectionBlock>
         ) : null}
@@ -356,13 +351,15 @@ export default function DashboardPage() {
         </section>
 
         {activeBranch ? (
-          <>
-            <TvDisplayHealthPanel branchId={activeBranch.id} />
-            <OwnerBranchKpiGrid
-              branchCount={availableBranches.length}
-              activeBranchName={activeBranch.name}
-            />
-          </>
+          <ReportDrillLink
+            title={t("dashboard.benchmarkLinkTitle", "Multi-branch benchmark")}
+            description={t(
+              "dashboard.benchmarkLinkDescription",
+              "Compare appointments and collections across branches for the selected period."
+            )}
+            href="/reports#benchmark"
+            linkLabel={t("dashboard.benchmarkLinkCta", "Open branch benchmark")}
+          />
         ) : null}
       </ContentPanel>
     </DirectionalTransition>
