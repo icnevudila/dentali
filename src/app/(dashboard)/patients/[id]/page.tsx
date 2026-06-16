@@ -44,6 +44,8 @@ import { getPatientOdontogram } from "@/lib/odontogram/dental-chart-service"
 import { PatientVisitHistoryPanel } from "@/components/patients/PatientVisitHistoryPanel"
 import { ManualInvoiceDrawer } from "@/components/billing/ManualInvoiceDrawer"
 import { cn } from "@/lib/utils"
+import { useLocale } from "@/hooks/use-locale"
+import { notify } from "@/lib/ui/notify"
 
 const PATIENT_TABS: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "record", label: "Patient Record", icon: ClipboardList },
@@ -66,6 +68,7 @@ type PatientTabId = (typeof PATIENT_TABS)[number]["id"]
 export default function PatientProfilePage() {
   const { id: patientId } = useRouteParams<{ id: string }>()
   const { activeBranch } = useBranch()
+  const { t } = useLocale()
   const router = useRouter()
   const searchParams = useSearchParams()
   const tabParam = searchParams.get("tab")
@@ -113,6 +116,39 @@ export default function PatientProfilePage() {
   const [timelineError, setTimelineError] = React.useState<string | null>(null)
   const [hasChartFindings, setHasChartFindings] = React.useState(false)
   const [showInvoiceDrawer, setShowInvoiceDrawer] = React.useState(false)
+  const intakeToastShown = React.useRef(false)
+  const balanceClearedToastShown = React.useRef(false)
+  const prevOpenBalanceRef = React.useRef<number | null>(null)
+
+  React.useEffect(() => {
+    if (!intakeComplete || intakeToastShown.current) return
+    intakeToastShown.current = true
+    notify.success(
+      t(
+        "patient.intakeCompleteWelcome",
+        "Patient registered — welcome them and complete the chart file before the first visit."
+      )
+    )
+  }, [intakeComplete, t])
+
+  React.useEffect(() => {
+    if (!balance) return
+    const openBalance = balance.open_balance
+    const gateClear = !billingGate?.has_billing_gap
+
+    if (
+      prevOpenBalanceRef.current !== null &&
+      prevOpenBalanceRef.current > 0 &&
+      openBalance <= 0 &&
+      gateClear &&
+      !balanceClearedToastShown.current
+    ) {
+      balanceClearedToastShown.current = true
+      notify.success(t("patient.balanceCleared", "Balance cleared"))
+    }
+
+    prevOpenBalanceRef.current = openBalance
+  }, [balance, billingGate, t])
 
   const refreshConsents = React.useCallback(() => {
     fetchPatientConsents(patientId).then(({ data }) => setConsents(data))
@@ -450,7 +486,10 @@ export default function PatientProfilePage() {
 
       <MetricStrip items={profileMetrics} />
 
-      <ClinicalVisitJourneyPanel journey={visitJourney} />
+      <ClinicalVisitJourneyPanel
+        journey={visitJourney}
+        celebrate={visitJourney.percentComplete >= 100 || intakeComplete}
+      />
 
       {intakeComplete ? (
         <ContentPanel className="border-primary-200/80 bg-primary-50/40">

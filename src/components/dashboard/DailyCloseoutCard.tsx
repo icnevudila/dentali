@@ -102,6 +102,22 @@ export function DailyCloseoutCard({ className }: { className?: string }) {
       <p className="mt-3 text-xs text-neutral-500">
         {t("dashboard.closeoutCardHint", "End-of-day summary — tap to open full closeout report")}
       </p>
+
+      {!loading && (openBalance > 0 || missingNotes > 0) ? (
+        <p className="mt-2 rounded-lg border border-amber-200/80 bg-amber-50/60 px-3 py-2 text-xs font-medium text-amber-800">
+          {openBalance > 0 && missingNotes > 0
+            ? t(
+                "dashboard.closeoutNudgeBoth",
+                "Open balance and missing notes — review before closing the day."
+              )
+            : openBalance > 0
+              ? t("dashboard.closeoutNudgeBalance", "Open balance remains — settle invoices before closeout.")
+              : t(
+                  "dashboard.closeoutNudgeNotes",
+                  "Missing clinical notes — document visits before closeout."
+                )}
+        </p>
+      ) : null}
     </Link>
   )
 }

@@ -696,6 +696,13 @@ export const LANDING_HEADINGS = {
     quote: t("Get a quote", "Teklif alın"),
     signIn: t("Sign in", "Giriş yap"),
     startTrial: t("Start free trial", "Ücretsiz dene"),
+    menu: t("Menu", "Menü"),
+    onThisPage: t("On this page", "Bu sayfada"),
+    scrollToTop: t("Back to top", "Yukarı dön"),
+    sectionFeatures: t("Features", "Özellikler"),
+    sectionClinic: t("Clinic experience", "Klinik deneyimi"),
+    sectionFaq: t("FAQ", "SSS"),
+    sectionPricing: t("Pricing overview", "Fiyat özeti"),
   },
   footer: {
     slogan: t("Software that makes your clinic smile — one branch-aware system for the whole team.", "Kliniğinizi gülümseten yazılım — tüm ekip için şube bilincine sahip tek sistem."),

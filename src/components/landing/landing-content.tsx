@@ -13,6 +13,7 @@ import { FaqSection } from "@/components/landing/sections/faq-section"
 import { PricingSummarySection } from "@/components/landing/sections/pricing-summary-section"
 import { FinalCta } from "@/components/landing/sections/final-cta"
 import { StickyCta } from "@/components/landing/sections/sticky-cta"
+import { LandingScrollToTop } from "@/components/landing/ui/landing-scroll-to-top"
 
 import "@/components/landing/landing.css"
 
@@ -53,6 +54,7 @@ export function LandingContent({ showcase }: { showcase?: any }) {
       <FinalCta />
 
       <StickyCta />
+      <LandingScrollToTop />
     </div>
   )
 }

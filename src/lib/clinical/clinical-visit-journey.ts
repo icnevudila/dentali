@@ -253,20 +253,21 @@ export function buildClinicalVisitJourney(params: {
   ]
 
   const doneCount = steps.filter((s) => s.status === "done").length
-  const percentComplete = Math.round((doneCount / steps.length) * 100)
-  const nextStep = steps.find((s) => s.status === "current") ?? null
+  const allDone = doneCount === steps.length
+  const percentComplete = allDone ? 100 : Math.round((doneCount / steps.length) * 100)
+  const nextStep = allDone ? null : (steps.find((s) => s.status === "current") ?? null)
 
   const phaseLabel =
-    nextStep?.phase === "intake"
-      ? "Intake — before first visit"
-      : nextStep?.phase === "visit"
-        ? "Front desk — day of visit"
-        : nextStep?.phase === "clinical"
-          ? "Chair — clinical work"
-          : nextStep?.phase === "billing"
-            ? "Billing — checkout"
-            : paymentDone
-              ? "Visit complete"
+    allDone || paymentDone
+      ? "Visit complete"
+      : nextStep?.phase === "intake"
+        ? "Intake — before first visit"
+        : nextStep?.phase === "visit"
+          ? "Front desk — day of visit"
+          : nextStep?.phase === "clinical"
+            ? "Chair — clinical work"
+            : nextStep?.phase === "billing"
+              ? "Billing — checkout"
               : "Clinical journey"
 
   return { steps, percentComplete, nextStep, phaseLabel }

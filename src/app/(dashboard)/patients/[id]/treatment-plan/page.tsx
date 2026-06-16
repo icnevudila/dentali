@@ -43,6 +43,7 @@ import {
 } from "@/lib/billing/invoice-service"
 import { PatientBillingGateBanner } from "@/components/billing/PatientBillingGateBanner"
 import { notify } from "@/lib/ui/notify"
+import { toast } from "sonner"
 import { fetchProcedureStockWarnings } from "@/lib/inventory/inventory-service"
 import { ProcedureStockWarningBanner } from "@/components/inventory/ProcedureStockWarningBanner"
 import { ChartFindingSuggestionsCard } from "@/components/clinical/ChartFindingSuggestionsCard"
@@ -358,7 +359,16 @@ function TreatmentPlanContent() {
       setPlanStatus(data.status)
       setTotal(data.total_estimated)
       setAutoInvoiceId(data.invoice_id)
-      notify.success(t("treatmentPlan.approved", "Treatment plan approved"))
+      if (data.invoice_id) {
+        toast.success(t("treatmentPlan.approvedWithInvoice", "Treatment plan approved — invoice draft created"), {
+          action: {
+            label: t("treatmentPlan.viewInvoice", "View invoice"),
+            onClick: () => router.push(`/billing/${data.invoice_id}`),
+          },
+        })
+      } else {
+        notify.success(t("treatmentPlan.approved", "Treatment plan approved"))
+      }
     }
     await loadPlan(activePlanId)
     setSaving(false)

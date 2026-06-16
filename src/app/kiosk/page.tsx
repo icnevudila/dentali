@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { KioskStepIndicator, kioskStepFromFlow } from "@/components/kiosk/KioskStepIndicator"
 import { PublicChannelBrand } from "@/components/brand/public-channel-brand"
-import { CheckCircle2, AlertCircle, Loader2, Users } from "lucide-react"
+import { CheckCircle2, AlertCircle, Loader2, Users, MapPin } from "lucide-react"
 import { updateKioskMood, getKioskQueueStats } from "@/lib/kiosk/kiosk-service"
 
 type Step = "loading" | "welcome" | "form" | "mood" | "success" | "error" | "intakeForm" | "intakeSuccess" | "pending_approval"
@@ -34,6 +34,7 @@ function KioskContent() {
   const [email, setEmail] = React.useState("")
   const [queueCode, setQueueCode] = React.useState("")
   const [entryId, setEntryId] = React.useState("")
+  const [intakeId, setIntakeId] = React.useState("")
   const [submitting, setSubmitting] = React.useState(false)
   const [isScreensaver, setIsScreensaver] = React.useState(false)
   const [liveQueue, setLiveQueue] = React.useState<{ serving: string[]; waitCount: number } | null>(null)
@@ -47,6 +48,7 @@ function KioskContent() {
     setErrorMsg("")
     setQueueCode("")
     setEntryId("")
+    setIntakeId("")
   }, [])
 
   React.useEffect(() => {
@@ -227,7 +229,7 @@ function KioskContent() {
     e.preventDefault()
     setSubmitting(true)
     setErrorMsg("")
-    const { error } = await submitKioskIntake(sessionId, {
+    const { data, error } = await submitKioskIntake(sessionId, {
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       phone: phone.trim() || undefined,
@@ -237,6 +239,9 @@ function KioskContent() {
     if (error) {
       setErrorMsg(error)
       return
+    }
+    if (data?.intake_id) {
+      setIntakeId(data.intake_id)
     }
     setStep("intakeSuccess")
     playSuccessSound(t("kiosk.speechIntake", "Registration received. Please wait for the front desk."))
@@ -583,15 +588,37 @@ function KioskContent() {
                 <CheckCircle2 className="h-12 w-12 text-white" />
               </div>
             </div>
-            
-            <div className="space-y-3">
-              <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight">{t("kiosk.registrationReceived", "Registration received")}</h1>
-              <p className="text-neutral-600 text-lg font-medium leading-relaxed px-4">
-                {t("kiosk.intakeSuccessDesc", "Please wait for the front desk to review your information and check you in.")}
+
+            <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight">
+              {t("kiosk.intakeSuccess", "Registration submitted!")}
+            </h1>
+
+            {intakeId ? (
+              <div className="rounded-[1.5rem] border border-emerald-100 bg-gradient-to-br from-emerald-50/80 to-white py-8 shadow-inner">
+                <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">
+                  {t("kiosk.registrationReference", "Your registration reference")}
+                </p>
+                <p className="font-mono text-4xl font-black tracking-tighter text-emerald-700 drop-shadow-sm">
+                  {intakeId.slice(0, 8).toUpperCase()}
+                </p>
+              </div>
+            ) : null}
+
+            <div className="flex items-center justify-center gap-2 rounded-xl border border-emerald-200/80 bg-emerald-50/60 px-4 py-3 text-emerald-900">
+              <MapPin className="h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
+              <p className="text-base font-semibold leading-snug">
+                {t("kiosk.proceedToFrontDesk", "Please proceed to the front desk")}
               </p>
             </div>
-            
-            <button 
+
+            <p className="text-neutral-600 text-base font-medium leading-relaxed px-4">
+              {t(
+                "kiosk.intakeSuccessHint",
+                "Please see the front desk to complete your file."
+              )}
+            </p>
+
+            <button
               onClick={resetToWelcome}
               className="w-full h-14 text-lg font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition duration-200 active:scale-[0.98]"
             >

@@ -706,3 +706,8 @@
     padding-bottom: calc(4.25rem + env(safe-area-inset-bottom));
   }
 }
+
+/* Anchor jumps clear fixed header */
+.landing-page-root section[id] {
+  scroll-margin-top: 5rem;
+}

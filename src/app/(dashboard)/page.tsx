@@ -17,6 +17,7 @@ import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 import { DashboardVisualPanel } from "@/components/dashboard/DashboardVisualPanel"
 import { AttentionPanel } from "@/components/dashboard/AttentionPanel"
 import { DailyCloseoutCard } from "@/components/dashboard/DailyCloseoutCard"
+import { RoleDashboardCockpit } from "@/components/dashboard/RoleDashboardCockpit"
 import { OwnerBranchKpiGrid } from "@/components/dashboard/OwnerBranchKpiGrid"
 import { TvDisplayHealthPanel } from "@/components/analytics/TvDisplayHealthPanel"
 import { useReportsSummary } from "@/hooks/use-reports-summary"
@@ -135,6 +136,10 @@ export default function DashboardPage() {
             </Button>
           }
         />
+
+        {activeBranch ? (
+          <RoleDashboardCockpit stats={stats} loading={loading} />
+        ) : null}
 
         {activeBranch ? (
           <div className="flex flex-wrap items-center gap-2 animate-fade-rise">
