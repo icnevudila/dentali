@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useLocale } from "@/hooks/use-locale"
@@ -15,6 +16,8 @@ import {
   UserRound,
 } from "lucide-react"
 
+const MENU_WIDTH = 176
+
 interface PatientRowActionsProps {
   patient: PatientRecord
   className?: string
@@ -23,53 +26,79 @@ interface PatientRowActionsProps {
 export function PatientRowActions({ patient, className }: PatientRowActionsProps) {
   const { t } = useLocale()
   const [open, setOpen] = React.useState(false)
-  const rootRef = React.useRef<HTMLDivElement>(null)
+  const [mounted, setMounted] = React.useState(false)
+  const [menuStyle, setMenuStyle] = React.useState<React.CSSProperties>({})
+  const buttonRef = React.useRef<HTMLButtonElement>(null)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const updateMenuPosition = React.useCallback(() => {
+    const button = buttonRef.current
+    if (!button) return
+
+    const rect = button.getBoundingClientRect()
+    const margin = 8
+    let left = rect.right - MENU_WIDTH
+    left = Math.max(margin, Math.min(left, window.innerWidth - MENU_WIDTH - margin))
+
+    const belowTop = rect.bottom + 4
+    const menuHeightEstimate = 220
+    const top =
+      belowTop + menuHeightEstimate > window.innerHeight - margin
+        ? Math.max(margin, rect.top - menuHeightEstimate - 4)
+        : belowTop
+
+    setMenuStyle({
+      position: "fixed",
+      top,
+      left,
+      width: MENU_WIDTH,
+      zIndex: 250,
+    })
+  }, [])
+
+  React.useLayoutEffect(() => {
+    if (!open) return
+    updateMenuPosition()
+    window.addEventListener("resize", updateMenuPosition)
+    window.addEventListener("scroll", updateMenuPosition, true)
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition)
+      window.removeEventListener("scroll", updateMenuPosition, true)
+    }
+  }, [open, updateMenuPosition])
 
   React.useEffect(() => {
     if (!open) return
-    const onDoc = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
-    }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false)
     }
-    document.addEventListener("mousedown", onDoc)
     document.addEventListener("keydown", onKey)
-    return () => {
-      document.removeEventListener("mousedown", onDoc)
-      document.removeEventListener("keydown", onKey)
-    }
+    return () => document.removeEventListener("keydown", onKey)
   }, [open])
 
-  const stopNav = (e: React.MouseEvent) => {
+  const stopNav = (e: React.SyntheticEvent) => {
     e.preventDefault()
     e.stopPropagation()
   }
 
   const phoneDigits = patient.phone?.replace(/\D/g, "") ?? ""
 
-  return (
-    <div ref={rootRef} className={cn("relative", className)} onClick={stopNav}>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-neutral-400 hover:text-neutral-700"
-        aria-expanded={open}
-        aria-haspopup="menu"
-        aria-label={t("patients.rowActions", "Patient actions")}
-        onClick={(e) => {
-          stopNav(e)
-          setOpen((v) => !v)
-        }}
-      >
-        <MoreHorizontal className="h-4 w-4" />
-      </Button>
-
-      {open ? (
+  const menu =
+    open && mounted ? (
+      <>
+        <button
+          type="button"
+          className="fixed inset-0 z-[240] cursor-default bg-black/20 sm:bg-transparent"
+          aria-label={t("common.close", "Close")}
+          onClick={() => setOpen(false)}
+        />
         <div
           role="menu"
-          className="absolute right-0 top-full z-20 mt-1 min-w-[11rem] overflow-hidden rounded-xl border border-neutral-200/90 bg-white py-1 shadow-[0_8px_24px_rgba(15,23,42,0.1)] animate-fade-rise"
+          style={menuStyle}
+          className="overflow-hidden rounded-xl border border-neutral-200/90 bg-white py-1 shadow-[0_8px_24px_rgba(15,23,42,0.14)] animate-fade-rise"
         >
           <MenuLink
             href={`/patients/${patient.id}`}
@@ -96,22 +125,39 @@ export function PatientRowActions({ patient, className }: PatientRowActionsProps
             <a
               role="menuitem"
               href={`tel:${phoneDigits}`}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 active:bg-neutral-100"
               onClick={() => setOpen(false)}
             >
-              <Phone className="h-4 w-4 text-neutral-400" aria-hidden />
+              <Phone className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
               {t("patients.actionCall", "Call patient")}
             </a>
           ) : null}
-          <MenuLink
-            href={`/queue`}
-            icon={ExternalLink}
-            onNavigate={() => setOpen(false)}
-          >
+          <MenuLink href={`/queue`} icon={ExternalLink} onNavigate={() => setOpen(false)}>
             {t("patients.actionQueue", "Go to queue")}
           </MenuLink>
         </div>
-      ) : null}
+      </>
+    ) : null
+
+  return (
+    <div className={cn(className)} onClick={stopNav}>
+      <Button
+        ref={buttonRef}
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-neutral-400 hover:text-neutral-700"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={t("patients.rowActions", "Patient actions")}
+        onClick={(e) => {
+          stopNav(e)
+          setOpen((v) => !v)
+        }}
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </Button>
+      {menu ? createPortal(menu, document.body) : null}
     </div>
   )
 }
@@ -131,10 +177,10 @@ function MenuLink({
     <Link
       role="menuitem"
       href={href}
-      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+      className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 active:bg-neutral-100"
       onClick={onNavigate}
     >
-      <Icon className="h-4 w-4 text-neutral-400" aria-hidden />
+      <Icon className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
       {children}
     </Link>
   )

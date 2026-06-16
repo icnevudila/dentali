@@ -81,10 +81,10 @@ export function RecordRow({
         </div>
       </div>
 
-      {(trailing || href) && (
+      {(trailing || href || onClick) && (
         <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 border-t border-neutral-100 sm:border-0 pt-3 sm:pt-0">
           {trailing}
-          {href ? (
+          {href || onClick ? (
             <ChevronRight
               className="h-4 w-4 shrink-0 text-neutral-300 transition-transform group-hover:translate-x-0.5 group-hover:text-primary-400"
               aria-hidden
@@ -98,8 +98,8 @@ export function RecordRow({
   const rowClass = cn(
     "group block w-full rounded-xl border border-neutral-200/90 bg-white px-3.5 py-3 sm:px-4 sm:py-3.5 transition-[border-color,background-color,box-shadow,transform] duration-200",
     staggerIndex !== undefined && "animate-stagger-item",
-    href &&
-      "hover:border-primary-200 hover:bg-primary-50/20 hover:shadow-[0_2px_12px_rgba(13,148,136,0.07)] active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30",
+    (href || onClick) &&
+      "cursor-pointer hover:border-primary-200 hover:bg-primary-50/20 hover:shadow-[0_2px_12px_rgba(13,148,136,0.07)] active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30",
     className
   )
 
@@ -133,7 +133,24 @@ export function RecordRow({
       className={rowClass}
       style={style}
       role={onClick ? "button" : undefined}
-      onClick={onClick}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={(e) => {
+        const target = e.target as HTMLElement
+        if (target.closest("button, a[href], input, select, textarea, label")) {
+          return
+        }
+        onClick?.()
+      }}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                onClick()
+              }
+            }
+          : undefined
+      }
     >
       {inner}
     </div>

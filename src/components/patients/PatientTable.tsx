@@ -1,6 +1,8 @@
 "use client"
 
 import type { CSSProperties } from "react"
+import { addTransitionType, startTransition } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -13,7 +15,6 @@ import { CompletionRing } from "@/components/visual/CompletionRing"
 import { useLocale } from "@/hooks/use-locale"
 import { formatDate } from "@/lib/i18n/translate"
 import { AlertCircle, Plus, UserSearch } from "lucide-react"
-import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 
 interface PatientTableProps {
   patients: PatientRecord[]
@@ -96,6 +97,14 @@ export function PatientTable({
   chartFindingsByPatient = {},
 }: PatientTableProps) {
   const { t, locale } = useLocale()
+  const router = useRouter()
+
+  const openPatient = (patientId: string) => {
+    startTransition(() => {
+      addTransitionType("nav-forward")
+      router.push(`/patients/${patientId}?tab=record`)
+    })
+  }
 
   if (noBranch) {
     return (
@@ -183,8 +192,7 @@ export function PatientTable({
           return (
             <div key={patient.id} className="relative lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-2">
               <RecordRow
-                href={`/patients/${patient.id}?tab=record`}
-                transitionTypes={NAV_FORWARD_TRANSITION}
+                onClick={() => openPatient(patient.id)}
                 staggerIndex={index}
                 initials={patientInitials(patient.first_name, patient.last_name)}
                 avatarUrl={patient.profile_photo_url}
