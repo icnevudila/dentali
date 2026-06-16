@@ -5,7 +5,13 @@ import { fetchPatientsAnalytics } from "@/lib/analytics/analytics-service"
 import { ModuleAnalyticsPanel } from "@/components/analytics/ModuleAnalyticsPanel"
 import { useLocale } from "@/hooks/use-locale"
 
-export function PatientsAnalyticsPanel({ branchId }: { branchId: string }) {
+export function PatientsAnalyticsPanel({
+  branchId,
+  periodDays = 30,
+}: {
+  branchId: string
+  periodDays?: number
+}) {
   const { t } = useLocale()
   const [loading, setLoading] = useState(true)
   const [consentPct, setConsentPct] = useState(0)
@@ -14,14 +20,16 @@ export function PatientsAnalyticsPanel({ branchId }: { branchId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data } = await fetchPatientsAnalytics(branchId, 30)
+    const { data } = await fetchPatientsAnalytics(branchId, periodDays)
     if (data) {
       setConsentPct(data.consentCompletionPct)
       setTotalActive(data.totalActive)
       setNewTrend(data.newPatientsTrend)
     }
     setLoading(false)
-  }, [branchId])
+  }, [branchId, periodDays])
+
+  const periodLabel = String(periodDays)
 
   useEffect(() => {
     void load()
@@ -48,7 +56,7 @@ export function PatientsAnalyticsPanel({ branchId }: { branchId: string }) {
         </div>
       </div>
       <ModuleAnalyticsPanel
-        title={t("patients.newTrend", "New patients (30d)")}
+        title={t("patients.newTrend", "New patients ({days}d)").replace("{days}", periodLabel)}
         variant="line"
         data={newTrend}
         loading={loading}

@@ -41,7 +41,10 @@ function ensureCoordinator(branchId: string, supabase: SupabaseClient): Coordina
   const existing = coordinators.get(branchId)
   if (existing) return existing
 
-  let channel = supabase.channel(`dashboard-kpi-${branchId}`)
+  const topic = `dashboard-kpi-${branchId}-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`
+  let channel = supabase.channel(topic)
 
   for (const table of REALTIME_TABLES) {
     const filter =
@@ -97,19 +100,25 @@ export function subscribeDashboardKpiRealtime(
   onChange: () => void,
   onLiveChange?: (live: boolean) => void
 ): () => void {
-  const supabase = createClient()
-  const coord = ensureCoordinator(branchId, supabase)
-  coord.listeners.add(onChange)
-  if (onLiveChange) {
-    coord.statusListeners.add(onLiveChange)
-    onLiveChange(coord.live)
-  }
-  coord.refCount += 1
+  try {
+    const supabase = createClient()
+    const coord = ensureCoordinator(branchId, supabase)
+    coord.listeners.add(onChange)
+    if (onLiveChange) {
+      coord.statusListeners.add(onLiveChange)
+      onLiveChange(coord.live)
+    }
+    coord.refCount += 1
 
-  return () => {
-    coord.listeners.delete(onChange)
-    if (onLiveChange) coord.statusListeners.delete(onLiveChange)
-    coord.refCount -= 1
-    releaseCoordinator(branchId, supabase)
+    return () => {
+      coord.listeners.delete(onChange)
+      if (onLiveChange) coord.statusListeners.delete(onLiveChange)
+      coord.refCount -= 1
+      releaseCoordinator(branchId, supabase)
+    }
+  } catch (error) {
+    console.error("Dashboard realtime unavailable", error)
+    onLiveChange?.(false)
+    return () => {}
   }
 }

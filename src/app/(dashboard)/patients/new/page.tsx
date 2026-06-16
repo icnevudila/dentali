@@ -261,12 +261,15 @@ function NewPatientPageContent() {
     })
 
     if (photoFile) {
-      await uploadPatientProfilePhoto({
+      const { error: photoError } = await uploadPatientProfilePhoto({
         organizationId: org.id,
         branchId: activeBranch.id,
         patientId: created.id,
         file: photoFile,
       })
+      if (photoError) {
+        toast.error(`Patient registered but photo upload failed: ${photoError}`)
+      }
     }
 
     if (insurance.payerType !== "none") {
@@ -280,9 +283,6 @@ function NewPatientPageContent() {
       })
       if (insuranceErr) {
         toast.error(`Patient registered but insurance save failed: ${insuranceErr}`)
-        setSubmitError(`Patient registered but insurance save failed: ${insuranceErr}`)
-        setIsSubmitting(false)
-        return
       }
     }
 
@@ -292,6 +292,7 @@ function NewPatientPageContent() {
       await markIntakeDraftFinalized(kioskDraftIntakeId, created.id)
       clearDraftForReview()
     }
+    setIsSubmitting(false)
     router.push(`/patients/${created.id}?intake=complete`)
   }
 

@@ -37,6 +37,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useRouteParams } from "@/hooks/use-route-params"
 import { useBranch } from "@/hooks/use-branch"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
+import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { NAV_BACK_TRANSITION, NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 import { ClinicalVisitJourneyPanel } from "@/components/clinical/ClinicalVisitJourneyPanel"
 import {
@@ -518,6 +519,7 @@ export default function PatientProfilePage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 print:hidden">
+          <WorkflowSettingsLink className="order-[-1] sm:order-none" />
           <Button variant="outline" size="sm" className="gap-2" asChild>
             <Link href={`/patients/${patientId}/chart`} transitionTypes={NAV_FORWARD_TRANSITION}>
               <Activity className="h-4 w-4" /> Chart
@@ -662,11 +664,11 @@ export default function PatientProfilePage() {
       />
 
       {/* TWO-COLUMN SIDEBAR & CONTENT LAYOUT */}
-      <div id="patient-profile-tabs" className="flex flex-col md:flex-row gap-6 items-start mt-4">
+      <div id="patient-profile-tabs" className="mt-4 flex flex-col gap-6 items-start xl:flex-row">
         {/* SIDEBAR TABS NAVIGATION */}
-        <aside className="w-full md:w-60 shrink-0">
+        <aside className="w-full shrink-0 xl:w-60">
           {/* Mobile dropdown selector */}
-          <div className="md:hidden">
+          <div className="xl:hidden">
             <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1 block">
               Menu Tab
             </label>
@@ -684,7 +686,7 @@ export default function PatientProfilePage() {
           </div>
 
           {/* Desktop sidebar list */}
-          <nav className="hidden md:flex flex-col gap-1 border-r border-neutral-200 pr-6 w-full">
+          <nav className="hidden xl:flex w-full flex-col gap-1 border-r border-neutral-200 pr-6">
             {PATIENT_TABS.map((tab) => {
               const isActive = activeTab === tab.id
               const TabIcon = tab.icon
@@ -969,7 +971,7 @@ export default function PatientProfilePage() {
 
           {/* EPICRISIS & LETTERS TAB */}
           {activeTab === "epicrisis" && (
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 xl:grid-cols-3">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Epicrisis & Discharge</CardTitle>

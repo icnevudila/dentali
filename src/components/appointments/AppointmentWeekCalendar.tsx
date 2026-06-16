@@ -173,6 +173,7 @@ export function AppointmentWeekCalendar({
   const handleNavigate = (direction: -1 | 1) => {
     if (viewMode === "month") {
       const nextMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + direction, 1)
+      onWeekChange(startOfWeekMonday(nextMonth))
       onSelectDate(toDateKey(nextMonth))
     } else if (viewMode === "week") {
       const nextWeekStart = startOfWeekMonday(parseDateKey(addDaysToKey(toDateKey(weekStart), direction * 7)))

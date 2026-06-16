@@ -20,6 +20,7 @@ import { PageErrorNotifier } from "@/components/ui/PageErrorNotifier"
 import { Button } from "@/components/ui/button"
 import { CompareBar } from "@/components/charts/ChartKit"
 import { CloseoutPrintDocument } from "@/components/reports/CloseoutPrintDocument"
+import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 
 export default function DailyCloseoutPage() {
   const { activeBranch } = useBranch()
@@ -176,6 +177,7 @@ export default function DailyCloseoutPage() {
       description={t("closeout.subtitle", "Review collections, open balances, and exceptions before closing the day.")}
       actions={
         <div className="flex flex-wrap gap-2">
+          <WorkflowSettingsLink />
           <Button variant="outline" size="sm" asChild>
             <Link href="/reports">
               <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />

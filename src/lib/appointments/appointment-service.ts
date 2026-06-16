@@ -210,6 +210,21 @@ export async function markAppointmentNoShow(
   return { data: { scheduled_at: raw.scheduled_at }, error: null }
 }
 
+export async function fetchAppointmentScheduledAt(
+  appointmentId: string
+): Promise<{ data: { scheduled_at: string } | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("appointments")
+    .select("scheduled_at")
+    .eq("id", appointmentId)
+    .maybeSingle()
+
+  if (error) return { data: null, error: error.message }
+  if (!data) return { data: null, error: null }
+  return { data: { scheduled_at: data.scheduled_at }, error: null }
+}
+
 /** Runs on queue page load — no extra Vercel/Supabase cron. */
 export async function autoNoShowForBranch(
   branchId: string,

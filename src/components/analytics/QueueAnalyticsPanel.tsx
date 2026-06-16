@@ -5,7 +5,13 @@ import { fetchQueueAnalytics } from "@/lib/analytics/analytics-service"
 import { ModuleAnalyticsPanel } from "@/components/analytics/ModuleAnalyticsPanel"
 import { useLocale } from "@/hooks/use-locale"
 
-export function QueueAnalyticsPanel({ branchId }: { branchId: string }) {
+export function QueueAnalyticsPanel({
+  branchId,
+  periodDays = 7,
+}: {
+  branchId: string
+  periodDays?: number
+}) {
   const { t } = useLocale()
   const [loading, setLoading] = useState(true)
   const [medianWait, setMedianWait] = useState(0)
@@ -14,14 +20,16 @@ export function QueueAnalyticsPanel({ branchId }: { branchId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data } = await fetchQueueAnalytics(branchId, 7)
+    const { data } = await fetchQueueAnalytics(branchId, periodDays)
     if (data) {
       setMedianWait(data.medianWaitMinutes)
       setPeakHours(data.peakHours)
       setTodayFlow(data.todayFlow)
     }
     setLoading(false)
-  }, [branchId])
+  }, [branchId, periodDays])
+
+  const periodLabel = String(periodDays)
 
   useEffect(() => {
     void load()
@@ -31,7 +39,7 @@ export function QueueAnalyticsPanel({ branchId }: { branchId: string }) {
     <div className="space-y-4">
       <div className="rounded-xl border border-neutral-200/80 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
         <p className="text-xs font-medium text-neutral-500">
-          {t("queue.medianWait", "Median wait (7d)")}
+          {t("queue.medianWait", "Median wait ({days}d)").replace("{days}", periodLabel)}
         </p>
         <p className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">
           {loading ? "—" : `${medianWait} min`}

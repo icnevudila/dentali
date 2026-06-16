@@ -18,14 +18,18 @@ import {
   MapPin,
   Shield,
   FileWarning,
+  Clock3,
+  Monitor,
+  Timer,
 } from "lucide-react"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { MetricStrip } from "@/components/layout/MetricStrip"
-import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { TrendArea, TrendLine, DistributionPie } from "@/components/charts/ChartKit"
 import { useOwnerAnalytics } from "@/hooks/use-owner-analytics"
 import { StatusBreakdown } from "@/components/charts/StatusBreakdown"
 import { ReportQuickLinks, type ReportLink } from "@/components/reports/ReportQuickLinks"
+import { ReportsSectionBlock } from "@/components/reports/ReportsSectionBlock"
+import { ReportPanelCaption } from "@/components/reports/ReportPanelCaption"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
 import { useReportsSummary } from "@/hooks/use-reports-summary"
@@ -34,12 +38,24 @@ import { buildReportsCsv, downloadReportsCsv } from "@/lib/reports/reports-expor
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { AppointmentsAnalyticsPanel } from "@/components/analytics/AppointmentsAnalyticsPanel"
+import { QueueAnalyticsPanel } from "@/components/analytics/QueueAnalyticsPanel"
+import { WaitlistAnalyticsPanel } from "@/components/analytics/WaitlistAnalyticsPanel"
+import { PatientsAnalyticsPanel } from "@/components/analytics/PatientsAnalyticsPanel"
+import { InventoryAnalyticsPanel } from "@/components/analytics/InventoryAnalyticsPanel"
+import { NotificationAnalyticsPanel } from "@/components/analytics/NotificationAnalyticsPanel"
+import { AuditAnalyticsPanel } from "@/components/analytics/AuditAnalyticsPanel"
+import { HmoAnalyticsPanel } from "@/components/analytics/HmoAnalyticsPanel"
+import { PhilHealthAnalyticsPanel } from "@/components/analytics/PhilHealthAnalyticsPanel"
+import { KioskAnalyticsPanel } from "@/components/analytics/KioskAnalyticsPanel"
+import { DisplayAnalyticsPanel } from "@/components/analytics/DisplayAnalyticsPanel"
+import { BranchPublicTokensPanel } from "@/components/analytics/BranchPublicTokensPanel"
+import { ChartConditionPanel } from "@/components/analytics/ChartConditionPanel"
 import { OrthoAnalyticsPanel } from "@/components/analytics/OrthoAnalyticsPanel"
 import { BranchBenchmarkPanel } from "@/components/analytics/BranchBenchmarkPanel"
 import { FinanceSummaryPanel } from "@/components/analytics/FinanceSummaryPanel"
-import { HmoAnalyticsPanel } from "@/components/analytics/HmoAnalyticsPanel"
 import { ChairTimeAnalyticsPanel } from "@/components/analytics/ChairTimeAnalyticsPanel"
-import { Timer } from "lucide-react"
+import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 
 const PERIOD_OPTIONS = [7, 30, 90] as const
 type PeriodDays = (typeof PERIOD_OPTIONS)[number]
@@ -53,6 +69,7 @@ export default function ReportsHubPage() {
   const { stats } = useDashboardStats()
 
   const periodLabel = String(periodDays)
+  const patientPeriodDays = periodDays < 30 ? 30 : periodDays
 
   const quickLinks = useMemo<ReportLink[]>(
     () => [
@@ -112,7 +129,8 @@ export default function ReportsHubPage() {
       value: loading ? "—" : (summary?.totals.completed ?? 0),
       hint: t("reports.metricCompletedOpen", "View completed visits"),
       icon: CheckCircle2,
-      variant: (summary?.totals.completed ?? 0) > 0 && !loading ? ("success" as const) : ("default" as const),
+      variant:
+        (summary?.totals.completed ?? 0) > 0 && !loading ? ("success" as const) : ("default" as const),
       href: "/appointments",
     },
     {
@@ -120,7 +138,8 @@ export default function ReportsHubPage() {
       value: loading ? "—" : `₱${(summary?.totals.collected ?? 0).toLocaleString()}`,
       hint: t("reports.metricCollectedOpen", "Open billing ledger"),
       icon: Wallet,
-      variant: (summary?.totals.collected ?? 0) > 0 && !loading ? ("success" as const) : ("default" as const),
+      variant:
+        (summary?.totals.collected ?? 0) > 0 && !loading ? ("success" as const) : ("default" as const),
       href: "/billing",
     },
     {
@@ -128,7 +147,8 @@ export default function ReportsHubPage() {
       value: loading ? "—" : (summary?.totals.noShow ?? 0),
       hint: t("reports.metricNoShowOpen", "Review appointments"),
       icon: XCircle,
-      variant: (summary?.totals.noShow ?? 0) > 0 && !loading ? ("warning" as const) : ("default" as const),
+      variant:
+        (summary?.totals.noShow ?? 0) > 0 && !loading ? ("warning" as const) : ("default" as const),
       href: "/appointments",
     },
   ]
@@ -198,7 +218,7 @@ export default function ReportsHubPage() {
       title={t("reports.title", "Reports Hub")}
       description={t(
         "reports.subtitle",
-        "Trends, collections, and operational snapshots — drill down into modules or export audit data."
+        "Open the branch once and review operations, chair flow, billing, claims, devices, and audit signals in one place."
       )}
       actions={
         <div className="flex flex-wrap items-center gap-2">
@@ -223,6 +243,7 @@ export default function ReportsHubPage() {
               </button>
             ))}
           </div>
+          <WorkflowSettingsLink />
           <Button
             variant="outline"
             size="sm"
@@ -254,17 +275,48 @@ export default function ReportsHubPage() {
       error={error}
       onRetry={() => void reload()}
       retryLabel={t("common.retry", "Retry")}
-      panelClassName="space-y-8"
+      panelClassName="space-y-10"
     >
       {!activeBranch ? (
-        <p className="text-sm text-neutral-500">{t("dashboard.selectBranch", "Select a branch to view stats")}</p>
+        <p className="text-sm text-neutral-500">
+          {t("dashboard.selectBranch", "Select a branch to view stats")}
+        </p>
       ) : null}
 
-      <section className="space-y-3">
-        <SectionEyebrow icon={TrendingUp}>{trendsTitle}</SectionEyebrow>
-        <div className="grid gap-4 lg:grid-cols-2">
+      {activeBranch ? (
+        <ReportsSectionBlock
+          icon={Clock3}
+          eyebrow={t("reports.sectionToday", "Today")}
+          title={t("reports.todayPulseTitle", "Today's pulse")}
+          description={t(
+            "reports.todayPulseDescription",
+            "A quick read of today's front-desk load, collections, unsigned consents, and open balances."
+          )}
+          action={
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/">{t("reports.backDashboard", "Back to dashboard")}</Link>
+            </Button>
+          }
+        >
+          <MetricStrip items={todayPulseMetrics} />
+        </ReportsSectionBlock>
+      ) : null}
+
+      <ReportsSectionBlock
+        icon={TrendingUp}
+        eyebrow={t("reports.sectionOverview", "Overview")}
+        title={trendsTitle}
+        description={t(
+          "reports.sectionOverviewDescription",
+          "Use these top-line charts to spot branch momentum fast: visit volume, cash movement, and appointment status mix."
+        )}
+      >
+        <div className="grid gap-4 xl:grid-cols-3">
           <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/30 p-4">
-            <h3 className="mb-3 text-sm font-semibold text-neutral-900">{appointmentsChartTitle}</h3>
+            <h3 className="mb-1 text-sm font-semibold text-neutral-900">{appointmentsChartTitle}</h3>
+            <p className="mb-3 text-xs text-neutral-500">
+              {t("reports.chartAppointmentsHint", "How busy the calendar has been across the selected period.")}
+            </p>
             <TrendLine
               data={(summary?.dailyAppointments ?? []).map((d) => ({ label: d.label, value: d.value }))}
               emptyLabel={t("dashboard.chartEmpty", "No activity in this period")}
@@ -272,7 +324,10 @@ export default function ReportsHubPage() {
             />
           </div>
           <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/30 p-4">
-            <h3 className="mb-3 text-sm font-semibold text-neutral-900">{collectionsChartTitle}</h3>
+            <h3 className="mb-1 text-sm font-semibold text-neutral-900">{collectionsChartTitle}</h3>
+            <p className="mb-3 text-xs text-neutral-500">
+              {t("reports.chartCollectionsHint", "Payments posted each day for the active branch.")}
+            </p>
             <TrendArea
               data={(summary?.dailyCollections ?? []).map((d) => ({ label: d.label, value: d.value }))}
               valueFormatter={(v) => (v >= 1000 ? `₱${(v / 1000).toFixed(1)}k` : `₱${v}`)}
@@ -280,15 +335,33 @@ export default function ReportsHubPage() {
               height={220}
             />
           </div>
-        </div>
-      </section>
-
-      {ownerAnalytics?.branchCompare && ownerAnalytics.branchCompare.length > 0 ? (
-        <section className="space-y-3">
-          <SectionEyebrow icon={BarChart3}>
-            {t("reports.branchCompare", "Open invoices by branch")}
-          </SectionEyebrow>
           <div className="rounded-xl border border-neutral-200/80 bg-white p-4">
+            <h3 className="mb-1 text-sm font-semibold text-neutral-900">
+              {t("reports.sectionStatus", "Appointment mix")}
+            </h3>
+            <p className="mb-3 text-xs text-neutral-500">
+              {t("reports.sectionStatusHint", "See whether the branch is completing visits or leaking them through no-shows and cancellations.")}
+            </p>
+            <StatusBreakdown slices={summary?.statusBreakdown ?? []} emptyLabel={statusEmptyLabel} />
+            {summary && summary.totals.cancelled > 0 ? (
+              <p className="mt-3 text-xs text-neutral-500">
+                {t("reports.cancelledNote", "{count} cancelled in period").replace(
+                  "{count}",
+                  String(summary.totals.cancelled)
+                )}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        {ownerAnalytics?.branchCompare && ownerAnalytics.branchCompare.length > 0 ? (
+          <div className="rounded-xl border border-neutral-200/80 bg-white p-4">
+            <h3 className="mb-1 text-sm font-semibold text-neutral-900">
+              {t("reports.branchCompare", "Open invoices by branch")}
+            </h3>
+            <p className="mb-3 text-xs text-neutral-500">
+              {t("reports.branchCompareHint", "Useful when owners want to see where AR pressure is accumulating across the group.")}
+            </p>
             <DistributionPie
               data={ownerAnalytics.branchCompare}
               height={220}
@@ -296,83 +369,292 @@ export default function ReportsHubPage() {
               emptyLabel={t("dashboard.chartEmpty", "No activity in this period")}
             />
           </div>
-        </section>
-      ) : null}
+        ) : null}
+      </ReportsSectionBlock>
 
       {activeBranch ? (
-        <section className="space-y-3">
-          <SectionEyebrow icon={Timer}>
-            {t("chairtime.title", "Real-Time Chair Efficiency (Chair-Time Tracker)")}
-          </SectionEyebrow>
-          <ChairTimeAnalyticsPanel branchId={activeBranch.id} />
-        </section>
-      ) : null}
-
-      <section className="space-y-3">
-        <SectionEyebrow icon={BarChart3}>
-          {t("reports.branchBenchmark", "Branch benchmark")}
-        </SectionEyebrow>
-        <BranchBenchmarkPanel periodDays={periodDays} />
-      </section>
-
-      {activeBranch ? (
-        <section className="space-y-3">
-          <SectionEyebrow icon={Wallet}>
-            {t("reports.financeSummary", "Finance summary")}
-          </SectionEyebrow>
-          <FinanceSummaryPanel branchId={activeBranch.id} />
-        </section>
-      ) : null}
-
-      {activeBranch ? (
-        <section className="space-y-3">
-          <SectionEyebrow icon={Receipt}>
-            {t("reports.hmoClaimsSection", "HMO claims & open AR")}
-          </SectionEyebrow>
-          <HmoAnalyticsPanel branchId={activeBranch.id} />
-        </section>
-      ) : null}
-
-      {activeBranch ? (
-        <section className="space-y-3">
-          <SectionEyebrow icon={Users}>{t("reports.orthoSection", "Orthodontics")}</SectionEyebrow>
-          <OrthoAnalyticsPanel branchId={activeBranch.id} />
-        </section>
-      ) : null}
-
-      <section className="space-y-3">
-        <SectionEyebrow icon={Calendar}>{t("reports.sectionStatus", "Appointment mix")}</SectionEyebrow>
-        <div className="rounded-xl border border-neutral-200/80 bg-white p-4">
-          <StatusBreakdown slices={summary?.statusBreakdown ?? []} emptyLabel={statusEmptyLabel} />
-          {summary && summary.totals.cancelled > 0 ? (
-            <p className="mt-3 text-xs text-neutral-500">
-              {t("reports.cancelledNote", "{count} cancelled in period").replace(
-                "{count}",
-                String(summary.totals.cancelled)
+        <ReportsSectionBlock
+          icon={Calendar}
+          eyebrow={t("reports.operationsEyebrow", "Operations")}
+          title={t("reports.operationsTitle", "Reception, queue, and patient flow")}
+          description={t(
+            "reports.operationsDescription",
+            "Track schedule occupancy, queue pressure, waitlist conversion, kiosk intake behavior, and chair-time efficiency from one section."
+          )}
+          action={
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/appointments">{t("reports.linkAppointments", "Appointments")}</Link>
+            </Button>
+          }
+        >
+          <div className="grid gap-4 2xl:grid-cols-2">
+            <ReportPanelCaption
+              title={t("reports.panelAppointmentsTitle", "Appointments and monthly booking board")}
+              description={t(
+                "reports.panelAppointmentsDescription",
+                "Follow occupancy, no-shows, cancellations, and the read-only monthly booking board to see who is booked and what kind of visit is coming."
               )}
-            </p>
-          ) : null}
-        </div>
-      </section>
+            >
+              <AppointmentsAnalyticsPanel branchId={activeBranch.id} periodDays={periodDays} />
+            </ReportPanelCaption>
+            <ReportPanelCaption
+              title={t("reports.panelQueueTitle", "Queue pressure")}
+              description={t(
+                "reports.panelQueueDescription",
+                "Use this panel when the front desk needs to see whether arrivals are moving into chair time fast enough or whether staff handoffs are slowing down."
+              )}
+            >
+              <QueueAnalyticsPanel branchId={activeBranch.id} periodDays={periodDays} />
+            </ReportPanelCaption>
+            <ReportPanelCaption
+              title={t("reports.panelWaitlistTitle", "Waitlist recovery")}
+              description={t(
+                "reports.panelWaitlistDescription",
+                "Shows how much demand is waiting off-calendar so staff can convert open slots into real visits instead of leaving chairs idle."
+              )}
+            >
+              <WaitlistAnalyticsPanel branchId={activeBranch.id} periodDays={patientPeriodDays} />
+            </ReportPanelCaption>
+            <ReportPanelCaption
+              title={t("reports.panelKioskTitle", "Kiosk and intake behavior")}
+              description={t(
+                "reports.panelKioskDescription",
+                "Watch self-check-in and intake completion so reception can intervene before the patient reaches the dentist without a complete file."
+              )}
+            >
+              <KioskAnalyticsPanel branchId={activeBranch.id} periodDays={periodDays} />
+            </ReportPanelCaption>
+            <ReportPanelCaption
+              title={t("reports.panelChairTitle", "Chair-time efficiency")}
+              description={t(
+                "reports.panelChairDescription",
+                "This view highlights how long the branch is spending in active treatment so owners can see whether schedule pressure is turning into productive chair time."
+              )}
+              className="2xl:col-span-2"
+            >
+              <ChairTimeAnalyticsPanel branchId={activeBranch.id} />
+            </ReportPanelCaption>
+          </div>
+        </ReportsSectionBlock>
+      ) : null}
 
-      <section className="space-y-3">
-        <SectionEyebrow icon={BarChart3}>{t("reports.sectionToday", "Today's pulse")}</SectionEyebrow>
-        <MetricStrip items={todayPulseMetrics} />
-      </section>
+      {activeBranch ? (
+        <ReportsSectionBlock
+          icon={Users}
+          eyebrow={t("reports.clinicalEyebrow", "Clinical")}
+          title={t("reports.clinicalTitle", "Patient and clinical quality")}
+          description={t(
+            "reports.clinicalDescription",
+            "Review registry growth, consent completion, active chart findings, and orthodontic workload without opening each patient one by one."
+          )}
+          action={
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/patients">{t("reports.linkPatients", "Patient registry")}</Link>
+            </Button>
+          }
+        >
+          <div className="grid gap-4 2xl:grid-cols-2">
+            <ReportPanelCaption
+              title={t("reports.panelPatientsTitle", "Registry and consent health")}
+              description={t(
+                "reports.panelPatientsDescription",
+                "See whether patient files are growing cleanly, whether consents are lagging, and where chart readiness may block the visit flow."
+              )}
+            >
+              <PatientsAnalyticsPanel branchId={activeBranch.id} periodDays={patientPeriodDays} />
+            </ReportPanelCaption>
+            <ReportPanelCaption
+              title={t("reports.panelChartTitle", "Dental chart findings")}
+              description={t(
+                "reports.panelChartDescription",
+                "Review active chart conditions and unresolved findings so the branch can keep treatment planning anchored to current clinical reality."
+              )}
+            >
+              <ChartConditionPanel branchId={activeBranch.id} />
+            </ReportPanelCaption>
+            <ReportPanelCaption
+              title={t("reports.panelOrthoTitle", "Orthodontic follow-up load")}
+              description={t(
+                "reports.panelOrthoDescription",
+                "This panel shows adjustment workload and future ortho follow-ups, which helps the team spot recurring specialty demand before it crowds general slots."
+              )}
+              className="2xl:col-span-2"
+            >
+              <OrthoAnalyticsPanel branchId={activeBranch.id} />
+            </ReportPanelCaption>
+          </div>
+        </ReportsSectionBlock>
+      ) : null}
 
-      <section className="space-y-3">
-        <SectionEyebrow icon={ScrollText}>{t("reports.sectionModules", "Drill-down modules")}</SectionEyebrow>
+      {activeBranch ? (
+        <ReportsSectionBlock
+          icon={Wallet}
+          eyebrow={t("reports.financeEyebrow", "Finance")}
+          title={t("reports.financeTitle", "Revenue, AR, and claims")}
+          description={t(
+            "reports.financeDescription",
+            "This section combines daily collections, AR aging, HMO pipeline, and PhilHealth readiness so finance can act without hopping between modules."
+          )}
+          action={<WorkflowSettingsLink />}
+        >
+          <div className="space-y-4">
+            <ReportPanelCaption
+              title={t("reports.panelFinanceSummaryTitle", "Collections and accounts receivable")}
+              description={t(
+                "reports.panelFinanceSummaryDescription",
+                "Use this summary to see whether money collected today is keeping up with open balances and whether billing follow-up should happen before day close."
+              )}
+            >
+              <FinanceSummaryPanel branchId={activeBranch.id} />
+            </ReportPanelCaption>
+            <div className="grid gap-4 2xl:grid-cols-2">
+              <ReportPanelCaption
+                title={t("reports.panelHmoTitle", "HMO pipeline")}
+                description={t(
+                  "reports.panelHmoDescription",
+                  "Shows claim volume and status so billing can see where reimbursements are stuck before AR quietly grows."
+                )}
+              >
+                <HmoAnalyticsPanel branchId={activeBranch.id} />
+              </ReportPanelCaption>
+              <ReportPanelCaption
+                title={t("reports.panelPhilHealthTitle", "PhilHealth readiness")}
+                description={t(
+                  "reports.panelPhilHealthDescription",
+                  "Tracks pending claim preparation and readiness gaps so staff can clean up documentation before submission windows are missed."
+                )}
+              >
+                <PhilHealthAnalyticsPanel branchId={activeBranch.id} />
+              </ReportPanelCaption>
+            </div>
+          </div>
+        </ReportsSectionBlock>
+      ) : null}
+
+      <ReportsSectionBlock
+        icon={BarChart3}
+        eyebrow={t("reports.benchmarkEyebrow", "Owner view")}
+        title={t("reports.branchBenchmark", "Branch benchmark")}
+        description={t(
+          "reports.benchmarkDescription",
+          "Compare branches across appointments and collections in the same period. This is the fastest way to spot underperforming sites."
+        )}
+      >
+        <ReportPanelCaption
+          title={t("reports.panelBenchmarkTitle", "Cross-branch performance")}
+          description={t(
+            "reports.panelBenchmarkDescription",
+            "Owners can compare visit volume and collections side by side here instead of opening each branch one at a time."
+          )}
+        >
+          <BranchBenchmarkPanel periodDays={periodDays} />
+        </ReportPanelCaption>
+      </ReportsSectionBlock>
+
+      {activeBranch ? (
+        <ReportsSectionBlock
+          icon={Shield}
+          eyebrow={t("reports.complianceEyebrow", "Compliance")}
+          title={t("reports.complianceTitle", "Audit, stock, and messaging health")}
+          description={t(
+            "reports.complianceDescription",
+            "Operational safety depends on more than visits. Watch stock risk, message delivery, and audit volume together."
+          )}
+          action={
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/reports/compliance">{t("reports.linkCompliance", "Sterilization log")}</Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/settings/audit">{t("reports.linkAudit", "Audit log")}</Link>
+              </Button>
+            </div>
+          }
+        >
+          <div className="grid gap-4 2xl:grid-cols-3">
+            <ReportPanelCaption
+              title={t("reports.panelInventoryTitle", "Inventory risk")}
+              description={t(
+                "reports.panelInventoryDescription",
+                "Low stock and stock pressure appear here so the branch can prevent treatment interruptions caused by avoidable supply gaps."
+              )}
+            >
+              <InventoryAnalyticsPanel branchId={activeBranch.id} />
+            </ReportPanelCaption>
+            <ReportPanelCaption
+              title={t("reports.panelNotificationsTitle", "SMS delivery and messaging")}
+              description={t(
+                "reports.panelNotificationsDescription",
+                "Watch template usage and delivery health to make sure reminders, recalls, and payment follow-ups actually reach patients."
+              )}
+            >
+              <NotificationAnalyticsPanel branchId={activeBranch.id} periodDays={patientPeriodDays} />
+            </ReportPanelCaption>
+            <ReportPanelCaption
+              title={t("reports.panelAuditTitle", "Audit activity")}
+              description={t(
+                "reports.panelAuditDescription",
+                "This panel helps supervisors confirm that sensitive actions and operational changes are being logged at the right pace."
+              )}
+            >
+              <AuditAnalyticsPanel branchId={activeBranch.id} periodDays={periodDays} />
+            </ReportPanelCaption>
+          </div>
+        </ReportsSectionBlock>
+      ) : null}
+
+      {activeBranch ? (
+        <ReportsSectionBlock
+          icon={Monitor}
+          eyebrow={t("reports.devicesEyebrow", "Patient-facing")}
+          title={t("reports.devicesTitle", "Kiosk, TV display, and public-link controls")}
+          description={t(
+            "reports.devicesDescription",
+            "Keep the waiting-room experience healthy: verify display heartbeat, check kiosk traffic, and close stale public tokens before they confuse staff."
+          )}
+          action={
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/display">{t("display.analyticsTitle", "Kiosk & TV display")}</Link>
+            </Button>
+          }
+        >
+          <div className="space-y-4">
+            <ReportPanelCaption
+              title={t("reports.panelDisplayTitle", "Display health")}
+              description={t(
+                "reports.panelDisplayDescription",
+                "Monitor kiosk and TV status here so patients are not looking at stale queue information or a dead waiting-room screen."
+              )}
+            >
+              <DisplayAnalyticsPanel branchId={activeBranch.id} />
+            </ReportPanelCaption>
+            <ReportPanelCaption
+              title={t("reports.panelTokensTitle", "Public links and tokens")}
+              description={t(
+                "reports.panelTokensDescription",
+                "Review branch public links and token state so staff can close stale access paths before they create front-desk confusion."
+              )}
+            >
+              <BranchPublicTokensPanel branchId={activeBranch.id} />
+            </ReportPanelCaption>
+          </div>
+        </ReportsSectionBlock>
+      ) : null}
+
+      <ReportsSectionBlock
+        icon={ScrollText}
+        eyebrow={t("reports.sectionModules", "Drill-down")}
+        title={t("reports.sectionModulesTitle", "Jump into the source modules")}
+        description={t(
+          "reports.sectionModulesDescription",
+          "These links open the operational screens where the numbers above are created, corrected, and closed."
+        )}
+      >
         <ReportQuickLinks links={quickLinks} />
         <p className="text-xs text-neutral-500">
           {t("reports.auditPermissionNote", "Audit log access depends on your role permissions.")}
         </p>
-      </section>
-
-      <div className="flex justify-end">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/">{t("reports.backDashboard", "Back to dashboard")}</Link>
-        </Button>
-      </div>
+      </ReportsSectionBlock>
     </ModulePageShell>
   )
 }

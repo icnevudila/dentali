@@ -15,6 +15,7 @@ import {
   createAppointment,
   checkInAppointment,
   fetchAppointments,
+  fetchAppointmentScheduledAt,
   fetchAppointmentsRange,
   rescheduleAppointment,
   updateAppointmentStatus,
@@ -37,7 +38,7 @@ import {
 import { sendAppointmentReminder } from "@/lib/notifications/notification-service"
 import { notifyWaitlistOnSlotOpen } from "@/lib/waitlist/waitlist-service"
 import { usePermission } from "@/hooks/use-permission"
-import { fetchOrgStaff, type StaffMember, addStaffMemberDirectly, fetchRolesList } from "@/lib/staff/staff-service"
+import { fetchOrgStaff, type StaffMember } from "@/lib/staff/staff-service"
 import { AppointmentWeekCalendar } from "@/components/appointments/AppointmentWeekCalendar"
 import { AppointmentEditDialog } from "@/components/appointments/AppointmentEditDialog"
 import { AppointmentSlotButtons } from "@/components/appointments/AppointmentSlotButtons"
@@ -83,6 +84,8 @@ function AppointmentsPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const focusMissingNotes = searchParams.get("focus") === "missing-notes"
+  const dateParam = searchParams.get("date")
+  const appointmentParam = searchParams.get("appointment")
   const sourceParam = searchParams.get("source")
   const bookingSourceFilter: BookingSource | null =
     sourceParam === "portal" || sourceParam === "kiosk" || sourceParam === "walk_in" || sourceParam === "phone"
@@ -95,8 +98,10 @@ function AppointmentsPageContent() {
   const canWriteAppts = hasPermission(PERMISSIONS.APPOINTMENTS_WRITE)
   const canCheckIn =
     hasPermission(PERMISSIONS.QUEUE_MANAGE) || hasPermission(PERMISSIONS.APPOINTMENTS_WRITE)
-  const [weekStart, setWeekStart] = React.useState(() => startOfWeekMonday(new Date()))
-  const [selectedDate, setSelectedDate] = React.useState(() => toDateKey(new Date()))
+  const initialDateKey =
+    dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : toDateKey(new Date())
+  const [weekStart, setWeekStart] = React.useState(() => startOfWeekMonday(parseDateKey(initialDateKey)))
+  const [selectedDate, setSelectedDate] = React.useState(initialDateKey)
   const [weekAppointments, setWeekAppointments] = React.useState<Awaited<ReturnType<typeof fetchAppointmentsRange>>["data"]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -160,6 +165,22 @@ function AppointmentsPageContent() {
   React.useEffect(() => {
     loadWeek()
   }, [loadWeek])
+
+  React.useEffect(() => {
+    if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return
+    setSelectedDate(dateParam)
+    setWeekStart(startOfWeekMonday(parseDateKey(dateParam)))
+  }, [dateParam])
+
+  React.useEffect(() => {
+    if (!appointmentParam || !activeBranch) return
+    void fetchAppointmentScheduledAt(appointmentParam).then(({ data, error: scheduledError }) => {
+      if (scheduledError || !data) return
+      const dateKey = appointmentDateKey(data.scheduled_at)
+      setSelectedDate(dateKey)
+      setWeekStart(startOfWeekMonday(parseDateKey(dateKey)))
+    })
+  }, [appointmentParam, activeBranch])
 
   useOperationalRefresh(["appointments"], loadWeek)
 
@@ -717,42 +738,10 @@ function AppointmentsPageContent() {
                       <p className="text-[11px] text-amber-700 font-medium">
                         No doctors assigned to this branch yet.
                       </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="text-[10px] h-7 px-2 border-amber-300 hover:bg-amber-50"
-                        onClick={async () => {
-                          setError(null)
-                          const roleList = await fetchRolesList()
-                          const dentistRole = roleList.find((r) => r.name === "dentist")
-                          if (!dentistRole) {
-                            setError("Dentist role not found in database")
-                            return
-                          }
-                          const { error: directErr } = await addStaffMemberDirectly({
-                            email: `dr.santos@${activeBranch?.name.toLowerCase().replace(/\s+/g, "") || "clinic"}.com`,
-                            fullName: "Dr. Maria Santos",
-                            branchId: activeBranch!.id,
-                            roleId: dentistRole.id,
-                            specialization: "General Dentistry",
-                            phoneNumber: "+63 912 345 6789"
-                          })
-                          if (directErr) {
-                            setError(directErr)
-                          } else {
-                            // Reload staff/providers
-                            const { data: staffData } = await fetchOrgStaff()
-                            const branchProviders = staffData.filter(
-                              (s) => s.is_active && s.branch_names.includes(activeBranch!.name)
-                            )
-                            setProviders(branchProviders)
-                            if (branchProviders.length > 0) {
-                              setSelectedProviderId(branchProviders[0].profile_id)
-                            }
-                          }
-                        }}
-                      >
-                        ⚡ Quick Add Dentist (Dr. Maria Santos)
+                      <Button type="button" variant="outline" className="text-[10px] h-7 px-2" asChild>
+                        <Link href="/settings/staff">
+                          Assign dentist in staff settings
+                        </Link>
                       </Button>
                     </div>
                   )}
@@ -917,10 +906,7 @@ function AppointmentsPageContent() {
         <AppointmentWeekCalendar
             appointments={filteredWeekAppointments}
             weekStart={weekStart}
-            onWeekChange={(start) => {
-              setWeekStart(start)
-              setSelectedDate(toDateKey(start))
-            }}
+            onWeekChange={setWeekStart}
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
             onStatusChange={handleStatus}

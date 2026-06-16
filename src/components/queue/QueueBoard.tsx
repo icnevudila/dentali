@@ -256,7 +256,7 @@ export function QueueBoard({
   return (
     <div className="space-y-2">
       <p className="text-xs text-neutral-500">{t("queue.dragHint", "Drag cards between columns to move patients. Reorder within Waiting by dropping on another card.")}</p>
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-3">
         {BOARD_COLUMNS.map((column) => {
           const colEntries = entries.filter((e) => column.statuses.includes(e.status))
           const isDropTarget = dropColumnId === column.id

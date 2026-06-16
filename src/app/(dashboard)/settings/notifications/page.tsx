@@ -31,6 +31,7 @@ import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { MapPin } from "lucide-react"
 import { NotificationAnalyticsPanel } from "@/components/analytics/NotificationAnalyticsPanel"
+import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 
 const SAMPLE_VARS: Record<string, string> = {
   patient_name: "Maria Santos",
@@ -214,6 +215,14 @@ export default function NotificationsSettingsPage() {
           "settings.notificationsBranchHint",
           "Branch templates override org defaults for this location."
         )}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <WorkflowSettingsLink />
+            <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
+              {t("common.refresh", "Refresh")}
+            </Button>
+          </div>
+        }
         badges={
           activeBranch ? (
             <div className="flex flex-wrap items-center gap-2 animate-fade-rise">

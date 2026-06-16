@@ -337,3 +337,8 @@ as $$
     'auto_no_show_after_grace', true
   );
 $$;
+
+grant execute on function public.check_in_patient(jsonb) to authenticated;
+grant execute on function public.check_in_appointment(uuid, boolean, boolean, uuid) to authenticated;
+grant execute on function public.auto_mark_overdue_appointments_no_show(int) to service_role;
+grant execute on function public.auto_no_show_for_branch(uuid, int) to authenticated;

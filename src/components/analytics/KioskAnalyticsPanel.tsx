@@ -5,7 +5,13 @@ import { fetchKioskAnalytics } from "@/lib/analytics/analytics-service"
 import { ModuleAnalyticsPanel } from "@/components/analytics/ModuleAnalyticsPanel"
 import { useLocale } from "@/hooks/use-locale"
 
-export function KioskAnalyticsPanel({ branchId }: { branchId: string }) {
+export function KioskAnalyticsPanel({
+  branchId,
+  periodDays = 7,
+}: {
+  branchId: string
+  periodDays?: number
+}) {
   const { t } = useLocale()
   const [loading, setLoading] = useState(true)
   const [daily, setDaily] = useState<{ label: string; value: number }[]>([])
@@ -14,14 +20,16 @@ export function KioskAnalyticsPanel({ branchId }: { branchId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data } = await fetchKioskAnalytics(branchId, 7)
+    const { data } = await fetchKioskAnalytics(branchId, periodDays)
     if (data) {
       setDaily(data.dailyCheckins)
       setTotalCheckins(data.totalPeriod)
       setIntakes(data.intakesPeriod)
     }
     setLoading(false)
-  }, [branchId])
+  }, [branchId, periodDays])
+
+  const periodLabel = String(periodDays)
 
   useEffect(() => {
     void load()
@@ -31,17 +39,17 @@ export function KioskAnalyticsPanel({ branchId }: { branchId: string }) {
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-neutral-200/80 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-          <p className="text-xs font-medium text-neutral-500">
-            {t("kiosk.checkins7d", "Kiosk check-ins (7d)")}
-          </p>
+        <p className="text-xs font-medium text-neutral-500">
+          {t("kiosk.checkins7d", "Kiosk check-ins ({days}d)").replace("{days}", periodLabel)}
+        </p>
           <p className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">
             {loading ? "—" : totalCheckins}
           </p>
         </div>
         <div className="rounded-xl border border-neutral-200/80 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-          <p className="text-xs font-medium text-neutral-500">
-            {t("kiosk.intakes7d", "Kiosk intakes (7d)")}
-          </p>
+        <p className="text-xs font-medium text-neutral-500">
+          {t("kiosk.intakes7d", "Kiosk intakes ({days}d)").replace("{days}", periodLabel)}
+        </p>
           <p className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">
             {loading ? "—" : intakes}
           </p>

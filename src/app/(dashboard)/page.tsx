@@ -19,7 +19,14 @@ import { AttentionPanel } from "@/components/dashboard/AttentionPanel"
 import { DailyCloseoutCard } from "@/components/dashboard/DailyCloseoutCard"
 import { RoleDashboardCockpit } from "@/components/dashboard/RoleDashboardCockpit"
 import { OwnerBranchKpiGrid } from "@/components/dashboard/OwnerBranchKpiGrid"
+import { MonthlyAppointmentsSnapshot } from "@/components/analytics/MonthlyAppointmentsSnapshot"
+import { QueueAnalyticsPanel } from "@/components/analytics/QueueAnalyticsPanel"
+import { PatientsAnalyticsPanel } from "@/components/analytics/PatientsAnalyticsPanel"
+import { DisplayAnalyticsPanel } from "@/components/analytics/DisplayAnalyticsPanel"
 import { TvDisplayHealthPanel } from "@/components/analytics/TvDisplayHealthPanel"
+import { ReportsSectionBlock } from "@/components/reports/ReportsSectionBlock"
+import { ReportPanelCaption } from "@/components/reports/ReportPanelCaption"
+import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { useReportsSummary } from "@/hooks/use-reports-summary"
 import {
   Users,
@@ -228,6 +235,7 @@ export default function DashboardPage() {
                   ).replace("{days}", chartPeriodLabel),
                 }}
               />
+              <MonthlyAppointmentsSnapshot branchId={activeBranch.id} />
             </div>
             <div className="w-full shrink-0 space-y-4 xl:w-80">
             <AttentionPanel
@@ -264,6 +272,56 @@ export default function DashboardPage() {
             <DailyCloseoutCard stats={stats} />
             </div>
           </div>
+        ) : null}
+
+        {activeBranch ? (
+          <ReportsSectionBlock
+            icon={BarChart3}
+            eyebrow={t("dashboard.previewEyebrow", "Operational preview")}
+            title={t("dashboard.previewTitle", "Branch flow at a glance")}
+            description={t(
+              "dashboard.previewDescription",
+              "The monthly booking board sits above. Use this strip for queue pressure, patient record readiness, and patient-facing screen health before drilling into reports."
+            )}
+            action={
+              <div className="flex flex-wrap gap-2">
+                <WorkflowSettingsLink />
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/reports">{t("dashboard.viewReportsHub", "Open Reports Hub")}</Link>
+                </Button>
+              </div>
+            }
+          >
+            <div className="grid gap-4 xl:grid-cols-3">
+              <ReportPanelCaption
+                title={t("dashboard.previewQueueTitle", "Queue pressure")}
+                description={t(
+                  "dashboard.previewQueueDescription",
+                  "See arrival speed, wait duration, and status movement so the front desk can rebalance chairs before the line builds up."
+                )}
+              >
+                <QueueAnalyticsPanel branchId={activeBranch.id} periodDays={chartPeriodDays} />
+              </ReportPanelCaption>
+              <ReportPanelCaption
+                title={t("dashboard.previewPatientsTitle", "Record readiness")}
+                description={t(
+                  "dashboard.previewPatientsDescription",
+                  "Watch intake completion, registry quality, and patient growth so staff can catch incomplete files before the visit starts."
+                )}
+              >
+                <PatientsAnalyticsPanel branchId={activeBranch.id} periodDays={30} />
+              </ReportPanelCaption>
+              <ReportPanelCaption
+                title={t("dashboard.previewDisplayTitle", "Display and public flow")}
+                description={t(
+                  "dashboard.previewDisplayDescription",
+                  "Confirm kiosk and waiting-room screens are healthy so patients see the right queue state and staff avoid manual explanations."
+                )}
+              >
+                <DisplayAnalyticsPanel branchId={activeBranch.id} />
+              </ReportPanelCaption>
+            </div>
+          </ReportsSectionBlock>
         ) : null}
 
         <section className="space-y-3">

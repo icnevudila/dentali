@@ -27,6 +27,10 @@ create index if not exists idx_patient_encounters_branch_open
 
 alter table public.patient_encounters enable row level security;
 
+drop policy if exists patient_encounters_select on public.patient_encounters;
+drop policy if exists patient_encounters_insert on public.patient_encounters;
+drop policy if exists patient_encounters_update on public.patient_encounters;
+
 create policy patient_encounters_select on public.patient_encounters
   for select to authenticated using (
     organization_id = public.current_user_org_id()
@@ -710,14 +714,21 @@ where tp.encounter_id is null
   and tp.created_at >= pe.opened_at - interval '2 hours'
   and tp.created_at <= coalesce(pe.closed_at, pe.opened_at) + interval '24 hours';
 
-update public.invoices inv
-set encounter_id = pe.id
-from public.patient_encounters pe
-where inv.encounter_id is null
-  and inv.patient_id = pe.patient_id
-  and inv.branch_id = pe.branch_id
-  and inv.created_at >= pe.opened_at - interval '2 hours'
-  and inv.created_at <= coalesce(pe.closed_at, pe.opened_at) + interval '48 hours';
+-- Invoice backfill bypasses closeout lock (metadata-only link, not financial mutation)
+do $encounter_invoice_backfill$
+begin
+  perform set_config('app.bypass_closeout_lock', 'true', true);
+
+  update public.invoices inv
+  set encounter_id = pe.id
+  from public.patient_encounters pe
+  where inv.encounter_id is null
+    and inv.patient_id = pe.patient_id
+    and inv.branch_id = pe.branch_id
+    and inv.created_at >= pe.opened_at - interval '2 hours'
+    and inv.created_at <= coalesce(pe.closed_at, pe.opened_at) + interval '48 hours';
+end;
+$encounter_invoice_backfill$;
 
 grant execute on function public.close_patient_encounter(uuid) to authenticated;
 grant execute on function public.get_patient_encounters(uuid, uuid, int) to authenticated;

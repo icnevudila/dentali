@@ -135,7 +135,15 @@ export function WaitlistEntryList({
                 </span>
               ) : entry.appointment_id ? (
                 <Button size="sm" variant="link" asChild onClick={(e) => e.stopPropagation()}>
-                  <Link href="/appointments">View appointment</Link>
+                  <Link
+                    href={
+                      entry.preferred_date
+                        ? `/appointments?appointment=${entry.appointment_id}&date=${entry.preferred_date}`
+                        : `/appointments?appointment=${entry.appointment_id}`
+                    }
+                  >
+                    View appointment
+                  </Link>
                 </Button>
               ) : (
                 <span className="text-xs text-neutral-400">
