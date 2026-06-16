@@ -43,7 +43,8 @@ const WORKFLOW_GROUPS: { title: string; items: WorkflowRule[] }[] = [
       {
         key: "consent_gate_checkin",
         label: "Consent gate on check-in",
-        description: "Block check-in when required consents are unsigned; staff can override with audit.",
+        description:
+          "Block check-in when intake consents (data privacy and general treatment) are unsigned; staff can override with audit. Procedure consents are collected at the chair.",
       },
       {
         key: "auto_waitlist_on_slot_open",
@@ -79,9 +80,9 @@ const WORKFLOW_GROUPS: { title: string; items: WorkflowRule[] }[] = [
       },
       {
         key: "billing_gate_block_services",
-        label: "Block booking/check-in with open balance",
+        label: "Billing gate on booking and check-in",
         description:
-          "Require billing clearance before new appointments and queue check-in. Staff can override with audit log.",
+          "At check-in and booking: block only overdue balances or totals ≥ ₱5,000. At checkout and clinical steps: full clearance (open invoices and missing plan invoices). Staff can override with audit.",
       },
     ],
   },

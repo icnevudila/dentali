@@ -106,10 +106,10 @@ export const ATTENTION_RULES: AttentionRuleDef[] = [
     id: "appointments_awaiting_checkin",
     statKey: "appointments_awaiting_checkin",
     labelKey: "appointmentsAwaitingCheckin",
-    href: "/appointments",
+    href: "/queue",
     tone: "sky",
     priority: 5,
-    permission: PERMISSIONS.APPOINTMENTS_READ,
+    permission: PERMISSIONS.QUEUE_MANAGE,
     workflowKey: "auto_checkin_updates_appointment",
     settingsKey: attentionShowKey("appointments_awaiting_checkin"),
   },
@@ -201,7 +201,7 @@ const ATTENTION_RULE_COPY: Record<string, { label: string; description: string }
   },
   appointments_awaiting_checkin: {
     label: "Awaiting check-in",
-    description: "Today's scheduled appointments not yet checked in",
+    description: "Check in on the Queue board — Today's arrivals",
   },
   open_encounters_stale: {
     label: "Open visits from prior days",

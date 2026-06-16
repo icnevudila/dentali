@@ -95,7 +95,10 @@ export function RoleDashboardCockpit({ stats, loading = false, className }: Role
       todayAppointments: t("dashboard.todayAppointments", "Today's Appointments"),
       todayAppointmentsHint: t("dashboard.todayAppointmentsHint", "Scheduled or confirmed today"),
       awaitingCheckin: t("dashboard.awaitingCheckin", "Awaiting check-in"),
-      awaitingCheckinHint: t("dashboard.awaitingCheckinHint", "Arrived patients not yet in queue"),
+      awaitingCheckinHint: t(
+        "dashboard.awaitingCheckinHint",
+        "Check in on Queue → Today's arrivals"
+      ),
       pendingIntakeDrafts: t("dashboard.pendingIntakeDrafts", "Pending intake drafts"),
       pendingIntakeDraftsHint: t("dashboard.pendingIntakeDraftsHint", "Kiosk or portal registrations to review"),
       queueWaiting: t("dashboard.queueWaiting", "Queue Waiting"),

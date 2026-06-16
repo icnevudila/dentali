@@ -625,7 +625,7 @@ export default function PatientProfilePage() {
           <p className="mt-1 text-sm text-neutral-600">
             {t(
               "visits.noActiveVisitHint",
-              "Check in this patient from Queue or today's appointment list. Check-in opens the visit and puts the patient in Waiting."
+              "Check in this patient from the Queue board. Check-in opens the visit and puts the patient in Waiting."
             )}
           </p>
           <Button size="sm" className="mt-3" asChild>

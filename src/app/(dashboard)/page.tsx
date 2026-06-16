@@ -41,6 +41,7 @@ import {
   MapPin,
   LayoutDashboard,
   BarChart3,
+  UserCheck,
 } from "lucide-react"
 
 const DASHBOARD_PERIOD_OPTIONS = [7, 30, 90] as const
@@ -95,6 +96,15 @@ export default function DashboardPage() {
       icon: Clock,
       href: "/queue",
       variant: stats.queue_waiting > 0 && !loading ? ("warning" as const) : ("default" as const),
+    },
+    {
+      label: t("dashboard.awaitingCheckin", "Awaiting check-in"),
+      value: loading ? "—" : stats.appointments_awaiting_checkin,
+      hint: t("dashboard.awaitingCheckinHint", "Check in on Queue → Today's arrivals"),
+      icon: UserCheck,
+      href: "/queue",
+      variant:
+        stats.appointments_awaiting_checkin > 0 && !loading ? ("warning" as const) : ("default" as const),
     },
     {
       label: t("dashboard.pendingConsents", "Pending Consents"),

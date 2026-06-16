@@ -2,10 +2,12 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Megaphone, Undo2, GripVertical } from "lucide-react"
+import { Megaphone, Undo2, GripVertical, UserCheck } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useLocale } from "@/hooks/use-locale"
+import type { AppointmentRecord } from "@/lib/appointments/types"
+import { formatArrivalTime } from "@/lib/queue/appointment-arrival"
 import {
   reorderQueueBoard,
   waitMinutes,
@@ -15,16 +17,25 @@ import {
 import { cn } from "@/lib/utils"
 
 type BoardColumn = {
-  id: "waiting" | "serving" | "chair"
+  id: "arrivals" | "waiting" | "serving" | "chair"
   titleKey: string
   titleDefault: string
   statuses: QueueStatus[]
-  dropStatus: QueueStatus
+  dropStatus: QueueStatus | null
   borderClass: string
   canReorder: boolean
 }
 
 const BOARD_COLUMNS: BoardColumn[] = [
+  {
+    id: "arrivals",
+    titleKey: "queue.colArrivals",
+    titleDefault: "Check-in",
+    statuses: [],
+    dropStatus: null,
+    borderClass: "border-t-2 border-t-violet-500 bg-violet-50/20",
+    canReorder: false,
+  },
   {
     id: "waiting",
     titleKey: "queue.colWaiting",
@@ -37,7 +48,7 @@ const BOARD_COLUMNS: BoardColumn[] = [
   {
     id: "serving",
     titleKey: "queue.colServing",
-    titleDefault: "Now Serving",
+    titleDefault: "Called",
     statuses: ["now_serving"],
     dropStatus: "now_serving",
     borderClass: "border-t-2 border-t-blue-500 bg-white",
@@ -53,6 +64,80 @@ const BOARD_COLUMNS: BoardColumn[] = [
     canReorder: false,
   },
 ]
+
+export type QueueBoardArrival = {
+  appointment: AppointmentRecord
+  tone: "overdue" | "due" | "upcoming"
+  minutesUntil: number
+}
+
+function ArrivalCardInner({
+  appt,
+  tone,
+  minutesUntil,
+  checkingIn,
+  highlighted,
+  onCheckIn,
+}: {
+  appt: AppointmentRecord
+  tone: "overdue" | "due" | "upcoming"
+  minutesUntil: number
+  checkingIn: boolean
+  highlighted?: boolean
+  onCheckIn: () => void
+}) {
+  const { t } = useLocale()
+  const timingLabel =
+    tone === "overdue"
+      ? t("queue.arrivalLate", "{n} min late").replace("{n}", String(Math.abs(minutesUntil)))
+      : tone === "due"
+        ? t("queue.arrivalDue", "Due now")
+        : t("queue.arrivalIn", "In {n} min").replace("{n}", String(minutesUntil))
+
+  return (
+    <div
+      className={cn(
+        "rounded-lg border bg-white p-3 shadow-sm border-l-4",
+        tone === "overdue" && "border-l-red-500 border-y-red-100 border-r-red-100",
+        tone === "due" && "border-l-amber-500 border-y-amber-100 border-r-amber-100",
+        tone === "upcoming" && "border-l-violet-400 border-y-neutral-200 border-r-neutral-200",
+        highlighted && "ring-2 ring-primary-400 ring-offset-1"
+      )}
+    >
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-sm font-semibold tabular-nums text-neutral-800">
+          {formatArrivalTime(appt.scheduled_at)}
+        </span>
+        <Badge
+          variant={tone === "overdue" ? "danger" : tone === "due" ? "warning" : "outline"}
+          className="text-[10px]"
+        >
+          {timingLabel}
+        </Badge>
+      </div>
+      <Link
+        href={`/patients/${appt.patient_id}`}
+        className="mt-1 block truncate text-sm font-medium text-neutral-900 hover:underline"
+      >
+        {appt.patient_name ?? t("dentist.unknownPatient", "Patient")}
+      </Link>
+      {appt.purpose ? (
+        <p className="mt-0.5 truncate text-xs text-neutral-500">{appt.purpose}</p>
+      ) : null}
+      <Button
+        size="sm"
+        className="mt-2 w-full gap-1"
+        disabled={checkingIn}
+        onClick={onCheckIn}
+      >
+        <UserCheck className="h-3.5 w-3.5" />
+        {checkingIn
+          ? t("queue.checkingIn", "Checking in...")
+          : t("queue.checkInToWaiting", "Check in to Waiting")}
+      </Button>
+    </div>
+  )
+}
 
 function QueueCard({
   entry,
@@ -194,6 +279,10 @@ function QueueCard({
 
 export function QueueBoard({
   entries,
+  arrivals,
+  highlightAppointmentId,
+  apptCheckInId,
+  onArrivalCheckIn,
   branchId,
   actionId,
   onAction,
@@ -201,6 +290,10 @@ export function QueueBoard({
   onReorderSuccess,
 }: {
   entries: QueueEntry[]
+  arrivals: QueueBoardArrival[]
+  highlightAppointmentId?: string | null
+  apptCheckInId?: string | null
+  onArrivalCheckIn: (appointmentId: string) => void
   branchId: string
   actionId: string | null
   onAction: (entryId: string, status: QueueStatus | "announce") => void
@@ -217,6 +310,8 @@ export function QueueBoard({
     targetEntryId: string | null,
     draggedId: string
   ) => {
+    if (!column.dropStatus) return
+
     setDropColumnId(null)
     setDragEntryId(null)
 
@@ -255,78 +350,117 @@ export function QueueBoard({
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-neutral-500">{t("queue.dragHint", "Drag cards between columns to move patients. Reorder within Waiting by dropping on another card.")}</p>
-      <div className="grid gap-4 xl:grid-cols-3">
-        {BOARD_COLUMNS.map((column) => {
-          const colEntries = entries.filter((e) => column.statuses.includes(e.status))
-          const isDropTarget = dropColumnId === column.id
+      <p className="text-xs text-neutral-500">
+        {t(
+          "queue.dragHintFourCol",
+          "Check in from the first column, then drag cards across Waiting → Called → In Chair."
+        )}
+      </p>
+      <div className="overflow-x-auto pb-1">
+        <div className="grid min-w-[64rem] grid-cols-4 gap-4">
+          {BOARD_COLUMNS.map((column) => {
+            const colEntries =
+              column.id === "arrivals"
+                ? []
+                : entries.filter((e) => column.statuses.includes(e.status))
+            const isDropTarget = dropColumnId === column.id
+            const count = column.id === "arrivals" ? arrivals.length : colEntries.length
 
-          return (
-            <div
-              key={column.id}
-              className={cn(
-                "rounded-lg border border-neutral-200 p-4 min-h-[200px] shadow-sm transition-colors",
-                column.borderClass,
-                isDropTarget && "ring-2 ring-primary-400 bg-primary-50/30"
-              )}
-              onDragOver={(e) => {
-                e.preventDefault()
-                e.dataTransfer.dropEffect = "move"
-                setDropColumnId(column.id)
-              }}
-              onDragLeave={() => setDropColumnId((prev) => (prev === column.id ? null : prev))}
-              onDrop={(e) => {
-                e.preventDefault()
-                const draggedId = e.dataTransfer.getData("text/queue-entry-id")
-                if (!draggedId) return
-                void handleDrop(column, null, draggedId)
-              }}
-            >
-              <h2 className="font-semibold text-sm text-neutral-700 mb-3">
-                {t(column.titleKey, column.titleDefault)}
-                <span className="ml-2 text-neutral-400">({colEntries.length})</span>
-              </h2>
-              <div className="space-y-2">
-                {colEntries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    onDragOver={(e) => {
-                      if (!column.canReorder) return
-                      e.preventDefault()
-                      e.stopPropagation()
-                      setDropColumnId(column.id)
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      const draggedId = e.dataTransfer.getData("text/queue-entry-id")
-                      if (!draggedId || draggedId === entry.id) return
-                      void handleDrop(column, entry.id, draggedId)
-                    }}
-                  >
-                    <QueueCard
-                      entry={entry}
-                      loading={actionId === entry.id || reordering}
-                      draggable
-                      isDragging={dragEntryId === entry.id}
-                      onDragStart={() => setDragEntryId(entry.id)}
-                      onDragEnd={() => {
-                        setDragEntryId(null)
-                        setDropColumnId(null)
-                      }}
-                      onAction={(status) => onAction(entry.id, status)}
-                    />
-                  </div>
-                ))}
-                {colEntries.length === 0 ? (
-                  <p className="text-xs text-neutral-400 py-4 text-center border border-dashed rounded-md">
-                    {t("queue.columnEmpty", "Drop here")}
-                  </p>
-                ) : null}
+            return (
+              <div
+                key={column.id}
+                id={column.id === "arrivals" ? "queue-arrivals" : undefined}
+                className={cn(
+                  "rounded-lg border border-neutral-200 p-4 min-h-[220px] shadow-sm transition-colors",
+                  column.borderClass,
+                  isDropTarget && column.dropStatus && "ring-2 ring-primary-400 bg-primary-50/30"
+                )}
+                onDragOver={(e) => {
+                  if (!column.dropStatus) return
+                  e.preventDefault()
+                  e.dataTransfer.dropEffect = "move"
+                  setDropColumnId(column.id)
+                }}
+                onDragLeave={() => setDropColumnId((prev) => (prev === column.id ? null : prev))}
+                onDrop={(e) => {
+                  if (!column.dropStatus) return
+                  e.preventDefault()
+                  const draggedId = e.dataTransfer.getData("text/queue-entry-id")
+                  if (!draggedId) return
+                  void handleDrop(column, null, draggedId)
+                }}
+              >
+                <h2 className="font-semibold text-sm text-neutral-700 mb-3">
+                  {t(column.titleKey, column.titleDefault)}
+                  <span className="ml-2 text-neutral-400">({count})</span>
+                </h2>
+                <div className="space-y-2">
+                  {column.id === "arrivals" ? (
+                    arrivals.length === 0 ? (
+                      <p className="text-xs text-neutral-400 py-4 text-center border border-dashed rounded-md px-2">
+                        {t(
+                          "queue.arrivalsColumnEmpty",
+                          "No scheduled visits waiting for check-in. Use Walk-in check-in for others."
+                        )}
+                      </p>
+                    ) : (
+                      arrivals.map(({ appointment: appt, tone, minutesUntil }) => (
+                        <ArrivalCardInner
+                          key={appt.id}
+                          appt={appt}
+                          tone={tone}
+                          minutesUntil={minutesUntil}
+                          checkingIn={apptCheckInId === appt.id}
+                          highlighted={highlightAppointmentId === appt.id}
+                          onCheckIn={() => onArrivalCheckIn(appt.id)}
+                        />
+                      ))
+                    )
+                  ) : (
+                    <>
+                      {colEntries.map((entry) => (
+                        <div
+                          key={entry.id}
+                          onDragOver={(e) => {
+                            if (!column.canReorder) return
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setDropColumnId(column.id)
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const draggedId = e.dataTransfer.getData("text/queue-entry-id")
+                            if (!draggedId || draggedId === entry.id) return
+                            void handleDrop(column, entry.id, draggedId)
+                          }}
+                        >
+                          <QueueCard
+                            entry={entry}
+                            loading={actionId === entry.id || reordering}
+                            draggable
+                            isDragging={dragEntryId === entry.id}
+                            onDragStart={() => setDragEntryId(entry.id)}
+                            onDragEnd={() => {
+                              setDragEntryId(null)
+                              setDropColumnId(null)
+                            }}
+                            onAction={(status) => onAction(entry.id, status)}
+                          />
+                        </div>
+                      ))}
+                      {colEntries.length === 0 ? (
+                        <p className="text-xs text-neutral-400 py-4 text-center border border-dashed rounded-md">
+                          {t("queue.columnEmpty", "Drop here")}
+                        </p>
+                      ) : null}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
     </div>
   )

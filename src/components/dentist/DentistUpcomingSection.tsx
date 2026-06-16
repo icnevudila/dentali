@@ -19,12 +19,20 @@ export function DentistUpcomingSection({ upcoming, loading }: DentistUpcomingSec
 
   return (
     <section className="space-y-3 border-t border-neutral-100 pt-6">
-      <div className="flex items-center gap-2">
-        <Calendar className="h-4 w-4 text-neutral-400" aria-hidden />
-        <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-400">
-          {t("dentist.sectionArriving", "Arriving today — not checked in yet")}
-          {!loading ? ` (${upcoming.length})` : ""}
-        </h2>
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-neutral-400" aria-hidden />
+          <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-400">
+            {t("dentist.sectionArriving", "Arriving today — not checked in yet")}
+            {!loading ? ` (${upcoming.length})` : ""}
+          </h2>
+        </div>
+        <p className="text-xs text-neutral-500">
+          {t(
+            "dentist.sectionArrivingHint",
+            "These patients are still scheduled. Front desk checks them in on the Queue board; they appear in Active queue after check-in."
+          )}
+        </p>
       </div>
 
       {loading ? (

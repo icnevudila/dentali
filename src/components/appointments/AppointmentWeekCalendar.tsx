@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Megaphone, Bell, Check, ChevronLeft, ChevronRight, UserCheck, UserX, X, Calendar, Filter, Plus, List, LayoutGrid } from "lucide-react"
+import { Bell, Check, ChevronLeft, ChevronRight, UserCheck, UserX, X, Calendar, Filter, Plus, List, LayoutGrid } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import type { AppointmentRecord } from "@/lib/appointments/appointment-service"
@@ -33,14 +33,12 @@ interface AppointmentWeekCalendarProps {
   onSelectDate: (dateKey: string) => void
   onStatusChange?: (id: string, status: string) => void
   onReschedule?: (id: string, targetDateKey: string) => void
-  onCheckIn?: (id: string) => void
-  onCallToServe?: (id: string) => void
+  onCheckIn?: (appointment: AppointmentRecord) => void
+  checkingInId?: string | null
   onRemind?: (id: string) => void
   onEdit?: (appointment: AppointmentRecord) => void
   updatingId?: string | null
   reschedulingId?: string | null
-  checkingInId?: string | null
-  callingToServeId?: string | null
   remindingId?: string | null
   dragHint?: string
   providers: StaffMember[]
@@ -55,13 +53,11 @@ export function AppointmentWeekCalendar({
   onStatusChange,
   onReschedule,
   onCheckIn,
-  onCallToServe,
+  checkingInId,
   onRemind,
   onEdit,
   updatingId,
   reschedulingId,
-  checkingInId,
-  callingToServeId,
   remindingId,
   dragHint,
   providers,
@@ -542,30 +538,20 @@ export function AppointmentWeekCalendar({
                                 <Bell className="h-4 w-4" />
                               </Button>
                             )}
-                            {onCheckIn && (
+                            {onCheckIn &&
+                            (appt.status === "scheduled" || appt.status === "confirmed") ? (
                               <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8 text-neutral-500 hover:text-neutral-700"
-                                disabled={checkingInId === appt.id || callingToServeId === appt.id}
-                                onClick={() => onCheckIn(appt.id)}
-                                title={t("appointments.checkInTitle", "Check in")}
+                                size="sm"
+                                className="h-8 gap-1.5 bg-primary-600 px-3 text-white hover:bg-primary-700"
+                                disabled={checkingInId === appt.id}
+                                onClick={() => onCheckIn(appt)}
                               >
-                                <UserCheck className="h-4 w-4" />
+                                <UserCheck className="h-3.5 w-3.5" />
+                                {checkingInId === appt.id
+                                  ? t("appointments.checkingIn", "Checking in…")
+                                  : t("appointments.checkInBtn", "Check in")}
                               </Button>
-                            )}
-                            {onCallToServe && (
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8 text-primary-600 hover:text-primary-700 hover:bg-primary-50"
-                                disabled={checkingInId === appt.id || callingToServeId === appt.id}
-                                onClick={() => onCallToServe(appt.id)}
-                                title={t("appointments.callToServeTitle", "Call to chair (auto check-in if needed)")}
-                              >
-                                <Megaphone className="h-4 w-4" />
-                              </Button>
-                            )}
+                            ) : null}
                             <Button
                               variant="outline"
                               size="icon"
@@ -701,6 +687,12 @@ export function AppointmentWeekCalendar({
                       <Badge className={cn("border uppercase font-semibold text-[10px] select-none", getStatusColor(appt.status))}>
                         {appt.status}
                       </Badge>
+
+                      {appt.status === "checked_in" && onCheckIn ? (
+                        <Button size="sm" variant="outline" className="h-8" asChild>
+                          <Link href="/queue">{t("appointments.openQueue", "Open queue")}</Link>
+                        </Button>
+                      ) : null}
                       
                       {isActive && onStatusChange && (
                         <div className="flex items-center gap-1">
@@ -727,30 +719,19 @@ export function AppointmentWeekCalendar({
                               <Bell className="h-4 w-4" />
                             </Button>
                           )}
-                          {onCheckIn && (
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 text-neutral-500 hover:text-neutral-700"
-                              disabled={checkingInId === appt.id || callingToServeId === appt.id}
-                              onClick={() => onCheckIn(appt.id)}
-                              title={t("appointments.checkInTitle", "Check in")}
-                            >
-                              <UserCheck className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {onCallToServe && (
+                          {onCheckIn &&
+                          (appt.status === "scheduled" || appt.status === "confirmed") ? (
                             <Button
                               variant="outline"
                               size="icon"
                               className="h-8 w-8 text-primary-600 hover:text-primary-700 hover:bg-primary-50"
-                              disabled={checkingInId === appt.id || callingToServeId === appt.id}
-                              onClick={() => onCallToServe(appt.id)}
-                              title={t("appointments.callToServeTitle", "Call to chair (auto check-in if needed)")}
+                              disabled={checkingInId === appt.id}
+                              onClick={() => onCheckIn(appt)}
+                              title={t("appointments.checkInBtn", "Check in")}
                             >
-                              <Megaphone className="h-4 w-4" />
+                              <UserCheck className="h-4 w-4" />
                             </Button>
-                          )}
+                          ) : null}
                           <Button
                             variant="outline"
                             size="icon"

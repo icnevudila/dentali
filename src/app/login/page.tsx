@@ -7,9 +7,11 @@ import { createClient } from "@/lib/supabase/client"
 import {
   acceptStaffInvitation,
   fetchMyBranches,
+  fetchMyPermissions,
   fetchStaffProfile,
   logSessionEvent,
 } from "@/lib/auth/auth-service"
+import { resolvePostLoginPath } from "@/lib/navigation/post-login-route"
 import { PublicChannelBrand } from "@/components/brand/public-channel-brand"
 import { AuthMarketingPanel } from "@/components/auth/auth-marketing-panel"
 import { LocaleSwitcher } from "@/components/i18n/LocaleSwitcher"
@@ -26,11 +28,23 @@ export default function LoginPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.auth.getSession().then((res: { data?: { session?: unknown } }) => {
+    void (async () => {
+      const res = await supabase.auth.getSession()
       const session = res.data?.session
-      if (session) router.replace("/")
+      if (!session) {
+        setCheckingSession(false)
+        return
+      }
+      const branches = await fetchMyBranches()
+      if (branches.length === 0) {
+        router.replace("/onboarding")
+        return
+      }
+      const staff = await fetchStaffProfile()
+      const perms = await fetchMyPermissions(branches[0]?.id ?? null)
+      router.replace(resolvePostLoginPath({ roleName: staff?.role_name ?? null, permissions: perms }))
       setCheckingSession(false)
-    })
+    })()
   }, [router, supabase.auth])
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -58,21 +72,25 @@ export default function LoginPage() {
     }
 
     const invite = await acceptStaffInvitation()
+    const branches = await fetchMyBranches()
+    const needsOnboarding = branches.length === 0
+    const perms = await fetchMyPermissions(branches[0]?.id ?? null)
+    const homePath = needsOnboarding
+      ? "/onboarding"
+      : resolvePostLoginPath({ roleName: staff?.role_name ?? null, permissions: perms })
+
     if (invite.status === "accepted") {
       await logSessionEvent("login")
-      router.push("/")
+      router.push(homePath)
       router.refresh()
       return
     }
-
-    const branches = await fetchMyBranches()
-    const needsOnboarding = branches.length === 0
 
     if (!needsOnboarding) {
       await logSessionEvent("login")
     }
 
-    router.push(needsOnboarding ? "/onboarding" : "/")
+    router.push(homePath)
     router.refresh()
   }
 

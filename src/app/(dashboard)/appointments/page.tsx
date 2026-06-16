@@ -10,10 +10,8 @@ import { useAuth } from "@/hooks/use-auth"
 import { useLocale } from "@/hooks/use-locale"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { searchPatients } from "@/lib/patients/patient-service"
-import { callAppointmentToServe } from "@/lib/queue/queue-service"
 import {
   createAppointment,
-  checkInAppointment,
   fetchAppointments,
   fetchAppointmentScheduledAt,
   fetchAppointmentsRange,
@@ -69,6 +67,8 @@ import { DirectionalTransition } from "@/components/layout/DirectionalTransition
 import { useOperationalRefresh } from "@/hooks/use-operational-refresh"
 import { resolveBookingSource } from "@/lib/appointments/booking-source"
 import type { BookingSource } from "@/lib/appointments/booking-source"
+import { useGatedCheckIn } from "@/hooks/use-gated-check-in"
+import { OpenEncounterCheckInDialog } from "@/components/queue/OpenEncounterCheckInDialog"
 
 type ViewMode = "today" | "week"
 
@@ -115,12 +115,9 @@ function AppointmentsPageContent() {
   const [booking, setBooking] = React.useState(false)
   const [updatingId, setUpdatingId] = React.useState<string | null>(null)
   const [reschedulingId, setReschedulingId] = React.useState<string | null>(null)
-  const [checkingInId, setCheckingInId] = React.useState<string | null>(null)
-  const [callingToServeId, setCallingToServeId] = React.useState<string | null>(null)
   const [remindingId, setRemindingId] = React.useState<string | null>(null)
   const [reminderNotice, setReminderNotice] = React.useState<string | null>(null)
   const [waitlistNotice, setWaitlistNotice] = React.useState<string | null>(null)
-  const [checkInQueueNotice, setCheckInQueueNotice] = React.useState(false)
   const [providers, setProviders] = React.useState<StaffMember[]>([])
   const [selectedProviderId, setSelectedProviderId] = React.useState("")
   const [slots, setSlots] = React.useState<AppointmentSlot[]>([])
@@ -165,6 +162,22 @@ function AppointmentsPageContent() {
   React.useEffect(() => {
     loadWeek()
   }, [loadWeek])
+
+  const {
+    apptCheckInId,
+    encounterPrompt,
+    encounterDialogOpen,
+    encounterResolving,
+    checkingIn: appointmentCheckInBusy,
+    pendingCheckIn,
+    checkInFromAppointment,
+    handleEncounterChoice,
+    closeEncounterDialog,
+  } = useGatedCheckIn({
+    branchId: activeBranch?.id,
+    onSuccess: loadWeek,
+    t,
+  })
 
   React.useEffect(() => {
     if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return
@@ -384,97 +397,6 @@ function AppointmentsPageContent() {
     }
   }
 
-  const handleCheckIn = async (
-    appointmentId: string,
-    forceBillingOverride = false,
-    forceCheckin = false
-  ) => {
-    setCheckingInId(appointmentId)
-    setError(null)
-    setReminderNotice(null)
-    const { data, error: err } = await checkInAppointment(appointmentId, {
-      forceBillingOverride,
-      forceCheckin,
-    })
-    setCheckingInId(null)
-    if (err) {
-      if (err.includes("Pending consents") && !forceCheckin) {
-        const ok = await notify.confirm(
-          t(
-            "queue.consentOverrideConfirm",
-            "Required consents are unsigned. Check in anyway? This will be logged in audit."
-          )
-        )
-        if (ok) return handleCheckIn(appointmentId, forceBillingOverride, true)
-      }
-      if (err.includes("Billing clearance") && !forceBillingOverride) {
-        const ok = await notify.confirm(
-          t(
-            "billing.gateConfirmCheckIn",
-            "Patient has outstanding billing. Check in anyway? This will be logged in audit."
-          )
-        )
-        if (ok) return handleCheckIn(appointmentId, true, forceCheckin)
-      }
-      notify.error(err)
-    } else if (data) {
-      notify.success(
-        t(
-          "appointments.checkInSuccess",
-          "Checked in - visit opened and patient is in the queue Waiting column."
-        )
-      )
-      patchAppointment(appointmentId, { status: "checked_in" })
-      setCheckInQueueNotice(true)
-    }
-  }
-
-  const handleCallToServe = async (
-    appointmentId: string,
-    forceBillingOverride = false,
-    forceCheckin = false
-  ) => {
-    setCallingToServeId(appointmentId)
-    setError(null)
-    setReminderNotice(null)
-    const { data, error: err } = await callAppointmentToServe(appointmentId, {
-      forceBillingOverride,
-      forceCheckin,
-    })
-    setCallingToServeId(null)
-    if (err) {
-      if (err.includes("Pending consents") && !forceCheckin) {
-        const ok = await notify.confirm(
-          t(
-            "queue.consentOverrideConfirm",
-            "Required consents are unsigned. Check in anyway? This will be logged in audit."
-          )
-        )
-        if (ok) return handleCallToServe(appointmentId, forceBillingOverride, true)
-      }
-      if (err.includes("Billing clearance") && !forceBillingOverride) {
-        const ok = await notify.confirm(
-          t(
-            "billing.gateConfirmCheckIn",
-            "Patient has outstanding billing. Check in anyway? This will be logged in audit."
-          )
-        )
-        if (ok) return handleCallToServe(appointmentId, true, forceCheckin)
-      }
-      notify.error(err)
-    } else if (data) {
-      patchAppointment(appointmentId, { status: "checked_in" })
-      const message = data.auto_checked_in
-        ? t(
-            "queue.autoCheckInAndCall",
-            "Auto check-in — now serving #{code}. Patient is on the dentist board."
-          ).replace("{code}", data.display_code)
-        : t("queue.calledToServe", "Now serving #{code}").replace("{code}", data.display_code)
-      notify.success(message)
-      setCheckInQueueNotice(true)
-    }
-  }
-
   const handleSendReminder = async (appointmentId: string) => {
     setRemindingId(appointmentId)
     setError(null)
@@ -490,6 +412,16 @@ function AppointmentsPageContent() {
       )
     }
   }
+
+  const todayAwaitingCheckinCount = React.useMemo(
+    () =>
+      weekAppointments.filter(
+        (a) =>
+          appointmentDateKey(a.scheduled_at) === today &&
+          (a.status === "scheduled" || a.status === "confirmed")
+      ).length,
+    [weekAppointments, today]
+  )
 
   const metricItems = React.useMemo(() => {
     const todayAppts = weekAppointments.filter((a) => appointmentDateKey(a.scheduled_at) === today)
@@ -563,7 +495,7 @@ function AppointmentsPageContent() {
             title={t("appointments.title", "Appointments")}
             description={t(
               "appointments.registrySubtitle",
-              "Week calendar with daily visits — book, check in, and update status."
+              "Week calendar for booking and status — check-in happens on the Queue board."
             )}
             actions={
             <>
@@ -584,6 +516,41 @@ function AppointmentsPageContent() {
             </>
           }
           />
+
+          {canCheckIn && todayAwaitingCheckinCount > 0 ? (
+            <div className="rounded-xl border border-amber-200/90 bg-amber-50/80 px-4 py-3 text-sm text-amber-950 animate-fade-rise">
+              <p className="font-medium">
+                {t(
+                  "appointments.awaitingCheckinBannerTitle",
+                  "{n} patient(s) need check-in on Queue"
+                ).replace("{n}", String(todayAwaitingCheckinCount))}
+              </p>
+              <p className="mt-1 text-amber-900/80">
+                {t(
+                  "appointments.awaitingCheckinBannerHint",
+                  "Open Queue — first column is Check-in. Tap Check in to Waiting for each patient who arrived."
+                )}
+              </p>
+              <Button variant="outline" size="sm" className="mt-2 border-amber-300 bg-white" asChild>
+                <Link href="/queue">{t("appointments.openQueueCheckIn", "Open Queue to check in")}</Link>
+              </Button>
+            </div>
+          ) : canCheckIn ? (
+            <div className="rounded-xl border border-sky-200/80 bg-sky-50/60 px-4 py-3 text-sm text-sky-950 animate-fade-rise">
+              <p className="font-medium">
+                {t("appointments.checkInOnQueueTitle", "Patient check-in is on the Queue board")}
+              </p>
+              <p className="mt-1 text-sky-900/80">
+                {t(
+                  "appointments.checkInOnQueueHint",
+                  "Use Check in on a scheduled visit here, or open Queue — first column lists today's arrivals. Everyone enters Waiting first."
+                )}
+              </p>
+              <Button variant="outline" size="sm" className="mt-2" asChild>
+                <Link href="/queue">{t("appointments.openQueue", "Open queue board")}</Link>
+              </Button>
+            </div>
+          ) : null}
 
           {focusMissingNotes ? (
             <div className="rounded-xl border border-amber-200/80 bg-amber-50/50 px-4 py-3 text-sm text-amber-950 animate-fade-rise">
@@ -634,24 +601,6 @@ function AppointmentsPageContent() {
           <MetricStrip items={metricItems} />
 
         {error ? <PageErrorNotifier error={error} onRetry={reload} /> : null}
-        {checkInQueueNotice ? (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900 animate-fade-rise">
-            {t(
-              "appointments.checkInSuccess",
-              "Checked in - visit opened and patient is in the queue Waiting column."
-            )}{" "}
-            <Link href="/queue" className="font-medium underline">
-              {t("appointments.openQueue", "Open queue board")}
-            </Link>
-            <button
-              type="button"
-              className="ml-2 text-emerald-800/70 hover:text-emerald-900"
-              onClick={() => setCheckInQueueNotice(false)}
-            >
-              {t("common.dismiss", "Dismiss")}
-            </button>
-          </div>
-        ) : null}
         {reminderNotice && (
           <p className="text-sm text-green-800 bg-green-50 border border-green-200 rounded-md px-4 py-2">
             {reminderNotice}
@@ -911,6 +860,14 @@ function AppointmentsPageContent() {
           <PageLoadingSkeleton variant="block" />
         ) : (
           <>
+        <OpenEncounterCheckInDialog
+          open={encounterDialogOpen}
+          prompt={encounterPrompt}
+          patientName={pendingCheckIn?.patientName}
+          loading={encounterResolving || appointmentCheckInBusy}
+          onChoose={(choice) => void handleEncounterChoice(choice)}
+          onClose={closeEncounterDialog}
+        />
         <AppointmentWeekCalendar
             appointments={filteredWeekAppointments}
             weekStart={weekStart}
@@ -919,14 +876,21 @@ function AppointmentsPageContent() {
             onSelectDate={setSelectedDate}
             onStatusChange={handleStatus}
             onReschedule={canWriteAppts ? handleReschedule : undefined}
-            onCheckIn={canCheckIn ? handleCheckIn : undefined}
-            onCallToServe={canCheckIn ? handleCallToServe : undefined}
+            onCheckIn={
+              canCheckIn
+                ? (appt) =>
+                    void checkInFromAppointment({
+                      appointmentId: appt.id,
+                      patientId: appt.patient_id,
+                      patientName: appt.patient_name ?? undefined,
+                    })
+                : undefined
+            }
+            checkingInId={apptCheckInId}
             onRemind={canWriteAppts ? handleSendReminder : undefined}
             onEdit={canWriteAppts ? openEditDialog : undefined}
             updatingId={updatingId}
             reschedulingId={reschedulingId}
-            checkingInId={checkingInId}
-            callingToServeId={callingToServeId}
             remindingId={remindingId}
             dragHint={
               canWriteAppts

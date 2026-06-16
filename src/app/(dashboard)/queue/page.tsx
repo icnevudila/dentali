@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
@@ -10,7 +11,6 @@ import { searchPatients } from "@/lib/patients/patient-service"
 import {
   callNextPatient,
   checkInPatient,
-  callAppointmentToServe,
   fetchQueueEntries,
   updateQueueStatus,
   waitMinutes,
@@ -32,14 +32,12 @@ import {
 } from "@/lib/clinical/encounter-check-in-flow"
 import {
   classifyTodayArrivals,
-  formatArrivalTime,
 } from "@/lib/queue/appointment-arrival"
 import { OpenEncounterCheckInDialog } from "@/components/queue/OpenEncounterCheckInDialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Megaphone, Plus, Users, X, Link2, Copy, Check, Calendar, MapPin, Clock, User, Bell, ScanFace, Stethoscope, UserCheck } from "lucide-react"
+import { Megaphone, Plus, Users, Link2, Copy, Check, MapPin, Clock, UserCheck } from "lucide-react"
 import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { generateBranchPublicToken } from "@/lib/kiosk/kiosk-service"
@@ -55,15 +53,16 @@ import { QueueAnalyticsPanel } from "@/components/analytics/QueueAnalyticsPanel"
 import { KioskAnalyticsPanel } from "@/components/analytics/KioskAnalyticsPanel"
 import { DisplayAnalyticsPanel } from "@/components/analytics/DisplayAnalyticsPanel"
 import { BranchPublicTokensPanel } from "@/components/analytics/BranchPublicTokensPanel"
-import { QueueBoard } from "@/components/queue/QueueBoard"
+import { QueueBoard, type QueueBoardArrival } from "@/components/queue/QueueBoard"
 import { VisitCheckoutWizard } from "@/components/queue/VisitCheckoutWizard"
+import { WalkInCheckInDialog } from "@/components/queue/WalkInCheckInDialog"
 
 type Tab = "board" | "history"
 
 type PendingCheckInAction = {
   patientId: string
   patientName?: string
-  mode: "walk_in" | "appointment_check_in" | "appointment_call"
+  mode: "walk_in" | "appointment_check_in"
   appointmentId?: string
   forceCheckin?: boolean
   forceBillingOverride?: boolean
@@ -79,156 +78,21 @@ function sortQueueEntries(data: QueueEntry[]): QueueEntry[] {
   })
 }
 
-// Legacy row kept only to avoid touching older encoded strings in this file.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function ArrivalRow({
-  appt,
-  tone,
-  apptCheckInId,
-  apptCallId,
-  t,
-  onCheckIn,
-  onCall,
-}: {
-  appt: AppointmentRecord
-  tone: "overdue" | "due" | "upcoming"
-  apptCheckInId: string | null
-  apptCallId: string | null
-  t: (key: string, fallback: string) => string
-  onCheckIn: () => void
-  onCall: () => void
-}) {
-  const rowClass =
-    tone === "overdue"
-      ? "border-red-200 bg-red-50/60"
-      : tone === "due"
-        ? "border-amber-200 bg-amber-50/50"
-        : "border-primary-100 bg-white"
-
-  return (
-    <div
-      className={`flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm ${rowClass}`}
-    >
-      <div>
-        <span className="font-medium">{formatArrivalTime(appt.scheduled_at)}</span>
-        {" · "}
-        <Link href={`/patients/${appt.patient_id}`} className="text-primary-600 hover:underline">
-          {appt.patient_name ?? "Patient"}
-        </Link>
-        {appt.purpose ? <span className="text-neutral-500"> · {appt.purpose}</span> : null}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          className="gap-1"
-          disabled={apptCheckInId === appt.id || apptCallId === appt.id}
-          onClick={onCheckIn}
-        >
-          <UserCheck className="h-3.5 w-3.5" />
-          {apptCheckInId === appt.id
-            ? t("queue.checkingIn", "Checking in…")
-            : t("queue.checkIn", "Check in")}
-        </Button>
-        <Button
-          size="sm"
-          className="gap-1"
-          disabled={apptCheckInId === appt.id || apptCallId === appt.id}
-          onClick={onCall}
-        >
-          <Megaphone className="h-3.5 w-3.5" />
-          {apptCallId === appt.id ? t("queue.calling", "Calling…") : t("queue.callToServe", "Call to chair")}
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-function ArrivalCheckInRow({
-  appt,
-  tone,
-  apptCheckInId,
-  apptCallId,
-  minutesUntil,
-  t,
-  onCheckIn,
-  onCall,
-}: {
-  appt: AppointmentRecord
-  tone: "overdue" | "due" | "upcoming"
-  apptCheckInId: string | null
-  apptCallId: string | null
-  minutesUntil: number
-  t: (key: string, fallback: string) => string
-  onCheckIn: () => void
-  onCall: () => void
-}) {
-  const rowClass =
-    tone === "overdue"
-      ? "border-red-200 bg-red-50/60"
-      : tone === "due"
-        ? "border-amber-200 bg-amber-50/50"
-        : "border-primary-100 bg-white"
-  const timingLabel =
-    tone === "overdue"
-      ? t("queue.arrivalLate", "{n} min late").replace("{n}", String(Math.abs(minutesUntil)))
-      : tone === "due"
-        ? t("queue.arrivalDue", "Due now")
-        : t("queue.arrivalIn", "In {n} min").replace("{n}", String(minutesUntil))
-
-  return (
-    <div
-      className={`flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm ${rowClass}`}
-    >
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium">{formatArrivalTime(appt.scheduled_at)}</span>
-          <Badge variant={tone === "overdue" ? "danger" : tone === "due" ? "warning" : "outline"}>
-            {timingLabel}
-          </Badge>
-          <Badge variant="outline">{t("queue.notCheckedIn", "Not checked in")}</Badge>
-        </div>
-        <div className="mt-1 truncate">
-          <Link href={`/patients/${appt.patient_id}`} className="text-primary-600 hover:underline">
-            {appt.patient_name ?? "Patient"}
-          </Link>
-          {appt.purpose ? <span className="text-neutral-500"> - {appt.purpose}</span> : null}
-        </div>
-        <p className="mt-1 text-xs text-neutral-500">
-          {t(
-            "queue.arrivalRowHint",
-            "Check-in opens today's visit and puts the patient in Waiting."
-          )}
-        </p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          className="gap-1"
-          disabled={apptCheckInId === appt.id || apptCallId === appt.id}
-          onClick={onCheckIn}
-        >
-          <UserCheck className="h-3.5 w-3.5" />
-          {apptCheckInId === appt.id
-            ? t("queue.checkingIn", "Checking in...")
-            : t("queue.checkInToWaiting", "Check in to Waiting")}
-        </Button>
-        <Button
-          size="sm"
-          className="gap-1"
-          disabled={apptCheckInId === appt.id || apptCallId === appt.id}
-          onClick={onCall}
-        >
-          <Megaphone className="h-3.5 w-3.5" />
-          {apptCallId === appt.id ? t("queue.calling", "Calling...") : t("queue.callDirect", "Call directly")}
-        </Button>
-      </div>
-    </div>
-  )
+function isConsentGateError(message: string) {
+  return message.includes("Intake consents") || message.includes("Pending consents")
 }
 
 export default function QueuePage() {
+  return (
+    <React.Suspense fallback={<PageLoadingSkeleton variant="list" />}>
+      <QueuePageContent />
+    </React.Suspense>
+  )
+}
+
+function QueuePageContent() {
+  const searchParams = useSearchParams()
+  const highlightAppointmentId = searchParams.get("appointment")
   const { activeBranch, branchRevision } = useBranch()
   const { t } = useLocale()
   const [tab, setTab] = React.useState<Tab>("board")
@@ -254,7 +118,6 @@ export default function QueuePage() {
   }, [])
   const [todayAppointments, setTodayAppointments] = React.useState<AppointmentRecord[]>([])
   const [apptCheckInId, setApptCheckInId] = React.useState<string | null>(null)
-  const [apptCallId, setApptCallId] = React.useState<string | null>(null)
   const [consentOverridePending, setConsentOverridePending] = React.useState(false)
   const [billingOverridePending, setBillingOverridePending] = React.useState(false)
   const [checkoutWizard, setCheckoutWizard] = React.useState<{
@@ -269,32 +132,6 @@ export default function QueuePage() {
 
   const siteOrigin = typeof window !== "undefined" ? window.location.origin : ""
   const today = toDateKey(new Date())
-  const queueFlowSteps = [
-    {
-      icon: ScanFace,
-      title: t("queue.flowStep1", "1. Find patient"),
-      description: t(
-        "queue.flowStep1Hint",
-        "Use today's appointment list for scheduled patients, or search a patient for walk-in."
-      ),
-    },
-    {
-      icon: UserCheck,
-      title: t("queue.flowStep2", "2. Check in"),
-      description: t(
-        "queue.flowStep2Hint",
-        "Check-in opens today's visit, creates the queue entry, and places the patient in Waiting."
-      ),
-    },
-    {
-      icon: Stethoscope,
-      title: t("queue.flowStep3", "3. Call to chair"),
-      description: t(
-        "queue.flowStep3Hint",
-        "Call moves the same visit to Now Serving, then In Chair, then checkout."
-      ),
-    },
-  ]
 
   const openCheckInModal = () => {
     setPatientQuery("")
@@ -413,6 +250,29 @@ export default function QueuePage() {
     () => classifyTodayArrivals(pendingAppointmentCheckIns),
     [pendingAppointmentCheckIns]
   )
+
+  const boardArrivals = React.useMemo((): QueueBoardArrival[] => {
+    const mapRow = (row: (typeof arrivalBuckets.overdue)[number], tone: QueueBoardArrival["tone"]) => ({
+      appointment: row.appointment,
+      tone,
+      minutesUntil: row.minutesUntil,
+    })
+    return [
+      ...arrivalBuckets.overdue.map((row) => mapRow(row, "overdue")),
+      ...arrivalBuckets.dueNow.map((row) => mapRow(row, "due")),
+      ...arrivalBuckets.upcoming.map((row) => mapRow(row, "upcoming")),
+    ]
+  }, [arrivalBuckets])
+
+  React.useEffect(() => {
+    if (!highlightAppointmentId || pendingAppointmentCheckIns.length === 0) return
+    const el = document.getElementById("queue-arrivals")
+    if (!el) return
+    const timer = window.setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" })
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [highlightAppointmentId, pendingAppointmentCheckIns.length])
 
   React.useEffect(() => {
     if (tab !== "board" || !activeBranch) return
@@ -546,7 +406,7 @@ export default function QueuePage() {
       })
       setCheckingIn(false)
       if (err) {
-        if (!action.forceCheckin && err.includes("Pending consents")) {
+        if (!action.forceCheckin && isConsentGateError(err)) {
           setConsentOverridePending(true)
         }
         if (!action.forceBillingOverride && err.includes("Billing clearance")) {
@@ -574,8 +434,13 @@ export default function QueuePage() {
       const { data, error: err } = await checkInAppointment(action.appointmentId, options)
       setApptCheckInId(null)
       if (err) {
-        if (!action.forceCheckin && err.includes("Pending consents")) {
-          const ok = await notify.confirm(t("queue.consentOverrideConfirm", "Required consents are unsigned. Check in anyway? This will be logged in audit."))
+        if (!action.forceCheckin && isConsentGateError(err)) {
+          const ok = await notify.confirm(
+            t(
+              "queue.consentOverrideConfirm",
+              "Intake consents (privacy and general treatment) are unsigned. Check in anyway? This will be logged in audit."
+            )
+          )
           if (ok) {
             return executeCheckIn({ ...action, forceCheckin: true }, reuseEncounterId)
           }
@@ -600,44 +465,6 @@ export default function QueuePage() {
         void load(true)
       }
       return
-    }
-
-    if (action.mode === "appointment_call") {
-      if (!action.appointmentId) return
-      setApptCallId(action.appointmentId)
-      setError(null)
-      const { data, error: err } = await callAppointmentToServe(action.appointmentId, options)
-      setApptCallId(null)
-      if (err) {
-        if (!action.forceCheckin && err.includes("Pending consents")) {
-          const ok = await notify.confirm(t("queue.consentOverrideConfirm", "Required consents are unsigned. Check in anyway? This will be logged in audit."))
-          if (ok) {
-            return executeCheckIn({ ...action, forceCheckin: true }, reuseEncounterId)
-          }
-        }
-        if (!action.forceBillingOverride && err.includes("Billing clearance")) {
-          const ok = await notify.confirm(
-            t(
-              "billing.gateConfirmCheckIn",
-              "Patient has outstanding billing. Check in anyway? This will be logged in audit."
-            )
-          )
-          if (ok) {
-            return executeCheckIn({ ...action, forceBillingOverride: true }, reuseEncounterId)
-          }
-        }
-        setError(err)
-        notify.error(err)
-      } else if (data) {
-        const message = data.auto_checked_in
-          ? t(
-              "queue.autoCheckInAndCall",
-              "Auto check-in — now serving #{code}. Patient is on the dentist board."
-            ).replace("{code}", data.display_code)
-          : t("queue.calledToServe", "Now serving #{code}").replace("{code}", data.display_code)
-        notify.success(message)
-        void load(true)
-      }
     }
   }
 
@@ -736,23 +563,6 @@ export default function QueuePage() {
     })
   }
 
-  const handleAppointmentCallToServe = async (
-    appointmentId: string,
-    forceBillingOverride = false,
-    forceCheckin = false
-  ) => {
-    const appt = todayAppointments.find((a) => a.id === appointmentId)
-    if (!appt) return
-    await beginGatedCheckIn({
-      patientId: appt.patient_id,
-      patientName: appt.patient_name ?? undefined,
-      mode: "appointment_call",
-      appointmentId,
-      forceBillingOverride,
-      forceCheckin,
-    })
-  }
-
   const avgWait =
     entries.length > 0
       ? Math.round(entries.reduce((s, e) => s + waitMinutes(e.checked_in_at), 0) / entries.length)
@@ -766,6 +576,12 @@ export default function QueuePage() {
   const metricItems =
     tab === "board"
       ? [
+          {
+            label: t("queue.metricArrivals", "To check in"),
+            value: loading ? "—" : pendingAppointmentCheckIns.length,
+            hint: t("queue.metricArrivalsHint", "Scheduled, not in queue yet"),
+            variant: pendingAppointmentCheckIns.length > 0 ? ("warning" as const) : ("default" as const),
+          },
           {
             label: t("queue.metricInQueue", "In queue"),
             value: loading ? "—" : entries.length,
@@ -808,28 +624,6 @@ export default function QueuePage() {
             {t("queue.eyebrow", "Front desk")} · {t("queue.title", "Queue & Patient Flow")}
           </SectionEyebrow>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 text-xs font-semibold uppercase tracking-wider text-neutral-400">
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-100 text-[10px]">1</span>
-              <span>Appointment</span>
-            </div>
-            <div className="h-0.5 w-8 bg-neutral-200 shrink-0" />
-            <div className="flex items-center gap-2 text-primary-600 shrink-0">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-[10px]">2</span>
-              <span>Waiting Room (Queue)</span>
-            </div>
-            <div className="h-0.5 w-8 bg-neutral-200 shrink-0" />
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-100 text-[10px]">3</span>
-              <span>In Chair (Treatment)</span>
-            </div>
-            <div className="h-0.5 w-8 bg-neutral-200 shrink-0" />
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-100 text-[10px]">4</span>
-              <span>Billing & Exit</span>
-            </div>
-          </div>
-
           <PageHeader
             title="Queue & Patient Flow"
             description={t(
@@ -853,46 +647,6 @@ export default function QueuePage() {
               </>
             }
           />
-
-          <div className="grid gap-3 md:grid-cols-3">
-            {queueFlowSteps.map((step) => {
-              const Icon = step.icon
-              return (
-                <div
-                  key={step.title}
-                  className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
-                >
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-neutral-950">{step.title}</p>
-                      <p className="mt-1 text-xs text-neutral-500">{step.description}</p>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="rounded-xl border border-sky-200/80 bg-sky-50/60 px-4 py-3 text-sm text-sky-950">
-            <div className="flex flex-wrap items-center gap-2">
-              <Bell className="h-4 w-4" />
-              <span className="font-medium">
-                {t(
-                  "queue.flowHintTitle",
-                  "Today's patients enter the queue only after check-in."
-                )}
-              </span>
-            </div>
-            <p className="mt-1 text-sky-900/80">
-              {t(
-                "queue.flowHintBody",
-                "Appointment check-in and walk-in check-in both open a visit and create a Waiting entry. Call directly skips Waiting only when the patient is ready for the chair."
-              )}
-            </p>
-          </div>
 
           {activeBranch ? (
             <div className="flex flex-wrap items-center gap-2 animate-fade-rise">
@@ -954,244 +708,59 @@ export default function QueuePage() {
             </div>
           )}
 
-        {tab === "board" && (
-          <Card className="border-primary-200 bg-primary-50/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                {t("queue.arrivalsTitle", "Today's arrivals — check in")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {pendingAppointmentCheckIns.length === 0 ? (
-                <div className="rounded-md border border-dashed border-primary-200 bg-white/70 px-3 py-4 text-sm text-neutral-600">
-                  <p className="font-medium text-neutral-900">
-                    {t("queue.arrivalsClearTitle", "No scheduled patients waiting for check-in.")}
-                  </p>
-                  <p className="mt-1 text-xs text-neutral-500">
-                    {t(
-                      "queue.arrivalsClearHint",
-                      "New arrivals can still be added with walk-in check-in."
-                    )}
-                  </p>
-                </div>
-              ) : null}
-              {arrivalBuckets.overdue.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-red-700">
-                    {t("queue.arrivalsOverdue", "Overdue — may auto no-show")}
-                  </p>
-                  {arrivalBuckets.overdue.map(({ appointment: appt, minutesUntil }) => (
-                    <ArrivalCheckInRow
-                      key={appt.id}
-                      appt={appt}
-                      tone="overdue"
-                      apptCheckInId={apptCheckInId}
-                      apptCallId={apptCallId}
-                      minutesUntil={minutesUntil}
-                      t={t}
-                      onCheckIn={() => handleAppointmentCheckIn(appt.id)}
-                      onCall={() => handleAppointmentCallToServe(appt.id)}
-                    />
-                  ))}
-                </div>
-              ) : null}
-              {arrivalBuckets.dueNow.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
-                    {t("queue.arrivalsDueNow", "Due now")}
-                  </p>
-                  {arrivalBuckets.dueNow.map(({ appointment: appt, minutesUntil }) => (
-                    <ArrivalCheckInRow
-                      key={appt.id}
-                      appt={appt}
-                      tone="due"
-                      apptCheckInId={apptCheckInId}
-                      apptCallId={apptCallId}
-                      minutesUntil={minutesUntil}
-                      t={t}
-                      onCheckIn={() => handleAppointmentCheckIn(appt.id)}
-                      onCall={() => handleAppointmentCallToServe(appt.id)}
-                    />
-                  ))}
-                </div>
-              ) : null}
-              {arrivalBuckets.upcoming.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                    {t("queue.arrivalsUpcoming", "Upcoming")}
-                  </p>
-                  {arrivalBuckets.upcoming.map(({ appointment: appt, minutesUntil }) => (
-                    <ArrivalCheckInRow
-                      key={appt.id}
-                      appt={appt}
-                      tone="upcoming"
-                      apptCheckInId={apptCheckInId}
-                      apptCallId={apptCallId}
-                      minutesUntil={minutesUntil}
-                      t={t}
-                      onCheckIn={() => handleAppointmentCheckIn(appt.id)}
-                      onCall={() => handleAppointmentCallToServe(appt.id)}
-                    />
-                  ))}
-                </div>
-              ) : null}
-            </CardContent>
-          </Card>
-        )}
+        <WalkInCheckInDialog
+          open={showCheckIn}
+          branchName={activeBranch?.name}
+          patientQuery={patientQuery}
+          onPatientQueryChange={setPatientQuery}
+          patients={patients}
+          selectedPatientId={selectedPatientId}
+          selectedPatientLabel={patientQuery}
+          onSelectPatient={(p) => {
+            setSelectedPatientId(p.id)
+            setPatientQuery(`${p.first_name} ${p.last_name}`)
+            setPatients([])
+          }}
+          onClearPatient={() => {
+            setSelectedPatientId("")
+            setPatientQuery("")
+            setPatients([])
+          }}
+          checkInNotes={checkInNotes}
+          onCheckInNotesChange={setCheckInNotes}
+          checkingIn={checkingIn}
+          billingOverridePending={billingOverridePending}
+          consentOverridePending={consentOverridePending}
+          onSubmit={handleCheckIn}
+          onBillingOverride={() => void handleCheckIn({ preventDefault: () => {} } as React.FormEvent, false, true)}
+          onConsentOverride={() => void handleCheckIn({ preventDefault: () => {} } as React.FormEvent, true)}
+          onClose={closeCheckInModal}
+        />
 
-        {showCheckIn && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <Card className="w-full max-w-md bg-white border-primary-200 shadow-xl animate-fade-rise">
-              <CardHeader className="pb-2 border-b">
-                <CardTitle className="text-base flex items-center justify-between">
-                  Walk-in check-in
-                  <Button variant="ghost" size="icon" onClick={closeCheckInModal}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <form onSubmit={handleCheckIn} className="space-y-4">
-                  <div className="space-y-1 relative">
-                    <label className="text-xs font-medium">Search patient</label>
-                    {selectedPatientId ? (
-                      <div className="flex items-center justify-between rounded-md border border-primary-200 bg-primary-50/50 px-3 py-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-primary-600" />
-                          <span className="font-medium text-primary-900">{patientQuery}</span>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-auto p-1 text-neutral-500 hover:text-neutral-700 hover:bg-transparent"
-                          onClick={() => {
-                            setSelectedPatientId("")
-                            setPatientQuery("")
-                            setPatients([])
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <Input
-                          value={patientQuery}
-                          onChange={(e) => setPatientQuery(e.target.value)}
-                          placeholder="Name or phone…"
-                          autoFocus
-                        />
-                        {patients.length > 0 && (
-                          <ul className="absolute z-50 left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-md shadow-lg divide-y max-h-48 overflow-y-auto">
-                            {patients.map((p) => (
-                              <li key={p.id}>
-                                <button
-                                  type="button"
-                                  className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-50"
-                                  onClick={() => {
-                                    setSelectedPatientId(p.id)
-                                    setPatientQuery(`${p.first_name} ${p.last_name}`)
-                                    setPatients([])
-                                  }}
-                                >
-                                  <div className="font-medium">{p.first_name} {p.last_name}</div>
-                                  {p.phone && <div className="text-xs text-neutral-500">{p.phone}</div>}
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </>
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">Visit note</label>
-                    <Input value={checkInNotes} onChange={(e) => setCheckInNotes(e.target.value)} placeholder="Walk-in reason…" />
-                  </div>
-                  {billingOverridePending ? (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-900">
-                      <p>{t("billing.gateBlockCheckIn", "Outstanding billing must be collected or overridden.")}</p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="mt-2"
-                        disabled={checkingIn}
-                        onClick={(e) => void handleCheckIn(e as unknown as React.FormEvent, false, true)}
-                      >
-                        {t("billing.gateOverrideCheckIn", "Check in with billing override")}
-                      </Button>
-                    </div>
-                  ) : null}
-                  {consentOverridePending ? (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-900">
-                      <p>{t("queue.consentGate", "Patient has unsigned consents. Override is logged in audit.")}</p>
-                      {selectedPatientId ? (
-                        <Button variant="link" size="sm" className="mt-1 h-auto p-0 text-amber-900" asChild>
-                          <Link href={`/patients/${selectedPatientId}?tab=consents`}>
-                            {t("queue.openConsents", "Open consents")}
-                          </Link>
-                        </Button>
-                      ) : null}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="mt-2"
-                        disabled={checkingIn}
-                        onClick={(e) => void handleCheckIn(e as unknown as React.FormEvent, true)}
-                      >
-                        {t("queue.consentOverride", "Check in anyway")}
-                      </Button>
-                    </div>
-                  ) : null}
-                  <div className="flex gap-2 pt-2 border-t">
-                    <Button type="submit" disabled={checkingIn || !selectedPatientId} className="w-full">
-                      {checkingIn ? "Checking in…" : "Check in"}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {loading && entries.length === 0 ? (
+        {loading && entries.length === 0 && boardArrivals.length === 0 ? (
           <PageLoadingSkeleton variant="grid3" />
         ) : tab === "board" ? (
           <div className="space-y-4">
-            {entries.length === 0 ? (
-              <div className="text-center py-16 text-neutral-500 border rounded-lg bg-neutral-50">
-              <Users className="h-10 w-10 mx-auto mb-3 text-neutral-300" />
-              <p>No patients in queue.</p>
-              <Button variant="outline" className="mt-4 gap-2" onClick={openCheckInModal}>
-                <Plus className="h-4 w-4" /> Check in first patient
-              </Button>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-3">
-              {activeBranch ? (
-                <div className="md:col-span-3">
-                  <QueueBoard
-                    entries={entries}
-                    branchId={activeBranch.id}
-                    actionId={actionId}
-                    onAction={handleAction}
-                    onReorderError={(msg) => {
-                      setError(msg)
-                      notify.error(msg)
-                    }}
-                    onReorderSuccess={() => {
-                      notify.success(t("queue.reordered", "Queue order updated"))
-                      void load(true)
-                    }}
-                  />
-                </div>
-              ) : null}
-            </div>
-          )}
+            {activeBranch ? (
+              <QueueBoard
+                entries={entries}
+                arrivals={boardArrivals}
+                highlightAppointmentId={highlightAppointmentId}
+                apptCheckInId={apptCheckInId}
+                onArrivalCheckIn={handleAppointmentCheckIn}
+                branchId={activeBranch.id}
+                actionId={actionId}
+                onAction={handleAction}
+                onReorderError={(msg) => {
+                  setError(msg)
+                  notify.error(msg)
+                }}
+                onReorderSuccess={() => {
+                  notify.success(t("queue.reordered", "Queue order updated"))
+                  void load(true)
+                }}
+              />
+            ) : null}
           {activeBranch ? (
             <div className="space-y-4 mt-8">
               <div className="grid gap-4 lg:grid-cols-2">

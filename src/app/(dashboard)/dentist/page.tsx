@@ -18,6 +18,7 @@ import { DirectionalTransition } from "@/components/layout/DirectionalTransition
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
 import type { AppointmentRecord } from "@/lib/appointments/types"
@@ -40,7 +41,7 @@ import type { PatientRecord } from "@/lib/patients/patient-service"
 import { fetchQueueEntries, fetchTodayServedCount, type QueueEntry } from "@/lib/queue/queue-service"
 import type { ToothFinding } from "@/lib/types/dental"
 import { createClient } from "@/lib/supabase/client"
-import { Armchair, CheckCircle2, MapPin, Stethoscope, Timer, Users, Calendar, FileText, ArrowRight } from "lucide-react"
+import { Armchair, CheckCircle2, MapPin, Stethoscope, Timer, Users, Calendar } from "lucide-react"
 
 const PAGE_SIZE = 20
 
@@ -350,8 +351,19 @@ function DentistPageContent() {
             title={t("dentist.registryTitle", "Dentist workspace")}
             description={t(
               "dentist.registrySubtitle",
-              "Today's active queue — same list, chart, and patient pages as the registry."
+              "Checked-in patients waiting, called, or in the chair today. Use the doctor filter for your own queue."
             )}
+            actions={
+              <>
+                <WorkflowSettingsLink />
+                <Button variant="outline" size="sm" className="gap-2" asChild>
+                  <Link href={`/appointments?date=${toDateKey(new Date())}`}>
+                    <Calendar className="h-4 w-4" aria-hidden />
+                    {t("dentist.headerTodaySchedule", "Today's schedule")}
+                  </Link>
+                </Button>
+              </>
+            }
           />
 
           {activeBranch ? (
@@ -383,75 +395,6 @@ function DentistPageContent() {
           ) : null}
 
           <MetricStrip items={metricItems} className="lg:grid-cols-2 xl:grid-cols-5" />
-
-          <div className="grid gap-3 md:grid-cols-3">
-            <Link
-              href="/queue"
-              className="group rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors hover:border-primary-200 hover:bg-primary-50/30"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                    {t("dentist.quickQueue", "Today first")}
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-neutral-950">
-                    {t("dentist.quickQueueTitle", "Open chair queue")}
-                  </p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-neutral-400 transition-transform group-hover:translate-x-0.5 group-hover:text-primary-600" />
-              </div>
-              <p className="mt-2 text-xs text-neutral-500">
-                {t(
-                  "dentist.quickQueueHint",
-                  "Call the next patient, check in arrivals, and keep the chair moving."
-                )}
-              </p>
-            </Link>
-            <Link
-              href="/appointments?focus=missing-notes"
-              className="group rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors hover:border-primary-200 hover:bg-primary-50/30"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                    {t("dentist.quickNotes", "Documentation")}
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-neutral-950">
-                    {t("dentist.quickNotesTitle", "Missing clinical notes")}
-                  </p>
-                </div>
-                <FileText className="h-4 w-4 text-neutral-400 transition-transform group-hover:translate-x-0.5 group-hover:text-primary-600" />
-              </div>
-              <p className="mt-2 text-xs text-neutral-500">
-                {t(
-                  "dentist.quickNotesHint",
-                  "Finish notes after visits so billing and closeout stay clean."
-                )}
-              </p>
-            </Link>
-            <Link
-              href="/appointments"
-              className="group rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors hover:border-primary-200 hover:bg-primary-50/30"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                    {t("dentist.quickSchedule", "Schedule")}
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-neutral-950">
-                    {t("dentist.quickScheduleTitle", "Today’s appointments")}
-                  </p>
-                </div>
-                <Calendar className="h-4 w-4 text-neutral-400 transition-transform group-hover:translate-x-0.5 group-hover:text-primary-600" />
-              </div>
-              <p className="mt-2 text-xs text-neutral-500">
-                {t(
-                  "dentist.quickScheduleHint",
-                  "Move between booking, chair queue, and patient charts without extra hops."
-                )}
-              </p>
-            </Link>
-          </div>
 
           <div className="grid gap-6 xl:grid-cols-[15rem_minmax(0,1fr)] 2xl:grid-cols-[16.5rem_minmax(0,1fr)]">
             <DentistFilterBar

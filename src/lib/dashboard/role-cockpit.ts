@@ -166,7 +166,7 @@ export function buildCockpitItems(
       label: labels.awaitingCheckin,
       hint: labels.awaitingCheckinHint,
       value: stats.appointments_awaiting_checkin,
-      href: "/appointments",
+      href: "/queue",
       icon: Users,
       variant: stats.appointments_awaiting_checkin > 0 ? "warning" : "default",
     },
