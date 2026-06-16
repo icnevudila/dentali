@@ -33,6 +33,8 @@ import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { PhilHealthAnalyticsPanel } from "@/components/analytics/PhilHealthAnalyticsPanel"
+import { ModulePageShell } from "@/components/layout/ModulePageShell"
+import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 
 const STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "danger" | "info" | "outline"> = {
   checklist_incomplete: "warning",
@@ -224,20 +226,39 @@ function PhilHealthPageContent() {
 
   return (
     <PermissionGate permission={PERMISSIONS.BILLING_READ}>
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          {statusFilter === "pending" ? (
+      <ModulePageShell
+        maxWidth=""
+        className="w-full"
+        eyebrow={t("billing.eyebrow", "Billing") + " · PhilHealth"}
+        icon={FileHeart}
+        title={t("billing.philhealthTitle", "PhilHealth Claims")}
+        description={t(
+          "billing.philhealthSubtitle",
+          "Readiness checklist and sync logs for eClaims submissions."
+        )}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <WorkflowSettingsLink />
+            <Button className="gap-2 shadow-sm" onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4" /> {t("billing.newClaimPrep", "New claim prep")}
+            </Button>
+          </div>
+        }
+        badges={
+          statusFilter === "pending" ? (
             <Badge variant="warning" className="font-normal">
               {t("billing.phPendingFilter", "Pending claims only")}
             </Badge>
-          ) : null}
-          <Button className="gap-2 shadow-sm" onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4" /> {t("billing.newClaimPrep", "New claim prep")}
-          </Button>
-        </div>
-
-        <MetricStrip items={metricItems} />
-
+          ) : null
+        }
+        metrics={metricItems}
+        metricsClassName="xl:grid-cols-4"
+        error={error}
+        onRetry={load}
+        retryLabel={t("common.retry", "Retry")}
+        panel={false}
+      >
+        <div className="space-y-6">
         <IntegrationEnvBanner
           title={t("billing.philhealthIntegration", "PhilHealth eClaims sync")}
           description={t(
@@ -247,15 +268,6 @@ function PhilHealthPageContent() {
         />
 
         {activeBranch ? <PhilHealthAnalyticsPanel branchId={activeBranch.id} /> : null}
-
-        {error ? (
-          <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 animate-fade-rise">
-            <p className="text-sm text-red-700">{error}</p>
-            <Button variant="outline" size="sm" className="mt-3" onClick={load}>
-              {t("common.retry", "Retry")}
-            </Button>
-          </div>
-        ) : null}
 
         {showForm && (
           <Card>
@@ -408,7 +420,8 @@ function PhilHealthPageContent() {
             </div>
           )}
         </div>
-      </div>
+        </div>
+      </ModulePageShell>
     </PermissionGate>
   )
 }

@@ -206,7 +206,7 @@ export function buildClinicalVisitJourney(params: {
     {
       id: "checkin",
       label: "Check-in",
-      description: "Patient checked in at front desk",
+      description: "Front desk opened today's visit and queue entry",
       status: statuses.checkin,
       href: `/queue`,
       phase: "visit",
@@ -383,7 +383,7 @@ export function buildEncounterVisitJourney(params: {
       label: "Check-in",
       description: queue
         ? `Queue ${queue.display_code} — ${queue.status.replace(/_/g, " ")}`
-        : "Patient checked in at front desk",
+        : "Front desk opens the visit and queue entry",
       status: statuses.checkin,
       href: "/queue",
       phase: "visit",

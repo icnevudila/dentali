@@ -194,7 +194,7 @@ export default function DailyCloseoutPage() {
           </Button>
           <Button variant="outline" size="sm" onClick={() => void handleSaveSnapshot()} disabled={!data || savingSnapshot}>
             <Save className="mr-1.5 h-3.5 w-3.5" />
-            {t("closeout.saveSnapshot", "Save snapshot")}
+            {t("closeout.saveSnapshot", "Close day snapshot")}
           </Button>
           <Button size="sm" onClick={handleExport} disabled={!data}>
             <Download className="mr-1.5 h-3.5 w-3.5" />
@@ -207,6 +207,12 @@ export default function DailyCloseoutPage() {
       {error ? null : (
         <div className="space-y-6">
           <MetricStrip items={metrics} className="lg:grid-cols-3" />
+          <p className="text-sm text-neutral-500">
+            {t(
+              "closeout.snapshotHint",
+              "Save the snapshot at the end of the shift so the day can be audited later."
+            )}
+          </p>
 
           <div className="rounded-xl border border-neutral-200/80 bg-white p-4 print:border-0 print:shadow-none">
             <h3 className="mb-3 text-sm font-semibold text-neutral-900">

@@ -418,7 +418,12 @@ function AppointmentsPageContent() {
       }
       notify.error(err)
     } else if (data) {
-      notify.success(t("appointments.checkInSuccess", "Patient checked in and added to queue"))
+      notify.success(
+        t(
+          "appointments.checkInSuccess",
+          "Checked in - visit opened and patient is in the queue Waiting column."
+        )
+      )
       patchAppointment(appointmentId, { status: "checked_in" })
       setCheckInQueueNotice(true)
     }
@@ -631,7 +636,10 @@ function AppointmentsPageContent() {
         {error ? <PageErrorNotifier error={error} onRetry={reload} /> : null}
         {checkInQueueNotice ? (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900 animate-fade-rise">
-            {t("appointments.checkInSuccess", "Patient checked in and added to the queue.")}{" "}
+            {t(
+              "appointments.checkInSuccess",
+              "Checked in - visit opened and patient is in the queue Waiting column."
+            )}{" "}
             <Link href="/queue" className="font-medium underline">
               {t("appointments.openQueue", "Open queue board")}
             </Link>

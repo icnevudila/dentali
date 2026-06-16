@@ -625,11 +625,11 @@ export default function PatientProfilePage() {
           <p className="mt-1 text-sm text-neutral-600">
             {t(
               "visits.noActiveVisitHint",
-              "Check in from the queue to start a new visit. Progress and billing will track only that arrival."
+              "Check in this patient from Queue or today's appointment list. Check-in opens the visit and puts the patient in Waiting."
             )}
           </p>
           <Button size="sm" className="mt-3" asChild>
-            <Link href="/queue">{t("visits.checkInCta", "Check in from queue")}</Link>
+            <Link href="/queue">{t("visits.checkInCta", "Open check-in list")}</Link>
           </Button>
         </ContentPanel>
       ) : null}
@@ -718,21 +718,68 @@ export default function PatientProfilePage() {
         {/* TAB CONTENT PANEL */}
         <div className="flex-1 w-full min-w-0">
           {activeTab === "record" && (
-            <PatientRecordOnePage
-              patientId={patientId}
-              patient={patient}
-              consents={consents}
-              appointments={appointments}
-              treatmentPlans={treatmentPlans}
-              medicalHistory={medicalHistory}
-              balance={balance}
-              balanceError={balanceError}
-              timeline={timeline}
-              timelineError={timelineError}
-              onConsentsChange={refreshConsents}
-              onAppointmentsChange={refreshAppointments}
-              onOpenTab={(tabId) => setActiveTab(tabId as PatientTabId)}
-            />
+            <div className="space-y-6">
+              <div className="grid gap-3 md:grid-cols-3">
+                <Link
+                  href={`/patients/${patientId}/epicrisis`}
+                  className="group rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors hover:border-primary-200 hover:bg-primary-50/30"
+                >
+                  <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                    Discharge
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-neutral-950">
+                    Open epicrisis summary
+                  </p>
+                  <p className="mt-2 text-xs text-neutral-500">
+                    Full discharge handover with visits, prescriptions, billing, and notes.
+                  </p>
+                </Link>
+                <Link
+                  href={`/patients/${patientId}/medical-abstract`}
+                  className="group rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors hover:border-primary-200 hover:bg-primary-50/30"
+                >
+                  <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                    Referral
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-neutral-950">
+                    Open medical abstract
+                  </p>
+                  <p className="mt-2 text-xs text-neutral-500">
+                    Useful for referrals and external handovers when discharge is too heavy.
+                  </p>
+                </Link>
+                <Link
+                  href={`/patients/${patientId}/ortho`}
+                  className="group rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors hover:border-primary-200 hover:bg-primary-50/30"
+                >
+                  <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                    Specialty
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-neutral-950">
+                    Open orthodontic record
+                  </p>
+                  <p className="mt-2 text-xs text-neutral-500">
+                    Log ortho adjustments, payments, and next visit dates.
+                  </p>
+                </Link>
+              </div>
+
+              <PatientRecordOnePage
+                patientId={patientId}
+                patient={patient}
+                consents={consents}
+                appointments={appointments}
+                treatmentPlans={treatmentPlans}
+                medicalHistory={medicalHistory}
+                balance={balance}
+                balanceError={balanceError}
+                timeline={timeline}
+                timelineError={timelineError}
+                onConsentsChange={refreshConsents}
+                onAppointmentsChange={refreshAppointments}
+                onOpenTab={(tabId) => setActiveTab(tabId as PatientTabId)}
+              />
+            </div>
           )}
 
           {/* CONSENTS TAB */}
