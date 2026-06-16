@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users, Plus, Receipt, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen } from "lucide-react"
+import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users, Plus, Receipt, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen, ScrollText } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
@@ -55,7 +55,7 @@ const PATIENT_TABS: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "prescriptions", label: "Prescriptions", icon: Pill },
   { id: "appointments", label: "Appointments", icon: Calendar },
   { id: "visits", label: "Visits", icon: UserCheck },
-  { id: "epicrisis", label: "Epicrisis & Discharge", icon: FileCheck2 },
+  { id: "epicrisis", label: "Epicrisis & Letters", icon: FileCheck2 },
   { id: "consents", label: "Consents & Forms", icon: ShieldCheck },
   { id: "radiology", label: "Radiology & Imaging", icon: ScanLine },
   { id: "documents", label: "Documents", icon: FolderOpen },
@@ -705,31 +705,61 @@ export default function PatientProfilePage() {
             </Card>
           )}
 
-          {/* EPICRISIS TAB */}
+          {/* EPICRISIS & LETTERS TAB */}
           {activeTab === "epicrisis" && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Discharge & Epicrisis Summary</CardTitle>
-                  <CardDescription>Consolidated treatment progress report, SOAP dental notes, and billing history.</CardDescription>
-                </div>
-                <Button size="sm" asChild>
-                  <Link href={`/patients/${patientId}/epicrisis`} transitionTypes={NAV_FORWARD_TRANSITION}>
-                    Generate Epicrisis Report
-                  </Link>
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-lg bg-neutral-50 p-4 border border-neutral-200/60 text-sm space-y-2">
-                  <p className="font-semibold text-neutral-800">Epicrisis Compilation Includes:</p>
-                  <ul className="list-disc list-inside space-y-1 text-xs text-neutral-600">
-                    <li>Demographics & Profile Information</li>
-                    <li>SOAP Clinical assessment history & chronological procedure logs</li>
-                    <li>Consolidated Invoice Status & Balance ledgers</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Epicrisis & Discharge</CardTitle>
+                  <CardDescription>
+                    Full discharge summary with visits, treatment, prescriptions, and billing.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button size="sm" asChild className="w-full">
+                    <Link href={`/patients/${patientId}/epicrisis`} transitionTypes={NAV_FORWARD_TRANSITION}>
+                      Generate Epicrisis Report
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-teal-600" />
+                    Medical Abstract
+                  </CardTitle>
+                  <CardDescription>
+                    Clinical summary for referral, insurance, or continuity of care.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button size="sm" variant="outline" asChild className="w-full">
+                    <Link href={`/patients/${patientId}/medical-abstract`} transitionTypes={NAV_FORWARD_TRANSITION}>
+                      Generate Medical Abstract
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <ScrollText className="h-4 w-4 text-teal-600" />
+                    Medical Certificate
+                  </CardTitle>
+                  <CardDescription>
+                    Fit-to-work, rest days, school excuse, or post-procedure certificate.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button size="sm" variant="outline" asChild className="w-full">
+                    <Link href={`/patients/${patientId}/medical-certificate`} transitionTypes={NAV_FORWARD_TRANSITION}>
+                      Generate Medical Certificate
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* APPOINTMENTS TAB */}

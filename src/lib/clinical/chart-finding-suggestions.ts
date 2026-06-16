@@ -78,7 +78,7 @@ export function matchProcedureForFinding(
     return {
       procedureId: matched.id,
       description: matched.name,
-      estimatedPrice: matched.effective_price,
+      estimatedPrice: 0,
     }
   }
 

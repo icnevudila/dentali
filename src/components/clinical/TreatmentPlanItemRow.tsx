@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { BulletTextarea } from "@/components/ui/BulletTextarea"
 import { BulletTextList } from "@/components/ui/BulletTextList"
 import { useLocale } from "@/hooks/use-locale"
+import { toStoredBulletText } from "@/lib/text/bullet-text"
 import type { TreatmentPlanItem } from "@/lib/clinical/treatment-plan-service"
 
 export function TreatmentPlanItemRow({
@@ -36,7 +37,7 @@ export function TreatmentPlanItemRow({
 
   const handleSave = async () => {
     await onSave({
-      description: description.trim(),
+      description: toStoredBulletText(description.trim()),
       estimatedPrice: parseFloat(price) || 0,
       toothNumber: tooth.trim() || null,
     })
@@ -74,7 +75,9 @@ export function TreatmentPlanItemRow({
             type="number"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            placeholder="₱"
+            placeholder={t("treatmentPlan.patientPrice", "Patient price (₱)")}
+            min="0"
+            step="0.01"
           />
           <Input
             value={tooth}
@@ -96,10 +99,14 @@ export function TreatmentPlanItemRow({
   }
 
   return (
-    <li className="py-2 flex items-center justify-between gap-3">
-      <span>
-        {item.description}
-        {item.tooth_number ? ` (${t("treatmentPlan.toothNumber", "Tooth #")} ${item.tooth_number})` : ""}
+    <li className="py-2 flex items-start justify-between gap-3">
+      <span className="min-w-0 flex-1">
+        <BulletTextList text={item.description} />
+        {item.tooth_number ? (
+          <span className="block text-xs text-neutral-500 mt-0.5">
+            {t("treatmentPlan.toothNumber", "Tooth #")} {item.tooth_number}
+          </span>
+        ) : null}
       </span>
       <div className="flex items-center gap-2 shrink-0">
         <span className="font-medium">₱{Number(item.estimated_price).toLocaleString()}</span>

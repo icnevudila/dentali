@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { getPatientOdontogram } from "@/lib/odontogram/dental-chart-service"
+import { BulletTextList } from "@/components/ui/BulletTextList"
 import {
   buildChartFindingSuggestions,
   type ChartFindingSuggestion,
@@ -62,8 +63,8 @@ export function ChartFindingSuggestionsCard({
     return null
   }
 
-  const estimatedTotal = suggestions.reduce((sum, s) => sum + s.estimatedPrice, 0)
   const unmatched = suggestions.filter((s) => !s.procedureId).length
+  const needsPricing = suggestions.filter((s) => s.procedureId).length
 
   return (
     <Card className="border-primary-200/80 bg-primary-50/20">
@@ -86,19 +87,20 @@ export function ChartFindingSuggestionsCard({
         <ul className="divide-y rounded-md border bg-white text-sm max-h-48 overflow-y-auto">
           {suggestions.map((s) => (
             <li key={s.finding.tooth_number} className="flex items-center justify-between gap-3 px-3 py-2">
-              <div className="min-w-0">
-                <p className="font-medium text-neutral-900 truncate">{s.description}</p>
-                <p className="text-xs text-neutral-500">Tooth {s.finding.tooth_number}</p>
+              <div className="min-w-0 flex-1">
+                <BulletTextList text={s.description} className="text-sm font-medium text-neutral-900" />
+                <p className="text-xs text-neutral-500 mt-0.5">Tooth {s.finding.tooth_number}</p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {!s.procedureId ? (
                   <Badge variant="outline" className="text-xs">
                     No catalog match
                   </Badge>
-                ) : null}
-                <span className="tabular-nums font-medium">
-                  {s.estimatedPrice > 0 ? `₱${s.estimatedPrice.toLocaleString()}` : "—"}
-                </span>
+                ) : (
+                  <Badge variant="outline" className="text-xs text-neutral-600">
+                    Set price on plan
+                  </Badge>
+                )}
               </div>
             </li>
           ))}
@@ -106,10 +108,9 @@ export function ChartFindingSuggestionsCard({
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-neutral-600">
-            Est. add-on total:{" "}
-            <span className="font-semibold tabular-nums text-neutral-900">
-              ₱{estimatedTotal.toLocaleString()}
-            </span>
+            {needsPricing > 0
+              ? "Prices are not copied from the catalog — set patient-specific amounts on each plan row after adding."
+              : "Review matches, then set prices on the plan before approving."}
           </p>
           <Button
             type="button"

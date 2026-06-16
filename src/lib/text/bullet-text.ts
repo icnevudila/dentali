@@ -6,6 +6,13 @@ export function formatBulletLines(text: string): string[] {
     .filter(Boolean)
 }
 
+/** Persist multiline clinical text with bullet prefixes for consistent list display. */
+export function toStoredBulletText(text: string): string {
+  const lines = formatBulletLines(text)
+  if (lines.length === 0) return ""
+  return lines.map((line) => `• ${line}`).join("\n")
+}
+
 export function insertBulletAtCursor(value: string, start: number, end: number): string {
   const before = value.slice(0, start)
   const selected = value.slice(start, end)

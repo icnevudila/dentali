@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ClipboardList } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { BulletTextList } from "@/components/ui/BulletTextList"
 import { Button } from "@/components/ui/button"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { useLocale } from "@/hooks/use-locale"
@@ -115,7 +116,9 @@ export function TreatmentPlanTimelinePanel({ patientId, branchId }: TreatmentPla
                       <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border-2 border-white bg-primary-400" />
                       <div className="rounded-md border border-neutral-100 bg-neutral-50/80 px-3 py-2">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <p className="text-sm font-medium text-neutral-900">{item.description}</p>
+                          <div className="text-sm font-medium text-neutral-900 min-w-0">
+                            <BulletTextList text={item.description} />
+                          </div>
                           {item.tooth_number && (
                             <Badge variant="outline" className="text-[10px]">
                               #{item.tooth_number}

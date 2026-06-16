@@ -11,6 +11,7 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { BulletTextarea } from "@/components/ui/BulletTextarea"
 import { Badge } from "@/components/ui/badge"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
@@ -46,20 +47,20 @@ import { fetchProcedureStockWarnings } from "@/lib/inventory/inventory-service"
 import { ProcedureStockWarningBanner } from "@/components/inventory/ProcedureStockWarningBanner"
 import { ChartFindingSuggestionsCard } from "@/components/clinical/ChartFindingSuggestionsCard"
 import { TreatmentPlanItemRow } from "@/components/clinical/TreatmentPlanItemRow"
-import { fetchOrganizationPreferences } from "@/lib/settings/org-preferences-service"
+import { toStoredBulletText } from "@/lib/text/bullet-text"
 
 const PROCEDURE_TEMPLATES = [
-  { code: "EXAM", name: "Oral Examination", price: 500, category: "preventive" },
-  { code: "PROPH", name: "Prophylaxis / Cleaning", price: 2500, category: "preventive" },
-  { code: "FILL", name: "Composite Filling", price: 3500, category: "restorative" },
-  { code: "RCT", name: "Root Canal Treatment", price: 12000, category: "restorative" },
-  { code: "EXT", name: "Tooth Extraction", price: 4000, category: "surgery" },
-  { code: "CRWN", name: "Jacket Crown", price: 15000, category: "restorative" },
-  { code: "PFM", name: "PFM Crown", price: 1500, category: "restorative" },
-  { code: "ZIRC", name: "Zirconia Crown (Single)", price: 2500, category: "restorative" },
-  { code: "EMAX", name: "E-Max Veneer", price: 3500, category: "restorative" },
-  { code: "NG", name: "Nightguard (Hard/Soft)", price: 1200, category: "preventive" },
-  { code: "DENT", name: "Complete Denture (Upper & Lower)", price: 5000, category: "prosthodontics" },
+  { code: "EXAM", name: "Oral Examination" },
+  { code: "PROPH", name: "Prophylaxis / Cleaning" },
+  { code: "FILL", name: "Composite Filling" },
+  { code: "RCT", name: "Root Canal Treatment" },
+  { code: "EXT", name: "Tooth Extraction" },
+  { code: "CRWN", name: "Jacket Crown" },
+  { code: "PFM", name: "PFM Crown" },
+  { code: "ZIRC", name: "Zirconia Crown (Single)" },
+  { code: "EMAX", name: "E-Max Veneer" },
+  { code: "NG", name: "Nightguard (Hard/Soft)" },
+  { code: "DENT", name: "Complete Denture (Upper & Lower)" },
 ]
 
 function TreatmentPlanContent() {
@@ -82,9 +83,8 @@ function TreatmentPlanContent() {
   const [toothNumber, setToothNumber] = React.useState("")
   const [isCustom, setIsCustom] = React.useState(false)
   const [customName, setCustomName] = React.useState("")
-  const [customPrice, setCustomPrice] = React.useState("")
   const [customCode, setCustomCode] = React.useState("")
-  const [showCustomPrice, setShowCustomPrice] = React.useState(false)
+  const [itemPrice, setItemPrice] = React.useState("")
   const [loading, setLoading] = React.useState(!!planId)
   const [saving, setSaving] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -168,12 +168,6 @@ function TreatmentPlanContent() {
     })
   }, [activeBranch?.id, selectedProc])
 
-  React.useEffect(() => {
-    fetchOrganizationPreferences().then(({ data }) => {
-      if (data) setShowCustomPrice(data.custom_procedure_show_price)
-    })
-  }, [])
-
   const handleCreatePlan = async () => {
     if (!user || !activeBranch || !planTitle.trim()) return
     setSaving(true)
@@ -195,47 +189,57 @@ function TreatmentPlanContent() {
 
   const handleAddItem = async () => {
     if (!activePlanId) return
-    
+
+    if (itemPrice.trim() === "") {
+      setError(t("treatmentPlan.priceRequired", "Enter the patient-specific price for this procedure."))
+      notify.error(t("treatmentPlan.priceRequired", "Enter the patient-specific price for this procedure."))
+      return
+    }
+
+    const parsedPrice = parseFloat(itemPrice)
+    if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
+      setError(t("treatmentPlan.priceInvalid", "Enter a valid price (0 or greater)."))
+      notify.error(t("treatmentPlan.priceInvalid", "Enter a valid price (0 or greater)."))
+      return
+    }
+
     setSaving(true)
     setError(null)
-    
+
     let procId: string | undefined = undefined
     let procName = ""
-    let procPrice = 0
-    
+
     if (selectedProc === "custom" || isCustom) {
       if (!customName.trim()) {
         setError("Please enter a procedure name.")
         setSaving(false)
         return
       }
-      const priceVal = showCustomPrice ? parseFloat(customPrice) || 0 : 0
-      
+
       const org = await fetchOrganization()
       if (!org) {
         setError("Organization not found.")
         setSaving(false)
         return
       }
-      
+
       const { data: newProc, error: createErr } = await createProcedure({
         organizationId: org.id,
         name: customName.trim(),
         code: customCode.trim() || undefined,
-        basePrice: priceVal,
+        basePrice: 0,
       })
-      
+
       if (createErr) {
         setError(createErr)
         setSaving(false)
         return
       }
-      
+
       if (newProc) {
         procId = newProc.id
         procName = newProc.name
-        procPrice = newProc.effective_price
-        
+
         const { data: updatedProcs } = await fetchProcedures(activeBranch?.id)
         setProcedures(updatedProcs)
       } else {
@@ -252,17 +256,18 @@ function TreatmentPlanContent() {
       }
       procId = proc.id
       procName = proc.name
-      procPrice = proc.effective_price
     }
-    
+
+    const descriptionSource = selectedProc === "custom" || isCustom ? customName : procName
+
     const { error: err } = await addPlanItem({
       planId: activePlanId,
       procedureId: procId,
-      description: procName,
-      estimatedPrice: procPrice,
+      description: toStoredBulletText(descriptionSource),
+      estimatedPrice: parsedPrice,
       toothNumber: toothNumber || undefined,
     })
-    
+
     if (err) {
       setError(err)
       notify.error(err)
@@ -273,8 +278,8 @@ function TreatmentPlanContent() {
       setSelectedProc("")
       setIsCustom(false)
       setCustomName("")
-      setCustomPrice("")
       setCustomCode("")
+      setItemPrice("")
       setToothNumber("")
     }
     setSaving(false)
@@ -567,18 +572,16 @@ function TreatmentPlanContent() {
                   </label>
                   <select
                     onChange={(e) => {
-                      const template = PROCEDURE_TEMPLATES.find(t => t.code === e.target.value)
+                      const template = PROCEDURE_TEMPLATES.find((tpl) => tpl.code === e.target.value)
                       if (template) {
                         setIsCustom(true)
                         setSelectedProc("custom")
                         setCustomName(template.name)
-                        setCustomPrice(String(template.price))
                         setCustomCode(template.code)
                       } else {
                         setIsCustom(false)
                         setSelectedProc("")
                         setCustomName("")
-                        setCustomPrice("")
                         setCustomCode("")
                       }
                     }}
@@ -586,19 +589,18 @@ function TreatmentPlanContent() {
                     value={isCustom ? customCode : ""}
                   >
                     <option value="">{t("treatmentPlan.quickSelectPlaceholder", "Select a template (e.g. crown, veneer, filling…)")}</option>
-                    {PROCEDURE_TEMPLATES.map((t) => (
-                      <option key={t.code} value={t.code}>
-                        {t.name} — ₱{t.price.toLocaleString()}
+                    {PROCEDURE_TEMPLATES.map((tpl) => (
+                      <option key={tpl.code} value={tpl.code}>
+                        {tpl.name}
                       </option>
                     ))}
                   </select>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {/* Select Procedure from Catalog */}
-                  <div className="flex flex-col gap-1.5 sm:col-span-1">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                      Catalog Procedure
+                      {t("treatmentPlan.catalogProcedure", "Catalog procedure")}
                     </label>
                     <select
                       value={selectedProc}
@@ -610,26 +612,24 @@ function TreatmentPlanContent() {
                         } else {
                           setIsCustom(false)
                           setCustomName("")
-                          setCustomPrice("")
                           setCustomCode("")
                         }
                       }}
                       className="h-10 rounded-md border border-neutral-300 px-3 text-sm bg-white"
                     >
-                      <option value="">Select procedure…</option>
+                      <option value="">{t("treatmentPlan.selectProcedure", "Select procedure…")}</option>
                       {procedures.map((p) => (
                         <option key={p.id} value={p.id}>
-                          {p.name} — ₱{p.effective_price.toLocaleString()}
+                          {p.name}
                         </option>
                       ))}
-                      <option value="custom">✍️ Custom Procedure</option>
+                      <option value="custom">{t("treatmentPlan.customProcedure", "Custom procedure")}</option>
                     </select>
                   </div>
 
-                  {/* Tooth Number */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                      Tooth # (Optional)
+                      {t("treatmentPlan.toothNumber", "Tooth # (optional)")}
                     </label>
                     <Input
                       placeholder="e.g. 18, 24, 36"
@@ -639,46 +639,46 @@ function TreatmentPlanContent() {
                     />
                   </div>
 
-                  {/* Add Button */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      {t("treatmentPlan.patientPrice", "Patient price (₱)")}
+                    </label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="e.g. 2500"
+                      value={itemPrice}
+                      onChange={(e) => setItemPrice(e.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+
                   <div className="flex flex-col gap-1.5 justify-end">
                     <Button
                       onClick={handleAddItem}
                       disabled={saving || (!selectedProc && !isCustom)}
                       className="h-10 gap-2 w-full"
                     >
-                      <Plus className="h-4 w-4" /> Add to Plan
+                      <Plus className="h-4 w-4" /> {t("treatmentPlan.addToPlan", "Add to plan")}
                     </Button>
                   </div>
                 </div>
 
-                {/* Custom Fields (Shown if isCustom is true) */}
-                {isCustom && (
-                  <div className={`grid gap-3 p-4 rounded-lg bg-neutral-50 border border-neutral-100 animate-fade-rise ${showCustomPrice ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-neutral-600">{t("treatmentPlan.customName", "Custom procedure name")}</label>
-                      <Input
-                        placeholder="e.g. Zirconia Crown"
+                {isCustom ? (
+                  <div className="grid gap-3 p-4 rounded-lg bg-neutral-50 border border-neutral-100 animate-fade-rise sm:grid-cols-2">
+                    <div className="flex flex-col gap-1.5 sm:col-span-2">
+                      <label className="text-xs font-semibold text-neutral-600">
+                        {t("treatmentPlan.customName", "Procedure details")}
+                      </label>
+                      <BulletTextarea
                         value={customName}
-                        onChange={(e) => setCustomName(e.target.value)}
-                        className="h-10 bg-white"
+                        onChange={setCustomName}
+                        rows={4}
+                        placeholder={`e.g.\n• Zirconia crown #24\n• Temporary crown`}
+                        className="bg-white"
                       />
                     </div>
-                    {showCustomPrice ? (
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-neutral-600">{t("treatmentPlan.customPrice", "Price (₱)")}</label>
-                        <Input
-                          placeholder="e.g. 2500"
-                          type="number"
-                          value={customPrice}
-                          onChange={(e) => setCustomPrice(e.target.value)}
-                          className="h-10 bg-white"
-                        />
-                      </div>
-                    ) : (
-                      <p className="text-xs text-neutral-500 self-end pb-2">
-                        Price hidden for free-text procedures — set on invoice later.
-                      </p>
-                    )}
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-semibold text-neutral-600">{t("treatmentPlan.customCode", "Code (optional)")}</label>
                       <Input
@@ -689,7 +689,7 @@ function TreatmentPlanContent() {
                       />
                     </div>
                   </div>
-                )}
+                ) : null}
 
                 {procedures.length === 0 && (
                   <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50 border border-amber-100 text-xs text-amber-800">

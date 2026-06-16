@@ -152,6 +152,32 @@ export async function revertOrthoAdjustment(
   return { data: data as OrthoBalance, error: null }
 }
 
+export async function updateOrthoAdjustment(payload: {
+  adjustmentId: string
+  adjustmentDate: string
+  procedure: string
+  nextProcedure?: string
+  nextVisitDate?: string
+  paymentAmount: number
+  notes?: string
+}): Promise<{ data: OrthoBalance | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("update_ortho_adjustment", {
+    p_payload: {
+      adjustment_id: payload.adjustmentId,
+      adjustment_date: payload.adjustmentDate,
+      procedure: payload.procedure,
+      next_procedure: payload.nextProcedure ?? "",
+      next_visit_date: payload.nextVisitDate ?? "",
+      payment_amount: payload.paymentAmount,
+      notes: payload.notes ?? "",
+    },
+  })
+
+  if (error) return { data: null, error: error.message }
+  return { data: data as OrthoBalance, error: null }
+}
+
 export async function createInvoiceFromOrthoCase(
   caseId: string
 ): Promise<{ data: { id: string; existing: boolean } | null; error: string | null }> {

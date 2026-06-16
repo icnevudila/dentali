@@ -15,9 +15,6 @@ export function BulletTextList({
   if (lines.length === 0) {
     return <span className={cn("text-neutral-400", className)}>{empty}</span>
   }
-  if (lines.length === 1) {
-    return <span className={cn("whitespace-pre-wrap", className)}>{lines[0]}</span>
-  }
   return (
     <ul className={cn("list-disc space-y-0.5 pl-4 text-inherit", className)}>
       {lines.map((line, i) => (

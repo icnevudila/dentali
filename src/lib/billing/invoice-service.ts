@@ -225,6 +225,7 @@ async function insertInvoiceLineItem(params: {
     p_tooth_number: params.toothNumber ?? null,
     p_procedure_id: params.procedureId ?? null,
     p_treatment_plan_item_id: params.treatmentPlanItemId ?? null,
+    p_discount_amount: 0,
   })
   return { error: error?.message ?? null }
 }
