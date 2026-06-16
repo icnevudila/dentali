@@ -5,6 +5,16 @@ export function landingAsset(path: string) {
 const v = landingAsset
 
 export const LANDING_VIDEOS = {
+  system: {
+    src: v("/landing/videos/system-video.mp4"),
+    poster: v("/landing/hero-dashboard.png"),
+    alt: "dentQL clinic system overview",
+  },
+  queue: {
+    src: v("/landing/videos/queue-video.mp4"),
+    poster: v("/landing/timeline-tv-queue.png"),
+    alt: "Waiting room queue display",
+  },
   kiosk: {
     src: v("/landing/videos/kiosk-video.mp4"),
     poster: v("/landing/timeline-kiosk.png"),

@@ -64,18 +64,16 @@ function ExperienceMedia({ item, locale }: { item: ClinicExperienceItem; locale:
     )
   }
 
-  if (item.id === "queue-tv" && item.image) {
+  if (item.id === "queue-tv" && video) {
     return (
       <MediaSlot>
         <div className="landing-zoom-hover-target mx-auto w-full max-w-[300px] overflow-hidden rounded-xl border-[6px] border-neutral-800 bg-neutral-900 p-1.5 shadow-lg [transform:none]">
-          <div className="landing-zoom-clip relative aspect-[16/10] w-full overflow-hidden rounded-lg bg-neutral-950">
-            <Image
-              src={item.image}
-              alt={lt(item.title, locale)}
-              fill
+          <div className="landing-video-safe landing-zoom-clip relative aspect-[16/10] w-full overflow-hidden rounded-lg bg-neutral-950">
+            <LandingVideo
+              src={video.src}
+              poster={video.poster}
+              label={video.alt}
               className="object-cover object-center"
-              sizes="300px"
-              priority={false}
             />
           </div>
         </div>

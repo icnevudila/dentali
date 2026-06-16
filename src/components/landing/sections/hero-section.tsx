@@ -1,71 +1,20 @@
 "use client"
 
 import * as React from "react"
-import Image from "next/image"
 import Link from "next/link"
-import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useLocale } from "@/hooks/use-locale"
-import { LANDING_HERO_PAGES } from "@/components/landing/data/landing-assets"
+import { LANDING_VIDEOS } from "@/components/landing/data/landing-assets"
 import { LANDING_HEADINGS, type LandingText } from "@/components/landing/data/landing-data"
+import { LandingVideo } from "@/components/landing/ui/landing-video"
 import { ScrollReveal } from "@/components/landing/ui/scroll-reveal"
-import { cn } from "@/lib/utils"
 
 function lt(text: LandingText, locale: string) {
   return locale === "tr" ? text.tr : text.en
 }
 
-function HeroSlideshow({ activeIdx, locale }: { activeIdx: number; locale: string }) {
-  return (
-    <div className="landing-zoom-clip relative aspect-[16/10] w-full">
-      {LANDING_HERO_PAGES.map((page, idx) => (
-        <div
-          key={page.id}
-          className={`absolute inset-0 transition-opacity duration-700 ${
-            idx === activeIdx ? "z-10 opacity-100" : "pointer-events-none z-0 opacity-0"
-          }`}
-        >
-          <div
-            key={idx === activeIdx ? `active-${activeIdx}` : `idle-${idx}`}
-            className={cn(
-              "absolute inset-0",
-              idx === activeIdx && "landing-zoom-ken-burns"
-            )}
-          >
-            <Image
-              src={page.desktop}
-              alt={lt(page.label, locale)}
-              fill
-              className="object-cover object-top"
-              sizes="(max-width: 768px) 100vw, (max-width: 1280px) 55vw, 720px"
-              priority={idx === 0}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 export function HeroSection() {
   const { locale } = useLocale()
-  const [activeIdx, setActiveIdx] = React.useState(0)
-  const pageCount = LANDING_HERO_PAGES.length
-
-  const goTo = React.useCallback(
-    (idx: number) => {
-      setActiveIdx((idx + pageCount) % pageCount)
-    },
-    [pageCount]
-  )
-
-  React.useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveIdx((prev) => (prev + 1) % pageCount)
-    }, 5000)
-    return () => clearInterval(timer)
-  }, [pageCount])
-
-  const activePage = LANDING_HERO_PAGES[activeIdx]
+  const systemVideo = LANDING_VIDEOS.system
 
   return (
     <section className="relative overflow-hidden bg-white pt-24 pb-14 md:pt-28 md:pb-20">
@@ -128,48 +77,21 @@ export function HeroSection() {
                     <span className="hidden h-5 w-24 rounded-md bg-white/5 sm:block" />
                   </div>
 
-                  <div className="overflow-hidden rounded-xl bg-white ring-1 ring-black/5">
-                    <HeroSlideshow activeIdx={activeIdx} locale={locale} />
+                  <div className="landing-video-safe landing-zoom-clip relative aspect-[16/10] overflow-hidden rounded-xl bg-white ring-1 ring-black/5">
+                    <LandingVideo
+                      src={systemVideo.src}
+                      poster={systemVideo.poster}
+                      label={systemVideo.alt}
+                      className="object-center"
+                    />
                   </div>
                 </div>
 
-                <div className="relative mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => goTo(activeIdx - 1)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-600 shadow-sm transition hover:bg-neutral-50"
-                      aria-label={locale === "tr" ? "Önceki ekran" : "Previous screen"}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <span className="min-w-[8rem] text-center text-sm font-semibold text-neutral-800">
-                      {lt(activePage.label, locale)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => goTo(activeIdx + 1)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-600 shadow-sm transition hover:bg-neutral-50"
-                      aria-label={locale === "tr" ? "Sonraki ekran" : "Next screen"}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div className="flex gap-2">
-                    {LANDING_HERO_PAGES.map((page, idx) => (
-                      <button
-                        key={page.id}
-                        type="button"
-                        onClick={() => goTo(idx)}
-                        className={`h-2 rounded-full transition-all ${
-                          idx === activeIdx ? "w-7 bg-primary-600" : "w-2 bg-neutral-300 hover:bg-neutral-400"
-                        }`}
-                        aria-label={lt(page.label, locale)}
-                      />
-                    ))}
-                  </div>
-                </div>
+                <p className="mt-4 text-center text-sm font-semibold text-neutral-600">
+                  {locale === "tr"
+                    ? "Klinik işletim sistemi — canlı önizleme"
+                    : "Clinic operating system — live preview"}
+                </p>
               </div>
             </ScrollReveal>
           </div>

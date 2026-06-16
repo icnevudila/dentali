@@ -125,7 +125,7 @@ export interface ClinicExperienceItem {
   description: LandingText
   bullets: LandingText[]
   media: "video" | "image"
-  videoKey?: "kiosk" | "portal"
+  videoKey?: "kiosk" | "portal" | "queue"
   image?: string
   frame: ProblemDeviceFrame
 }
@@ -178,8 +178,8 @@ export const CLINIC_EXPERIENCE_ITEMS: ClinicExperienceItem[] = [
       t("Updates in real time from queue", "Sıradan gerçek zamanlı güncellenir"),
       t("Per-branch display URL", "Şube başına ayrı ekran adresi"),
     ],
-    media: "image",
-    image: asset("/landing/timeline-tv-queue.png"),
+    media: "video",
+    videoKey: "queue",
     frame: "tv",
   },
 ]
