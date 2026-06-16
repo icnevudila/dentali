@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { useLocale } from "@/hooks/use-locale"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { searchPatients } from "@/lib/patients/patient-service"
+import { callAppointmentToServe } from "@/lib/queue/queue-service"
 import {
   createAppointment,
   checkInAppointment,
@@ -110,6 +111,7 @@ function AppointmentsPageContent() {
   const [updatingId, setUpdatingId] = React.useState<string | null>(null)
   const [reschedulingId, setReschedulingId] = React.useState<string | null>(null)
   const [checkingInId, setCheckingInId] = React.useState<string | null>(null)
+  const [callingToServeId, setCallingToServeId] = React.useState<string | null>(null)
   const [remindingId, setRemindingId] = React.useState<string | null>(null)
   const [reminderNotice, setReminderNotice] = React.useState<string | null>(null)
   const [waitlistNotice, setWaitlistNotice] = React.useState<string | null>(null)
@@ -397,6 +399,52 @@ function AppointmentsPageContent() {
     } else if (data) {
       notify.success(t("appointments.checkInSuccess", "Patient checked in and added to queue"))
       patchAppointment(appointmentId, { status: "checked_in" })
+      setCheckInQueueNotice(true)
+    }
+  }
+
+  const handleCallToServe = async (
+    appointmentId: string,
+    forceBillingOverride = false,
+    forceCheckin = false
+  ) => {
+    setCallingToServeId(appointmentId)
+    setError(null)
+    setReminderNotice(null)
+    const { data, error: err } = await callAppointmentToServe(appointmentId, {
+      forceBillingOverride,
+      forceCheckin,
+    })
+    setCallingToServeId(null)
+    if (err) {
+      if (err.includes("Pending consents") && !forceCheckin) {
+        const ok = await notify.confirm(
+          t(
+            "queue.consentOverrideConfirm",
+            "Required consents are unsigned. Check in anyway? This will be logged in audit."
+          )
+        )
+        if (ok) return handleCallToServe(appointmentId, forceBillingOverride, true)
+      }
+      if (err.includes("Billing clearance") && !forceBillingOverride) {
+        const ok = await notify.confirm(
+          t(
+            "billing.gateConfirmCheckIn",
+            "Patient has outstanding billing. Check in anyway? This will be logged in audit."
+          )
+        )
+        if (ok) return handleCallToServe(appointmentId, true, forceCheckin)
+      }
+      notify.error(err)
+    } else if (data) {
+      patchAppointment(appointmentId, { status: "checked_in" })
+      const message = data.auto_checked_in
+        ? t(
+            "queue.autoCheckInAndCall",
+            "Auto check-in — now serving #{code}. Patient is on the dentist board."
+          ).replace("{code}", data.display_code)
+        : t("queue.calledToServe", "Now serving #{code}").replace("{code}", data.display_code)
+      notify.success(message)
       setCheckInQueueNotice(true)
     }
   }
@@ -878,11 +926,13 @@ function AppointmentsPageContent() {
             onStatusChange={handleStatus}
             onReschedule={canWriteAppts ? handleReschedule : undefined}
             onCheckIn={canCheckIn ? handleCheckIn : undefined}
+            onCallToServe={canCheckIn ? handleCallToServe : undefined}
             onRemind={canWriteAppts ? handleSendReminder : undefined}
             onEdit={canWriteAppts ? openEditDialog : undefined}
             updatingId={updatingId}
             reschedulingId={reschedulingId}
             checkingInId={checkingInId}
+            callingToServeId={callingToServeId}
             remindingId={remindingId}
             dragHint={
               canWriteAppts

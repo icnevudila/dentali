@@ -28,6 +28,7 @@ test.describe("Clinical journey routes", () => {
       "/patients/new",
       "/appointments",
       "/queue",
+      "/dentist",
       "/billing",
       "/settings/workflow",
       "/reports/closeout",

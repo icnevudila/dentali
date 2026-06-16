@@ -25,6 +25,7 @@ const labels: AttentionLabels = {
   overdueInvoices: "Overdue invoices",
   hmoDraft: "HMO draft",
   philhealthPending: "PhilHealth pending",
+  openEncountersStale: "Open visits from prior days",
 }
 
 const baseStats: DashboardStats = {
@@ -42,6 +43,7 @@ const baseStats: DashboardStats = {
   philhealth_pending: 0,
   pending_intake_drafts: 0,
   appointments_awaiting_checkin: 0,
+  open_encounters_stale: 0,
 }
 
 const allPermissions = new Set<string>([

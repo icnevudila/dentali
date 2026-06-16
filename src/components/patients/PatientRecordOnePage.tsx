@@ -35,7 +35,7 @@ import { buildPatientRecordChecklist } from "@/lib/patients/patient-record-compl
 import type { TreatmentPlanSummary } from "@/lib/clinical/treatment-plan-service"
 import { TreatmentPlanProgressBar } from "@/components/clinical/TreatmentPlanProgressBar"
 import type { TimelineEvent } from "@/lib/clinical/clinical-notes-service"
-import { PatientVisitHistoryPanel } from "@/components/patients/PatientVisitHistoryPanel"
+import { PatientEncountersWorkspace } from "@/components/patients/PatientEncountersWorkspace"
 import { fetchOrthoCase, type OrthoCase } from "@/lib/clinical/ortho-service"
 import { AuditHistoryPanel } from "@/components/audit/AuditHistoryPanel"
 import { useBranch } from "@/hooks/use-branch"
@@ -498,7 +498,7 @@ export function PatientRecordOnePage({
         </RecordSection>
 
         <RecordSection id="record-visit-history" title="Visit history">
-          <PatientVisitHistoryPanel patientId={patientId} branchId={activeBranch?.id} />
+          <PatientEncountersWorkspace patientId={patientId} branchId={activeBranch?.id} />
         </RecordSection>
 
         <RecordSection

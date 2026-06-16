@@ -92,6 +92,7 @@ export async function createTreatmentPlan(params: {
   patientId: string
   title: string
   userId: string
+  encounterId?: string | null
 }): Promise<{ data: { id: string } | null; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("create_treatment_plan", {
@@ -100,6 +101,7 @@ export async function createTreatmentPlan(params: {
       branch_id: params.branchId,
       patient_id: params.patientId,
       title: params.title,
+      encounter_id: params.encounterId ?? null,
     },
   })
 
@@ -129,6 +131,30 @@ export async function addPlanItem(params: {
   })
 
   return { error: error?.message ?? null }
+}
+
+export async function duplicatePlanItemsFromPlan(
+  sourcePlanId: string,
+  targetPlanId: string
+): Promise<{ copied: number; error: string | null }> {
+  const { items, error } = await getTreatmentPlan(sourcePlanId)
+  if (error) return { copied: 0, error }
+
+  let copied = 0
+  for (const item of items) {
+    const { error: addErr } = await addPlanItem({
+      planId: targetPlanId,
+      procedureId: item.procedure_id ?? undefined,
+      description: item.description,
+      estimatedPrice: item.estimated_price,
+      toothNumber: item.tooth_number ?? undefined,
+      priority: item.priority,
+    })
+    if (addErr) return { copied, error: addErr }
+    copied++
+  }
+
+  return { copied, error: null }
 }
 
 export async function updatePlanItem(params: {

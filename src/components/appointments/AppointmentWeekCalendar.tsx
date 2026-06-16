@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Bell, Check, ChevronLeft, ChevronRight, UserCheck, UserX, X, Calendar, Filter, Plus, List, LayoutGrid } from "lucide-react"
+import { Megaphone, Bell, Check, ChevronLeft, ChevronRight, UserCheck, UserX, X, Calendar, Filter, Plus, List, LayoutGrid } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import type { AppointmentRecord } from "@/lib/appointments/appointment-service"
@@ -34,11 +34,13 @@ interface AppointmentWeekCalendarProps {
   onStatusChange?: (id: string, status: string) => void
   onReschedule?: (id: string, targetDateKey: string) => void
   onCheckIn?: (id: string) => void
+  onCallToServe?: (id: string) => void
   onRemind?: (id: string) => void
   onEdit?: (appointment: AppointmentRecord) => void
   updatingId?: string | null
   reschedulingId?: string | null
   checkingInId?: string | null
+  callingToServeId?: string | null
   remindingId?: string | null
   dragHint?: string
   providers: StaffMember[]
@@ -53,11 +55,13 @@ export function AppointmentWeekCalendar({
   onStatusChange,
   onReschedule,
   onCheckIn,
+  onCallToServe,
   onRemind,
   onEdit,
   updatingId,
   reschedulingId,
   checkingInId,
+  callingToServeId,
   remindingId,
   dragHint,
   providers,
@@ -542,11 +546,23 @@ export function AppointmentWeekCalendar({
                                 variant="outline"
                                 size="icon"
                                 className="h-8 w-8 text-neutral-500 hover:text-neutral-700"
-                                disabled={checkingInId === appt.id}
+                                disabled={checkingInId === appt.id || callingToServeId === appt.id}
                                 onClick={() => onCheckIn(appt.id)}
-                                title="Check In Patient"
+                                title={t("appointments.checkInTitle", "Check in")}
                               >
                                 <UserCheck className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {onCallToServe && (
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 text-primary-600 hover:text-primary-700 hover:bg-primary-50"
+                                disabled={checkingInId === appt.id || callingToServeId === appt.id}
+                                onClick={() => onCallToServe(appt.id)}
+                                title={t("appointments.callToServeTitle", "Call to chair (auto check-in if needed)")}
+                              >
+                                <Megaphone className="h-4 w-4" />
                               </Button>
                             )}
                             <Button
@@ -715,11 +731,23 @@ export function AppointmentWeekCalendar({
                               variant="outline"
                               size="icon"
                               className="h-8 w-8 text-neutral-500 hover:text-neutral-700"
-                              disabled={checkingInId === appt.id}
+                              disabled={checkingInId === appt.id || callingToServeId === appt.id}
                               onClick={() => onCheckIn(appt.id)}
-                              title="Check In Patient"
+                              title={t("appointments.checkInTitle", "Check in")}
                             >
                               <UserCheck className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {onCallToServe && (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 text-primary-600 hover:text-primary-700 hover:bg-primary-50"
+                              disabled={checkingInId === appt.id || callingToServeId === appt.id}
+                              onClick={() => onCallToServe(appt.id)}
+                              title={t("appointments.callToServeTitle", "Call to chair (auto check-in if needed)")}
+                            >
+                              <Megaphone className="h-4 w-4" />
                             </Button>
                           )}
                           <Button

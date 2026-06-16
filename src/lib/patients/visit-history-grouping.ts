@@ -10,6 +10,7 @@ export type VisitRow = {
   subtitle: string | null
   status: string
   meta?: string
+  appointmentId?: string | null
 }
 
 export type VisitSession = {
@@ -76,6 +77,10 @@ export function mergeVisitRows(
         e.event_type === "appointment" && String(e.title).toLowerCase().includes("portal")
           ? "online"
           : undefined,
+      appointmentId:
+        e.event_type === "appointment"
+          ? e.event_id
+          : (e.metadata?.appointment_id as string | undefined) ?? null,
     })
   }
 
@@ -88,6 +93,7 @@ export function mergeVisitRows(
       subtitle: `Queue ${q.display_code}${q.chair_label ? ` · ${q.chair_label}` : ""}`,
       status: q.status,
       meta: q.appointment_id ? "scheduled" : "walk-in",
+      appointmentId: q.appointment_id ?? null,
     })
   }
 
@@ -146,10 +152,17 @@ export function groupVisitRowsIntoSessions(
       return row.id
     }
 
-    if (row.kind === "appointment") {
-      const appointmentId = row.id.replace(/^appointment-/, "")
+    if (row.kind === "appointment" && row.appointmentId) {
+      const appointmentId = row.appointmentId
       const linked = appointmentToSession.get(appointmentId)
       if (linked) return linked
+      return `appointment-${appointmentId}`
+    }
+
+    if (row.kind === "clinical_note" && row.appointmentId) {
+      const linked = appointmentToSession.get(row.appointmentId)
+      if (linked) return linked
+      return `appointment-${row.appointmentId}`
     }
 
     const dateKey = manilaDateKey(row.occurredAt)

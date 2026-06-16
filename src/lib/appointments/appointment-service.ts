@@ -210,6 +210,21 @@ export async function markAppointmentNoShow(
   return { data: { scheduled_at: raw.scheduled_at }, error: null }
 }
 
+/** Runs on queue page load — no extra Vercel/Supabase cron. */
+export async function autoNoShowForBranch(
+  branchId: string,
+  graceMinutes = 15
+): Promise<{ data: { marked: number; skipped: number } | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("auto_no_show_for_branch", {
+    p_branch_id: branchId,
+    p_grace_minutes: graceMinutes,
+  })
+  if (error) return { data: null, error: error.message }
+  const raw = data as { marked: number; skipped: number }
+  return { data: raw, error: null }
+}
+
 export async function createAppointment(params: {
   organizationId: string
   branchId: string
@@ -244,13 +259,18 @@ export async function createAppointment(params: {
 
 export async function checkInAppointment(
   appointmentId: string,
-  options?: { forceBillingOverride?: boolean; forceCheckin?: boolean }
+  options?: {
+    forceBillingOverride?: boolean
+    forceCheckin?: boolean
+    reuseEncounterId?: string
+  }
 ): Promise<{ data: { queue_id: string; display_code: string } | null; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("check_in_appointment", {
     p_appointment_id: appointmentId,
     p_force_billing_override: options?.forceBillingOverride ?? false,
     p_force_checkin: options?.forceCheckin ?? false,
+    p_reuse_encounter_id: options?.reuseEncounterId ?? null,
   })
 
   if (error) return { data: null, error: error.message }

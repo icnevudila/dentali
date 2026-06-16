@@ -21,9 +21,10 @@ const MENU_WIDTH = 176
 interface PatientRowActionsProps {
   patient: PatientRecord
   className?: string
+  listContext?: "registry" | "daily"
 }
 
-export function PatientRowActions({ patient, className }: PatientRowActionsProps) {
+export function PatientRowActions({ patient, className, listContext = "registry" }: PatientRowActionsProps) {
   const { t } = useLocale()
   const [open, setOpen] = React.useState(false)
   const [mounted, setMounted] = React.useState(false)
@@ -132,9 +133,11 @@ export function PatientRowActions({ patient, className }: PatientRowActionsProps
               {t("patients.actionCall", "Call patient")}
             </a>
           ) : null}
-          <MenuLink href={`/queue`} icon={ExternalLink} onNavigate={() => setOpen(false)}>
-            {t("patients.actionQueue", "Go to queue")}
-          </MenuLink>
+          {listContext === "registry" ? (
+            <MenuLink href={`/queue`} icon={ExternalLink} onNavigate={() => setOpen(false)}>
+              {t("patients.actionQueue", "Go to queue")}
+            </MenuLink>
+          ) : null}
         </div>
       </>
     ) : null

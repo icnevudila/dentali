@@ -66,6 +66,7 @@ export async function createClinicalNote(params: {
   plan?: string
   body?: string
   appointmentId?: string | null
+  encounterId?: string | null
 }): Promise<{ data: { id: string } | null; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase
@@ -75,6 +76,7 @@ export async function createClinicalNote(params: {
       organization_id: params.organizationId,
       branch_id: params.branchId,
       appointment_id: params.appointmentId ?? null,
+      encounter_id: params.encounterId ?? null,
       title: params.title?.trim() || "Clinical Note",
       subjective: params.subjective || null,
       objective: params.objective || null,

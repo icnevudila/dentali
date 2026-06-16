@@ -377,7 +377,10 @@ export async function recordInvoicePayment(params: {
   amount: number
   paymentMethod?: string
   notes?: string
-}): Promise<{ data: { paid_amount: number; status: string; balance: number } | null; error: string | null }> {
+}): Promise<{
+  data: { paid_amount: number; status: string; balance: number; encounter_closed?: boolean } | null
+  error: string | null
+}> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("record_invoice_payment", {
     p_invoice_id: params.invoiceId,
@@ -387,12 +390,18 @@ export async function recordInvoicePayment(params: {
   })
 
   if (error) return { data: null, error: error.message }
-  const raw = data as { paid_amount: number; status: string; balance: number }
+  const raw = data as {
+    paid_amount: number
+    status: string
+    balance: number
+    encounter_closed?: boolean
+  }
   return {
     data: {
       paid_amount: Number(raw.paid_amount),
       status: raw.status,
       balance: Number(raw.balance),
+      encounter_closed: Boolean(raw.encounter_closed),
     },
     error: null,
   }

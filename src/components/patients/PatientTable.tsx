@@ -9,12 +9,17 @@ import { Button } from "@/components/ui/button"
 import { RecordRow, patientInitials } from "@/components/layout/RecordRow"
 import { PatientRowActions } from "@/components/patients/PatientRowActions"
 import type { PatientRecord } from "@/lib/patients/patient-service"
+import type { QueueEntry, QueueStatus } from "@/lib/queue/queue-service"
+import { waitMinutes } from "@/lib/queue/queue-service"
 import type { ToothFinding } from "@/lib/types/dental"
 import { MiniOdontogram } from "@/components/odontogram/MiniOdontogram"
 import { CompletionRing } from "@/components/visual/CompletionRing"
 import { useLocale } from "@/hooks/use-locale"
 import { formatDate } from "@/lib/i18n/translate"
+import { cn } from "@/lib/utils"
 import { AlertCircle, Plus, UserSearch } from "lucide-react"
+
+type PatientTableContext = "registry" | "daily"
 
 interface PatientTableProps {
   patients: PatientRecord[]
@@ -28,6 +33,53 @@ interface PatientTableProps {
   searchQuery?: string
   noBranch?: boolean
   chartFindingsByPatient?: Record<string, ToothFinding[]>
+  context?: PatientTableContext
+  queueByPatientId?: Record<string, QueueEntry>
+}
+
+function queueStatusBadgeVariant(status: QueueStatus) {
+  if (status === "in_chair") return "success" as const
+  if (status === "now_serving") return "warning" as const
+  if (status === "ready") return "info" as const
+  return "default" as const
+}
+
+function queueStatusLabel(t: (key: string, fallback: string) => string, status: QueueStatus) {
+  switch (status) {
+    case "in_chair":
+      return t("dentist.statusInChair", "In chair")
+    case "now_serving":
+      return t("dentist.statusServing", "Called")
+    case "ready":
+      return t("dentist.statusReady", "Ready")
+    case "waiting":
+      return t("dentist.statusWaiting", "Waiting")
+    default:
+      return status.replace("_", " ")
+  }
+}
+
+function formatQueueSecondary(
+  patient: PatientRecord,
+  queue: QueueEntry,
+  t: (key: string, fallback: string) => string
+): string {
+  const parts: string[] = []
+  if (patient.patient_number) parts.push(patient.patient_number)
+  parts.push(queue.display_code)
+  parts.push(`${waitMinutes(queue.checked_in_at)} ${t("dentist.minAbbr", "min")}`)
+  if (queue.chair_label) parts.push(`${t("dentist.chair", "Chair")} ${queue.chair_label}`)
+  const contact = formatPatientSecondary(patient)
+  if (contact !== "No contact on file") parts.push(contact)
+  return parts.join(" · ")
+}
+
+function formatRegistrySecondary(patient: PatientRecord): string {
+  const parts: string[] = []
+  if (patient.patient_number) parts.push(patient.patient_number)
+  const contact = formatPatientSecondary(patient)
+  if (contact !== "No contact on file") parts.push(contact)
+  return parts.length > 0 ? parts.join(" · ") : contact
 }
 
 function formatPatientSecondary(patient: PatientRecord): string {
@@ -95,9 +147,12 @@ export function PatientTable({
   searchQuery,
   noBranch,
   chartFindingsByPatient = {},
+  context = "registry",
+  queueByPatientId = {},
 }: PatientTableProps) {
   const { t, locale } = useLocale()
   const router = useRouter()
+  const isDaily = context === "daily"
 
   const openPatient = (patientId: string) => {
     startTransition(() => {
@@ -110,10 +165,14 @@ export function PatientTable({
     return (
       <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/60 px-6 py-12 text-center animate-fade-rise">
         <p className="text-sm font-medium text-neutral-700">
-          {t("patients.selectBranchTitle", "Select a branch to view patients")}
+          {isDaily
+            ? t("dentist.selectBranchTitle", "Select a branch to see today's chair queue")
+            : t("patients.selectBranchTitle", "Select a branch to view patients")}
         </p>
         <p className="mt-1 text-sm text-neutral-500">
-          {t("patients.selectBranchHint", "Use the branch switcher in the top bar.")}
+          {isDaily
+            ? t("dentist.selectBranchHint", "Use the branch switcher in the top bar.")
+            : t("patients.selectBranchHint", "Use the branch switcher in the top bar.")}
         </p>
       </div>
     )
@@ -155,15 +214,23 @@ export function PatientTable({
         </div>
         <p className="mt-4 text-sm font-medium text-neutral-700">
           {isFiltered
-            ? t("patients.emptySearch", "No patients match your search.")
-            : t("patients.empty", "No patients found.")}
+            ? isDaily
+              ? t("dentist.emptySearch", "No patients match your search.")
+              : t("patients.emptySearch", "No patients match your search.")
+            : isDaily
+              ? t("dentist.empty", "Nobody in the chair queue right now.")
+              : t("patients.empty", "No patients found.")}
         </p>
         <p className="mt-1 text-sm text-neutral-500">
           {isFiltered
-            ? t("patients.emptySearchHint", "Try a different name or phone number.")
-            : t("patients.emptyHint", "Register a new patient to get started.")}
+            ? isDaily
+              ? t("dentist.emptySearchHint", "Try a queue code or patient name.")
+              : t("patients.emptySearchHint", "Try a different name or phone number.")
+            : isDaily
+              ? t("dentist.emptyHint", "Checked-in patients appear here automatically.")
+              : t("patients.emptyHint", "Register a new patient to get started.")}
         </p>
-        {!isFiltered ? (
+        {!isFiltered && !isDaily ? (
           <Button asChild size="sm" className="mt-5 gap-2">
             <Link href="/patients/new">
               <Plus className="h-4 w-4" />
@@ -188,6 +255,19 @@ export function PatientTable({
           const fullName = `${patient.first_name} ${patient.last_name}`
           const intakePct = patient.intake_pct ?? 0
           const lastVisitLabel = formatLastVisit(locale, patient.last_visit_at)
+          const queue = queueByPatientId[patient.id]
+          const statusBadge = queue ? (
+            <Badge variant={queueStatusBadgeVariant(queue.status)} className="shrink-0 font-normal">
+              {queueStatusLabel(t, queue.status)}
+            </Badge>
+          ) : (
+            <Badge
+              variant={patient.status === "active" ? "success" : "default"}
+              className="shrink-0 font-normal"
+            >
+              {patient.status}
+            </Badge>
+          )
 
           return (
             <div key={patient.id} className="relative lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-2">
@@ -196,35 +276,37 @@ export function PatientTable({
                 staggerIndex={index}
                 initials={patientInitials(patient.first_name, patient.last_name)}
                 avatarUrl={patient.profile_photo_url}
+                className={cn(
+                  queue?.status === "in_chair" &&
+                    "ring-2 ring-emerald-400/70 bg-emerald-50/50 border-emerald-200",
+                  queue?.status === "now_serving" &&
+                    "ring-2 ring-amber-400/60 bg-amber-50/40 border-amber-200"
+                )}
                 primary={
                   <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="truncate">{fullName}</span>
-                    <Badge
-                      variant={patient.status === "active" ? "success" : "default"}
-                      className="shrink-0 font-normal lg:hidden"
-                    >
-                      {patient.status}
-                    </Badge>
+                    <span className="lg:hidden">{statusBadge}</span>
                   </span>
                 }
                 secondary={
                   <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                    <span>{formatPatientSecondary(patient)}</span>
-                    <span className="text-neutral-300 lg:hidden">·</span>
-                    <span className="lg:hidden">
-                      <span className="text-neutral-400">{t("patients.colLastVisit", "Last visit")}: </span>
-                      {lastVisitLabel}
+                    <span>
+                      {queue
+                        ? formatQueueSecondary(patient, queue, t)
+                        : formatRegistrySecondary(patient)}
                     </span>
+                    {!queue ? (
+                      <>
+                        <span className="text-neutral-300 lg:hidden">·</span>
+                        <span className="lg:hidden">
+                          <span className="text-neutral-400">{t("patients.colLastVisit", "Last visit")}: </span>
+                          {lastVisitLabel}
+                        </span>
+                      </>
+                    ) : null}
                   </span>
                 }
-                meta={
-                  <Badge
-                    variant={patient.status === "active" ? "success" : "default"}
-                    className="hidden shrink-0 font-normal lg:inline-flex"
-                  >
-                    {patient.status}
-                  </Badge>
-                }
+                meta={<span className="hidden lg:inline-flex">{statusBadge}</span>}
                 trailing={
                   <div className="flex items-center gap-2 sm:gap-3">
                     <span
@@ -242,7 +324,7 @@ export function PatientTable({
                     <div className="hidden items-center gap-2 lg:flex" title={t("patients.colChart", "Chart")}>
                       <MiniOdontogram size="sm" findings={chartFindingsByPatient[patient.id] ?? []} />
                     </div>
-                    <PatientRowActions patient={patient} />
+                    <PatientRowActions patient={patient} listContext={context} />
                   </div>
                 }
               />

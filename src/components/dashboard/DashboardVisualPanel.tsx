@@ -70,7 +70,7 @@ export function DashboardVisualPanel({
         </Button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
         <div className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] lg:col-span-1">
           <div className="mb-3 flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-primary-600" aria-hidden />

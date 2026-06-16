@@ -39,9 +39,19 @@ import { useBranch } from "@/hooks/use-branch"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
 import { NAV_BACK_TRANSITION, NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 import { ClinicalVisitJourneyPanel } from "@/components/clinical/ClinicalVisitJourneyPanel"
-import { buildClinicalVisitJourney } from "@/lib/clinical/clinical-visit-journey"
+import {
+  buildClinicalVisitJourney,
+  buildEncounterVisitJourney,
+} from "@/lib/clinical/clinical-visit-journey"
 import { getPatientOdontogram } from "@/lib/odontogram/dental-chart-service"
-import { PatientVisitHistoryPanel } from "@/components/patients/PatientVisitHistoryPanel"
+import { PatientEncountersWorkspace } from "@/components/patients/PatientEncountersWorkspace"
+import {
+  closePatientEncounter,
+  fetchActiveEncounter,
+  type PatientEncounterDetail,
+} from "@/lib/clinical/encounter-service"
+import { fetchCarryForwardSources, type CarryForwardSources } from "@/lib/clinical/encounter-carry-forward"
+import { EncounterCarryForwardBanner } from "@/components/clinical/EncounterCarryForwardBanner"
 import { ManualInvoiceDrawer } from "@/components/billing/ManualInvoiceDrawer"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/hooks/use-locale"
@@ -69,6 +79,7 @@ export default function PatientProfilePage() {
   const { id: patientId } = useRouteParams<{ id: string }>()
   const { activeBranch } = useBranch()
   const { t } = useLocale()
+  const realtimeInstanceId = React.useId().replace(/:/g, "")
   const router = useRouter()
   const searchParams = useSearchParams()
   const tabParam = searchParams.get("tab")
@@ -115,6 +126,9 @@ export default function PatientProfilePage() {
   const [timeline, setTimeline] = React.useState<TimelineEvent[]>([])
   const [timelineError, setTimelineError] = React.useState<string | null>(null)
   const [hasChartFindings, setHasChartFindings] = React.useState(false)
+  const [activeEncounter, setActiveEncounter] = React.useState<PatientEncounterDetail | null>(null)
+  const [carryForwardSources, setCarryForwardSources] = React.useState<CarryForwardSources | null>(null)
+  const [closingEncounter, setClosingEncounter] = React.useState(false)
   const [showInvoiceDrawer, setShowInvoiceDrawer] = React.useState(false)
   const intakeToastShown = React.useRef(false)
   const balanceClearedToastShown = React.useRef(false)
@@ -180,6 +194,16 @@ export default function PatientProfilePage() {
     })
   }, [patientId])
 
+  const refreshActiveEncounter = React.useCallback(() => {
+    if (!activeBranch?.id) {
+      setActiveEncounter(null)
+      return
+    }
+    fetchActiveEncounter(patientId, activeBranch.id).then(({ data }) => {
+      setActiveEncounter(data)
+    })
+  }, [patientId, activeBranch?.id])
+
   React.useEffect(() => {
     if (!patientId) return
     setLoading(true)
@@ -238,11 +262,25 @@ export default function PatientProfilePage() {
   }, [patientId, activeBranch?.id])
 
   React.useEffect(() => {
+    refreshActiveEncounter()
+  }, [refreshActiveEncounter])
+
+  React.useEffect(() => {
+    if (!patientId || !activeBranch?.id || !activeEncounter) {
+      setCarryForwardSources(null)
+      return
+    }
+    fetchCarryForwardSources(patientId, activeBranch.id, {
+      excludeEncounterId: activeEncounter.encounter.id,
+    }).then(({ data }) => setCarryForwardSources(data))
+  }, [patientId, activeBranch?.id, activeEncounter?.encounter.id])
+
+  React.useEffect(() => {
     if (!patientId) return
 
     const supabase = createClient()
     const channel = supabase
-      .channel(`patient-journey-${patientId}`)
+      .channel(`patient-journey-${patientId}-${realtimeInstanceId}`)
       .on(
         "postgres_changes",
         {
@@ -278,6 +316,32 @@ export default function PatientProfilePage() {
         () => {
           refreshAppointments()
           refreshTimeline()
+          refreshActiveEncounter()
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "patient_encounters",
+          filter: `patient_id=eq.${patientId}`,
+        },
+        () => {
+          refreshActiveEncounter()
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "clinical_notes",
+          filter: `patient_id=eq.${patientId}`,
+        },
+        () => {
+          refreshTimeline()
+          refreshActiveEncounter()
         }
       )
       .on(
@@ -320,6 +384,8 @@ export default function PatientProfilePage() {
     refreshBalance,
     refreshBillingGate,
     refreshTimeline,
+    refreshActiveEncounter,
+    realtimeInstanceId,
   ])
 
   if (loading) {
@@ -346,7 +412,7 @@ export default function PatientProfilePage() {
     (a) => a.status !== "cancelled" && a.status !== "completed"
   ).length
 
-  const visitJourney = buildClinicalVisitJourney({
+  const intakeJourney = buildClinicalVisitJourney({
     patientId,
     patient,
     medicalHistory,
@@ -358,6 +424,26 @@ export default function PatientProfilePage() {
     timeline,
     hasChartFindings,
   })
+
+  const visitJourney = activeEncounter
+    ? buildEncounterVisitJourney({
+        patientId,
+        detail: activeEncounter,
+        hasChartFindings,
+      })
+    : intakeJourney
+
+  const handleFinishVisit = async () => {
+    if (!activeEncounter) return
+    setClosingEncounter(true)
+    const { error } = await closePatientEncounter(activeEncounter.encounter.id)
+    if (error) notify.error(error)
+    else {
+      notify.success(t("visits.visitClosed", "Visit closed"))
+      refreshActiveEncounter()
+    }
+    setClosingEncounter(false)
+  }
 
   const profileMetrics = [
     {
@@ -420,7 +506,13 @@ export default function PatientProfilePage() {
               )}
             </div>
             <p className="text-sm text-neutral-500">
-              ID: {patient.id.slice(0, 8)} • {patient.date_of_birth ?? "—"} • {patient.gender ?? "—"}
+              {patient.patient_number ? (
+                <>
+                  <span className="font-mono font-medium text-neutral-700">{patient.patient_number}</span>
+                  {" · "}
+                </>
+              ) : null}
+              {patient.date_of_birth ?? "—"} · {patient.gender ?? "—"}
             </p>
           </div>
         </div>
@@ -488,8 +580,57 @@ export default function PatientProfilePage() {
 
       <ClinicalVisitJourneyPanel
         journey={visitJourney}
-        celebrate={visitJourney.percentComplete >= 100 || intakeComplete}
+        celebrate={
+          activeEncounter
+            ? visitJourney.percentComplete >= 100 && activeEncounter.encounter.status === "open"
+            : intakeComplete
+        }
+        finishAction={
+          activeEncounter && activeEncounter.encounter.status === "open"
+            ? {
+                label: t("visits.finishVisit", "Finish visit"),
+                onClick: () => void handleFinishVisit(),
+                loading: closingEncounter,
+              }
+            : undefined
+        }
+        completionAction={
+          !activeEncounter
+            ? {
+                href: `/patients/${patientId}/visits`,
+                label: t("visits.viewAllVisits", "View visit history"),
+              }
+            : {
+                href: `/patients/${patientId}/visits`,
+                label: t("visits.openVisitsLog", "Open visits log"),
+              }
+        }
       />
+
+      {activeEncounter && carryForwardSources ? (
+        <EncounterCarryForwardBanner
+          patientId={patientId}
+          sources={carryForwardSources}
+          onApplyNote={() => setActiveTab("clinical-notes")}
+        />
+      ) : null}
+
+      {!activeEncounter ? (
+        <ContentPanel className="border-neutral-200/80">
+          <p className="text-sm font-medium text-neutral-900">
+            {t("visits.noActiveVisit", "No active visit")}
+          </p>
+          <p className="mt-1 text-sm text-neutral-600">
+            {t(
+              "visits.noActiveVisitHint",
+              "Check in from the queue to start a new visit. Progress and billing will track only that arrival."
+            )}
+          </p>
+          <Button size="sm" className="mt-3" asChild>
+            <Link href="/queue">{t("visits.checkInCta", "Check in from queue")}</Link>
+          </Button>
+        </ContentPanel>
+      ) : null}
 
       {intakeComplete ? (
         <ContentPanel className="border-primary-200/80 bg-primary-50/40">
@@ -821,7 +962,7 @@ export default function PatientProfilePage() {
                 </Button>
               </CardHeader>
               <CardContent>
-                <PatientVisitHistoryPanel patientId={patientId} branchId={activeBranch?.id} />
+                <PatientEncountersWorkspace patientId={patientId} branchId={activeBranch?.id} hasChartFindings={hasChartFindings} />
               </CardContent>
             </Card>
           )}

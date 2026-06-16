@@ -10,6 +10,7 @@ import {
 
 export interface PatientRecord {
   id: string
+  patient_number?: string | null
   first_name: string
   last_name: string
   date_of_birth: string | null
@@ -107,6 +108,79 @@ export async function searchPatients(
   }
 
   return { ...mapSearchPatientsRows((legacy.data ?? []) as SearchPatientsRow[]), error: null }
+}
+
+function computeIntakePct(patient: {
+  id: string
+  phone: string | null
+  date_of_birth: string | null
+}, hasMedical: Set<string>, hasSignedConsent: Set<string>): number {
+  return Math.min(
+    100,
+    (patient.phone ? 25 : 0) +
+      (patient.date_of_birth ? 25 : 0) +
+      (hasMedical.has(patient.id) ? 25 : 0) +
+      (hasSignedConsent.has(patient.id) ? 25 : 0)
+  )
+}
+
+export async function fetchPatientRecordsByIds(
+  patientIds: string[],
+  branchId: string | null
+): Promise<{ data: PatientRecord[]; error: string | null }> {
+  const uniqueIds = [...new Set(patientIds)]
+  if (uniqueIds.length === 0) return { data: [], error: null }
+
+  const showcase = getShowcaseSnapshot()
+  if (showcase && branchId === showcase.branch.id) {
+    const byId = new Map(showcase.patients.map((p) => [p.id, p]))
+    return {
+      data: uniqueIds
+        .map((id) => byId.get(id))
+        .filter((patient): patient is PatientRecord => Boolean(patient)),
+      error: null,
+    }
+  }
+
+  if (!branchId) return { data: [], error: null }
+
+  const supabase = createClient()
+  const [patientsRes, linksRes, medicalRes, consentsRes] = await Promise.all([
+    supabase
+      .from("patients")
+      .select(
+        "id, patient_number, first_name, last_name, date_of_birth, gender, phone, email, address, status"
+      )
+      .in("id", uniqueIds),
+    supabase
+      .from("patient_branch_links")
+      .select("patient_id, last_visit_at")
+      .eq("branch_id", branchId)
+      .in("patient_id", uniqueIds),
+    supabase.from("patient_medical_histories").select("patient_id").in("patient_id", uniqueIds),
+    supabase
+      .from("patient_consents")
+      .select("patient_id, status")
+      .in("patient_id", uniqueIds)
+      .eq("status", "signed"),
+  ])
+
+  if (patientsRes.error) return { data: [], error: patientsRes.error.message }
+
+  const lastVisitById = new Map(
+    (linksRes.data ?? []).map((link) => [link.patient_id, link.last_visit_at])
+  )
+  const hasMedical = new Set<string>((medicalRes.data ?? []).map((row) => row.patient_id as string))
+  const hasSignedConsent = new Set<string>((consentsRes.data ?? []).map((row) => row.patient_id as string))
+
+  return {
+    data: (patientsRes.data ?? []).map((patient) => ({
+      ...patient,
+      last_visit_at: lastVisitById.get(patient.id) ?? null,
+      intake_pct: computeIntakePct(patient, hasMedical, hasSignedConsent),
+    })),
+    error: null,
+  }
 }
 
 export async function findPatientsByPhone(

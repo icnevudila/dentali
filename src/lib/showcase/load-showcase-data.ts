@@ -25,6 +25,7 @@ const EMPTY_STATS: DashboardStats = {
   philhealth_pending: 0,
   pending_intake_drafts: 0,
   appointments_awaiting_checkin: 0,
+  open_encounters_stale: 0,
 }
 
 async function resolveBranch(
@@ -75,6 +76,7 @@ function mapDashboardStats(raw: Record<string, number>): DashboardStats {
     philhealth_pending: Number(raw.philhealth_pending ?? 0),
     pending_intake_drafts: Number(raw.pending_intake_drafts ?? 0),
     appointments_awaiting_checkin: Number(raw.appointments_awaiting_checkin ?? 0),
+    open_encounters_stale: Number(raw.open_encounters_stale ?? 0),
   }
 }
 
@@ -111,6 +113,7 @@ async function loadStatsDirect(
     paymentsRes,
     hmoRes,
     phRes,
+    staleEncountersRes,
   ] = await Promise.all([
     supabase.from("patients").select("id", { count: "exact", head: true }).eq("organization_id", orgId).eq("status", "active"),
     supabase
@@ -169,6 +172,13 @@ async function loadStatsDirect(
       .eq("organization_id", orgId)
       .eq("branch_id", branchId)
       .in("status", ["draft", "checklist_incomplete", "ready", "sync_failed"]),
+    supabase
+      .from("patient_encounters")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("branch_id", branchId)
+      .eq("status", "open")
+      .lt("opened_at", `${manilaToday}T00:00:00+08:00`),
   ])
 
   let todayCollected = 0
@@ -246,6 +256,7 @@ async function loadStatsDirect(
     philhealth_pending: phRes.count ?? 0,
     pending_intake_drafts: intakeDraftsRes.count ?? 0,
     appointments_awaiting_checkin: awaitingCheckinRes.count ?? 0,
+    open_encounters_stale: staleEncountersRes.count ?? 0,
   })
 }
 
@@ -269,7 +280,7 @@ async function loadPatients(
   if (error || !data) {
     let query = supabase
       .from("patients")
-      .select("id, first_name, last_name, date_of_birth, gender, phone, email, address, status")
+      .select("id, patient_number, first_name, last_name, date_of_birth, gender, phone, email, address, status")
       .eq("status", "active")
       .order("last_name")
       .limit(5)

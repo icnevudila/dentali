@@ -15,6 +15,7 @@ import {
   PieChart,
   Settings,
   Shield,
+  Stethoscope,
   Tablet,
   Timer,
   UserPlus,
@@ -93,6 +94,13 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         href: "/patients",
         icon: Users,
         permission: PERMISSIONS.PATIENTS_READ,
+      },
+      {
+        nameKey: "nav.dentist",
+        fallback: "Today's chair",
+        href: "/dentist",
+        icon: Stethoscope,
+        permission: PERMISSIONS.DENTAL_CHART_READ,
       },
       {
         nameKey: "nav.newPatient",

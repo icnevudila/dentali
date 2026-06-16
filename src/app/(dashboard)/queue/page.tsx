@@ -10,6 +10,7 @@ import { searchPatients } from "@/lib/patients/patient-service"
 import {
   callNextPatient,
   checkInPatient,
+  callAppointmentToServe,
   fetchQueueEntries,
   updateQueueStatus,
   waitMinutes,
@@ -19,9 +20,21 @@ import {
 import {
   checkInAppointment,
   fetchAppointments,
+  autoNoShowForBranch,
   type AppointmentRecord,
 } from "@/lib/appointments/appointment-service"
 import { toDateKey } from "@/lib/appointments/week-calendar"
+import {
+  applyEncounterCheckInChoice,
+  loadOpenEncounterPrompt,
+  type EncounterCheckInChoice,
+  type OpenEncounterPrompt,
+} from "@/lib/clinical/encounter-check-in-flow"
+import {
+  classifyTodayArrivals,
+  formatArrivalTime,
+} from "@/lib/queue/appointment-arrival"
+import { OpenEncounterCheckInDialog } from "@/components/queue/OpenEncounterCheckInDialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -47,6 +60,15 @@ import { VisitCheckoutWizard } from "@/components/queue/VisitCheckoutWizard"
 
 type Tab = "board" | "history"
 
+type PendingCheckInAction = {
+  patientId: string
+  patientName?: string
+  mode: "walk_in" | "appointment_check_in" | "appointment_call"
+  appointmentId?: string
+  forceCheckin?: boolean
+  forceBillingOverride?: boolean
+}
+
 function sortQueueEntries(data: QueueEntry[]): QueueEntry[] {
   return [...data].sort((a, b) => {
     const aHasAppt = !!a.appointment_id
@@ -55,6 +77,69 @@ function sortQueueEntries(data: QueueEntry[]): QueueEntry[] {
     if (!aHasAppt && bHasAppt) return 1
     return new Date(a.checked_in_at).getTime() - new Date(b.checked_in_at).getTime()
   })
+}
+
+function ArrivalRow({
+  appt,
+  tone,
+  apptCheckInId,
+  apptCallId,
+  t,
+  onCheckIn,
+  onCall,
+}: {
+  appt: AppointmentRecord
+  tone: "overdue" | "due" | "upcoming"
+  apptCheckInId: string | null
+  apptCallId: string | null
+  t: (key: string, fallback: string) => string
+  onCheckIn: () => void
+  onCall: () => void
+}) {
+  const rowClass =
+    tone === "overdue"
+      ? "border-red-200 bg-red-50/60"
+      : tone === "due"
+        ? "border-amber-200 bg-amber-50/50"
+        : "border-primary-100 bg-white"
+
+  return (
+    <div
+      className={`flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm ${rowClass}`}
+    >
+      <div>
+        <span className="font-medium">{formatArrivalTime(appt.scheduled_at)}</span>
+        {" · "}
+        <Link href={`/patients/${appt.patient_id}`} className="text-primary-600 hover:underline">
+          {appt.patient_name ?? "Patient"}
+        </Link>
+        {appt.purpose ? <span className="text-neutral-500"> · {appt.purpose}</span> : null}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1"
+          disabled={apptCheckInId === appt.id || apptCallId === appt.id}
+          onClick={onCheckIn}
+        >
+          <UserCheck className="h-3.5 w-3.5" />
+          {apptCheckInId === appt.id
+            ? t("queue.checkingIn", "Checking in…")
+            : t("queue.checkIn", "Check in")}
+        </Button>
+        <Button
+          size="sm"
+          className="gap-1"
+          disabled={apptCheckInId === appt.id || apptCallId === appt.id}
+          onClick={onCall}
+        >
+          <Megaphone className="h-3.5 w-3.5" />
+          {apptCallId === appt.id ? t("queue.calling", "Calling…") : t("queue.callToServe", "Call to chair")}
+        </Button>
+      </div>
+    </div>
+  )
 }
 
 export default function QueuePage() {
@@ -83,6 +168,7 @@ export default function QueuePage() {
   }, [])
   const [todayAppointments, setTodayAppointments] = React.useState<AppointmentRecord[]>([])
   const [apptCheckInId, setApptCheckInId] = React.useState<string | null>(null)
+  const [apptCallId, setApptCallId] = React.useState<string | null>(null)
   const [consentOverridePending, setConsentOverridePending] = React.useState(false)
   const [billingOverridePending, setBillingOverridePending] = React.useState(false)
   const [checkoutWizard, setCheckoutWizard] = React.useState<{
@@ -90,6 +176,10 @@ export default function QueuePage() {
     patientName: string
     billingGate: PatientBillingGate | null
   } | null>(null)
+  const [encounterPrompt, setEncounterPrompt] = React.useState<OpenEncounterPrompt | null>(null)
+  const [encounterDialogOpen, setEncounterDialogOpen] = React.useState(false)
+  const [pendingCheckIn, setPendingCheckIn] = React.useState<PendingCheckInAction | null>(null)
+  const [encounterResolving, setEncounterResolving] = React.useState(false)
 
   const siteOrigin = typeof window !== "undefined" ? window.location.origin : ""
   const today = toDateKey(new Date())
@@ -182,10 +272,22 @@ export default function QueuePage() {
 
   React.useEffect(() => {
     if (!activeBranch) return
-    fetchAppointments(activeBranch.id, today).then(({ data }) => {
-      setTodayAppointments(data.filter((a) => a.status === "scheduled" || a.status === "confirmed"))
-    })
-  }, [activeBranch, today, entries])
+    void (async () => {
+      const { data: noShowResult } = await autoNoShowForBranch(activeBranch.id)
+      if (noShowResult && noShowResult.marked > 0) {
+        notify.info(
+          t("queue.autoNoShowMarked", "{n} overdue appointment(s) marked no-show.").replace(
+            "{n}",
+            String(noShowResult.marked)
+          )
+        )
+      }
+      const { data } = await fetchAppointments(activeBranch.id, today)
+      setTodayAppointments(
+        data.filter((a) => a.status === "scheduled" || a.status === "confirmed")
+      )
+    })()
+  }, [activeBranch, today, entries, t])
 
   const queuedAppointmentIds = React.useMemo(
     () => new Set(entries.map((e) => e.appointment_id).filter(Boolean)),
@@ -193,6 +295,11 @@ export default function QueuePage() {
   )
 
   const pendingAppointmentCheckIns = todayAppointments.filter((a) => !queuedAppointmentIds.has(a.id))
+
+  const arrivalBuckets = React.useMemo(
+    () => classifyTodayArrivals(pendingAppointmentCheckIns),
+    [pendingAppointmentCheckIns]
+  )
 
   React.useEffect(() => {
     if (tab !== "board" || !activeBranch) return
@@ -246,6 +353,24 @@ export default function QueuePage() {
     } else {
       const res = await updateQueueStatus(entryId, status)
       err = res.error
+      if (!err && res.data) {
+        if (status === "in_chair" && res.data.soap_draft_id) {
+          notify.info(
+            t(
+              "queue.autoSoapDraft",
+              "Draft SOAP note created from the last visit — open Clinical Notes to review."
+            )
+          )
+        }
+        if (status === "served" && res.data.invoice_draft_id) {
+          notify.info(
+            t(
+              "queue.autoInvoiceDraft",
+              "Invoice draft created from the approved treatment plan."
+            )
+          )
+        }
+      }
     }
     setActionId(null)
     if (err) {
@@ -286,6 +411,163 @@ export default function QueuePage() {
     }
   }
 
+  const executeCheckIn = async (
+    action: PendingCheckInAction,
+    reuseEncounterId?: string | null
+  ) => {
+    if (!activeBranch) return
+
+    const options = {
+      forceCheckin: action.forceCheckin,
+      forceBillingOverride: action.forceBillingOverride,
+      reuseEncounterId: reuseEncounterId ?? undefined,
+    }
+
+    if (action.mode === "walk_in") {
+      setCheckingIn(true)
+      const { error: err } = await checkInPatient({
+        branchId: activeBranch.id,
+        patientId: action.patientId,
+        notes: checkInNotes || undefined,
+        ...options,
+      })
+      setCheckingIn(false)
+      if (err) {
+        if (!action.forceCheckin && err.includes("Pending consents")) {
+          setConsentOverridePending(true)
+        }
+        if (!action.forceBillingOverride && err.includes("Billing clearance")) {
+          setBillingOverridePending(true)
+        }
+        setError(err)
+        notify.error(err)
+      } else {
+        closeCheckInModal()
+        notify.success(t("queue.walkInCheckInSuccess", "Patient added to queue"))
+        void load(true)
+      }
+      return
+    }
+
+    if (action.mode === "appointment_check_in") {
+      if (!action.appointmentId) return
+      setApptCheckInId(action.appointmentId)
+      setError(null)
+      const { data, error: err } = await checkInAppointment(action.appointmentId, options)
+      setApptCheckInId(null)
+      if (err) {
+        if (!action.forceCheckin && err.includes("Pending consents")) {
+          const ok = await notify.confirm(t("queue.consentOverrideConfirm", "Required consents are unsigned. Check in anyway? This will be logged in audit."))
+          if (ok) {
+            return executeCheckIn({ ...action, forceCheckin: true }, reuseEncounterId)
+          }
+        }
+        if (!action.forceBillingOverride && err.includes("Billing clearance")) {
+          const ok = await notify.confirm(
+            t(
+              "billing.gateConfirmCheckIn",
+              "Patient has outstanding billing. Check in anyway? This will be logged in audit."
+            )
+          )
+          if (ok) {
+            return executeCheckIn({ ...action, forceBillingOverride: true }, reuseEncounterId)
+          }
+        }
+        setError(err)
+        notify.error(err)
+      } else if (data) {
+        notify.success(
+          t("queue.checkInSuccess", "Checked in — queue #{code}").replace("{code}", data.display_code)
+        )
+        void load(true)
+      }
+      return
+    }
+
+    if (action.mode === "appointment_call") {
+      if (!action.appointmentId) return
+      setApptCallId(action.appointmentId)
+      setError(null)
+      const { data, error: err } = await callAppointmentToServe(action.appointmentId, options)
+      setApptCallId(null)
+      if (err) {
+        if (!action.forceCheckin && err.includes("Pending consents")) {
+          const ok = await notify.confirm(t("queue.consentOverrideConfirm", "Required consents are unsigned. Check in anyway? This will be logged in audit."))
+          if (ok) {
+            return executeCheckIn({ ...action, forceCheckin: true }, reuseEncounterId)
+          }
+        }
+        if (!action.forceBillingOverride && err.includes("Billing clearance")) {
+          const ok = await notify.confirm(
+            t(
+              "billing.gateConfirmCheckIn",
+              "Patient has outstanding billing. Check in anyway? This will be logged in audit."
+            )
+          )
+          if (ok) {
+            return executeCheckIn({ ...action, forceBillingOverride: true }, reuseEncounterId)
+          }
+        }
+        setError(err)
+        notify.error(err)
+      } else if (data) {
+        const message = data.auto_checked_in
+          ? t(
+              "queue.autoCheckInAndCall",
+              "Auto check-in — now serving #{code}. Patient is on the dentist board."
+            ).replace("{code}", data.display_code)
+          : t("queue.calledToServe", "Now serving #{code}").replace("{code}", data.display_code)
+        notify.success(message)
+        void load(true)
+      }
+    }
+  }
+
+  const beginGatedCheckIn = async (action: PendingCheckInAction) => {
+    if (!activeBranch) return
+    const { prompt, error: promptError } = await loadOpenEncounterPrompt(
+      action.patientId,
+      activeBranch.id
+    )
+    if (promptError) {
+      notify.error(promptError)
+      return
+    }
+    if (prompt) {
+      setEncounterPrompt(prompt)
+      setPendingCheckIn(action)
+      setEncounterDialogOpen(true)
+      return
+    }
+    await executeCheckIn(action, null)
+  }
+
+  const handleEncounterChoice = async (choice: EncounterCheckInChoice) => {
+    if (!pendingCheckIn || !encounterPrompt) return
+    if (choice === "cancel") {
+      setEncounterDialogOpen(false)
+      setEncounterPrompt(null)
+      setPendingCheckIn(null)
+      return
+    }
+    setEncounterResolving(true)
+    const { reuseEncounterId, error: closeError } = await applyEncounterCheckInChoice(
+      choice,
+      encounterPrompt
+    )
+    if (closeError) {
+      setEncounterResolving(false)
+      notify.error(closeError)
+      return
+    }
+    const action = pendingCheckIn
+    setEncounterDialogOpen(false)
+    setEncounterPrompt(null)
+    setPendingCheckIn(null)
+    setEncounterResolving(false)
+    await executeCheckIn(action, reuseEncounterId)
+  }
+
   const handleCheckIn = async (
     e: React.FormEvent,
     forceCheckin = false,
@@ -293,29 +575,14 @@ export default function QueuePage() {
   ) => {
     e.preventDefault()
     if (!activeBranch || !selectedPatientId) return
-    setCheckingIn(true)
-    const { error: err } = await checkInPatient({
-      branchId: activeBranch.id,
+    const patient = patients.find((p) => p.id === selectedPatientId)
+    await beginGatedCheckIn({
       patientId: selectedPatientId,
-      notes: checkInNotes || undefined,
+      patientName: patient ? `${patient.first_name} ${patient.last_name}` : undefined,
+      mode: "walk_in",
       forceCheckin,
       forceBillingOverride,
     })
-    setCheckingIn(false)
-    if (err) {
-      if (!forceCheckin && err.includes("Pending consents")) {
-        setConsentOverridePending(true)
-      }
-      if (!forceBillingOverride && err.includes("Billing clearance")) {
-        setBillingOverridePending(true)
-      }
-      setError(err)
-      notify.error(err)
-    } else {
-      closeCheckInModal()
-      notify.success(t("queue.walkInCheckInSuccess", "Patient added to queue"))
-      void load(true)
-    }
   }
 
   const handleCallNext = async () => {
@@ -339,40 +606,33 @@ export default function QueuePage() {
     forceBillingOverride = false,
     forceCheckin = false
   ) => {
-    setApptCheckInId(appointmentId)
-    setError(null)
-    const { data, error: err } = await checkInAppointment(appointmentId, {
+    const appt = todayAppointments.find((a) => a.id === appointmentId)
+    if (!appt) return
+    await beginGatedCheckIn({
+      patientId: appt.patient_id,
+      patientName: appt.patient_name ?? undefined,
+      mode: "appointment_check_in",
+      appointmentId,
       forceBillingOverride,
       forceCheckin,
     })
-    setApptCheckInId(null)
-    if (err) {
-      if (!forceCheckin && err.includes("Pending consents")) {
-        const ok = await notify.confirm(
-          t(
-            "queue.consentOverrideConfirm",
-            "Required consents are unsigned. Check in anyway? This will be logged in audit."
-          )
-        )
-        if (ok) return handleAppointmentCheckIn(appointmentId, forceBillingOverride, true)
-      }
-      if (!forceBillingOverride && err.includes("Billing clearance")) {
-        const ok = await notify.confirm(
-          t(
-            "billing.gateConfirmCheckIn",
-            "Patient has outstanding billing. Check in anyway? This will be logged in audit."
-          )
-        )
-        if (ok) return handleAppointmentCheckIn(appointmentId, true, forceCheckin)
-      }
-      setError(err)
-      notify.error(err)
-    } else if (data) {
-      notify.success(
-        t("queue.checkInSuccess", "Checked in — queue #{code}").replace("{code}", data.display_code)
-      )
-      void load(true)
-    }
+  }
+
+  const handleAppointmentCallToServe = async (
+    appointmentId: string,
+    forceBillingOverride = false,
+    forceCheckin = false
+  ) => {
+    const appt = todayAppointments.find((a) => a.id === appointmentId)
+    if (!appt) return
+    await beginGatedCheckIn({
+      patientId: appt.patient_id,
+      patientName: appt.patient_name ?? undefined,
+      mode: "appointment_call",
+      appointmentId,
+      forceBillingOverride,
+      forceCheckin,
+    })
   }
 
   const avgWait =
@@ -501,6 +761,20 @@ export default function QueuePage() {
             </Button>
           </div>
 
+          <OpenEncounterCheckInDialog
+            open={encounterDialogOpen}
+            prompt={encounterPrompt}
+            patientName={pendingCheckIn?.patientName}
+            loading={encounterResolving || checkingIn}
+            onChoose={(choice) => void handleEncounterChoice(choice)}
+            onClose={() => {
+              if (encounterResolving) return
+              setEncounterDialogOpen(false)
+              setEncounterPrompt(null)
+              setPendingCheckIn(null)
+            }}
+          />
+
           {checkoutWizard ? (
             <VisitCheckoutWizard
               open
@@ -527,40 +801,67 @@ export default function QueuePage() {
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                Today&apos;s appointments — check in
+                {t("queue.arrivalsTitle", "Today's arrivals — check in")}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              {pendingAppointmentCheckIns.map((appt) => (
-                <div
-                  key={appt.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary-100 bg-white px-3 py-2 text-sm"
-                >
-                  <div>
-                    <span className="font-medium">
-                      {new Date(appt.scheduled_at).toLocaleTimeString("en-PH", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                    {" · "}
-                    <Link href={`/patients/${appt.patient_id}`} className="text-primary-600 hover:underline">
-                      {appt.patient_name ?? "Patient"}
-                    </Link>
-                    {appt.purpose && <span className="text-neutral-500"> · {appt.purpose}</span>}
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-1"
-                    disabled={apptCheckInId === appt.id}
-                    onClick={() => handleAppointmentCheckIn(appt.id)}
-                  >
-                    <UserCheck className="h-3.5 w-3.5" />
-                    {apptCheckInId === appt.id ? "Checking in…" : "Check in"}
-                  </Button>
+            <CardContent className="space-y-4">
+              {arrivalBuckets.overdue.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-red-700">
+                    {t("queue.arrivalsOverdue", "Overdue — may auto no-show")}
+                  </p>
+                  {arrivalBuckets.overdue.map(({ appointment: appt }) => (
+                    <ArrivalRow
+                      key={appt.id}
+                      appt={appt}
+                      tone="overdue"
+                      apptCheckInId={apptCheckInId}
+                      apptCallId={apptCallId}
+                      t={t}
+                      onCheckIn={() => handleAppointmentCheckIn(appt.id)}
+                      onCall={() => handleAppointmentCallToServe(appt.id)}
+                    />
+                  ))}
                 </div>
-              ))}
+              ) : null}
+              {arrivalBuckets.dueNow.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+                    {t("queue.arrivalsDueNow", "Due now")}
+                  </p>
+                  {arrivalBuckets.dueNow.map(({ appointment: appt }) => (
+                    <ArrivalRow
+                      key={appt.id}
+                      appt={appt}
+                      tone="due"
+                      apptCheckInId={apptCheckInId}
+                      apptCallId={apptCallId}
+                      t={t}
+                      onCheckIn={() => handleAppointmentCheckIn(appt.id)}
+                      onCall={() => handleAppointmentCallToServe(appt.id)}
+                    />
+                  ))}
+                </div>
+              ) : null}
+              {arrivalBuckets.upcoming.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    {t("queue.arrivalsUpcoming", "Upcoming")}
+                  </p>
+                  {arrivalBuckets.upcoming.map(({ appointment: appt }) => (
+                    <ArrivalRow
+                      key={appt.id}
+                      appt={appt}
+                      tone="upcoming"
+                      apptCheckInId={apptCheckInId}
+                      apptCallId={apptCallId}
+                      t={t}
+                      onCheckIn={() => handleAppointmentCheckIn(appt.id)}
+                      onCall={() => handleAppointmentCallToServe(appt.id)}
+                    />
+                  ))}
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         )}

@@ -1,9 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { createClient } from "@/lib/supabase/client"
 import { useBranch } from "@/hooks/use-branch"
 import { fetchDashboardStats, type DashboardStats } from "@/lib/dashboard/dashboard-service"
+import { subscribeDashboardKpiRealtime } from "@/lib/dashboard/dashboard-realtime"
 import { getShowcaseSnapshot } from "@/lib/showcase/intercept"
 
 const EMPTY_STATS: DashboardStats = {
@@ -21,19 +21,8 @@ const EMPTY_STATS: DashboardStats = {
   philhealth_pending: 0,
   pending_intake_drafts: 0,
   appointments_awaiting_checkin: 0,
+  open_encounters_stale: 0,
 }
-
-const REALTIME_TABLES = [
-  "queue_entries",
-  "appointments",
-  "patient_consents",
-  "patient_intakes",
-  "invoices",
-  "invoice_payments",
-  "patients",
-  "inventory_items",
-  "waitlist_entries",
-] as const
 
 export function useDashboardStats() {
   const { activeBranch, branchRevision } = useBranch()
@@ -42,13 +31,14 @@ export function useDashboardStats() {
   const [error, setError] = React.useState<string | null>(null)
   const [live, setLive] = React.useState(false)
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null)
-  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const branchId = activeBranch?.id
 
   const reload = React.useCallback(
     async (opts?: { silent?: boolean }) => {
-      if (!activeBranch) return
+      if (!branchId) return
       if (!opts?.silent) setLoading(true)
-      const { data, error: err } = await fetchDashboardStats(activeBranch.id)
+      const { data, error: err } = await fetchDashboardStats(branchId)
       if (data) {
         setStats(data)
         setLastUpdated(new Date())
@@ -56,11 +46,14 @@ export function useDashboardStats() {
       setError(err)
       setLoading(false)
     },
-    [activeBranch]
+    [branchId]
   )
 
+  const reloadRef = React.useRef(reload)
+  reloadRef.current = reload
+
   React.useEffect(() => {
-    if (!activeBranch) {
+    if (!branchId) {
       setLoading(false)
       setLive(false)
       return
@@ -73,56 +66,30 @@ export function useDashboardStats() {
       setError(null)
       return
     }
-    void reload()
-  }, [activeBranch?.id, branchRevision, reload])
+    void reloadRef.current()
+  }, [branchId, branchRevision])
 
   React.useEffect(() => {
-    if (!activeBranch || getShowcaseSnapshot()) return
+    if (!branchId || getShowcaseSnapshot()) return
 
-    const supabase = createClient()
-    const branchId = activeBranch.id
-    const scheduleReload = () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      debounceRef.current = setTimeout(() => {
-        void reload({ silent: true })
-      }, 400)
-    }
-
-    let channel = supabase.channel(`dashboard-kpi-${branchId}`)
-
-    for (const table of REALTIME_TABLES) {
-      const filter =
-        table === "invoice_payments" || table === "patients"
-          ? undefined
-          : `branch_id=eq.${branchId}`
-
-      channel = channel.on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table,
-          ...(filter ? { filter } : {}),
-        },
-        scheduleReload
-      )
-    }
-
-    channel.subscribe((status: any) => {
-      setLive(status === "SUBSCRIBED")
-    })
+    const unsubscribe = subscribeDashboardKpiRealtime(
+      branchId,
+      () => {
+        void reloadRef.current({ silent: true })
+      },
+      setLive
+    )
 
     const fallbackInterval = setInterval(() => {
-      void reload({ silent: true })
+      void reloadRef.current({ silent: true })
     }, 120_000)
 
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
       clearInterval(fallbackInterval)
       setLive(false)
-      supabase.removeChannel(channel)
+      unsubscribe()
     }
-  }, [activeBranch?.id, reload])
+  }, [branchId])
 
   return { stats, loading, error, live, lastUpdated, reload }
 }

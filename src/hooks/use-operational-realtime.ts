@@ -73,7 +73,8 @@ export function useOperationalRealtime(branchId: string | undefined) {
     if (!branchId) return
 
     const supabase = createClient()
-    let channel = supabase.channel(`operational-ops-${branchId}`)
+    const instanceId = Math.random().toString(36).slice(2)
+    let channel = supabase.channel(`operational-ops-${branchId}-${instanceId}`)
 
     for (const table of OPERATIONAL_TABLES) {
       channel = channel.on(

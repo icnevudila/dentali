@@ -24,6 +24,7 @@ import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { RecordRow } from "@/components/layout/RecordRow"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
+import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { BillingArAgingPanel } from "@/components/analytics/BillingArAgingPanel"
 import { Sparkline } from "@/components/charts/ChartKit"
 import { useReportsSummary } from "@/hooks/use-reports-summary"
@@ -163,12 +164,15 @@ function BillingPageContent() {
               </Badge>
             ) : null}
           </div>
-          <PermissionGate permission={PERMISSIONS.BILLING_WRITE}>
-            <Button className="gap-2 shadow-sm" onClick={() => setShowCreate((v) => !v)}>
-              <Plus className="h-4 w-4" />
-              {showCreate ? t("common.cancel", "Cancel") : t("billing.createInvoice", "New invoice")}
-            </Button>
-          </PermissionGate>
+          <div className="flex flex-wrap items-center gap-2">
+            <WorkflowSettingsLink />
+            <PermissionGate permission={PERMISSIONS.BILLING_WRITE}>
+              <Button className="gap-2 shadow-sm" onClick={() => setShowCreate((v) => !v)}>
+                <Plus className="h-4 w-4" />
+                {showCreate ? t("common.cancel", "Cancel") : t("billing.createInvoice", "New invoice")}
+              </Button>
+            </PermissionGate>
+          </div>
         </div>
 
         <MetricStrip items={metricItems} />

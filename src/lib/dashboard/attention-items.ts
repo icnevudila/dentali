@@ -30,6 +30,7 @@ export type AttentionLabels = {
   overdueInvoices: string
   hmoDraft: string
   philhealthPending: string
+  openEncountersStale: string
 }
 
 export type BuildAttentionOptions = {

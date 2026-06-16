@@ -52,6 +52,27 @@ export default function DashboardPage() {
 
   const chartPeriodLabel = String(chartPeriodDays)
 
+  const dashboardDescription = React.useMemo(() => {
+    if (!activeBranch) {
+      return t("dashboard.selectBranch", "Select a branch to view stats")
+    }
+    if (loading) {
+      return t("dashboard.subtitleLoading", "Loading today's numbers for this branch…")
+    }
+    const collected =
+      stats.today_collected > 0
+        ? `₱${stats.today_collected.toLocaleString()}`
+        : t("dashboard.noCollectionsYet", "no collections yet")
+    return t(
+      "dashboard.subtitleWithStats",
+      "{branch} — {appts} appointments today, {queue} in queue, {collected} collected."
+    )
+      .replace("{branch}", activeBranch.name)
+      .replace("{appts}", String(stats.today_appointments))
+      .replace("{queue}", String(stats.queue_waiting))
+      .replace("{collected}", collected)
+  }, [activeBranch, loading, stats, t])
+
   const flowMetrics = [
     {
       label: t("dashboard.todayAppointments", "Today's Appointments"),
@@ -123,10 +144,7 @@ export default function DashboardPage() {
 
         <PageHeader
           title={t("dashboard.title", "Dashboard")}
-          description={t(
-            "dashboard.registrySubtitle",
-            "Live clinic pulse — appointments, queue, billing, and stock at a glance."
-          )}
+          description={dashboardDescription}
           actions={
             <Button asChild className="gap-2 shadow-sm">
               <Link href="/patients/new" transitionTypes={NAV_FORWARD_TRANSITION}>
@@ -175,11 +193,11 @@ export default function DashboardPage() {
           </div>
         ) : null}
 
-        {activeBranch && !loading ? (
-          <div className="grid gap-4 lg:grid-cols-3">
-            <div className="lg:col-span-2 space-y-4">
+        {activeBranch ? (
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
+            <div className="min-w-0 flex-1 space-y-4">
               <SectionEyebrow icon={BarChart3}>
-                {t("dashboard.sectionInsights", "Insights")}
+                {t("dashboard.sectionInsights", "Branch trends")}
               </SectionEyebrow>
               <DashboardVisualPanel
                 summary={reportsSummary}
@@ -211,7 +229,7 @@ export default function DashboardPage() {
                 }}
               />
             </div>
-            <div className="space-y-4">
+            <div className="w-full shrink-0 space-y-4 xl:w-80">
             <AttentionPanel
               stats={stats}
               permissions={permissions}
@@ -233,20 +251,24 @@ export default function DashboardPage() {
                 overdueInvoices: t("dashboard.overdueInvoices", "Overdue invoices"),
                 hmoDraft: t("dashboard.hmoDraft", "HMO draft claims"),
                 philhealthPending: t("dashboard.philhealthPending", "PhilHealth pending"),
+                openEncountersStale: t(
+                  "dashboard.openEncountersStale",
+                  "Open visits from prior days"
+                ),
                 manualActionHint: t(
                   "dashboard.attentionManualHint",
                   "Automation off — staff action required"
                 ),
               }}
             />
-            <DailyCloseoutCard />
+            <DailyCloseoutCard stats={stats} />
             </div>
           </div>
         ) : null}
 
         <section className="space-y-3">
           <SectionEyebrow icon={Calendar}>
-            {t("dashboard.sectionFlow", "Today's flow")}
+            {t("dashboard.sectionFlow", "Front desk today")}
           </SectionEyebrow>
           <MetricStrip items={flowMetrics} className="lg:grid-cols-3" />
         </section>

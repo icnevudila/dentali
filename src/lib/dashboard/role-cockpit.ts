@@ -79,22 +79,23 @@ export function buildCockpitItems(
   if (mode === "owner") return []
 
   if (mode === "clinical") {
+    const inClinic = stats.queue_waiting
     return [
       {
-        id: "queue",
+        id: "chair-queue",
         label: labels.queueWaiting,
         hint: labels.queueWaitingHint,
-        value: stats.queue_waiting,
-        href: "/queue",
+        value: inClinic,
+        href: "/dentist",
         icon: Clock,
-        variant: stats.queue_waiting > 0 ? "warning" : "default",
+        variant: inClinic > 0 ? "warning" : "default",
       },
       {
         id: "missing-notes",
         label: labels.missingNotes,
         hint: labels.missingNotesHint,
         value: stats.missing_clinical_notes,
-        href: "/appointments?focus=missing-notes",
+        href: "/dentist?filter=in_chair",
         icon: FileWarning,
         variant: stats.missing_clinical_notes > 0 ? "warning" : "default",
       },

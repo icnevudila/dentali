@@ -66,6 +66,15 @@ Deno.serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
+
+    const { data: noShowResult, error: noShowError } = await supabaseAdmin.rpc(
+      "auto_mark_overdue_appointments_no_show",
+      { p_grace_minutes: 15 }
+    )
+    if (noShowError) {
+      console.error("auto_mark_overdue_appointments_no_show:", noShowError.message)
+    }
+
     const summary: Record<string, { sent: number; skipped: number }> = {}
 
     for (const reminderType of ["24h", "2h", "no_show"] as ReminderType[]) {
@@ -216,9 +225,16 @@ Deno.serve(async (req) => {
       summary[reminderType] = { sent, skipped }
     }
 
-    return new Response(JSON.stringify({ success: true, summary }), {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        summary,
+        auto_no_show: noShowResult ?? null,
+      }),
+      {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-    })
+    }
+    )
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error"
     return new Response(JSON.stringify({ error: message }), {

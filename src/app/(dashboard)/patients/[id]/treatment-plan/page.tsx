@@ -33,7 +33,14 @@ import {
   bulkAddChartFindingsToPlan,
   updatePlanItem,
   deletePlanItem,
+  duplicatePlanItemsFromPlan,
 } from "@/lib/clinical/treatment-plan-service"
+import { fetchActiveEncounter } from "@/lib/clinical/encounter-service"
+import {
+  fetchCarryForwardSources,
+  type CarryForwardPlan,
+} from "@/lib/clinical/encounter-carry-forward"
+import { EncounterCarryForwardPicker } from "@/components/clinical/EncounterCarryForwardPicker"
 import {
   getLinkedInvoiceForPlan,
   resyncDraftInvoiceFromPlan,
@@ -68,6 +75,7 @@ function TreatmentPlanContent() {
   const { id: patientId } = useRouteParams<{ id: string }>()
   const searchParams = useSearchParams()
   const planId = searchParams.get("plan")
+  const encounterIdParam = searchParams.get("encounter")
   const router = useRouter()
   const { user } = useAuth()
   const { activeBranch } = useBranch()
@@ -96,6 +104,8 @@ function TreatmentPlanContent() {
   const [riskFlags, setRiskFlags] = React.useState<string[]>([])
   const [seeding, setSeeding] = React.useState(false)
   const [billingGate, setBillingGate] = React.useState<PatientBillingGate | null>(null)
+  const [carryPlan, setCarryPlan] = React.useState<CarryForwardPlan | null>(null)
+  const [showPlanCarryPicker, setShowPlanCarryPicker] = React.useState(true)
 
   const planEditable = planStatus === "proposed" || planStatus === "draft"
 
@@ -160,6 +170,17 @@ function TreatmentPlanContent() {
   }, [patientId, planId, loadPlan, activeBranch?.id])
 
   React.useEffect(() => {
+    if (!activeBranch?.id || planId) return
+    void (async () => {
+      const { data: activeEnc } = await fetchActiveEncounter(patientId, activeBranch.id)
+      const { data } = await fetchCarryForwardSources(patientId, activeBranch.id, {
+        excludeEncounterId: activeEnc?.encounter.id,
+      })
+      setCarryPlan(data.plan)
+    })()
+  }, [patientId, activeBranch?.id, planId])
+
+  React.useEffect(() => {
     if (!activeBranch?.id || !selectedProc) {
       setStockWarnings([])
       return
@@ -169,23 +190,58 @@ function TreatmentPlanContent() {
     })
   }, [activeBranch?.id, selectedProc])
 
-  const handleCreatePlan = async () => {
-    if (!user || !activeBranch || !planTitle.trim()) return
+  const handleCreatePlan = async (options?: { copyFromPlanId?: string; titleOverride?: string }) => {
+    if (!user || !activeBranch) return
+    const title = (options?.titleOverride ?? planTitle).trim()
+    if (!title) return
     setSaving(true)
     const org = await fetchOrganization()
     if (!org) { setError("Org not found"); setSaving(false); return }
+
+    const encounterId =
+      encounterIdParam ??
+      (activeBranch
+        ? (await fetchActiveEncounter(patientId, activeBranch.id)).data?.encounter.id ?? null
+        : null)
 
     const { data, error: err } = await createTreatmentPlan({
       organizationId: org.id,
       branchId: activeBranch.id,
       patientId,
-      title: planTitle.trim(),
+      title,
       userId: user.id,
+      encounterId,
     })
+    if (err || !data) {
+      setSaving(false)
+      setError(err ?? "Failed")
+      return
+    }
+
+    if (options?.copyFromPlanId) {
+      const { error: copyErr } = await duplicatePlanItemsFromPlan(options.copyFromPlanId, data.id)
+      if (copyErr) {
+        setSaving(false)
+        setError(copyErr)
+        return
+      }
+    }
+
     setSaving(false)
-    if (err || !data) { setError(err ?? "Failed"); return }
+    setShowPlanCarryPicker(false)
     setActivePlanId(data.id)
     router.replace(`/patients/${patientId}/treatment-plan?plan=${data.id}`)
+  }
+
+  const handleCreatePlanClick = () => {
+    void handleCreatePlan()
+  }
+
+  const handleCopyPlanFromLastVisit = () => {
+    if (!carryPlan) return
+    const title = planTitle.trim() || `${carryPlan.title} (continued)`
+    setPlanTitle(title)
+    void handleCreatePlan({ copyFromPlanId: carryPlan.planId, titleOverride: title })
   }
 
   const handleAddItem = async () => {
@@ -461,16 +517,30 @@ function TreatmentPlanContent() {
           />
         ) : null}
         {!activePlanId ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>New Treatment Plan</CardTitle>
-              <CardDescription>Create a proposed treatment plan for this patient.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Input value={planTitle} onChange={(e) => setPlanTitle(e.target.value)} placeholder="e.g. Restorative Phase 1" />
-              <Button onClick={handleCreatePlan} disabled={saving || !planTitle.trim()}>Create Plan</Button>
-            </CardContent>
-          </Card>
+          <div className="space-y-4">
+            {carryPlan && showPlanCarryPicker && carryPlan.itemCount > 0 ? (
+              <EncounterCarryForwardPicker
+                kind="plan"
+                source={carryPlan}
+                loading={saving}
+                onCopy={handleCopyPlanFromLastVisit}
+                onBlank={() => {
+                  setShowPlanCarryPicker(false)
+                }}
+                onDismiss={() => setShowPlanCarryPicker(false)}
+              />
+            ) : null}
+            <Card>
+              <CardHeader>
+                <CardTitle>New Treatment Plan</CardTitle>
+                <CardDescription>Create a proposed treatment plan for this patient.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Input value={planTitle} onChange={(e) => setPlanTitle(e.target.value)} placeholder="e.g. Restorative Phase 1" />
+                <Button onClick={handleCreatePlanClick} disabled={saving || !planTitle.trim()}>Create Plan</Button>
+              </CardContent>
+            </Card>
+          </div>
         ) : (
           <>
             <Card>

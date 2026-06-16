@@ -50,6 +50,12 @@ const WORKFLOW_GROUPS: { title: string; items: WorkflowRule[] }[] = [
         label: "No-show opens waitlist slot",
         description: "Cancelled or no-show appointments notify matching waitlist entries.",
       },
+      {
+        key: "auto_no_show_after_grace",
+        label: "Auto no-show after 15 min",
+        description:
+          "Marks scheduled/confirmed appointments as no-show when check-in is missing. Runs on queue page refresh and existing appointment-reminders-cron (no new Vercel cron).",
+      },
     ],
   },
   {
@@ -76,6 +82,29 @@ const WORKFLOW_GROUPS: { title: string; items: WorkflowRule[] }[] = [
         label: "Block booking/check-in with open balance",
         description:
           "Require billing clearance before new appointments and queue check-in. Staff can override with audit log.",
+      },
+    ],
+  },
+  {
+    title: "Visits & Clinical",
+    items: [
+      {
+        key: "auto_draft_soap_on_chair",
+        label: "Draft SOAP when in chair",
+        description:
+          "When a patient moves to the chair, create a draft clinical note — optionally pre-filled from the last signed SOAP.",
+      },
+      {
+        key: "auto_served_creates_invoice",
+        label: "Served creates invoice draft",
+        description:
+          "When queue entry is marked served, spawn an invoice draft from the encounter's approved treatment plan.",
+      },
+      {
+        key: "auto_close_encounter_on_payment",
+        label: "Payment closes visit",
+        description:
+          "When an encounter-linked invoice is fully paid, automatically close the open visit.",
       },
     ],
   },

@@ -5,16 +5,21 @@ import Link from "next/link"
 import { Wallet, ArrowRight, FileWarning } from "lucide-react"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
-import { useDashboardStats } from "@/hooks/use-dashboard-stats"
 import { fetchDailyCloseout, type DailyCloseout } from "@/lib/analytics/analytics-service"
+import type { DashboardStats } from "@/lib/dashboard/dashboard-service"
 import { useOperationalRefresh } from "@/hooks/use-operational-refresh"
 import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 import { cn } from "@/lib/utils"
 
-export function DailyCloseoutCard({ className }: { className?: string }) {
+export function DailyCloseoutCard({
+  className,
+  stats,
+}: {
+  className?: string
+  stats: DashboardStats
+}) {
   const { activeBranch } = useBranch()
   const { t } = useLocale()
-  const { stats } = useDashboardStats()
   const [closeout, setCloseout] = React.useState<DailyCloseout | null>(null)
   const [loading, setLoading] = React.useState(true)
 

@@ -178,6 +178,15 @@ export default function InvoiceDetailPage() {
     }
 
     notify.success(t("billing.paymentSuccessWithCommission", "Payment recorded! Doktor hakedişi (%40) otomatik hesaplanıp maaş hesabına aktarıldı."))
+
+    if (data?.encounter_closed) {
+      notify.info(
+        t(
+          "billing.encounterAutoClosed",
+          "Visit closed automatically — balance is settled for this encounter."
+        )
+      )
+    }
     
     // Auto-Recall Marketing Simulation
     if (lineItems.some(i => i.description.toLowerCase().includes("cleaning") || i.description.toLowerCase().includes("temizlik") || i.description.toLowerCase().includes("proph"))) {

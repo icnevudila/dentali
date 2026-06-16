@@ -23,12 +23,24 @@ type ClinicalVisitJourneyPanelProps = {
   journey: ClinicalVisitJourney
   compact?: boolean
   celebrate?: boolean
+  completionAction?: {
+    href: string
+    label: string
+  }
+  finishAction?: {
+    label: string
+    onClick: () => void
+    disabled?: boolean
+    loading?: boolean
+  }
 }
 
 export function ClinicalVisitJourneyPanel({
   journey,
   compact = false,
   celebrate = false,
+  completionAction,
+  finishAction,
 }: ClinicalVisitJourneyPanelProps) {
   const { t } = useLocale()
   const { steps, percentComplete, nextStep, phaseLabel } = journey
@@ -89,6 +101,26 @@ export function ClinicalVisitJourneyPanel({
           <Badge variant="success" className="shrink-0">
             {t("journey.completeBadge", "Complete")}
           </Badge>
+          {finishAction ? (
+            <Button
+              size="sm"
+              className="shrink-0 gap-1.5"
+              onClick={finishAction.onClick}
+              disabled={finishAction.disabled || finishAction.loading}
+            >
+              {finishAction.loading ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              ) : null}
+              {finishAction.label}
+            </Button>
+          ) : completionAction ? (
+            <Button size="sm" className="shrink-0 gap-1.5" asChild>
+              <Link href={completionAction.href}>
+                {completionAction.label}
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          ) : null}
         </div>
       ) : null}
 

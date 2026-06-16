@@ -24,6 +24,7 @@ type AttentionPanelProps = {
     overdueInvoices: string
     hmoDraft: string
     philhealthPending: string
+    openEncountersStale: string
     manualActionHint?: string
   }
 }
@@ -48,6 +49,7 @@ export function AttentionPanel({
       overdueInvoices: labels.overdueInvoices,
       hmoDraft: labels.hmoDraft,
       philhealthPending: labels.philhealthPending,
+      openEncountersStale: labels.openEncountersStale,
     },
     { permissions, workflowSettings }
   )

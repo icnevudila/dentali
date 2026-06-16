@@ -34,6 +34,12 @@ import {
   type ClinicalNote,
   type TimelineEvent,
 } from "@/lib/clinical/clinical-notes-service"
+import { fetchActiveEncounter } from "@/lib/clinical/encounter-service"
+import {
+  fetchCarryForwardSources,
+  type CarryForwardNote,
+} from "@/lib/clinical/encounter-carry-forward"
+import { EncounterCarryForwardPicker } from "@/components/clinical/EncounterCarryForwardPicker"
 
 function groupByDate(events: TimelineEvent[]): Map<string, TimelineEvent[]> {
   const map = new Map<string, TimelineEvent[]>()
@@ -192,6 +198,24 @@ export function ClinicalNotesWorkspace({
   const [creating, setCreating] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [filter, setFilter] = React.useState<"all" | "notes" | "appointments">("all")
+  const [carryNote, setCarryNote] = React.useState<CarryForwardNote | null>(null)
+  const [showCarryPicker, setShowCarryPicker] = React.useState(false)
+
+  const loadCarrySources = React.useCallback(async () => {
+    if (!activeBranch) {
+      setCarryNote(null)
+      return
+    }
+    const { data: activeEnc } = await fetchActiveEncounter(patientId, activeBranch.id)
+    const { data } = await fetchCarryForwardSources(patientId, activeBranch.id, {
+      excludeEncounterId: activeEnc?.encounter.id,
+    })
+    setCarryNote(data.note)
+  }, [patientId, activeBranch])
+
+  React.useEffect(() => {
+    void loadCarrySources()
+  }, [loadCarrySources])
 
   const load = React.useCallback(async () => {
     setLoading(true)
@@ -215,21 +239,30 @@ export function ClinicalNotesWorkspace({
     else setSelectedNote(data)
   }
 
-  const handleNewNote = async () => {
+  const createNote = async (fromSource?: CarryForwardNote | null) => {
     if (!user || !activeBranch) return
     setCreating(true)
     setError(null)
+    setShowCarryPicker(false)
     const org = await fetchOrganization()
     if (!org) {
       setError("Organization not found")
       setCreating(false)
       return
     }
+    const { data: activeEnc } = await fetchActiveEncounter(patientId, activeBranch.id)
     const { data, error: createError } = await createClinicalNote({
       patientId,
       organizationId: org.id,
       branchId: activeBranch.id,
       userId: user.id,
+      encounterId: activeEnc?.encounter.id ?? null,
+      appointmentId: activeEnc?.encounter.appointment_id ?? null,
+      title: fromSource?.title ? `${fromSource.title} (continued)` : undefined,
+      subjective: fromSource?.subjective ?? undefined,
+      objective: fromSource?.objective ?? undefined,
+      assessment: fromSource?.assessment ?? undefined,
+      plan: fromSource?.plan ?? undefined,
     })
     if (createError || !data) {
       setError(createError ?? "Failed to create note")
@@ -238,6 +271,14 @@ export function ClinicalNotesWorkspace({
       await openNote(data.id)
     }
     setCreating(false)
+  }
+
+  const handleNewNote = async () => {
+    if (carryNote) {
+      setShowCarryPicker(true)
+      return
+    }
+    await createNote()
   }
 
   const filtered = timeline.filter((ev) => {
@@ -316,6 +357,17 @@ export function ClinicalNotesWorkspace({
           </div>
         </div>
       )}
+
+      {showCarryPicker && carryNote ? (
+        <EncounterCarryForwardPicker
+          kind="note"
+          source={carryNote}
+          loading={creating}
+          onCopy={() => void createNote(carryNote)}
+          onBlank={() => void createNote()}
+          onDismiss={() => setShowCarryPicker(false)}
+        />
+      ) : null}
 
       {error ? (
         <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 animate-fade-rise">
