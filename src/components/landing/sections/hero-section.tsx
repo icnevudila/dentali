@@ -14,7 +14,7 @@ function lt(text: LandingText, locale: string) {
 
 export function HeroSection() {
   const { locale } = useLocale()
-  const systemVideo = LANDING_VIDEOS.system
+  const heroVideo = LANDING_VIDEOS.landing
 
   return (
     <section className="relative overflow-hidden bg-white pt-24 pb-14 md:pt-28 md:pb-20">
@@ -79,9 +79,9 @@ export function HeroSection() {
 
                   <div className="landing-video-safe landing-zoom-clip relative aspect-[16/10] overflow-hidden rounded-xl bg-white ring-1 ring-black/5">
                     <LandingVideo
-                      src={systemVideo.src}
-                      poster={systemVideo.poster}
-                      label={systemVideo.alt}
+                      src={heroVideo.src}
+                      poster={heroVideo.poster}
+                      label={heroVideo.alt}
                       className="object-center"
                     />
                   </div>

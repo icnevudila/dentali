@@ -14,6 +14,8 @@ type AttentionPanelProps = {
     title: string
     allClear: string
     pendingConsents: string
+    pendingIntakeDrafts: string
+    appointmentsAwaitingCheckin: string
     queueWaiting: string
     waitlistWaiting: string
     openInvoices: string
@@ -36,6 +38,8 @@ export function AttentionPanel({
     stats,
     {
       pendingConsents: labels.pendingConsents,
+      pendingIntakeDrafts: labels.pendingIntakeDrafts,
+      appointmentsAwaitingCheckin: labels.appointmentsAwaitingCheckin,
       queueWaiting: labels.queueWaiting,
       waitlistWaiting: labels.waitlistWaiting,
       openInvoices: labels.openInvoices,

@@ -15,6 +15,8 @@ import type { AttentionLabels } from "@/lib/dashboard/attention-items"
 
 const labels: AttentionLabels = {
   pendingConsents: "Pending consents",
+  pendingIntakeDrafts: "Pending intake drafts",
+  appointmentsAwaitingCheckin: "Awaiting check-in",
   queueWaiting: "Queue waiting",
   waitlistWaiting: "Waitlist",
   openInvoices: "Open invoices",
@@ -38,6 +40,8 @@ const baseStats: DashboardStats = {
   missing_clinical_notes: 0,
   hmo_draft_claims: 0,
   philhealth_pending: 0,
+  pending_intake_drafts: 0,
+  appointments_awaiting_checkin: 0,
 }
 
 const allPermissions = new Set<string>([

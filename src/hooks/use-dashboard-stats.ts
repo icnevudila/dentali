@@ -19,12 +19,15 @@ const EMPTY_STATS: DashboardStats = {
   missing_clinical_notes: 0,
   hmo_draft_claims: 0,
   philhealth_pending: 0,
+  pending_intake_drafts: 0,
+  appointments_awaiting_checkin: 0,
 }
 
 const REALTIME_TABLES = [
   "queue_entries",
   "appointments",
   "patient_consents",
+  "patient_intakes",
   "invoices",
   "invoice_payments",
   "patients",

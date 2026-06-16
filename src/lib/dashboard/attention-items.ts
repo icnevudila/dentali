@@ -20,6 +20,8 @@ export type AttentionItem = {
 
 export type AttentionLabels = {
   pendingConsents: string
+  pendingIntakeDrafts: string
+  appointmentsAwaitingCheckin: string
   queueWaiting: string
   waitlistWaiting: string
   openInvoices: string

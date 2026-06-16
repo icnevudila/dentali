@@ -14,6 +14,8 @@ export interface DashboardStats {
   missing_clinical_notes: number
   hmo_draft_claims: number
   philhealth_pending: number
+  pending_intake_drafts: number
+  appointments_awaiting_checkin: number
 }
 
 export async function fetchDashboardStats(
@@ -46,6 +48,8 @@ export async function fetchDashboardStats(
       missing_clinical_notes: Number(raw.missing_clinical_notes ?? 0),
       hmo_draft_claims: Number(raw.hmo_draft_claims ?? 0),
       philhealth_pending: Number(raw.philhealth_pending ?? 0),
+      pending_intake_drafts: Number(raw.pending_intake_drafts ?? 0),
+      appointments_awaiting_checkin: Number(raw.appointments_awaiting_checkin ?? 0),
     },
     error: null,
   }

@@ -15,6 +15,7 @@ import {
   type KioskIntakeDraft,
 } from "@/lib/patients/intake-draft-review"
 import { useLocale } from "@/hooks/use-locale"
+import { useOperationalRefresh } from "@/hooks/use-operational-refresh"
 import { cn } from "@/lib/utils"
 
 const COLLAPSED_VISIBLE = 3
@@ -91,6 +92,8 @@ export function PatientIntakeDraftPanel({
   React.useEffect(() => {
     load()
   }, [load])
+
+  useOperationalRefresh(["patient_intakes"], load)
 
   React.useEffect(() => {
     setExpanded(false)

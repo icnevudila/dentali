@@ -26,7 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Megaphone, Plus, Users, X, Link2, Copy, Check, UserCheck, Calendar, MapPin, Clock, FileText, User, Receipt } from "lucide-react"
+import { Megaphone, Plus, Users, X, Link2, Copy, Check, UserCheck, Calendar, MapPin, Clock, User } from "lucide-react"
 import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { generateBranchPublicToken } from "@/lib/kiosk/kiosk-service"
@@ -43,6 +43,7 @@ import { KioskAnalyticsPanel } from "@/components/analytics/KioskAnalyticsPanel"
 import { DisplayAnalyticsPanel } from "@/components/analytics/DisplayAnalyticsPanel"
 import { BranchPublicTokensPanel } from "@/components/analytics/BranchPublicTokensPanel"
 import { QueueBoard } from "@/components/queue/QueueBoard"
+import { VisitCheckoutWizard } from "@/components/queue/VisitCheckoutWizard"
 
 type Tab = "board" | "history"
 
@@ -84,7 +85,7 @@ export default function QueuePage() {
   const [apptCheckInId, setApptCheckInId] = React.useState<string | null>(null)
   const [consentOverridePending, setConsentOverridePending] = React.useState(false)
   const [billingOverridePending, setBillingOverridePending] = React.useState(false)
-  const [servedNotePrompt, setServedNotePrompt] = React.useState<{
+  const [checkoutWizard, setCheckoutWizard] = React.useState<{
     patientId: string
     patientName: string
     billingGate: PatientBillingGate | null
@@ -254,7 +255,7 @@ export default function QueuePage() {
     } else {
       if (status === "served" && entry?.patient_id) {
         const { data: billingGate } = await getPatientBillingGate(entry.patient_id)
-        setServedNotePrompt({
+        setCheckoutWizard({
           patientId: entry.patient_id,
           patientName: entry.patient_name ?? "Patient",
           billingGate,
@@ -500,42 +501,16 @@ export default function QueuePage() {
             </Button>
           </div>
 
-          {servedNotePrompt ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900 animate-fade-rise space-y-3">
-              <div>
-                <p className="font-medium">
-                  {servedNotePrompt.patientName} — {t("queue.visitComplete", "visit marked complete")}
-                </p>
-                <p className="mt-1 text-emerald-800/90">
-                  {t("queue.notePrompt", "Add a clinical note while the visit is fresh.")}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Button size="sm" className="gap-1.5" asChild>
-                    <Link href={`/patients/${servedNotePrompt.patientId}?tab=clinical-notes`}>
-                      <FileText className="h-3.5 w-3.5" />
-                      {t("queue.createNote", "Create note")}
-                    </Link>
-                  </Button>
-                  {servedNotePrompt.billingGate?.primary_open_invoice_id ? (
-                    <Button size="sm" variant="outline" className="gap-1.5" asChild>
-                      <Link href={`/billing/${servedNotePrompt.billingGate.primary_open_invoice_id}`}>
-                        <Receipt className="h-3.5 w-3.5" />
-                        {t("queue.collectPayment", "Collect payment")}
-                      </Link>
-                    </Button>
-                  ) : servedNotePrompt.billingGate?.has_billing_gap ? (
-                    <Button size="sm" variant="outline" asChild>
-                      <Link href={`/patients/${servedNotePrompt.patientId}/treatment-plan`}>
-                        {t("queue.completeBilling", "Complete billing")}
-                      </Link>
-                    </Button>
-                  ) : null}
-                  <Button size="sm" variant="ghost" onClick={() => setServedNotePrompt(null)}>
-                    {t("common.dismiss", "Dismiss")}
-                  </Button>
-                </div>
-              </div>
-            </div>
+          {checkoutWizard ? (
+            <VisitCheckoutWizard
+              open
+              onOpenChange={(open) => {
+                if (!open) setCheckoutWizard(null)
+              }}
+              patientId={checkoutWizard.patientId}
+              patientName={checkoutWizard.patientName}
+              billingGate={checkoutWizard.billingGate}
+            />
           ) : null}
 
           {error && (

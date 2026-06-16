@@ -23,6 +23,8 @@ const EMPTY_STATS: DashboardStats = {
   missing_clinical_notes: 0,
   hmo_draft_claims: 0,
   philhealth_pending: 0,
+  pending_intake_drafts: 0,
+  appointments_awaiting_checkin: 0,
 }
 
 async function resolveBranch(
@@ -71,6 +73,8 @@ function mapDashboardStats(raw: Record<string, number>): DashboardStats {
     missing_clinical_notes: Number(raw.missing_clinical_notes ?? 0),
     hmo_draft_claims: Number(raw.hmo_draft_claims ?? 0),
     philhealth_pending: Number(raw.philhealth_pending ?? 0),
+    pending_intake_drafts: Number(raw.pending_intake_drafts ?? 0),
+    appointments_awaiting_checkin: Number(raw.appointments_awaiting_checkin ?? 0),
   }
 }
 
@@ -210,6 +214,23 @@ async function loadStatsDirect(
   const lowStock =
     lowStockItems?.filter((i) => Number(i.quantity_on_hand) <= Number(i.min_stock_level)).length ?? 0
 
+  const [intakeDraftsRes, awaitingCheckinRes] = await Promise.all([
+    supabase
+      .from("patient_intakes")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("branch_id", branchId)
+      .eq("status", "draft"),
+    supabase
+      .from("appointments")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("branch_id", branchId)
+      .in("status", ["scheduled", "confirmed"])
+      .gte("scheduled_at", `${manilaToday}T00:00:00+08:00`)
+      .lt("scheduled_at", `${manilaToday}T23:59:59+08:00`),
+  ])
+
   return mapDashboardStats({
     active_patients: patientsRes.count ?? 0,
     today_appointments: apptsRes.count ?? 0,
@@ -223,6 +244,8 @@ async function loadStatsDirect(
     missing_clinical_notes: missingNotes,
     hmo_draft_claims: hmoRes.count ?? 0,
     philhealth_pending: phRes.count ?? 0,
+    pending_intake_drafts: intakeDraftsRes.count ?? 0,
+    appointments_awaiting_checkin: awaitingCheckinRes.count ?? 0,
   })
 }
 

@@ -122,6 +122,28 @@ export default function PatientProfilePage() {
     fetchPatientAppointments(patientId).then(({ data }) => setAppointments(data))
   }, [patientId])
 
+  const refreshTreatmentPlans = React.useCallback(() => {
+    fetchPatientTreatmentPlans(patientId).then(({ data }) => setTreatmentPlans(data))
+  }, [patientId])
+
+  const refreshBalance = React.useCallback(() => {
+    getPatientBalance(patientId).then(({ data, error }) => {
+      setBalance(data)
+      setBalanceError(error)
+    })
+  }, [patientId])
+
+  const refreshBillingGate = React.useCallback(() => {
+    getPatientBillingGate(patientId).then(({ data }) => setBillingGate(data))
+  }, [patientId])
+
+  const refreshTimeline = React.useCallback(() => {
+    fetchPatientTimeline(patientId).then(({ data, error }) => {
+      setTimeline(data)
+      setTimelineError(error)
+    })
+  }, [patientId])
+
   React.useEffect(() => {
     if (!patientId) return
     setLoading(true)
@@ -184,7 +206,7 @@ export default function PatientProfilePage() {
 
     const supabase = createClient()
     const channel = supabase
-      .channel(`patient-consents-${patientId}`)
+      .channel(`patient-journey-${patientId}`)
       .on(
         "postgres_changes",
         {
@@ -197,12 +219,72 @@ export default function PatientProfilePage() {
           refreshConsents()
         }
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "appointments",
+          filter: `patient_id=eq.${patientId}`,
+        },
+        () => {
+          refreshAppointments()
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "queue_entries",
+          filter: `patient_id=eq.${patientId}`,
+        },
+        () => {
+          refreshAppointments()
+          refreshTimeline()
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "invoices",
+          filter: `patient_id=eq.${patientId}`,
+        },
+        () => {
+          refreshBalance()
+          refreshBillingGate()
+          refreshTimeline()
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "treatment_plans",
+          filter: `patient_id=eq.${patientId}`,
+        },
+        () => {
+          refreshTreatmentPlans()
+          refreshBillingGate()
+        }
+      )
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [patientId, refreshConsents])
+  }, [
+    patientId,
+    refreshConsents,
+    refreshAppointments,
+    refreshTreatmentPlans,
+    refreshBalance,
+    refreshBillingGate,
+    refreshTimeline,
+  ])
 
   if (loading) {
     return <PageLoadingSkeleton variant="detail" className="max-w-7xl px-4 py-8" />

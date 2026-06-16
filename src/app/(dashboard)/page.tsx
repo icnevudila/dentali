@@ -16,6 +16,7 @@ import { DirectionalTransition } from "@/components/layout/DirectionalTransition
 import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 import { DashboardVisualPanel } from "@/components/dashboard/DashboardVisualPanel"
 import { AttentionPanel } from "@/components/dashboard/AttentionPanel"
+import { DailyCloseoutCard } from "@/components/dashboard/DailyCloseoutCard"
 import { OwnerBranchKpiGrid } from "@/components/dashboard/OwnerBranchKpiGrid"
 import { TvDisplayHealthPanel } from "@/components/analytics/TvDisplayHealthPanel"
 import { useReportsSummary } from "@/hooks/use-reports-summary"
@@ -171,8 +172,8 @@ export default function DashboardPage() {
 
         {activeBranch && !loading ? (
           <div className="grid gap-4 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <SectionEyebrow icon={BarChart3} className="mb-3">
+            <div className="lg:col-span-2 space-y-4">
+              <SectionEyebrow icon={BarChart3}>
                 {t("dashboard.sectionInsights", "Insights")}
               </SectionEyebrow>
               <DashboardVisualPanel
@@ -205,6 +206,7 @@ export default function DashboardPage() {
                 }}
               />
             </div>
+            <div className="space-y-4">
             <AttentionPanel
               stats={stats}
               permissions={permissions}
@@ -213,6 +215,11 @@ export default function DashboardPage() {
                 title: t("dashboard.attentionTitle", "Needs attention"),
                 allClear: t("dashboard.attentionClear", "All clear — nothing urgent right now."),
                 pendingConsents: t("dashboard.pendingConsents", "Pending Consents"),
+                pendingIntakeDrafts: t("dashboard.pendingIntakeDrafts", "Pending intake drafts"),
+                appointmentsAwaitingCheckin: t(
+                  "dashboard.awaitingCheckin",
+                  "Awaiting check-in"
+                ),
                 queueWaiting: t("dashboard.queueWaiting", "Queue Waiting"),
                 waitlistWaiting: t("dashboard.waitlistWaiting", "Waitlist pending"),
                 openInvoices: t("dashboard.openInvoices", "Open Invoices"),
@@ -227,6 +234,8 @@ export default function DashboardPage() {
                 ),
               }}
             />
+            <DailyCloseoutCard />
+            </div>
           </div>
         ) : null}
 
