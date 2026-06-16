@@ -1,7 +1,7 @@
 "use client"
 
 import { Building2, CalendarDays, Check, Tv } from "lucide-react"
-import { DentQLLogo } from "@/components/brand/dentql-logo"
+import { PublicChannelBrand } from "@/components/brand/public-channel-brand"
 import { useLocale } from "@/hooks/use-locale"
 
 const BULLETS = {
@@ -46,7 +46,7 @@ export function AuthMarketingPanel({ variant }: AuthMarketingPanelProps) {
       <div className="landing-hero-orb landing-hero-orb-b pointer-events-none absolute opacity-30" />
 
       <div className="relative z-10">
-        <DentQLLogo href="/welcome" invert size="md" />
+        <PublicChannelBrand variant="auth-header" href="/welcome" />
       </div>
 
       <div className="relative z-10 max-w-md space-y-8">

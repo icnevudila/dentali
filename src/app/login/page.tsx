@@ -10,7 +10,7 @@ import {
   fetchStaffProfile,
   logSessionEvent,
 } from "@/lib/auth/auth-service"
-import { DentQLLogo } from "@/components/brand/dentql-logo"
+import { PublicChannelBrand } from "@/components/brand/public-channel-brand"
 import { AuthMarketingPanel } from "@/components/auth/auth-marketing-panel"
 import { LocaleSwitcher } from "@/components/i18n/LocaleSwitcher"
 import { useLocale } from "@/hooks/use-locale"
@@ -91,16 +91,14 @@ export default function LoginPage() {
       <div className="relative flex min-h-screen flex-1 flex-col overflow-hidden">
         <div className="landing-hero-bg pointer-events-none absolute inset-0 opacity-30" />
 
-        <header className="relative z-10 mx-auto flex w-full max-w-xl items-center justify-between px-6 py-5 lg:max-w-lg">
-          <DentQLLogo href="/welcome" size="sm" className="lg:hidden" />
-          <div className="ml-auto">
-            <LocaleSwitcher />
-          </div>
+        <header className="relative z-10 mx-auto flex w-full max-w-xl items-center justify-end px-6 py-5 lg:max-w-lg">
+          <LocaleSwitcher />
         </header>
 
         <div className="relative z-10 flex flex-1 items-center justify-center px-4 pb-10">
-          <div className="w-full max-w-[440px] space-y-8 rounded-3xl border border-neutral-100 bg-white/90 p-8 shadow-xl shadow-neutral-200/50 backdrop-blur-md">
-            <div className="space-y-2 text-center">
+          <div className="w-full max-w-[440px] space-y-8 rounded-3xl border border-neutral-100 bg-white p-8 shadow-xl shadow-neutral-200/50">
+            <div className="space-y-3 text-center">
+              <PublicChannelBrand variant="auth" href="/welcome" className="mb-1 lg:hidden" />
               <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900">
                 {t("login.signIn", "Sign in")}
               </h1>
