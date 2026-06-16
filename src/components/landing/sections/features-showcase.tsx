@@ -3,7 +3,9 @@
 import * as React from "react"
 import Image from "next/image"
 import { useLocale } from "@/hooks/use-locale"
-import { FEATURES, LANDING_HEADINGS, type LandingText } from "@/components/landing/data/landing-data"
+import { FEATURES, LANDING_HEADINGS, type FeatureItem, type LandingText } from "@/components/landing/data/landing-data"
+import { LANDING_VIDEOS } from "@/components/landing/data/landing-assets"
+import { LandingVideo } from "@/components/landing/ui/landing-video"
 import { ScrollReveal } from "@/components/landing/ui/scroll-reveal"
 import { cn } from "@/lib/utils"
 
@@ -15,6 +17,48 @@ function featureImageClass(featureId: string) {
   return featureId === "chart"
     ? "object-contain object-center bg-white"
     : "object-cover object-top"
+}
+
+function FeaturePreview({
+  feature,
+  locale,
+  active,
+  animate,
+  priority,
+}: {
+  feature: FeatureItem
+  locale: string
+  active: boolean
+  animate?: boolean
+  priority?: boolean
+}) {
+  const video = feature.videoKey ? LANDING_VIDEOS[feature.videoKey] : null
+
+  if (video) {
+    return (
+      <div className="landing-video-safe absolute inset-0 overflow-hidden bg-white">
+        <LandingVideo
+          src={video.src}
+          poster={video.poster}
+          label={video.alt}
+          active={active}
+          className={featureImageClass(feature.id)}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className={cn("absolute inset-0", animate && active && "landing-zoom-ken-burns-slow")}>
+      <Image
+        src={feature.screenshot}
+        alt={lt(feature.title, locale)}
+        fill
+        className={featureImageClass(feature.id)}
+        priority={priority}
+      />
+    </div>
+  )
 }
 
 export function FeaturesShowcase() {
@@ -140,15 +184,7 @@ export function FeaturesShowcase() {
 
                   {isActive && (
                     <div className="landing-zoom-clip relative mt-4 block aspect-[16/10] w-full overflow-hidden rounded-xl border border-neutral-200/80 shadow-md lg:hidden">
-                      <div className="landing-zoom-ken-burns-slow absolute inset-0">
-                        <Image
-                          src={feature.screenshot}
-                          alt={lt(feature.title, locale)}
-                          fill
-                          className={featureImageClass(feature.id)}
-                          priority
-                        />
-                      </div>
+                      <FeaturePreview feature={feature} locale={locale} active priority />
                     </div>
                   )}
                 </div>
@@ -167,21 +203,13 @@ export function FeaturesShowcase() {
                   )}
                   data-visible={activeTab === idx ? "true" : "false"}
                 >
-                  <div
-                    key={activeTab === idx ? `active-${idx}` : `idle-${idx}`}
-                    className={cn(
-                      "absolute inset-0",
-                      activeTab === idx && "landing-zoom-ken-burns-slow"
-                    )}
-                  >
-                    <Image
-                      src={feature.screenshot}
-                      alt={lt(feature.title, locale)}
-                      fill
-                      className={featureImageClass(feature.id)}
-                      priority={idx === 0}
-                    />
-                  </div>
+                  <FeaturePreview
+                    feature={feature}
+                    locale={locale}
+                    active={activeTab === idx}
+                    animate
+                    priority={idx === 0}
+                  />
                 </div>
               ))}
             </div>

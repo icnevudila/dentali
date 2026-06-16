@@ -15,6 +15,11 @@ export const LANDING_VIDEOS = {
     poster: v("/landing/timeline-tv-queue.png"),
     alt: "Waiting room queue display",
   },
+  chart: {
+    src: v("/landing/videos/dental-chart-video.mp4"),
+    poster: v("/landing/dental-chart.png"),
+    alt: "Interactive dental chart demo",
+  },
   kiosk: {
     src: v("/landing/videos/kiosk-video.mp4"),
     poster: v("/landing/timeline-kiosk.png"),

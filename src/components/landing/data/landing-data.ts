@@ -1,7 +1,7 @@
 /* ── Landing page data: features, testimonials, FAQ, timeline, i18n ── */
 
 import type { LucideIcon } from "lucide-react"
-import { landingAsset as asset } from "./landing-assets"
+import { landingAsset as asset, type LandingVideoKey } from "./landing-assets"
 import {
   LayoutDashboard, Users, ClipboardList, CalendarDays,
   CreditCard, Package, BarChart3, Shield, Smartphone,
@@ -287,6 +287,7 @@ export interface FeatureItem {
   title: LandingText
   description: LandingText
   screenshot: string // path under /landing/
+  videoKey?: LandingVideoKey
 }
 
 export const FEATURES: FeatureItem[] = [
@@ -310,6 +311,7 @@ export const FEATURES: FeatureItem[] = [
     title: t("Dental Chart", "Diş Şeması"),
     description: t("Interactive FDI odontogram with findings, notes, and treatment history.", "Bulgular, notlar ve tedavi geçmişi ile interaktif FDI odontogram."),
     screenshot: asset("/landing/dental-chart.png"),
+    videoKey: "chart",
   },
   {
     id: "treatment",
