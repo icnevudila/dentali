@@ -11,7 +11,7 @@ import { searchPatients } from "@/lib/patients/patient-service"
 import {
   callNextPatient,
   checkInPatient,
-  fetchQueueEntries,
+  fetchQueueEntriesForDay,
   updateQueueStatus,
   waitMinutes,
   type QueueEntry,
@@ -50,7 +50,11 @@ import { createClient } from "@/lib/supabase/client"
 import { VisitCheckoutWizard } from "@/components/queue/VisitCheckoutWizard"
 import { WalkInCheckInDialog } from "@/components/queue/WalkInCheckInDialog"
 import { QueueBoard, type QueueBoardArrival } from "@/components/queue/QueueBoard"
+import { QueueDaySummary, type QueueDayStats } from "@/components/queue/QueueDaySummary"
+import { computeQueueDayStats } from "@/lib/queue/queue-day-stats"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
+import { ClinicDayBar } from "@/components/layout/ClinicDayBar"
+import { useClinicDay } from "@/hooks/use-clinic-day"
 import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
 
 type Tab = "board" | "history"
@@ -91,8 +95,11 @@ function QueuePageContent() {
   const highlightAppointmentId = searchParams.get("appointment")
   const { activeBranch, branchRevision } = useBranch()
   const { t } = useLocale()
+  const { clinicDay, isToday, formattedDay, previousDay } = useClinicDay()
   const [tab, setTab] = React.useState<Tab>("board")
   const [entries, setEntries] = React.useState<QueueEntry[]>([])
+  const [dayEntries, setDayEntries] = React.useState<QueueEntry[]>([])
+  const [prevDayServed, setPrevDayServed] = React.useState<number | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [actionId, setActionId] = React.useState<string | null>(null)
@@ -100,6 +107,7 @@ function QueuePageContent() {
   const [patientQuery, setPatientQuery] = React.useState("")
   const [patients, setPatients] = React.useState<Awaited<ReturnType<typeof searchPatients>>["data"]>([])
   const [selectedPatientId, setSelectedPatientId] = React.useState("")
+  const [selectedPatientName, setSelectedPatientName] = React.useState("")
   const [checkInNotes, setCheckInNotes] = React.useState("")
   const [checkingIn, setCheckingIn] = React.useState(false)
   const [callingNext, setCallingNext] = React.useState(false)
@@ -123,6 +131,7 @@ function QueuePageContent() {
     setPatientQuery("")
     setPatients([])
     setSelectedPatientId("")
+    setSelectedPatientName("")
     setCheckInNotes("")
     setConsentOverridePending(false)
     setBillingOverridePending(false)
@@ -133,6 +142,7 @@ function QueuePageContent() {
     setPatientQuery("")
     setPatients([])
     setSelectedPatientId("")
+    setSelectedPatientName("")
     setCheckInNotes("")
     setConsentOverridePending(false)
     setBillingOverridePending(false)
@@ -160,13 +170,20 @@ function QueuePageContent() {
     (silent = false) => {
       if (!activeBranch) return
       if (!silent) setLoading(true)
-      fetchQueueEntries(activeBranch.id, tab === "board").then(({ data, error: err }) => {
-        setEntries(sortQueueEntries(data))
+
+      void fetchQueueEntriesForDay(activeBranch.id, clinicDay).then(({ data: dayData, error: err }) => {
+        const sortedDay = sortQueueEntries(dayData)
+        setDayEntries(sortedDay)
+        const filtered =
+          tab === "board"
+            ? sortedDay.filter((e) => !["served", "cancelled"].includes(e.status))
+            : sortedDay.filter((e) => ["served", "cancelled"].includes(e.status))
+        setEntries(filtered)
         setError(err)
         setLoading(false)
       })
     },
-    [activeBranch, tab]
+    [activeBranch, tab, clinicDay]
   )
 
   React.useEffect(() => {
@@ -175,7 +192,17 @@ function QueuePageContent() {
   }, [load, branchRevision])
 
   React.useEffect(() => {
-    if (!activeBranch) return
+    if (!activeBranch || !isToday) {
+      setPrevDayServed(null)
+      return
+    }
+    void fetchQueueEntriesForDay(activeBranch.id, previousDay).then(({ data }) => {
+      setPrevDayServed(data.filter((e) => e.status === "served").length)
+    })
+  }, [activeBranch, isToday, previousDay])
+
+  React.useEffect(() => {
+    if (!activeBranch || !isToday) return
     void (async () => {
       const { data: noShowResult } = await autoNoShowForBranch(activeBranch.id)
       if (noShowResult && noShowResult.marked > 0) {
@@ -191,11 +218,11 @@ function QueuePageContent() {
         data.filter((a) => a.status === "scheduled" || a.status === "confirmed")
       )
     })()
-  }, [activeBranch, today, entries, t])
+  }, [activeBranch, today, dayEntries, t, isToday])
 
   const queuedAppointmentIds = React.useMemo(
-    () => new Set(entries.map((e) => e.appointment_id).filter(Boolean)),
-    [entries]
+    () => new Set(dayEntries.map((e) => e.appointment_id).filter(Boolean)),
+    [dayEntries]
   )
 
   const pendingAppointmentCheckIns = todayAppointments.filter((a) => !queuedAppointmentIds.has(a.id))
@@ -229,7 +256,7 @@ function QueuePageContent() {
   }, [highlightAppointmentId, pendingAppointmentCheckIns.length])
 
   React.useEffect(() => {
-    if (tab !== "board" || !activeBranch) return
+    if (tab !== "board" || !activeBranch || !isToday) return
 
     const supabase = createClient()
     const channel = supabase
@@ -254,7 +281,7 @@ function QueuePageContent() {
       clearInterval(interval)
       supabase.removeChannel(channel)
     }
-  }, [load, tab, activeBranch])
+  }, [load, tab, activeBranch, isToday])
 
   React.useEffect(() => {
     if (!activeBranch || patientQuery.length < 2) {
@@ -352,7 +379,7 @@ function QueuePageContent() {
 
     if (action.mode === "walk_in") {
       setCheckingIn(true)
-      const { error: err } = await checkInPatient({
+      const { data, error: err } = await checkInPatient({
         branchId: activeBranch.id,
         patientId: action.patientId,
         notes: checkInNotes || undefined,
@@ -371,10 +398,15 @@ function QueuePageContent() {
       } else {
         closeCheckInModal()
         notify.success(
-          t(
-            "queue.walkInCheckInSuccess",
-            "Walk-in checked in - visit opened and patient is in Waiting."
-          )
+          data?.display_code
+            ? t("queue.checkInSuccess", "Checked in — queue #{code}").replace(
+                "{code}",
+                data.display_code
+              )
+            : t(
+                "queue.walkInCheckInSuccess",
+                "Walk-in checked in — patient is in Waiting."
+              )
         )
         void load(true)
       }
@@ -424,15 +456,18 @@ function QueuePageContent() {
 
   const beginGatedCheckIn = async (action: PendingCheckInAction) => {
     if (!activeBranch) return
+    if (action.mode === "walk_in") setCheckingIn(true)
     const { prompt, error: promptError } = await loadOpenEncounterPrompt(
       action.patientId,
       activeBranch.id
     )
     if (promptError) {
+      if (action.mode === "walk_in") setCheckingIn(false)
       notify.error(promptError)
       return
     }
     if (prompt) {
+      if (action.mode === "walk_in") setCheckingIn(false)
       setEncounterPrompt(prompt)
       setPendingCheckIn(action)
       setEncounterDialogOpen(true)
@@ -474,10 +509,9 @@ function QueuePageContent() {
   ) => {
     e.preventDefault()
     if (!activeBranch || !selectedPatientId) return
-    const patient = patients.find((p) => p.id === selectedPatientId)
     await beginGatedCheckIn({
       patientId: selectedPatientId,
-      patientName: patient ? `${patient.first_name} ${patient.last_name}` : undefined,
+      patientName: selectedPatientName || undefined,
       mode: "walk_in",
       forceCheckin,
       forceBillingOverride,
@@ -517,58 +551,59 @@ function QueuePageContent() {
     })
   }
 
-  const avgWait =
-    entries.length > 0
-      ? Math.round(entries.reduce((s, e) => s + waitMinutes(e.checked_in_at), 0) / entries.length)
-      : 0
-
-  const waitingCount = entries.filter((e) => e.status === "waiting").length
-  const servingCount = entries.filter(
-    (e) => e.status === "now_serving" || e.status === "in_chair" || e.status === "ready"
-  ).length
+  const dayStats = React.useMemo(
+    (): QueueDayStats => computeQueueDayStats(dayEntries),
+    [dayEntries]
+  )
 
   const metricItems =
-    tab === "board"
+    tab === "board" && isToday
       ? [
           {
-            label: t("queue.metricArrivals", "To check in"),
-            value: loading ? "—" : pendingAppointmentCheckIns.length,
-            hint: t("queue.metricArrivalsHint", "Scheduled, not in queue yet"),
-            variant: pendingAppointmentCheckIns.length > 0 ? ("warning" as const) : ("default" as const),
-          },
-          {
-            label: t("queue.metricInQueue", "In queue"),
-            value: loading ? "—" : entries.length,
-            hint: activeBranch?.name ?? t("queue.selectBranch", "Select a branch"),
+            label: t("queue.metricInQueue", "Active now"),
+            value: loading ? "—" : dayStats.active,
+            hint: t("queue.metricInQueueHint", "Waiting through in-chair"),
             icon: Users,
+            variant: dayStats.active > 0 ? ("warning" as const) : ("default" as const),
           },
           {
             label: t("queue.metricWaiting", "Waiting"),
-            value: loading ? "—" : waitingCount,
+            value: loading ? "—" : dayStats.waiting,
             hint: t("queue.metricWaitingHint", "Not yet called"),
-            variant: waitingCount > 0 ? ("warning" as const) : ("default" as const),
           },
           {
-            label: t("queue.metricServing", "Serving"),
-            value: loading ? "—" : servingCount,
-            hint: t("queue.metricServingHint", "Called or in chair"),
+            label: t("queue.metricServing", "Called / chair"),
+            value: loading ? "—" : dayStats.serving,
+            hint: t("queue.metricServingHint", "Being seen"),
             icon: UserCheck,
           },
           {
-            label: t("queue.avgWait", "Avg wait"),
-            value: loading || entries.length === 0 ? "—" : `${avgWait} min`,
-            hint: t("queue.metricAvgHint", "Since check-in"),
-            icon: Clock,
+            label: t("queue.summaryServed", "Served today"),
+            value: loading ? "—" : dayStats.served,
+            hint: t("queue.metricServedHint", "Completed this clinic day"),
+            variant: dayStats.served > 0 ? ("success" as const) : ("default" as const),
           },
         ]
-      : [
-          {
-            label: t("queue.history", "History"),
-            value: loading ? "—" : entries.length,
-            hint: t("queue.metricHistoryHint", "Completed today"),
-            icon: Users,
-          },
-        ]
+      : tab === "history" || !isToday
+        ? [
+            {
+              label: t("queue.summaryServed", "Served"),
+              value: loading ? "—" : dayStats.served,
+              hint: formattedDay,
+              variant: dayStats.served > 0 ? ("success" as const) : ("default" as const),
+            },
+            {
+              label: t("queue.summaryCancelled", "Cancelled"),
+              value: loading ? "—" : dayStats.cancelled,
+            },
+            {
+              label: t("queue.avgVisit", "Avg visit"),
+              value: loading || dayStats.served === 0 ? "—" : `${dayStats.avgVisitMins} min`,
+              hint: t("queue.summaryAvgVisitSub", "Check-in to complete"),
+              icon: Clock,
+            },
+          ]
+        : []
 
   return (
     <PermissionGate permission={PERMISSIONS.QUEUE_MANAGE}>
@@ -585,6 +620,7 @@ function QueuePageContent() {
               "Scheduled patients check in here, become a Waiting queue entry, then move to Chair and checkout."
             )}
             actions={
+              isToday ? (
               <>
                 <WorkflowSettingsLink />
                 <Button
@@ -599,7 +635,29 @@ function QueuePageContent() {
                   <Plus className="h-4 w-4" /> {t("queue.checkIn", "Check in")}
                 </Button>
               </>
+              ) : (
+                <WorkflowSettingsLink />
+              )
             }
+          />
+
+          <ClinicDayBar
+            compareHint={
+              !isToday
+                ? t(
+                    "queue.pastDayHint",
+                    "Viewing queue history for {day}. Switch to Today for live check-in and flow."
+                  ).replace("{day}", formattedDay)
+                : null
+            }
+          />
+
+          <QueueDaySummary
+            stats={dayStats}
+            isToday={isToday}
+            formattedDay={formattedDay}
+            prevDayServed={prevDayServed}
+            arrivalsPending={isToday ? pendingAppointmentCheckIns.length : 0}
           />
 
           {activeBranch ? (
@@ -608,7 +666,7 @@ function QueuePageContent() {
                 <MapPin className="h-3 w-3" aria-hidden />
                 {activeBranch.name}
               </Badge>
-              {pendingAppointmentCheckIns.length > 0 && tab === "board" ? (
+              {pendingAppointmentCheckIns.length > 0 && tab === "board" && isToday ? (
                 <Badge variant="warning" className="font-normal">
                   {pendingAppointmentCheckIns.length} {t("queue.apptCheckIn", "appointments to check in")}
                 </Badge>
@@ -616,11 +674,11 @@ function QueuePageContent() {
             </div>
           ) : null}
 
-          <MetricStrip items={metricItems} className={tab === "history" ? "lg:grid-cols-1" : undefined} />
+          <MetricStrip items={metricItems} className="lg:grid-cols-4" />
 
           <div className="flex flex-wrap gap-2">
             <Button variant={tab === "board" ? "default" : "outline"} size="sm" onClick={() => setTab("board")}>
-              {t("queue.liveBoard", "Live board")}
+              {isToday ? t("queue.liveBoard", "Live board") : t("queue.dayBoard", "Day board")}
             </Button>
             <Button variant={tab === "history" ? "default" : "outline"} size="sm" onClick={() => setTab("history")}>
               {t("queue.history", "History")}
@@ -669,14 +727,16 @@ function QueuePageContent() {
           onPatientQueryChange={setPatientQuery}
           patients={patients}
           selectedPatientId={selectedPatientId}
-          selectedPatientLabel={patientQuery}
+          selectedPatientLabel={selectedPatientName || patientQuery}
           onSelectPatient={(p) => {
             setSelectedPatientId(p.id)
+            setSelectedPatientName(`${p.first_name} ${p.last_name}`)
             setPatientQuery(`${p.first_name} ${p.last_name}`)
             setPatients([])
           }}
           onClearPatient={() => {
             setSelectedPatientId("")
+            setSelectedPatientName("")
             setPatientQuery("")
             setPatients([])
           }}
@@ -698,13 +758,14 @@ function QueuePageContent() {
             {activeBranch ? (
               <QueueBoard
                 entries={entries}
-                arrivals={boardArrivals}
+                arrivals={isToday ? boardArrivals : []}
                 highlightAppointmentId={highlightAppointmentId}
                 apptCheckInId={apptCheckInId}
                 onArrivalCheckIn={handleAppointmentCheckIn}
                 branchId={activeBranch.id}
                 actionId={actionId}
                 onAction={handleAction}
+                readOnly={!isToday}
                 onReorderError={(msg) => {
                   setError(msg)
                   notify.error(msg)
@@ -735,7 +796,11 @@ function QueuePageContent() {
             />
         </div>
       ) : entries.length === 0 ? (
-          <p className="text-center py-12 text-neutral-500">No completed queue entries today.</p>
+          <p className="text-center py-12 text-neutral-500">
+            {isToday
+              ? t("queue.noHistoryToday", "No completed queue entries today.")
+              : t("queue.noHistoryDay", "No queue entries on this clinic day.")}
+          </p>
         ) : (
           <Card>
             <CardContent className="pt-6">

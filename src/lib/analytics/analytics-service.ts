@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client"
+import { toDateKey } from "@/lib/appointments/week-calendar"
 import type { DayBucket } from "@/lib/reports/date-buckets"
 import type { StatusSlice } from "@/lib/reports/reports-service"
 
@@ -126,7 +127,7 @@ export async function fetchDailyCloseout(
   const supabase = createClient()
   const { data, error } = await supabase.rpc("get_daily_closeout", {
     p_branch_id: branchId,
-    p_date: date ?? new Date().toISOString().slice(0, 10),
+    p_date: date ?? toDateKey(new Date()),
   })
   if (error) return { data: null, error: error.message }
   const raw = data as Record<string, number | string>
@@ -562,14 +563,25 @@ export async function fetchAutomationRunLog(
 export async function saveCloseoutSnapshot(
   branchId: string | null,
   date?: string
-): Promise<{ data: string | null; error: string | null }> {
+): Promise<{ data: string | null; error: string | null; updated: boolean }> {
   const supabase = createClient()
+  const targetDate = date ?? toDateKey(new Date())
+
+  let existingQuery = supabase
+    .from("closeout_snapshots")
+    .select("id")
+    .eq("snapshot_date", targetDate)
+  existingQuery = branchId
+    ? existingQuery.eq("branch_id", branchId)
+    : existingQuery.is("branch_id", null)
+  const { data: existing } = await existingQuery.maybeSingle()
+
   const { data, error } = await supabase.rpc("save_closeout_snapshot", {
     p_branch_id: branchId,
-    p_date: date ?? new Date().toISOString().slice(0, 10),
+    p_date: targetDate,
   })
-  if (error) return { data: null, error: error.message }
-  return { data: String(data), error: null }
+  if (error) return { data: null, error: error.message, updated: !!existing?.id }
+  return { data: String(data), error: null, updated: !!existing?.id }
 }
 
 export async function fetchCloseoutHistory(

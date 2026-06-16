@@ -81,6 +81,69 @@ export async function fetchQueueEntries(
   return { data: mapped, error: null }
 }
 
+/** All queue entries checked in on a Manila calendar day (any status). */
+export async function fetchQueueEntriesForDay(
+  branchId: string,
+  dateKey: string
+): Promise<{ data: QueueEntry[]; error: string | null }> {
+  const showcase = getShowcaseSnapshot()
+  if (showcase && branchId === showcase.branch.id) {
+    const day = new Date(dateKey).toLocaleDateString("en-CA", { timeZone: "Asia/Manila" })
+    const data = showcase.queueEntries.filter((entry) => {
+      const entryDay = new Date(entry.checked_in_at).toLocaleDateString("en-CA", {
+        timeZone: "Asia/Manila",
+      })
+      return entryDay === day
+    })
+    return { data, error: null }
+  }
+
+  const start = `${dateKey}T00:00:00+08:00`
+  const end = `${dateKey}T23:59:59.999+08:00`
+
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("queue_entries")
+    .select(
+      "id, patient_id, appointment_id, display_code, status, chair_label, notes, checked_in_at, called_at, in_chair_at, completed_at, patient_mood, patients(first_name, last_name, patient_number), appointments(provider_id)"
+    )
+    .eq("branch_id", branchId)
+    .gte("checked_in_at", start)
+    .lte("checked_in_at", end)
+    .order("checked_in_at", { ascending: true })
+
+  if (error) return { data: [], error: error.message }
+
+  const mapped = (data ?? []).map((row) => {
+    const p = row.patients as
+      | { first_name: string; last_name: string; patient_number?: string | null }
+      | { first_name: string; last_name: string; patient_number?: string | null }[]
+      | null
+    const patient = Array.isArray(p) ? p[0] : p
+    const appt = row.appointments as { provider_id: string | null } | { provider_id: string | null }[] | null
+    const appointment = Array.isArray(appt) ? appt[0] : appt
+    return {
+      id: row.id,
+      patient_id: row.patient_id,
+      patient_name: patient ? `${patient.first_name} ${patient.last_name}` : undefined,
+      patient_number: patient?.patient_number ?? null,
+      appointment_id: row.appointment_id,
+      provider_id: appointment?.provider_id ?? null,
+      display_code: row.display_code,
+      status: row.status as QueueStatus,
+      chair_label: row.chair_label,
+      notes: row.notes,
+      checked_in_at: row.checked_in_at,
+      called_at: row.called_at,
+      in_chair_at: row.in_chair_at,
+      completed_at: row.completed_at,
+      patient_mood: row.patient_mood,
+    } as QueueEntry
+  })
+
+  return { data: mapped, error: null }
+}
+
 export async function checkInPatient(params: {
   branchId: string
   patientId: string

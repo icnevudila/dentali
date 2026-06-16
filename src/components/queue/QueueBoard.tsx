@@ -78,6 +78,7 @@ function ArrivalCardInner({
   checkingIn,
   highlighted,
   onCheckIn,
+  readOnly = false,
 }: {
   appt: AppointmentRecord
   tone: "overdue" | "due" | "upcoming"
@@ -85,6 +86,7 @@ function ArrivalCardInner({
   checkingIn: boolean
   highlighted?: boolean
   onCheckIn: () => void
+  readOnly?: boolean
 }) {
   const { t } = useLocale()
   const timingLabel =
@@ -124,6 +126,7 @@ function ArrivalCardInner({
       {appt.purpose ? (
         <p className="mt-0.5 truncate text-xs text-neutral-500">{appt.purpose}</p>
       ) : null}
+      {!readOnly ? (
       <Button
         size="sm"
         className="mt-2 w-full gap-1"
@@ -135,6 +138,7 @@ function ArrivalCardInner({
           ? t("queue.checkingIn", "Checking in...")
           : t("queue.checkInToWaiting", "Check in to Waiting")}
       </Button>
+      ) : null}
     </div>
   )
 }
@@ -147,6 +151,7 @@ function QueueCard({
   onDragStart,
   onDragEnd,
   isDragging,
+  readOnly = false,
 }: {
   entry: QueueEntry
   onAction: (status: QueueStatus | "announce", chair?: string) => void
@@ -155,6 +160,7 @@ function QueueCard({
   onDragStart: () => void
   onDragEnd: () => void
   isDragging: boolean
+  readOnly?: boolean
 }) {
   const mins = waitMinutes(entry.checked_in_at)
   const { t } = useLocale()
@@ -220,6 +226,7 @@ function QueueCard({
       <p className="text-xs text-neutral-500 mt-1">{mins} min waiting</p>
       {entry.chair_label ? <p className="text-xs text-neutral-600">Chair: {entry.chair_label}</p> : null}
       {entry.notes ? <p className="text-xs text-neutral-400 mt-1 truncate">{entry.notes}</p> : null}
+      {!readOnly ? (
       <div className="flex flex-wrap gap-1 mt-2">
         {entry.status === "waiting" ? (
           <Button size="sm" variant="outline" disabled={loading} onClick={() => onAction("ready")}>
@@ -273,6 +280,7 @@ function QueueCard({
           </Button>
         ) : null}
       </div>
+      ) : null}
     </div>
   )
 }
@@ -288,6 +296,7 @@ export function QueueBoard({
   onAction,
   onReorderError,
   onReorderSuccess,
+  readOnly = false,
 }: {
   entries: QueueEntry[]
   arrivals: QueueBoardArrival[]
@@ -299,6 +308,7 @@ export function QueueBoard({
   onAction: (entryId: string, status: QueueStatus | "announce") => void
   onReorderError: (message: string) => void
   onReorderSuccess: () => void
+  readOnly?: boolean
 }) {
   const { t } = useLocale()
   const [dragEntryId, setDragEntryId] = React.useState<string | null>(null)
@@ -351,10 +361,12 @@ export function QueueBoard({
   return (
     <div className="space-y-2">
       <p className="text-xs text-neutral-500">
-        {t(
-          "queue.dragHintFourCol",
-          "Check in from the first column, then drag cards across Waiting → Called → In Chair."
-        )}
+        {readOnly
+          ? t("queue.historyBoardHint", "Read-only snapshot for the selected clinic day.")
+          : t(
+              "queue.dragHintFourCol",
+              "Check in from the first column, then drag cards across Waiting → Called → In Chair."
+            )}
       </p>
       <div className="overflow-x-auto pb-1">
         <div className="grid min-w-[64rem] grid-cols-4 gap-4">
@@ -376,14 +388,14 @@ export function QueueBoard({
                   isDropTarget && column.dropStatus && "ring-2 ring-primary-400 bg-primary-50/30"
                 )}
                 onDragOver={(e) => {
-                  if (!column.dropStatus) return
+                  if (readOnly || !column.dropStatus) return
                   e.preventDefault()
                   e.dataTransfer.dropEffect = "move"
                   setDropColumnId(column.id)
                 }}
                 onDragLeave={() => setDropColumnId((prev) => (prev === column.id ? null : prev))}
                 onDrop={(e) => {
-                  if (!column.dropStatus) return
+                  if (readOnly || !column.dropStatus) return
                   e.preventDefault()
                   const draggedId = e.dataTransfer.getData("text/queue-entry-id")
                   if (!draggedId) return
@@ -413,6 +425,7 @@ export function QueueBoard({
                           checkingIn={apptCheckInId === appt.id}
                           highlighted={highlightAppointmentId === appt.id}
                           onCheckIn={() => onArrivalCheckIn(appt.id)}
+                          readOnly={readOnly}
                         />
                       ))
                     )
@@ -422,12 +435,13 @@ export function QueueBoard({
                         <div
                           key={entry.id}
                           onDragOver={(e) => {
-                            if (!column.canReorder) return
+                            if (readOnly || !column.canReorder) return
                             e.preventDefault()
                             e.stopPropagation()
                             setDropColumnId(column.id)
                           }}
                           onDrop={(e) => {
+                            if (readOnly) return
                             e.preventDefault()
                             e.stopPropagation()
                             const draggedId = e.dataTransfer.getData("text/queue-entry-id")
@@ -438,7 +452,7 @@ export function QueueBoard({
                           <QueueCard
                             entry={entry}
                             loading={actionId === entry.id || reordering}
-                            draggable
+                            draggable={!readOnly}
                             isDragging={dragEntryId === entry.id}
                             onDragStart={() => setDragEntryId(entry.id)}
                             onDragEnd={() => {
@@ -446,6 +460,7 @@ export function QueueBoard({
                               setDropColumnId(null)
                             }}
                             onAction={(status) => onAction(entry.id, status)}
+                            readOnly={readOnly}
                           />
                         </div>
                       ))}

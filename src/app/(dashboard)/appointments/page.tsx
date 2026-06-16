@@ -60,6 +60,7 @@ import { Calendar, Plus, Check, X, LayoutGrid, List, ChevronLeft, ChevronRight, 
 import { PageHeader } from "@/components/layout/PageHeader"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
+import { AppointmentsDaySummary } from "@/components/appointments/AppointmentsDaySummary"
 import { MetricStrip, type MetricItem } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
@@ -406,44 +407,26 @@ function AppointmentsPageContent() {
   )
 
   const metricItems = React.useMemo(() => {
-    const todayAppts = weekAppointments.filter((a) => appointmentDateKey(a.scheduled_at) === today)
-    const todayTotal = todayAppts.length
+    const todayAppts = weekAppointments.filter((a) => appointmentDateKey(a.scheduled_at) === selectedDate)
     const todayAwaitingCheckin = todayAppts.filter(
       (a) => a.status === "scheduled" || a.status === "confirmed"
     ).length
-    const todayUpcoming = todayAwaitingCheckin
-    const todayCompleted = todayAppts.filter((a) => a.status === "completed").length
     const todayPortal = todayAppts.filter((a) => resolveBookingSource(a) === "portal").length
     const weekPortal = weekAppointments.filter((a) => resolveBookingSource(a) === "portal").length
+    const isSelectedToday = selectedDate === today
 
-    const items: MetricItem[] = [
-      {
-        label: t("appointments.metricTotal", "Today"),
-        value: loading ? "—" : todayTotal,
-        hint: t("appointments.todayPrefix", "Today"),
-        icon: Calendar,
-      },
-      {
-        label: t("appointments.metricUpcoming", "Upcoming Today"),
-        value: loading ? "—" : todayUpcoming,
-        hint: t("appointments.metricUpcomingHint", "Scheduled or confirmed"),
-        variant: todayAwaitingCheckin > 0 ? ("warning" as const) : ("default" as const),
-      },
-      {
+    const items: MetricItem[] = []
+
+    if (isSelectedToday && canCheckIn) {
+      items.push({
         label: t("appointments.metricAwaitingCheckin", "Awaiting check-in"),
         value: loading ? "—" : todayAwaitingCheckin,
         hint: t("appointments.metricAwaitingCheckinHint", "Not yet checked in today"),
         icon: UserCheck,
         variant: todayAwaitingCheckin > 0 ? ("warning" as const) : ("default" as const),
         href: "/queue",
-      },
-      {
-        label: t("appointments.metricDone", "Completed Today"),
-        value: loading ? "—" : todayCompleted,
-        hint: t("appointments.metricDoneHint", "Marked done today"),
-        variant: "success" as const,
-      },
-    ]
+      })
+    }
 
     if (!loading && (todayPortal > 0 || weekPortal > 0)) {
       items.push({
@@ -457,13 +440,21 @@ function AppointmentsPageContent() {
               )
             : t("appointments.metricPortalHint", "Patient portal — tap to filter"),
         icon: Globe,
-        variant: bookingSourceFilter === "portal" ? ("default" as const) : ("default" as const),
         onClick: () => setBookingSourceFilter(bookingSourceFilter === "portal" ? null : "portal"),
       })
     }
 
     return items
-  }, [weekAppointments, today, loading, t, bookingSourceFilter, setBookingSourceFilter])
+  }, [
+    weekAppointments,
+    selectedDate,
+    today,
+    loading,
+    t,
+    bookingSourceFilter,
+    setBookingSourceFilter,
+    canCheckIn,
+  ])
 
   return (
     <PermissionGate permission={PERMISSIONS.APPOINTMENTS_READ}>
@@ -574,13 +565,22 @@ function AppointmentsPageContent() {
           ) : null}
 
           {activeBranch ? (
+            <AppointmentsDaySummary
+              appointments={filteredWeekAppointments}
+              selectedDate={selectedDate}
+              isToday={selectedDate === today}
+              loading={loading}
+            />
+          ) : null}
+
+          {activeBranch ? (
             <Badge variant="info" className="gap-1 w-fit font-normal">
               <MapPin className="h-3 w-3" aria-hidden />
               {activeBranch.name}
             </Badge>
           ) : null}
 
-          <MetricStrip items={metricItems} />
+          {metricItems.length > 0 ? <MetricStrip items={metricItems} className="lg:grid-cols-2" /> : null}
 
         {error ? <PageErrorNotifier error={error} onRetry={reload} /> : null}
         {reminderNotice && (

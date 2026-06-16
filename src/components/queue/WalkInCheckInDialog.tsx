@@ -80,13 +80,13 @@ export function WalkInCheckInDialog({
       }}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-2xl bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:rounded-xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
+        className="flex max-h-[min(92vh,100dvh)] w-full max-w-lg flex-col rounded-t-2xl bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[92vh] sm:rounded-xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="walk-in-check-in-title"
       >
-        <div className="border-b border-neutral-100 px-5 py-4 sm:px-6">
+        <div className="shrink-0 border-b border-neutral-100 px-5 py-4 sm:px-6">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -121,7 +121,8 @@ export function WalkInCheckInDialog({
           </div>
         </div>
 
-        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-4 sm:px-6">
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 sm:px-6">
           <div className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="walk-in-patient-search" className="text-sm font-medium text-neutral-800">
@@ -266,28 +267,43 @@ export function WalkInCheckInDialog({
               </div>
             ) : null}
           </div>
+          </div>
 
-          <div className="mt-6 flex flex-col-reverse gap-2 border-t border-neutral-100 pt-4 sm:flex-row sm:justify-end">
-            <Button type="button" variant="outline" disabled={checkingIn} onClick={onClose} className="sm:min-w-[7rem]">
+          <div className="shrink-0 border-t border-neutral-100 bg-white px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={checkingIn}
+              onClick={onClose}
+              className="h-11 w-full sm:min-w-[7rem] sm:w-auto"
+            >
               {t("common.cancel", "Cancel")}
             </Button>
             <Button
               type="submit"
               disabled={checkingIn || !selectedPatientId}
-              className="gap-2 sm:min-w-[10rem]"
+              size="lg"
+              className="h-11 w-full gap-2 sm:min-w-[12rem] sm:w-auto"
             >
               {checkingIn ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  {t("queue.checkingIn", "Checking in…")}
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                  <span>{t("queue.checkingIn", "Checking in…")}</span>
                 </>
               ) : (
                 <>
-                  <UserCheck className="h-4 w-4" aria-hidden />
-                  {t("queue.checkInToWaiting", "Check in to Waiting")}
+                  <UserCheck className="h-4 w-4 shrink-0" aria-hidden />
+                  <span>{t("queue.checkInToWaiting", "Check in to Waiting")}</span>
                 </>
               )}
             </Button>
+            </div>
+            {!selectedPatientId ? (
+              <p className="mt-2 text-center text-xs text-neutral-500 sm:text-right">
+                {t("queue.walkInSelectPatientHint", "Select a patient above to enable check-in.")}
+              </p>
+            ) : null}
           </div>
         </form>
       </div>

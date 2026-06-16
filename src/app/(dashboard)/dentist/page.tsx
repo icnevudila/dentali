@@ -20,7 +20,11 @@ import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useBranch } from "@/hooks/use-branch"
+import { useClinicDay } from "@/hooks/use-clinic-day"
 import { useLocale } from "@/hooks/use-locale"
+import { ClinicDayBar } from "@/components/layout/ClinicDayBar"
+import { QueueDaySummary } from "@/components/queue/QueueDaySummary"
+import { computeQueueDayStats } from "@/lib/queue/queue-day-stats"
 import { toDateKey } from "@/lib/appointments/week-calendar"
 import { fetchOdontogramFindingsForPatients } from "@/lib/odontogram/dental-chart-service"
 import {
@@ -35,10 +39,10 @@ import { useAuth } from "@/hooks/use-auth"
 import { useStaffRole } from "@/hooks/use-staff-role"
 import { fetchOrgStaff, type StaffMember } from "@/lib/staff/staff-service"
 import type { PatientRecord } from "@/lib/patients/patient-service"
-import { fetchQueueEntries, fetchTodayServedCount, type QueueEntry } from "@/lib/queue/queue-service"
+import { fetchQueueEntries, fetchQueueEntriesForDay, type QueueEntry } from "@/lib/queue/queue-service"
 import type { ToothFinding } from "@/lib/types/dental"
 import { createClient } from "@/lib/supabase/client"
-import { Armchair, CheckCircle2, MapPin, Stethoscope, Timer, Users, Calendar } from "lucide-react"
+import { Armchair, MapPin, Stethoscope, Timer, Users, Calendar } from "lucide-react"
 
 const PAGE_SIZE = 20
 
@@ -70,6 +74,7 @@ function DentistPageContent() {
   const { roleName } = useStaffRole()
   const { activeBranch, branchRevision, hasActiveBranch } = useBranch()
   const { t } = useLocale()
+  const { clinicDay, isToday, formattedDay } = useClinicDay()
   const searchRef = React.useRef<HTMLInputElement>(null)
 
   const urlQuery = searchParams.get("q") ?? ""
@@ -88,12 +93,12 @@ function DentistPageContent() {
   const [queueByPatientId, setQueueByPatientId] = React.useState<Record<string, QueueEntry>>({})
   const [total, setTotal] = React.useState(0)
   const [queueEntries, setQueueEntries] = React.useState<QueueEntry[]>([])
+  const [dayQueueEntries, setDayQueueEntries] = React.useState<QueueEntry[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [chartFindingsByPatient, setChartFindingsByPatient] = React.useState<
     Record<string, ToothFinding[]>
   >({})
-  const [servedToday, setServedToday] = React.useState(0)
 
   const isSearching = query !== debouncedQuery || (loading && debouncedQuery.length > 0)
 
@@ -105,6 +110,8 @@ function DentistPageContent() {
       nextProviderId: string | null
     ) => {
       const params = new URLSearchParams()
+      const dayParam = searchParams.get("date")
+      if (dayParam) params.set("date", dayParam)
       if (nextQuery.trim()) params.set("q", nextQuery.trim())
       if (nextPage > 1) params.set("page", String(nextPage))
       if (nextFilter !== "all") params.set("filter", nextFilter)
@@ -112,7 +119,7 @@ function DentistPageContent() {
       const qs = params.toString()
       router.replace(qs ? `/dentist?${qs}` : "/dentist", { scroll: false })
     },
-    [router]
+    [router, searchParams]
   )
 
   React.useEffect(() => {
@@ -187,7 +194,7 @@ function DentistPageContent() {
     setLoading(true)
     setError(null)
 
-    const [listResult, queueResult, servedResult] = await Promise.all([
+    const [listResult, queueResult, dayResult] = await Promise.all([
       searchDentistQueuePatients(activeBranch.id, {
         query: debouncedQuery,
         filter,
@@ -195,19 +202,24 @@ function DentistPageContent() {
         page,
         pageSize: PAGE_SIZE,
       }),
-      fetchQueueEntries(activeBranch.id, true),
-      fetchTodayServedCount(activeBranch.id),
+      isToday
+        ? fetchQueueEntries(activeBranch.id, true)
+        : fetchQueueEntriesForDay(activeBranch.id, clinicDay),
+      fetchQueueEntriesForDay(activeBranch.id, clinicDay),
     ])
 
     setPatients(listResult.data)
     setQueueByPatientId(listResult.queueByPatientId)
     setTotal(listResult.total)
     setError(listResult.error)
-    setServedToday(servedResult.count)
+    setDayQueueEntries(dayResult.data)
     setLoading(false)
 
+    const queueSource = isToday
+      ? queueResult.data
+      : queueResult.data.filter((entry) => entry.status !== "cancelled")
     const sortedQueue = filterDentistBoardByProvider(
-      sortDentistBoardEntries(queueResult.data),
+      sortDentistBoardEntries(queueSource),
       providerId
     )
     setQueueEntries(sortedQueue)
@@ -220,14 +232,14 @@ function DentistPageContent() {
     } else {
       setChartFindingsByPatient({})
     }
-  }, [activeBranch, branchRevision, debouncedQuery, filter, page, providerId])
+  }, [activeBranch, branchRevision, debouncedQuery, filter, page, providerId, isToday, clinicDay])
 
   React.useEffect(() => {
     loadPatients()
   }, [loadPatients])
 
   React.useEffect(() => {
-    if (!activeBranch) return
+    if (!activeBranch || !isToday) return
 
     const supabase = createClient()
     const channel = supabase
@@ -249,7 +261,7 @@ function DentistPageContent() {
       clearInterval(interval)
       supabase.removeChannel(channel)
     }
-  }, [activeBranch, loadPatients])
+  }, [activeBranch, loadPatients, isToday])
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -269,15 +281,9 @@ function DentistPageContent() {
   }
 
   const counts = countDentistBoardEntries(queueEntries)
+  const dayStats = React.useMemo(() => computeQueueDayStats(dayQueueEntries), [dayQueueEntries])
 
   const metricItems = [
-    {
-      label: t("dentist.metricActive", "In clinic now"),
-      value: loading && hasActiveBranch ? "—" : counts.total,
-      hint: activeBranch?.name ?? t("dashboard.selectBranch", "Select a branch"),
-      icon: Users,
-      onClick: () => handleFilterChange("all"),
-    },
     {
       label: t("dentist.metricInChair", "In chair"),
       value: loading && hasActiveBranch ? "—" : counts.inChair,
@@ -301,12 +307,6 @@ function DentistPageContent() {
       icon: Timer,
       onClick: () => handleFilterChange("waiting"),
     },
-    {
-      label: t("dentist.metricServedToday", "Served today"),
-      value: loading && hasActiveBranch ? "—" : servedToday,
-      hint: t("dentist.metricServedTodayHint", "Completed visits today"),
-      icon: CheckCircle2,
-    },
   ]
 
   return (
@@ -327,14 +327,35 @@ function DentistPageContent() {
               <>
                 <WorkflowSettingsLink />
                 <Button variant="outline" size="sm" className="gap-2" asChild>
-                  <Link href={`/appointments?date=${toDateKey(new Date())}`}>
+                  <Link href={`/appointments?date=${isToday ? toDateKey(new Date()) : clinicDay}`}>
                     <Calendar className="h-4 w-4" aria-hidden />
-                    {t("dentist.headerTodaySchedule", "Today's schedule")}
+                    {isToday
+                      ? t("dentist.headerTodaySchedule", "Today's schedule")
+                      : t("dentist.headerDaySchedule", "Day schedule")}
                   </Link>
                 </Button>
               </>
             }
           />
+
+          <ClinicDayBar
+            compareHint={
+              !isToday
+                ? t(
+                    "dentist.pastDayHint",
+                    "Historical chair queue for {day}. Switch to Today for live patients."
+                  ).replace("{day}", formattedDay)
+                : null
+            }
+          />
+
+          {activeBranch ? (
+            <QueueDaySummary
+              stats={dayStats}
+              isToday={isToday}
+              formattedDay={formattedDay}
+            />
+          ) : null}
 
           {activeBranch ? (
             <div className="flex flex-wrap items-center gap-2 animate-fade-rise">
@@ -342,7 +363,6 @@ function DentistPageContent() {
                 <MapPin className="h-3 w-3" aria-hidden />
                 {activeBranch.name}
               </Badge>
-              <WorkflowSettingsLink />
               {!loading ? (
                 <Badge variant="outline" className="font-normal tabular-nums">
                   {total}{" "}
@@ -364,7 +384,7 @@ function DentistPageContent() {
             </div>
           ) : null}
 
-          <MetricStrip items={metricItems} className="lg:grid-cols-2 xl:grid-cols-5" />
+          <MetricStrip items={metricItems} className="lg:grid-cols-3" />
 
           <div className="grid gap-6 xl:grid-cols-[15rem_minmax(0,1fr)] 2xl:grid-cols-[16.5rem_minmax(0,1fr)]">
             <DentistFilterBar
@@ -382,7 +402,9 @@ function DentistPageContent() {
                 <SectionEyebrow icon={Users}>
                   {loading
                     ? t("dentist.listLoading", "Chair queue")
-                    : t("dentist.listEyebrow", "Active queue")}
+                    : isToday
+                      ? t("dentist.listEyebrow", "Active queue")
+                      : t("dentist.listEyebrowDay", "Queue that day")}
                 </SectionEyebrow>
                 <PatientSearchBar
                   value={query}

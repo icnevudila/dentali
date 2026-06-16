@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
-import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
@@ -17,26 +16,18 @@ import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 import { DashboardVisualPanel } from "@/components/dashboard/DashboardVisualPanel"
 import { AttentionPanel } from "@/components/dashboard/AttentionPanel"
 import { DailyCloseoutCard } from "@/components/dashboard/DailyCloseoutCard"
-import { RoleDashboardCockpit } from "@/components/dashboard/RoleDashboardCockpit"
+import { DashboardOpsSummary } from "@/components/dashboard/DashboardOpsSummary"
 import { MonthlyAppointmentsSnapshot } from "@/components/analytics/MonthlyAppointmentsSnapshot"
 import { ReportsSectionBlock } from "@/components/reports/ReportsSectionBlock"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { useReportsSummary } from "@/hooks/use-reports-summary"
 import {
-  Users,
-  Calendar,
-  FileWarning,
   Plus,
-  Clock,
-  Receipt,
-  Wallet,
-  PackageX,
   Radio,
   MapPin,
   LayoutDashboard,
   BarChart3,
-  UserCheck,
 } from "lucide-react"
 
 const DASHBOARD_PERIOD_OPTIONS = [7, 30, 90] as const
@@ -76,77 +67,6 @@ export default function DashboardPage() {
       .replace("{collected}", collected)
   }, [activeBranch, loading, stats, t])
 
-  const flowMetrics = [
-    {
-      label: t("dashboard.todayAppointments", "Today's Appointments"),
-      value: loading ? "—" : stats.today_appointments,
-      hint: t("dashboard.todayAppointmentsHint", "Scheduled or confirmed today"),
-      icon: Calendar,
-      href: "/appointments",
-    },
-    {
-      label: t("dashboard.queueWaiting", "Queue Waiting"),
-      value: loading ? "—" : stats.queue_waiting,
-      hint: t("dashboard.viewQueue", "View queue board"),
-      icon: Clock,
-      href: "/queue",
-      variant: stats.queue_waiting > 0 && !loading ? ("warning" as const) : ("default" as const),
-    },
-    {
-      label: t("dashboard.awaitingCheckin", "Awaiting check-in"),
-      value: loading ? "—" : stats.appointments_awaiting_checkin,
-      hint: t("dashboard.awaitingCheckinHint", "Check in on Queue → Today's arrivals"),
-      icon: UserCheck,
-      href: "/queue",
-      variant:
-        stats.appointments_awaiting_checkin > 0 && !loading ? ("warning" as const) : ("default" as const),
-    },
-    {
-      label: t("dashboard.pendingConsents", "Pending Consents"),
-      value: loading ? "—" : stats.pending_consents,
-      hint: t("dashboard.pendingConsentsHint", "Awaiting patient signature"),
-      icon: FileWarning,
-      href: "/patients",
-      variant: stats.pending_consents > 0 && !loading ? ("warning" as const) : ("default" as const),
-    },
-  ]
-
-  const revenueMetrics = [
-    {
-      label: t("dashboard.openInvoices", "Open Invoices"),
-      value: loading ? "—" : stats.open_invoices,
-      hint: t("dashboard.viewBilling", "View billing"),
-      icon: Receipt,
-      href: "/billing",
-      variant: stats.open_invoices > 0 && !loading ? ("warning" as const) : ("default" as const),
-    },
-    {
-      label: t("dashboard.collectedToday", "Collected Today"),
-      value: loading ? "—" : `₱${stats.today_collected.toLocaleString()}`,
-      hint: t("dashboard.collectedTodayHint", "Payments recorded today"),
-      icon: Wallet,
-      variant: stats.today_collected > 0 && !loading ? ("success" as const) : ("default" as const),
-    },
-    {
-      label: t("dashboard.lowStockItems", "Low Stock Items"),
-      value: loading ? "—" : stats.low_stock_items,
-      hint: t("dashboard.viewInventory", "View inventory"),
-      icon: PackageX,
-      href: "/inventory",
-      variant: stats.low_stock_items > 0 && !loading ? ("warning" as const) : ("default" as const),
-    },
-  ]
-
-  const registryMetrics = [
-    {
-      label: t("dashboard.activePatients", "Active Patients"),
-      value: loading ? "—" : stats.active_patients,
-      hint: t("dashboard.activePatientsHint", "Organization-wide registry"),
-      icon: Users,
-      href: "/patients",
-    },
-  ]
-
   return (
     <DirectionalTransition className="mx-auto w-full max-w-7xl">
       <ContentPanel padding="lg" className="space-y-8">
@@ -168,7 +88,7 @@ export default function DashboardPage() {
         />
 
         {activeBranch ? (
-          <RoleDashboardCockpit stats={stats} loading={loading} />
+          <DashboardOpsSummary stats={stats} loading={loading} />
         ) : null}
 
         {activeBranch ? (
@@ -328,27 +248,6 @@ export default function DashboardPage() {
             </div>
           </ReportsSectionBlock>
         ) : null}
-
-        <section className="space-y-3">
-          <SectionEyebrow icon={Calendar}>
-            {t("dashboard.sectionFlow", "Front desk today")}
-          </SectionEyebrow>
-          <MetricStrip items={flowMetrics} className="lg:grid-cols-3" />
-        </section>
-
-        <section className="space-y-3">
-          <SectionEyebrow icon={Receipt}>
-            {t("dashboard.sectionRevenue", "Revenue & stock")}
-          </SectionEyebrow>
-          <MetricStrip items={revenueMetrics} className="lg:grid-cols-3" />
-        </section>
-
-        <section className="space-y-3">
-          <SectionEyebrow icon={Users}>
-            {t("dashboard.sectionRegistry", "Registry")}
-          </SectionEyebrow>
-          <MetricStrip items={registryMetrics} className="sm:grid-cols-2 lg:grid-cols-3" />
-        </section>
 
         {activeBranch ? (
           <ReportDrillLink

@@ -32,6 +32,7 @@ import { StatusPipeline, waitlistPipelineSteps } from "@/components/visual/Statu
 import { WaitlistEntryList } from "@/components/waitlist/WaitlistEntryList"
 import { WaitlistBookDialog } from "@/components/waitlist/WaitlistBookDialog"
 import { WaitlistAddDialog } from "@/components/waitlist/WaitlistAddDialog"
+import { WaitlistOpsSummary } from "@/components/waitlist/WaitlistOpsSummary"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { notify } from "@/lib/ui/notify"
 
@@ -167,35 +168,16 @@ export default function WaitlistPage() {
   }
 
   const metricItems =
-    tab === "active"
+    tab === "active" && waitingCount > 0
       ? [
-          {
-            label: t("waitlist.active", "Active"),
-            value: loading ? "—" : entries.length,
-            hint: t("waitlist.metricActiveHint", "On waitlist now"),
-            icon: Clock,
-          },
           {
             label: t("waitlist.metricWaiting", "Waiting"),
             value: loading ? "—" : waitingCount,
             hint: t("waitlist.metricWaitingHint", "Not yet contacted"),
-            variant: waitingCount > 0 && !loading ? ("warning" as const) : ("default" as const),
-          },
-          {
-            label: t("waitlist.metricContacted", "Contacted"),
-            value: loading ? "—" : contactedCount,
-            hint: t("waitlist.metricContactedHint", "Follow-up in progress"),
-            icon: Clock,
+            variant: !loading ? ("warning" as const) : ("default" as const),
           },
         ]
-      : [
-          {
-            label: t("waitlist.history", "History"),
-            value: loading ? "—" : entries.length,
-            hint: t("waitlist.metricHistoryHint", "Booked, cancelled, expired"),
-            icon: Clock,
-          },
-        ]
+      : []
 
   return (
     <PermissionGate permission={PERMISSIONS.APPOINTMENTS_READ}>
@@ -227,8 +209,18 @@ export default function WaitlistPage() {
             </div>
           ) : null
         }
+        summary={
+          <WaitlistOpsSummary
+            activeCount={entries.length}
+            waitingCount={waitingCount}
+            contactedCount={contactedCount}
+            historyCount={entries.length}
+            tab={tab}
+            loading={loading}
+          />
+        }
         metrics={metricItems}
-        metricsClassName={tab === "history" ? "lg:grid-cols-1" : "lg:grid-cols-3"}
+        metricsClassName="lg:grid-cols-1"
         error={error && !loading ? error : null}
         onRetry={load}
         retryLabel={t("common.retry", "Retry")}

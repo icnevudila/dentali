@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
-import { MetricStrip } from "@/components/layout/MetricStrip"
+import { BillingOpsSummary } from "@/components/billing/BillingOpsSummary"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { RecordRow } from "@/components/layout/RecordRow"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
@@ -113,33 +113,6 @@ function BillingPageContent() {
     return "warning" as const
   }
 
-  const metricItems = [
-    {
-      label: t("billing.metricTotal", "Invoices"),
-      value: loading ? "—" : billingStats.total,
-      hint: activeBranch?.name ?? t("dashboard.selectBranch", "Select a branch"),
-      icon: Receipt,
-    },
-    {
-      label: t("billing.filterOpen", "Open"),
-      value: loading ? "—" : billingStats.open,
-      hint: t("billing.metricOpenHint", "Outstanding balance"),
-      variant: billingStats.open > 0 ? ("warning" as const) : ("default" as const),
-    },
-    {
-      label: t("billing.balance", "Outstanding"),
-      value: loading ? "—" : `₱${billingStats.outstanding.toLocaleString()}`,
-      hint: t("billing.metricOutstandingHint", "Unpaid total"),
-      icon: FileText,
-    },
-    {
-      label: t("billing.filterPaid", "Paid"),
-      value: loading ? "—" : billingStats.paid,
-      hint: t("billing.metricPaidHint", "Fully settled"),
-      variant: "success" as const,
-    },
-  ]
-
   return (
     <PermissionGate permission={PERMISSIONS.BILLING_READ}>
       <div className="space-y-6">
@@ -172,7 +145,16 @@ function BillingPageContent() {
           </div>
         </div>
 
-        <MetricStrip items={metricItems} />
+        {activeBranch ? (
+          <BillingOpsSummary
+            total={billingStats.total}
+            open={billingStats.open}
+            outstanding={billingStats.outstanding}
+            paid={billingStats.paid}
+            loading={loading}
+            branchName={activeBranch.name}
+          />
+        ) : null}
 
         {activeBranch ? (
           <ReportDrillLink

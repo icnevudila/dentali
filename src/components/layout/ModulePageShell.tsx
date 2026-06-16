@@ -15,6 +15,8 @@ type ModulePageShellProps = {
   description?: ReactNode
   actions?: ReactNode
   badges?: ReactNode
+  /** Detailed day/module summary grid — shown above the slim metric strip */
+  summary?: ReactNode
   metrics?: MetricItem[]
   metricsClassName?: string
   error?: string | null
@@ -35,6 +37,7 @@ export function ModulePageShell({
   description,
   actions,
   badges,
+  summary,
   metrics,
   metricsClassName,
   error,
@@ -60,6 +63,8 @@ export function ModulePageShell({
         <PageHeader title={title} description={description} actions={actions} />
 
         {badges}
+
+        {summary}
 
         {metrics && metrics.length > 0 ? (
           <MetricStrip items={metrics} className={metricsClassName} />
