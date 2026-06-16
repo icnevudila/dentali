@@ -117,8 +117,13 @@ export function RecordRow({
         style={style}
         onClick={(e) => {
           const target = e.target as HTMLElement
-          if (target.closest("button, a[href], input, select, textarea, label")) {
+          if (target.closest("button, input, select, textarea, label")) {
             e.preventDefault()
+            return
+          }
+          const nestedLink = target.closest("a[href]")
+          if (nestedLink && nestedLink !== e.currentTarget) {
+            return
           }
           onClick?.()
         }}
