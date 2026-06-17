@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useLocale } from "@/hooks/use-locale"
 import type { PatientRecord } from "@/lib/patients/patient-service"
+import { PatientCommandCenter } from "@/components/queue/PatientCommandCenter"
 
 export type WalkInCheckInDialogProps = {
   open: boolean
+  branchId?: string
   branchName?: string
   patientQuery: string
   onPatientQueryChange: (value: string) => void
@@ -33,6 +35,7 @@ export type WalkInCheckInDialogProps = {
 
 export function WalkInCheckInDialog({
   open,
+  branchId,
   branchName,
   patientQuery,
   onPatientQueryChange,
@@ -227,6 +230,10 @@ export function WalkInCheckInDialog({
                 </div>
               )}
             </div>
+
+            {selectedPatientId && branchId ? (
+              <PatientCommandCenter patientId={selectedPatientId} branchId={branchId} />
+            ) : null}
 
             <div className="space-y-2">
               <label htmlFor="walk-in-note" className="text-sm font-medium text-neutral-800">

@@ -6,13 +6,15 @@ export function SectionEyebrow({
   children,
   icon: Icon,
   className,
+  hideOnMobile = false,
 }: {
   children: ReactNode
   icon?: LucideIcon
   className?: string
+  hideOnMobile?: boolean
 }) {
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn("flex items-center gap-2", hideOnMobile && "hidden md:flex", className)}>
       {Icon ? (
         <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary-50 text-primary-600">
           <Icon className="h-3.5 w-3.5" aria-hidden />

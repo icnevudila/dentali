@@ -491,11 +491,12 @@ function AppointmentsPageContent() {
     <PermissionGate permission={PERMISSIONS.APPOINTMENTS_READ}>
       <DirectionalTransition className="mx-auto w-full max-w-7xl">
         <ContentPanel padding="lg" className="space-y-6">
-          <SectionEyebrow icon={Calendar}>
+          <SectionEyebrow icon={Calendar} hideOnMobile>
             {t("appointments.eyebrow", "Scheduling")} · {t("appointments.title", "Appointments")}
           </SectionEyebrow>
 
           <PageHeader
+            compact
             title={t("appointments.title", "Appointments")}
             description={t(
               "appointments.registrySubtitle",
@@ -623,7 +624,9 @@ function AppointmentsPageContent() {
             </Badge>
           ) : null}
 
-          {metricItems.length > 0 ? <MetricStrip items={metricItems} className="lg:grid-cols-2" /> : null}
+          {metricItems.length > 0 ? (
+            <MetricStrip items={metricItems} snapOnMobile desktopCols={2} />
+          ) : null}
 
         {error ? <PageErrorNotifier error={error} onRetry={reload} /> : null}
         {reminderNotice && (

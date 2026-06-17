@@ -8,6 +8,7 @@ import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
 import { searchPatients } from "@/lib/patients/patient-service"
+import { sendReviewRequestAfterServed } from "@/lib/notifications/review-request-service"
 import { fetchPatientConsents } from "@/lib/patients/consent-service"
 import {
   checkInConsentFormLabel,
@@ -54,6 +55,7 @@ import { VisitCheckoutWizard } from "@/components/queue/VisitCheckoutWizard"
 import { PatientArrivalDialog } from "@/components/queue/PatientArrivalDialog"
 import { QueueBoard, type QueueBoardArrival } from "@/components/queue/QueueBoard"
 import { QueueDaySummary, type QueueDayStats, type QueueDaySummaryKey } from "@/components/queue/QueueDaySummary"
+import { CollapsibleGuide } from "@/components/layout/CollapsibleGuide"
 import { QueueWorkflowGuide } from "@/components/queue/QueueWorkflowGuide"
 import { computeQueueDayStats } from "@/lib/queue/queue-day-stats"
 import {
@@ -500,6 +502,11 @@ function QueuePageContent() {
       notify.error(err)
     } else {
       if (status === "served" && entry?.patient_id) {
+        void sendReviewRequestAfterServed(entryId).then((result) => {
+          if (result.sent) {
+            notify.success(t("queue.reviewSmsSent", "Review request SMS sent."))
+          }
+        })
         const { data: billingGate } = await getPatientBillingGate(entry.patient_id)
         setCheckoutWizard({
           patientId: entry.patient_id,
@@ -852,12 +859,14 @@ function QueuePageContent() {
   return (
     <PermissionGate permission={PERMISSIONS.QUEUE_MANAGE}>
       <DirectionalTransition className="mx-auto w-full max-w-7xl">
-        <ContentPanel padding="lg" className="space-y-6">
-          <SectionEyebrow icon={Users}>
+        <ContentPanel padding="lg" className="flex flex-col gap-6">
+          <div className="order-1 space-y-6">
+          <SectionEyebrow icon={Users} hideOnMobile>
             {t("queue.eyebrow", "Front desk")} · {t("queue.title", "Queue & Patient Flow")}
           </SectionEyebrow>
 
           <PageHeader
+            compact
             title="Queue & Patient Flow"
             description={t(
               "queue.subtitle",
@@ -910,9 +919,9 @@ function QueuePageContent() {
             activeKey={summaryKeyFromFilter(boardFilter)}
             onItemClick={handleSummaryClick}
           />
+          </div>
 
-          {tab === "board" && isToday ? <QueueWorkflowGuide /> : null}
-
+          <div className="order-2 md:order-3">
           {activeBranch ? (
             <div className="flex flex-wrap items-center gap-2 animate-fade-rise">
               <Badge variant="info" className="gap-1 font-normal">
@@ -926,10 +935,9 @@ function QueuePageContent() {
               ) : null}
             </div>
           ) : null}
+          </div>
 
-          <MetricStrip items={metricItems} className="lg:grid-cols-4" />
-
-          <div className="flex flex-wrap gap-2">
+          <div className="order-3 md:order-5 flex flex-wrap gap-2">
             <Button variant={tab === "board" ? "default" : "outline"} size="sm" onClick={() => handleTabChange("board")}>
               {isToday ? t("queue.liveBoard", "Live board") : t("queue.dayBoard", "Day board")}
             </Button>
@@ -938,41 +946,27 @@ function QueuePageContent() {
             </Button>
           </div>
 
-          <OpenEncounterCheckInDialog
-            open={encounterDialogOpen}
-            prompt={encounterPrompt}
-            patientName={pendingCheckIn?.patientName}
-            loading={encounterResolving || checkingIn}
-            onChoose={(choice) => void handleEncounterChoice(choice)}
-            onClose={() => {
-              if (encounterResolving) return
-              setEncounterDialogOpen(false)
-              setEncounterPrompt(null)
-              setPendingCheckIn(null)
-            }}
-          />
-
-          {checkoutWizard ? (
-            <VisitCheckoutWizard
-              open
-              onOpenChange={(open) => {
-                if (!open) setCheckoutWizard(null)
-              }}
-              patientId={checkoutWizard.patientId}
-              patientName={checkoutWizard.patientName}
-              billingGate={checkoutWizard.billingGate}
-              encounterId={checkoutWizard.encounterId}
-            />
+          <div className="order-6 md:order-2">
+          {tab === "board" && isToday ? (
+            <CollapsibleGuide summary={t("queue.flowHowItWorks", "How queue check-in works")}>
+              <QueueWorkflowGuide />
+            </CollapsibleGuide>
           ) : null}
+          </div>
 
-          {error && (
+          <div className="order-5 md:order-4">
+          <MetricStrip items={metricItems} snapOnMobile desktopCols={4} />
+          </div>
+
+          <div className="order-4 md:order-6 space-y-4">
+          {error ? (
             <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 animate-fade-rise">
               <p className="text-sm text-red-700">{error}</p>
               <Button variant="outline" size="sm" className="mt-3" onClick={() => load()}>
                 {t("common.retry", "Retry")}
               </Button>
             </div>
-          )}
+          ) : null}
 
           {checkInGate ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4 text-amber-950 animate-fade-rise">
@@ -1038,39 +1032,6 @@ function QueuePageContent() {
               </div>
             </div>
           ) : null}
-
-        <PatientArrivalDialog
-          open={showCheckIn}
-          branchName={activeBranch?.name}
-          patientQuery={patientQuery}
-          onPatientQueryChange={setPatientQuery}
-          patients={patients}
-          selectedPatientId={selectedPatientId}
-          selectedPatientLabel={selectedPatientName || patientQuery}
-          onSelectPatient={(p) => {
-            setSelectedPatientId(p.id)
-            setSelectedPatientName(`${p.first_name} ${p.last_name}`)
-            setPatientQuery(`${p.first_name} ${p.last_name}`)
-            setPatients([])
-          }}
-          onClearPatient={() => {
-            setSelectedPatientId("")
-            setSelectedPatientName("")
-            setPatientQuery("")
-            setPatients([])
-          }}
-          checkInNotes={checkInNotes}
-          onCheckInNotesChange={setCheckInNotes}
-          checkingIn={checkingIn}
-          billingOverridePending={billingOverridePending}
-          consentOverridePending={consentOverridePending}
-          consentFormHref={walkInConsentHref}
-          consentFormLabel={walkInConsentLabel}
-          onSubmit={handleCheckIn}
-          onBillingOverride={() => void handleCheckIn({ preventDefault: () => {} } as React.FormEvent, false, true)}
-          onConsentOverride={() => void handleCheckIn({ preventDefault: () => {} } as React.FormEvent, true)}
-          onClose={closeCheckInModal}
-        />
 
         {loading && entries.length === 0 && boardArrivals.length === 0 ? (
           <PageLoadingSkeleton variant="grid3" />
@@ -1164,6 +1125,68 @@ function QueuePageContent() {
             </CardContent>
           </Card>
         )}
+          </div>
+
+          <OpenEncounterCheckInDialog
+            open={encounterDialogOpen}
+            prompt={encounterPrompt}
+            patientName={pendingCheckIn?.patientName}
+            loading={encounterResolving || checkingIn}
+            onChoose={(choice) => void handleEncounterChoice(choice)}
+            onClose={() => {
+              if (encounterResolving) return
+              setEncounterDialogOpen(false)
+              setEncounterPrompt(null)
+              setPendingCheckIn(null)
+            }}
+          />
+
+          {checkoutWizard ? (
+            <VisitCheckoutWizard
+              open
+              onOpenChange={(open) => {
+                if (!open) setCheckoutWizard(null)
+              }}
+              patientId={checkoutWizard.patientId}
+              patientName={checkoutWizard.patientName}
+              billingGate={checkoutWizard.billingGate}
+              encounterId={checkoutWizard.encounterId}
+            />
+          ) : null}
+
+        <PatientArrivalDialog
+          open={showCheckIn}
+          branchId={activeBranch?.id}
+          branchName={activeBranch?.name}
+          patientQuery={patientQuery}
+          onPatientQueryChange={setPatientQuery}
+          patients={patients}
+          selectedPatientId={selectedPatientId}
+          selectedPatientLabel={selectedPatientName || patientQuery}
+          onSelectPatient={(p) => {
+            setSelectedPatientId(p.id)
+            setSelectedPatientName(`${p.first_name} ${p.last_name}`)
+            setPatientQuery(`${p.first_name} ${p.last_name}`)
+            setPatients([])
+          }}
+          onClearPatient={() => {
+            setSelectedPatientId("")
+            setSelectedPatientName("")
+            setPatientQuery("")
+            setPatients([])
+          }}
+          checkInNotes={checkInNotes}
+          onCheckInNotesChange={setCheckInNotes}
+          checkingIn={checkingIn}
+          billingOverridePending={billingOverridePending}
+          consentOverridePending={consentOverridePending}
+          consentFormHref={walkInConsentHref}
+          consentFormLabel={walkInConsentLabel}
+          onSubmit={handleCheckIn}
+          onBillingOverride={() => void handleCheckIn({ preventDefault: () => {} } as React.FormEvent, false, true)}
+          onConsentOverride={() => void handleCheckIn({ preventDefault: () => {} } as React.FormEvent, true)}
+          onClose={closeCheckInModal}
+        />
 
         </ContentPanel>
       </DirectionalTransition>

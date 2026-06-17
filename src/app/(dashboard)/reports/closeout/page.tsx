@@ -28,6 +28,7 @@ import { CompareBar } from "@/components/charts/ChartKit"
 import { CloseoutPrintDocument } from "@/components/reports/CloseoutPrintDocument"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { Badge } from "@/components/ui/badge"
+import { TypedConfirmDialog } from "@/components/ui/TypedConfirmDialog"
 import { notify } from "@/lib/ui/notify"
 import { cn } from "@/lib/utils"
 
@@ -59,6 +60,8 @@ function DailyCloseoutContent() {
   const [savingSnapshot, setSavingSnapshot] = useState(false)
   const [finalizingDay, setFinalizingDay] = useState(false)
   const [reopeningDay, setReopeningDay] = useState(false)
+  const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false)
+  const [reopenDialogOpen, setReopenDialogOpen] = useState(false)
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -223,16 +226,6 @@ function DailyCloseoutContent() {
 
   const handleFinalizeDay = async () => {
     if (!isToday || dayFinalized) return
-    const confirmation = window.prompt(
-      t(
-        "closeout.finalizeConfirm",
-        "Type FINALIZE to lock billing edits for today's clinic day."
-      )
-    )
-    if (confirmation !== "FINALIZE") {
-      notify.error(t("closeout.finalizeCancelled", "Closeout was not finalized"))
-      return
-    }
     setFinalizingDay(true)
     const { error: err } = await finalizeCloseoutDay(activeBranch?.id ?? null, clinicDay)
     setFinalizingDay(false)
@@ -240,6 +233,7 @@ function DailyCloseoutContent() {
       setError(err)
       notify.error(err)
     } else {
+      setFinalizeDialogOpen(false)
       notify.success(t("closeout.finalized", "Clinic day finalized — billing is locked for today"))
       void reload()
     }
@@ -247,16 +241,6 @@ function DailyCloseoutContent() {
 
   const handleReopenDay = async () => {
     if (!isToday || !dayFinalized) return
-    const confirmation = window.prompt(
-      t(
-        "closeout.reopenConfirm",
-        "Type REOPEN to unlock today's billing edits and return the closeout to draft."
-      )
-    )
-    if (confirmation !== "REOPEN") {
-      notify.error(t("closeout.reopenCancelled", "Closeout remains finalized"))
-      return
-    }
     setReopeningDay(true)
     const { error: err } = await reopenTodayCloseoutDay(activeBranch?.id ?? null, clinicDay)
     setReopeningDay(false)
@@ -264,6 +248,7 @@ function DailyCloseoutContent() {
       setError(err)
       notify.error(err)
     } else {
+      setReopenDialogOpen(false)
       notify.success(t("closeout.reopened", "Clinic day reopened — billing edits are unlocked"))
       void reload()
     }
@@ -370,7 +355,7 @@ function DailyCloseoutContent() {
             <Button
               size="sm"
               variant={dayFinalized ? "outline" : "default"}
-              onClick={() => void handleFinalizeDay()}
+              onClick={() => setFinalizeDialogOpen(true)}
               disabled={!data || finalizingDay || !isToday || dayFinalized}
               title={
                 dayFinalized
@@ -387,7 +372,7 @@ function DailyCloseoutContent() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => void handleReopenDay()}
+                onClick={() => setReopenDialogOpen(true)}
                 disabled={!data || reopeningDay}
                 title={t("closeout.reopenHint", "Admin-only undo for an accidental same-day closeout")}
               >
@@ -560,6 +545,36 @@ function DailyCloseoutContent() {
           </div>
         )}
       </ModulePageShell>
+
+      <TypedConfirmDialog
+        open={finalizeDialogOpen}
+        onOpenChange={setFinalizeDialogOpen}
+        title={t("closeout.finalizeDialogTitle", "Finalize clinic day")}
+        description={t(
+          "closeout.finalizeConfirm",
+          "This locks invoice and payment edits for today's clinic day. Type FINALIZE to continue."
+        )}
+        confirmToken="FINALIZE"
+        confirmLabel={t("closeout.finalizeDay", "Finalize day & lock billing")}
+        icon="lock"
+        loading={finalizingDay}
+        onConfirm={handleFinalizeDay}
+      />
+
+      <TypedConfirmDialog
+        open={reopenDialogOpen}
+        onOpenChange={setReopenDialogOpen}
+        title={t("closeout.reopenDialogTitle", "Reopen today's closeout")}
+        description={t(
+          "closeout.reopenConfirm",
+          "Unlock today's billing edits and return the closeout to draft. Type REOPEN to continue."
+        )}
+        confirmToken="REOPEN"
+        confirmLabel={t("closeout.reopenToday", "Reopen today")}
+        icon="unlock"
+        loading={reopeningDay}
+        onConfirm={handleReopenDay}
+      />
     </>
   )
 }

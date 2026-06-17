@@ -137,6 +137,12 @@ const WORKFLOW_GROUPS: { title: string; items: WorkflowRule[] }[] = [
         label: "Owner daily digest SMS",
         description: "End-of-day branch summary SMS to owner/admin phones via owner-digest-sms-cron.",
       },
+      {
+        key: "auto_review_request_sms",
+        label: "Google review SMS after visit",
+        description:
+          "When a queue entry is marked served, send a one-time SMS asking for a Google review (30-day dedupe per patient). Set google_review_url in branch settings.",
+      },
     ],
   },
 ]

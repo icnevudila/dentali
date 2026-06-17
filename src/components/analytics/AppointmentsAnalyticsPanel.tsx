@@ -20,9 +20,12 @@ import { useLocale } from "@/hooks/use-locale"
 
 export function AppointmentsAnalyticsPanel({
   branchId,
+  periodDays = 7,
+  compact = false,
 }: {
   branchId: string
   periodDays?: number
+  compact?: boolean
 }) {
   const { t } = useLocale()
   const today = toDateKey(new Date())
@@ -56,27 +59,29 @@ export function AppointmentsAnalyticsPanel({
 
   return (
     <div className="min-w-0 space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-neutral-200/80 bg-neutral-50/60 p-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4 text-primary-600" aria-hidden />
-            <h3 className="text-sm font-semibold text-neutral-900">
-              {t("appointments.calendarReportTitle", "Appointment calendar report")}
-            </h3>
+      {compact ? null : (
+        <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-neutral-200/80 bg-neutral-50/60 p-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-primary-600" aria-hidden />
+              <h3 className="text-sm font-semibold text-neutral-900">
+                {t("appointments.calendarReportTitle", "Appointment calendar report")}
+              </h3>
+            </div>
+            <p className="max-w-3xl text-xs leading-5 text-neutral-500">
+              {t(
+                "appointments.calendarReportHint",
+                "Read-only appointment scheduler view. Review who is booked, which dentist is assigned, the visit reason, and daily load without changing live appointments."
+              )}
+            </p>
           </div>
-          <p className="max-w-3xl text-xs leading-5 text-neutral-500">
-            {t(
-              "appointments.calendarReportHint",
-              "Read-only appointment scheduler view. Review who is booked, which dentist is assigned, the visit reason, and daily load without changing live appointments."
-            )}
-          </p>
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/appointments?date=${selectedDate}`}>
+              {t("appointments.openScheduler", "Open scheduler")}
+            </Link>
+          </Button>
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/appointments?date=${selectedDate}`}>
-            {t("appointments.openScheduler", "Open scheduler")}
-          </Link>
-        </Button>
-      </div>
+      )}
 
       {error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

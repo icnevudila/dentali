@@ -72,9 +72,6 @@ export function AppointmentWeekCalendar({
       if (saved === "month" || saved === "week" || saved === "day") {
         return saved
       }
-      if (window.matchMedia("(max-width: 767px)").matches) {
-        return "week"
-      }
     }
     return "month"
   })
@@ -291,8 +288,9 @@ export function AppointmentWeekCalendar({
 
       {/* Monthly Grid View */}
       {viewMode === "month" && (
-        <div className="overflow-x-auto border border-neutral-200 rounded-lg">
-          <div className="grid min-w-0 grid-cols-7 gap-px overflow-hidden bg-neutral-200 sm:min-w-[750px]">
+        <div className="-mx-1 overflow-x-auto scroll-px-2 pb-1 snap-x snap-mandatory [scrollbar-width:thin] md:mx-0 md:overflow-visible md:snap-none">
+          <div className="min-w-[680px] border border-neutral-200 rounded-lg md:min-w-0">
+          <div className="grid grid-cols-7 gap-px overflow-hidden bg-neutral-200">
           {/* Weekday labels */}
           {DAY_LABELS.map((label) => (
             <div key={label} className="bg-neutral-50 p-2 text-center text-[10px] font-bold text-neutral-500 uppercase">
@@ -373,14 +371,15 @@ export function AppointmentWeekCalendar({
               </div>
             )
           })}
-        </div>
+          </div>
+          </div>
         </div>
       )}
 
       {/* Weekly Grid View */}
       {viewMode === "week" && (
-        <div className="overflow-x-auto pb-2">
-          <div className="grid min-w-0 grid-cols-7 gap-1 sm:min-w-[700px] sm:gap-2">
+        <div className="-mx-1 overflow-x-auto scroll-px-2 pb-1 snap-x snap-mandatory [scrollbar-width:thin] md:mx-0 md:overflow-visible md:snap-none">
+          <div className="grid min-w-[640px] grid-cols-7 gap-1 md:min-w-0 md:gap-2">
           {weekDays.map((day, i) => {
             const key = toDateKey(day)
             const dayAppts = groupedAppointments.get(key) ?? []
@@ -468,7 +467,7 @@ export function AppointmentWeekCalendar({
               </div>
             )
           })}
-        </div>
+          </div>
         </div>
       )}
 

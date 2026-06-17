@@ -106,6 +106,9 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
             <Link href="/quote" className="hover:text-primary-700">
               {t("marketing.navQuote", "Get a quote")}
             </Link>
+            <Link href="/blog" className="hover:text-primary-700">
+              Blog
+            </Link>
             <Link href="/login" className="hover:text-primary-700">
               {t("marketing.signIn", "Sign in")}
             </Link>

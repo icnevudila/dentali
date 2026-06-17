@@ -10,6 +10,7 @@ import {
   createConsentSigningToken,
   type PatientConsent,
 } from "@/lib/patients/consent-service"
+import { isCheckInRequiredConsentSlug, sortPatientConsentsForDisplay } from "@/lib/patients/checkin-consent"
 import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 
 export function ConsentRecordList({
@@ -38,6 +39,11 @@ export function ConsentRecordList({
     setTimeout(() => setLinkCopied(null), 2500)
   }
 
+  const sortedConsents = React.useMemo(
+    () => sortPatientConsentsForDisplay(consents),
+    [consents]
+  )
+
   if (consents.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50/50 px-6 py-12 text-center text-sm text-neutral-500">
@@ -51,13 +57,22 @@ export function ConsentRecordList({
       {linkError ? (
         <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{linkError}</p>
       ) : null}
-      {consents.map((c) => (
+      {sortedConsents.map((c) => (
         <RecordRow
           key={c.id}
           href={c.status === "signed" ? `/patients/${patientId}/consents/${c.template_slug}/view` : undefined}
           leading={<ShieldCheck className="h-5 w-5" />}
           avatarClassName="bg-primary-50"
-          primary={c.template_name}
+          primary={
+            <span className="inline-flex flex-wrap items-center gap-2">
+              {c.template_name}
+              {isCheckInRequiredConsentSlug(c.template_slug) && c.status === "pending" ? (
+                <Badge variant="warning" className="text-[10px]">
+                  Required
+                </Badge>
+              ) : null}
+            </span>
+          }
           secondary={
             c.signed_at
               ? `Signed ${new Date(c.signed_at).toLocaleDateString("en-PH")}`

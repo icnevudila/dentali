@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { HorizontalSnapStrip } from "@/components/layout/HorizontalSnapStrip"
 import Link from "next/link"
 
 export type OpsSummaryCell = {
@@ -19,6 +20,7 @@ type OpsSummaryGridProps = {
   items: OpsSummaryCell[]
   className?: string
   columnsClassName?: string
+  snapOnMobile?: boolean
 }
 
 function SummaryCell({
@@ -80,8 +82,11 @@ export function OpsSummaryGrid({
   items,
   className,
   columnsClassName = "sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7",
+  snapOnMobile = true,
 }: OpsSummaryGridProps) {
   if (items.length === 0) return null
+
+  const cells = items.map((item) => <SummaryCell key={item.label} {...item} />)
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -89,11 +94,13 @@ export function OpsSummaryGrid({
         <h3 className="text-sm font-semibold text-neutral-900">{title}</h3>
         {subtitle ? <p className="text-xs text-neutral-500">{subtitle}</p> : null}
       </div>
-      <div className={cn("grid gap-2", columnsClassName)}>
-        {items.map((item) => (
-          <SummaryCell key={item.label} {...item} />
-        ))}
-      </div>
+      {snapOnMobile ? (
+        <HorizontalSnapStrip desktopLayout="grid" desktopCols={3} className={columnsClassName}>
+          {cells}
+        </HorizontalSnapStrip>
+      ) : (
+        <div className={cn("grid gap-2", columnsClassName)}>{cells}</div>
+      )}
     </div>
   )
 }

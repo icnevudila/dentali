@@ -4,6 +4,7 @@ import Link from "next/link"
 import { BarChart3, TrendingUp, Wallet, Activity } from "lucide-react"
 import { TrendArea, TrendLine } from "@/components/charts/ChartKit"
 import { StatusBreakdown } from "@/components/charts/StatusBreakdown"
+import { HorizontalSnapStrip } from "@/components/layout/HorizontalSnapStrip"
 import type { ReportsSummary } from "@/lib/reports/reports-service"
 import { Button } from "@/components/ui/button"
 
@@ -72,7 +73,7 @@ export function DashboardVisualPanel({
         </Button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-4 lg:items-start">
+      <HorizontalSnapStrip desktopCols={4}>
         <div className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] lg:col-span-1">
           <div className="mb-3 flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-primary-600" aria-hidden />
@@ -148,7 +149,7 @@ export function DashboardVisualPanel({
             </div>
           )}
         </div>
-      </div>
+      </HorizontalSnapStrip>
     </section>
   )
 }

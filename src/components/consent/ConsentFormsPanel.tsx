@@ -22,7 +22,15 @@ import {
   type ConsentCatalogItem,
   type PatientConsent,
 } from "@/lib/patients/consent-service"
+import {
+  findCheckInBlockingConsentSlug,
+  isCheckInRequiredConsentSlug,
+  resolveConsentDisplayStatus,
+  sortConsentCatalogItems,
+  sortPatientConsentsForDisplay,
+} from "@/lib/patients/checkin-consent"
 import { useBranch } from "@/hooks/use-branch"
+import { useLocale } from "@/hooks/use-locale"
 import { cn } from "@/lib/utils"
 import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 import { ConsentScanUploadButton } from "@/components/consent/ConsentScanUploadButton"
@@ -31,11 +39,7 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 type FormStatus = "not_started" | "pending" | "signed" | "voided"
 
 function resolveFormStatus(slug: string, consents: PatientConsent[]): FormStatus {
-  const record = consents.find((c) => c.template_slug === slug)
-  if (!record) return "not_started"
-  if (record.status === "signed") return "signed"
-  if (record.status === "voided") return "voided"
-  return "pending"
+  return resolveConsentDisplayStatus(slug, consents)
 }
 
 const STATUS_BADGE: Record<FormStatus, { label: string; variant: "default" | "success" | "warning" }> = {
@@ -56,6 +60,7 @@ export function ConsentFormsPanel({
 }) {
   const router = useRouter()
   const { activeBranch } = useBranch()
+  const { t } = useLocale()
   const [catalog, setCatalog] = React.useState<ConsentCatalogItem[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -132,6 +137,19 @@ export function ConsentFormsPanel({
     setTimeout(() => setLinkCopiedSlug(null), 2500)
   }
 
+  const sortedCatalog = React.useMemo(
+    () => sortConsentCatalogItems(catalog, consents),
+    [catalog, consents]
+  )
+  const pendingConsents = React.useMemo(
+    () => sortPatientConsentsForDisplay(consents.filter((c) => c.status === "pending")),
+    [consents]
+  )
+  const blockingSlug = findCheckInBlockingConsentSlug(consents)
+  const blockingTemplate = blockingSlug
+    ? sortedCatalog.find((item) => item.slug === blockingSlug)
+    : null
+
   if (loading) {
     return <PageLoadingSkeleton variant="cards" />
   }
@@ -152,6 +170,34 @@ export function ConsentFormsPanel({
 
   return (
     <div className="space-y-6">
+      {blockingSlug && blockingTemplate ? (
+        <div className="rounded-xl border border-amber-300 bg-amber-50/90 px-4 py-3 shadow-sm">
+          <p className="text-sm font-semibold text-amber-950">
+            {t("consent.requiredForCheckInTitle", "Required before check-in")}
+          </p>
+          <p className="mt-1 text-sm text-amber-900">
+            {t(
+              "consent.requiredForCheckInBody",
+              "Complete and sign this form first — queue check-in stays blocked until it is signed."
+            )}
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Badge variant="warning" className="text-[10px]">
+              {t("consent.awaitingSignature", "Awaiting signature")}
+            </Badge>
+            <span className="text-sm font-medium text-neutral-900">{blockingTemplate.name}</span>
+            <Button
+              size="sm"
+              className="ml-auto gap-1"
+              disabled={busySlug === blockingSlug}
+              onClick={() => void handleFillNow(blockingTemplate)}
+            >
+              <PenLine className="h-3.5 w-3.5" />
+              {t("consent.fillRequiredNow", "Sign now")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
       {catalog.length > 0 ? (
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <div className="rounded-xl border border-neutral-200 bg-white px-3 py-3 text-center shadow-sm">
@@ -192,17 +238,20 @@ export function ConsentFormsPanel({
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
-        {catalog.map((template) => {
+        {sortedCatalog.map((template) => {
           const status = resolveFormStatus(template.slug, consents)
           const badge = STATUS_BADGE[status]
           const isBusy = busySlug === template.slug
           const consentRecord = consents.find((c) => c.template_slug === template.slug)
+          const requiredForCheckIn =
+            isCheckInRequiredConsentSlug(template.slug) && status !== "signed"
 
           return (
             <article
               key={template.slug}
               className={cn(
                 "relative flex flex-col overflow-hidden rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md",
+                requiredForCheckIn && "ring-1 ring-amber-300/80",
                 status === "signed" && "border-emerald-200/90",
                 status === "pending" && "border-amber-200/70",
                 status === "not_started" && "border-neutral-200",
@@ -241,6 +290,11 @@ export function ConsentFormsPanel({
               </div>
 
               <div className="mt-2 flex flex-wrap gap-1.5">
+                {requiredForCheckIn ? (
+                  <span className="inline-flex items-center rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-900">
+                    {t("consent.requiredForCheckIn", "Required for check-in")}
+                  </span>
+                ) : null}
                 {template.source_asset ? (
                   <span className="inline-flex items-center rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-600">
                     {template.source_asset}
@@ -341,15 +395,13 @@ export function ConsentFormsPanel({
         })}
       </div>
 
-      {consents.filter((c) => c.status === "pending").length > 0 ? (
+      {pendingConsents.length > 0 ? (
         <div className="rounded-lg border border-neutral-200 bg-neutral-50/50 p-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
-            Pending signatures
+            {t("consent.pendingSignatures", "Pending signatures")}
           </p>
           <ul className="space-y-2">
-            {consents
-              .filter((c) => c.status === "pending")
-              .map((c) => (
+            {pendingConsents.map((c) => (
                 <li
                   key={c.id}
                   className="flex items-center justify-between gap-2 text-sm text-neutral-700"

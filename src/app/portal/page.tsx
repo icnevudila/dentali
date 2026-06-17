@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useLocale } from "@/hooks/use-locale"
 import { PORTAL_VISIT_REASONS, type PortalVisitReasonId } from "@/lib/portal/visit-reasons"
+import { PortalStatusPanel } from "@/components/portal/PortalStatusPanel"
 import { PublicChannelBrand } from "@/components/brand/public-channel-brand"
 import { notify } from "@/lib/ui/notify"
 import { 
@@ -27,13 +28,16 @@ import {
   CalendarDays,
   MapPin,
   ShieldAlert,
-  HeartHandshake
+  HeartHandshake,
+  ListOrdered,
 } from "lucide-react"
 
-type Step = 
+type Step =
   | "loading" 
   | "welcome" 
-  | "identity" 
+  | "identity"
+  | "status_identity"
+  | "status"
   | "provider" 
   | "datetime" 
   | "intakeForm"
@@ -145,6 +149,31 @@ function PortalPageContent() {
     const uniqueProviders = Array.from(new Map(data.map(p => [p.provider_id, p])).values())
     setProviders(uniqueProviders.map(p => ({ id: p.provider_id, name: p.provider_name })))
     setStep("provider")
+  }
+
+  const handleStatusIdentitySubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!phone || !lastName) return
+
+    setSubmitting(true)
+    setErrorMsg("")
+
+    const { error: verifyError } = await verifyPortalPatient(sessionId, phone, lastName)
+    setSubmitting(false)
+
+    if (verifyError) {
+      if (verifyError.includes("REGISTRATION_PENDING")) {
+        setStep("pending_approval")
+        playPendingSound(
+          "Your registration has been received but is pending approval at the front desk."
+        )
+      } else {
+        portalError("No record found. Please check your information.")
+      }
+      return
+    }
+
+    setStep("status")
   }
 
   const playPendingSound = (speechText: string) => {
@@ -271,7 +300,7 @@ function PortalPageContent() {
 
   // Stepper helper
   const renderStepper = () => {
-    if (step === "loading" || step === "error") return null;
+    if (step === "loading" || step === "error" || step === "status" || step === "status_identity") return null;
 
     const steps = step === "intakeForm" || step === "intakeSuccess"
       ? [
@@ -399,9 +428,98 @@ function PortalPageContent() {
                 </div>
                 <ChevronRight className="ml-auto h-5 w-5 text-neutral-400 group-hover:translate-x-1 transition-transform" />
               </button>
+
+              <button
+                onClick={() => setStep("status_identity")}
+                className="flex w-full items-center gap-4 rounded-2xl border border-neutral-100/80 bg-white p-5 shadow-sm transition-all duration-300 hover:border-violet-200 hover:bg-violet-50/30 hover:shadow-md group text-left cursor-pointer active:scale-[0.99]"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-50 border border-violet-100 text-violet-600 transition-colors group-hover:bg-violet-100">
+                  <ListOrdered className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-neutral-800">My visit today</h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">Queue number, balance, and sign required forms before check-in.</p>
+                </div>
+                <ChevronRight className="ml-auto h-5 w-5 text-neutral-400 group-hover:translate-x-1 transition-transform" />
+              </button>
             </div>
           </div>
         )}
+
+        {step === "status_identity" && (
+          <div className="rounded-[2.5rem] border border-white bg-white/70 p-6 sm:p-8 shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-8 fade-in duration-500">
+            <button
+              onClick={() => setStep("welcome")}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500 hover:text-neutral-800 mb-6 transition-colors uppercase tracking-wider"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> Go Back
+            </button>
+
+            <div className="mb-6">
+              <h2 className="text-2xl font-extrabold text-neutral-900 tracking-tight">Visit status</h2>
+              <p className="text-sm text-neutral-500 mt-1">Verify your identity to see queue, balance, and consent forms.</p>
+            </div>
+
+            <form onSubmit={handleStatusIdentitySubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="pl-1 text-xs font-bold uppercase tracking-widest text-neutral-500">
+                  Phone Number
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400" />
+                  <Input
+                    type="tel"
+                    placeholder="09XXXXXXXXX"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="h-14 rounded-2xl border-2 border-transparent bg-white/80 pl-12 pr-5 text-lg shadow-sm transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="pl-1 text-xs font-bold uppercase tracking-widest text-neutral-500">
+                  Last Name
+                </label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400" />
+                  <Input
+                    type="text"
+                    placeholder="Enter your last name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="h-14 rounded-2xl border-2 border-transparent bg-white/80 pl-12 pr-5 text-lg shadow-sm transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="group mt-2 h-14 w-full rounded-2xl bg-primary-600 text-lg font-bold text-white shadow-lg shadow-primary-500/20 transition-all duration-300 hover:bg-primary-700 hover:shadow-xl active:scale-[0.98]"
+              >
+                {submitting ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <>View my status <ChevronRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" /></>
+                )}
+              </Button>
+            </form>
+          </div>
+        )}
+
+        {step === "status" && sessionId ? (
+          <PortalStatusPanel
+            sessionId={sessionId}
+            phone={phone}
+            lastName={lastName}
+            branchName={branchName}
+            onBack={() => setStep("welcome")}
+            onBookAppointment={() => setStep("identity")}
+          />
+        ) : null}
 
         {step === "identity" && (
           <div className="rounded-[2.5rem] border border-white bg-white/70 p-6 sm:p-8 shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-8 fade-in duration-500">

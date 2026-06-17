@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next"
 import { getSiteUrl } from "@/lib/site-url"
-import { ARTICLES } from "@/lib/marketing/resources-data"
+import { BLOG_POSTS } from "@/lib/marketing/blog-data"
 
 /** Public marketing routes only — clinical app routes stay out of the index. */
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -33,19 +33,25 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
+      url: `${base}/blog`,
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.85,
+    },
+    {
       url: `${base}/resources`,
       lastModified,
       changeFrequency: "weekly",
-      priority: 0.8,
+      priority: 0.75,
     },
   ]
 
-  const articleRoutes = ARTICLES.map((article) => ({
-    url: `${base}/resources/${article.slug}`,
+  const blogRoutes = BLOG_POSTS.map((post) => ({
+    url: `${base}/blog/${post.slug}`,
     lastModified,
     changeFrequency: "monthly" as const,
     priority: 0.7,
   }))
 
-  return [...staticRoutes, ...articleRoutes]
+  return [...staticRoutes, ...blogRoutes]
 }

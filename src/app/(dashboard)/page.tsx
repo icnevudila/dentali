@@ -14,9 +14,13 @@ import { useAttentionContext } from "@/hooks/use-attention-context"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
 import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 import { DashboardVisualPanel } from "@/components/dashboard/DashboardVisualPanel"
+import { DashboardScheduleSection } from "@/components/dashboard/DashboardScheduleSection"
 import { AttentionPanel } from "@/components/dashboard/AttentionPanel"
 import { DailyCloseoutCard } from "@/components/dashboard/DailyCloseoutCard"
 import { DashboardOpsSummary } from "@/components/dashboard/DashboardOpsSummary"
+import { DashboardExtendedReports } from "@/components/dashboard/DashboardExtendedReports"
+import { OwnerMorningDashboard } from "@/components/dashboard/OwnerMorningDashboard"
+import { AutomationInbox } from "@/components/dashboard/AutomationInbox"
 import { useReportsSummary } from "@/hooks/use-reports-summary"
 import {
   Plus,
@@ -65,11 +69,12 @@ export default function DashboardPage() {
   return (
     <DirectionalTransition className="mx-auto w-full max-w-7xl">
       <ContentPanel padding="lg" className="space-y-8">
-        <SectionEyebrow icon={LayoutDashboard}>
+        <SectionEyebrow icon={LayoutDashboard} hideOnMobile>
           {t("dashboard.eyebrow", "Overview")} · {t("dashboard.title", "Dashboard")}
         </SectionEyebrow>
 
         <PageHeader
+          compact
           title={t("dashboard.title", "Dashboard")}
           description={dashboardDescription}
           actions={
@@ -84,6 +89,14 @@ export default function DashboardPage() {
 
         {activeBranch ? (
           <DashboardOpsSummary stats={stats} loading={loading} />
+        ) : null}
+
+        {activeBranch ? (
+          <OwnerMorningDashboard
+            stats={stats}
+            reportsSummary={reportsSummary}
+            loading={loading || reportsLoading}
+          />
         ) : null}
 
         {activeBranch ? (
@@ -118,6 +131,10 @@ export default function DashboardPage() {
               {t("common.retry", "Retry")}
             </Button>
           </div>
+        ) : null}
+
+        {activeBranch ? (
+          <DashboardScheduleSection branchId={activeBranch.id} periodDays={chartPeriodDays} />
         ) : null}
 
         {activeBranch ? (
@@ -158,6 +175,11 @@ export default function DashboardPage() {
               />
             </div>
             <div className="w-full shrink-0 space-y-4 xl:w-72">
+            <AutomationInbox
+              stats={stats}
+              reportsSummary={reportsSummary}
+              loading={loading || reportsLoading}
+            />
             <AttentionPanel
               stats={stats}
               permissions={permissions}
@@ -193,6 +215,15 @@ export default function DashboardPage() {
             <DailyCloseoutCard stats={stats} interactive />
             </div>
           </div>
+        ) : null}
+
+        {activeBranch ? (
+          <DashboardExtendedReports
+            branchId={activeBranch.id}
+            periodDays={chartPeriodDays}
+            reportsSummary={reportsSummary}
+            summaryLoading={reportsLoading}
+          />
         ) : null}
 
       </ContentPanel>
