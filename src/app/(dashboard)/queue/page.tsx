@@ -36,7 +36,7 @@ import { OpenEncounterCheckInDialog } from "@/components/queue/OpenEncounterChec
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Megaphone, Plus, Users, MapPin, Clock, UserCheck } from "lucide-react"
+import { AlertTriangle, Megaphone, Plus, ShieldCheck, Users, MapPin, Clock, UserCheck } from "lucide-react"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { notify } from "@/lib/ui/notify"
 import { PageHeader } from "@/components/layout/PageHeader"
@@ -65,6 +65,13 @@ type PendingCheckInAction = {
   appointmentId?: string
   forceCheckin?: boolean
   forceBillingOverride?: boolean
+}
+
+type CheckInGate = {
+  kind: "consent" | "billing"
+  message: string
+  action: PendingCheckInAction
+  reuseEncounterId: string | null
 }
 
 function sortQueueEntries(data: QueueEntry[]): QueueEntry[] {
@@ -126,6 +133,7 @@ function QueuePageContent() {
   const [encounterDialogOpen, setEncounterDialogOpen] = React.useState(false)
   const [pendingCheckIn, setPendingCheckIn] = React.useState<PendingCheckInAction | null>(null)
   const [encounterResolving, setEncounterResolving] = React.useState(false)
+  const [checkInGate, setCheckInGate] = React.useState<CheckInGate | null>(null)
   const seededWalkInRef = React.useRef(false)
 
   const today = toDateKey(new Date())
@@ -138,6 +146,7 @@ function QueuePageContent() {
     setCheckInNotes("")
     setConsentOverridePending(false)
     setBillingOverridePending(false)
+    setCheckInGate(null)
     setShowCheckIn(true)
   }
 
@@ -164,6 +173,7 @@ function QueuePageContent() {
     setCheckInNotes("")
     setConsentOverridePending(false)
     setBillingOverridePending(false)
+    setCheckInGate(null)
     setShowCheckIn(false)
   }
 
@@ -383,6 +393,46 @@ function QueuePageContent() {
     }
   }
 
+  const handleCheckInGateError = (
+    err: string,
+    action: PendingCheckInAction,
+    reuseEncounterId: string | null
+  ) => {
+    if (!action.forceCheckin && isConsentGateError(err)) {
+      setError(null)
+      setCheckInGate({
+        kind: "consent",
+        message: t(
+          "queue.consentGateFriendly",
+          "Consent is required before check-in. Open the patient's consent forms, or override if clinic policy allows it."
+        ),
+        action,
+        reuseEncounterId,
+      })
+      if (action.mode === "walk_in") setConsentOverridePending(true)
+      notify.info(t("queue.consentGateShort", "Consent required before check-in."))
+      return true
+    }
+
+    if (!action.forceBillingOverride && err.includes("Billing clearance")) {
+      setError(null)
+      setCheckInGate({
+        kind: "billing",
+        message: t(
+          "billing.gateFriendly",
+          "Outstanding billing must be reviewed before check-in. Collect payment or override if authorized."
+        ),
+        action,
+        reuseEncounterId,
+      })
+      if (action.mode === "walk_in") setBillingOverridePending(true)
+      notify.info(t("billing.gateShort", "Billing review required before check-in."))
+      return true
+    }
+
+    return false
+  }
+
   const executeCheckIn = async (
     action: PendingCheckInAction,
     reuseEncounterId?: string | null
@@ -405,15 +455,11 @@ function QueuePageContent() {
       })
       setCheckingIn(false)
       if (err) {
-        if (!action.forceCheckin && isConsentGateError(err)) {
-          setConsentOverridePending(true)
-        }
-        if (!action.forceBillingOverride && err.includes("Billing clearance")) {
-          setBillingOverridePending(true)
-        }
+        if (handleCheckInGateError(err, action, reuseEncounterId)) return
         setError(err)
         notify.error(err)
       } else {
+        setCheckInGate(null)
         closeCheckInModal()
         notify.success(
           data?.display_code
@@ -438,31 +484,11 @@ function QueuePageContent() {
       const { data, error: err } = await checkInAppointment(action.appointmentId, options)
       setApptCheckInId(null)
       if (err) {
-        if (!action.forceCheckin && isConsentGateError(err)) {
-          const ok = await notify.confirm(
-            t(
-              "queue.consentOverrideConfirm",
-              "Intake consents (privacy and general treatment) are unsigned. Check in anyway? This will be logged in audit."
-            )
-          )
-          if (ok) {
-            return executeCheckIn({ ...action, forceCheckin: true }, reuseEncounterId)
-          }
-        }
-        if (!action.forceBillingOverride && err.includes("Billing clearance")) {
-          const ok = await notify.confirm(
-            t(
-              "billing.gateConfirmCheckIn",
-              "Patient has outstanding billing. Check in anyway? This will be logged in audit."
-            )
-          )
-          if (ok) {
-            return executeCheckIn({ ...action, forceBillingOverride: true }, reuseEncounterId)
-          }
-        }
+        if (handleCheckInGateError(err, action, reuseEncounterId)) return
         setError(err)
         notify.error(err)
       } else if (data) {
+        setCheckInGate(null)
         notify.success(
           t("queue.checkInSuccess", "Checked in — queue #{code}").replace("{code}", data.display_code)
         )
@@ -742,6 +768,69 @@ function QueuePageContent() {
               </Button>
             </div>
           )}
+
+          {checkInGate ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4 text-amber-950 animate-fade-rise">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex min-w-0 gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-amber-700">
+                    {checkInGate.kind === "consent" ? (
+                      <ShieldCheck className="h-4 w-4" aria-hidden />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4" aria-hidden />
+                    )}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">
+                      {checkInGate.kind === "consent"
+                        ? t("queue.consentGateTitle", "Consent required before check-in")
+                        : t("billing.gateTitle", "Billing review required before check-in")}
+                    </p>
+                    <p className="mt-1 text-sm text-amber-900/90">{checkInGate.message}</p>
+                    {checkInGate.action.patientName ? (
+                      <p className="mt-1 text-xs text-amber-900/80">
+                        {checkInGate.action.patientName}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Button variant="outline" size="sm" className="border-amber-300 bg-white" asChild>
+                    <Link
+                      href={
+                        checkInGate.kind === "consent"
+                          ? `/patients/${checkInGate.action.patientId}?tab=consents`
+                          : `/billing?patient=${checkInGate.action.patientId}`
+                      }
+                    >
+                      {checkInGate.kind === "consent"
+                        ? t("queue.openConsents", "Open consents")
+                        : t("billing.openBilling", "Open billing")}
+                    </Link>
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-amber-700 text-white hover:bg-amber-800"
+                    disabled={checkingIn || apptCheckInId === checkInGate.action.appointmentId}
+                    onClick={() => {
+                      const overrideAction =
+                        checkInGate.kind === "consent"
+                          ? { ...checkInGate.action, forceCheckin: true }
+                          : { ...checkInGate.action, forceBillingOverride: true }
+                      void executeCheckIn(overrideAction, checkInGate.reuseEncounterId)
+                    }}
+                  >
+                    {checkInGate.kind === "consent"
+                      ? t("queue.consentOverride", "Check in anyway")
+                      : t("billing.gateOverrideCheckIn", "Check in with billing override")}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setCheckInGate(null)}>
+                    {t("common.dismiss", "Dismiss")}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
         <WalkInCheckInDialog
           open={showCheckIn}
