@@ -52,11 +52,34 @@ export interface NotificationChannelSettings {
   whatsapp_clinic_phone: string | null
   sms_sender_name: string
   default_patient_channel: PatientChannelPreference
+  sms_api_key_configured: boolean
+  email_api_key_configured: boolean
+  sms_api_key_hint: string | null
+  email_api_key_hint: string | null
+}
+
+export type NotificationChannelSettingsUpsert = NotificationChannelSettings & {
+  semaphore_api_key?: string
+  resend_api_key?: string
+  clear_semaphore_api_key?: boolean
+  clear_resend_api_key?: boolean
 }
 
 export interface NotificationChannelHealth {
-  sms: { provider: string; configured: boolean; secret_name: string; optional_secret: string }
-  email: { provider: string; configured: boolean; secret_name: string; optional_secret: string }
+  sms: {
+    provider: string
+    configured: boolean
+    secret_name: string
+    optional_secret?: string
+    source?: "settings" | "env" | "none"
+  }
+  email: {
+    provider: string
+    configured: boolean
+    secret_name: string
+    optional_secret?: string
+    source?: "settings" | "env" | "none"
+  }
   whatsapp: { mode: string; configured: boolean; cost: string; note: string }
 }
 
@@ -216,7 +239,7 @@ export async function fetchNotificationChannelSettings(
 }
 
 export async function upsertNotificationChannelSettings(
-  settings: NotificationChannelSettings
+  settings: NotificationChannelSettingsUpsert
 ): Promise<{ data: NotificationChannelSettings | null; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("upsert_notification_channel_settings", {

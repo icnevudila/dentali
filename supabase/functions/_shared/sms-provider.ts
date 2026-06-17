@@ -9,15 +9,16 @@ function normalizePhilippinesNumber(phone: string): string {
   return `63${digits}`
 }
 
-/** Live SMS via Semaphore (PH). Requires SEMAPHORE_API_KEY secret. */
+/** Live SMS via Semaphore (PH). API key from org DB settings or SEMAPHORE_API_KEY secret. */
 export async function sendLiveSms(
   phone: string,
   message: string,
-  senderNameOverride?: string | null
+  senderNameOverride?: string | null,
+  apiKeyOverride?: string | null
 ): Promise<SmsSendResult> {
-  const apiKey = Deno.env.get("SEMAPHORE_API_KEY")
+  const apiKey = apiKeyOverride?.trim() || Deno.env.get("SEMAPHORE_API_KEY")
   if (!apiKey) {
-    return { ok: false, error: "SMS provider not configured (SEMAPHORE_API_KEY missing)" }
+    return { ok: false, error: "SMS provider not configured (Semaphore API key missing)" }
   }
 
   const senderName =

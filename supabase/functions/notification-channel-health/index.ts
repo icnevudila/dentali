@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1"
+import { resolveResendApiKey, resolveSemaphoreApiKey } from "../_shared/provider-secrets.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,9 +22,12 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+
     const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     })
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
 
     const {
       data: { user },
@@ -40,35 +44,56 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}))
     const branchId = body.branch_id ? String(body.branch_id) : null
 
-    if (branchId) {
-      const { data: allowed, error: permError } = await supabaseUser.rpc("has_permission", {
-        p_permission: "notifications.read",
-        p_branch: branchId,
+    if (!branchId) {
+      return new Response(JSON.stringify({ error: "branch_id is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
-      if (permError || !allowed) {
-        return new Response(JSON.stringify({ error: "Permission denied" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        })
-      }
     }
 
-    const smsConfigured = Boolean(Deno.env.get("SEMAPHORE_API_KEY")?.trim())
-    const emailConfigured = Boolean(Deno.env.get("RESEND_API_KEY")?.trim())
+    const { data: allowed, error: permError } = await supabaseUser.rpc("has_permission", {
+      p_permission: "notifications.read",
+      p_branch: branchId,
+    })
+
+    if (permError || !allowed) {
+      return new Response(JSON.stringify({ error: "Permission denied" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
+    }
+
+    const { data: branch } = await supabaseAdmin
+      .from("branches")
+      .select("organization_id")
+      .eq("id", branchId)
+      .maybeSingle()
+
+    if (!branch?.organization_id) {
+      return new Response(JSON.stringify({ error: "Branch not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
+    }
+
+    const [smsKey, resendKey] = await Promise.all([
+      resolveSemaphoreApiKey(supabaseAdmin, branch.organization_id),
+      resolveResendApiKey(supabaseAdmin, branch.organization_id),
+    ])
 
     return new Response(
       JSON.stringify({
         sms: {
           provider: "Semaphore",
-          configured: smsConfigured,
+          configured: Boolean(smsKey),
+          source: smsKey ? (Deno.env.get("SEMAPHORE_API_KEY") === smsKey ? "env" : "settings") : "none",
           secret_name: "SEMAPHORE_API_KEY",
-          optional_secret: "SEMAPHORE_SENDER_NAME",
         },
         email: {
           provider: "Resend",
-          configured: emailConfigured,
+          configured: Boolean(resendKey),
+          source: resendKey ? (Deno.env.get("RESEND_API_KEY") === resendKey ? "env" : "settings") : "none",
           secret_name: "RESEND_API_KEY",
-          optional_secret: "CLOSEOUT_EMAIL_FROM",
         },
         whatsapp: {
           mode: "manual",

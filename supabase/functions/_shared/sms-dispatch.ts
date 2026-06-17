@@ -1,5 +1,5 @@
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1"
-import { sendLiveSms } from "./sms-provider.ts"
+import { sendOrgLiveSms } from "./provider-secrets.ts"
 
 export async function branchDryRunMode(
   supabaseAdmin: SupabaseClient,
@@ -40,6 +40,7 @@ export async function logSmsDispatch(params: {
 
 export async function dispatchBranchSms(params: {
   supabaseAdmin: SupabaseClient
+  organizationId: string
   branchId: string
   phone: string
   messageBody: string
@@ -47,16 +48,11 @@ export async function dispatchBranchSms(params: {
 }): Promise<"dry_run" | "sent" | "failed"> {
   if (params.dryRun) return "dry_run"
 
-  const { data: settings } = await params.supabaseAdmin
-    .from("notification_branch_settings")
-    .select("sms_sender_name")
-    .eq("branch_id", params.branchId)
-    .maybeSingle()
-
-  const smsResult = await sendLiveSms(
-    params.phone,
-    params.messageBody,
-    settings?.sms_sender_name ?? null
-  )
+  const smsResult = await sendOrgLiveSms(params.supabaseAdmin, {
+    organizationId: params.organizationId,
+    branchId: params.branchId,
+    phone: params.phone,
+    message: params.messageBody,
+  })
   return smsResult.ok ? "sent" : "failed"
 }

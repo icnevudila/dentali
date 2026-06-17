@@ -1,9 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1"
 import {
   buildEmailFromHeader,
-  emailShouldDryRun,
+  emailShouldDryRunForOrg,
   fetchBranchChannelSettings,
 } from "../_shared/notification-channel-config.ts"
+import { resolveResendApiKey } from "../_shared/provider-secrets.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -64,12 +65,23 @@ async function sendViaResend(
     ? await fetchBranchChannelSettings(supabaseAdmin, branchId)
     : null
 
-  if (emailShouldDryRun(channelSettings)) {
+  const { data: branch } = branchId
+    ? await supabaseAdmin.from("branches").select("organization_id").eq("id", branchId).maybeSingle()
+    : { data: null }
+
+  const organizationId = branch?.organization_id ?? null
+  const dryRun =
+    !organizationId ||
+    (await emailShouldDryRunForOrg(supabaseAdmin, organizationId, channelSettings))
+
+  if (dryRun) {
     return { ok: true, dry_run: true }
   }
 
-  const apiKey = Deno.env.get("RESEND_API_KEY")
-  if (!apiKey) return { ok: false, error: "RESEND_API_KEY not configured" }
+  const apiKey = organizationId
+    ? await resolveResendApiKey(supabaseAdmin, organizationId)
+    : Deno.env.get("RESEND_API_KEY")
+  if (!apiKey) return { ok: false, error: "Resend API key not configured" }
 
   const from = buildEmailFromHeader(channelSettings)
   const replyTo = channelSettings?.email_reply_to ?? undefined
@@ -120,8 +132,7 @@ Deno.serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
-    const globalDryRun =
-      Deno.env.get("CLOSEOUT_EMAIL_DRY_RUN") === "true" || !Deno.env.get("RESEND_API_KEY")
+    const globalDryRun = Deno.env.get("CLOSEOUT_EMAIL_DRY_RUN") === "true"
 
     const { data: enqueued, error: enqueueError } = await supabaseAdmin.rpc(
       "enqueue_closeout_email_digest"

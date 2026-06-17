@@ -1,4 +1,5 @@
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1"
+import { resolveResendApiKey } from "./provider-secrets.ts"
 
 export type BranchChannelSettings = {
   clinic_display_name: string
@@ -53,7 +54,17 @@ export function buildEmailFromHeader(
 }
 
 export function emailShouldDryRun(settings: BranchChannelSettings | null): boolean {
-  if (!Deno.env.get("RESEND_API_KEY")) return true
   if (Deno.env.get("CLOSEOUT_EMAIL_DRY_RUN") === "true") return true
   return settings?.email_dry_run_mode ?? true
+}
+
+export async function emailShouldDryRunForOrg(
+  supabaseAdmin: SupabaseClient,
+  organizationId: string,
+  settings: BranchChannelSettings | null
+): Promise<boolean> {
+  if (Deno.env.get("CLOSEOUT_EMAIL_DRY_RUN") === "true") return true
+  if (settings?.email_dry_run_mode ?? true) return true
+  const apiKey = await resolveResendApiKey(supabaseAdmin, organizationId)
+  return !apiKey
 }

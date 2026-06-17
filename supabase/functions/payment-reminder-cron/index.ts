@@ -102,6 +102,7 @@ Deno.serve(async (req) => {
       const dryRun = await branchDryRunMode(supabaseAdmin, row.branch_id)
       const status = await dispatchBranchSms({
         supabaseAdmin,
+        organizationId: row.organization_id,
         branchId: row.branch_id,
         phone,
         messageBody,

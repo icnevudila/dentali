@@ -1,9 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1"
 import {
   buildEmailFromHeader,
-  emailShouldDryRun,
+  emailShouldDryRunForOrg,
   fetchBranchChannelSettings,
 } from "../_shared/notification-channel-config.ts"
+import { resolveResendApiKey } from "../_shared/provider-secrets.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -71,7 +72,24 @@ Deno.serve(async (req) => {
     }
 
     const channelSettings = await fetchBranchChannelSettings(supabaseAdmin, branchId)
-    const dryRun = emailShouldDryRun(channelSettings)
+    const { data: branch } = await supabaseAdmin
+      .from("branches")
+      .select("organization_id")
+      .eq("id", branchId)
+      .maybeSingle()
+
+    if (!branch?.organization_id) {
+      return new Response(JSON.stringify({ error: "Branch not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
+    }
+
+    const dryRun = await emailShouldDryRunForOrg(
+      supabaseAdmin,
+      branch.organization_id,
+      channelSettings
+    )
     const from = buildEmailFromHeader(channelSettings)
     const replyTo = channelSettings?.email_reply_to ?? undefined
 
@@ -87,12 +105,17 @@ Deno.serve(async (req) => {
       )
     }
 
-    const apiKey = Deno.env.get("RESEND_API_KEY")
+    const apiKey = await resolveResendApiKey(supabaseAdmin, branch.organization_id)
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "RESEND_API_KEY not configured on server" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+      return new Response(
+        JSON.stringify({
+          error: "Resend API key not configured. Add it in Settings → Notifications → Channels.",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      )
     }
 
     const res = await fetch("https://api.resend.com/emails", {

@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1"
-import { sendLiveSms } from "../_shared/sms-provider.ts"
+import { sendOrgLiveSms } from "../_shared/provider-secrets.ts"
 import { resolveBranchNotificationTemplate } from "../_shared/notification-template.ts"
 
 const corsHeaders = {
@@ -130,7 +130,12 @@ Deno.serve(async (req) => {
       let errorMessage: string | null = null
 
       if (!dryRun) {
-        const smsResult = await sendLiveSms(phone, messageBody)
+        const smsResult = await sendOrgLiveSms(supabaseAdmin, {
+          organizationId: String(appt.organization_id),
+          branchId: appt.branch_id,
+          phone,
+          message: messageBody,
+        })
         if (smsResult.ok) {
           providerRef = smsResult.providerRef
         } else {
