@@ -1015,7 +1015,7 @@ begin
       'patient_id', a.patient_id,
       'patient_name', trim(coalesce(pt.first_name, '') || ' ' || coalesce(pt.last_name, '')),
       'provider_id', a.provider_id,
-      'provider_name', trim(coalesce(pr.first_name, '') || ' ' || coalesce(pr.last_name, '')),
+      'provider_name', coalesce(pr.full_name, pr.email, 'Dentist'),
       'duration_minutes', a.duration_minutes
     ) order by a.scheduled_at
   ), '[]'::jsonb)
