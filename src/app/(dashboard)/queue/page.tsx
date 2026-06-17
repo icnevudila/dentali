@@ -47,9 +47,10 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
 import { createClient } from "@/lib/supabase/client"
 import { VisitCheckoutWizard } from "@/components/queue/VisitCheckoutWizard"
-import { WalkInCheckInDialog } from "@/components/queue/WalkInCheckInDialog"
+import { PatientArrivalDialog } from "@/components/queue/PatientArrivalDialog"
 import { QueueBoard, type QueueBoardArrival } from "@/components/queue/QueueBoard"
 import { QueueDaySummary, type QueueDayStats } from "@/components/queue/QueueDaySummary"
+import { QueueWorkflowGuide } from "@/components/queue/QueueWorkflowGuide"
 import { computeQueueDayStats } from "@/lib/queue/queue-day-stats"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { ClinicDayBar } from "@/components/layout/ClinicDayBar"
@@ -681,7 +682,7 @@ function QueuePageContent() {
                   </Link>
                 </Button>
                 <Button className="gap-2 shadow-sm" onClick={openCheckInModal}>
-                  <UserCheck className="h-4 w-4" /> {t("queue.walkInTitle", "Walk-in check-in")}
+                  <UserCheck className="h-4 w-4" /> {t("queue.patientArrival", "Patient arrival")}
                 </Button>
               </>
               ) : (
@@ -708,6 +709,8 @@ function QueuePageContent() {
             prevDayServed={prevDayServed}
             arrivalsPending={isToday ? pendingAppointmentCheckIns.length : 0}
           />
+
+          {tab === "board" && isToday ? <QueueWorkflowGuide /> : null}
 
           {activeBranch ? (
             <div className="flex flex-wrap items-center gap-2 animate-fade-rise">
@@ -832,7 +835,7 @@ function QueuePageContent() {
             </div>
           ) : null}
 
-        <WalkInCheckInDialog
+        <PatientArrivalDialog
           open={showCheckIn}
           branchName={activeBranch?.name}
           patientQuery={patientQuery}

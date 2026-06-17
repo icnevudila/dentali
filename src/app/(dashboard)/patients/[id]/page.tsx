@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users, Plus, Receipt, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen, ScrollText } from "lucide-react"
+import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users, Plus, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen, ScrollText } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
@@ -134,6 +134,7 @@ export default function PatientProfilePage() {
   const intakeToastShown = React.useRef(false)
   const balanceClearedToastShown = React.useRef(false)
   const prevOpenBalanceRef = React.useRef<number | null>(null)
+  const activeBranchId = activeBranch?.id ?? null
 
   React.useEffect(() => {
     if (!intakeComplete || intakeToastShown.current) return
@@ -196,59 +197,62 @@ export default function PatientProfilePage() {
   }, [patientId])
 
   const refreshActiveEncounter = React.useCallback(() => {
-    if (!activeBranch?.id) {
+    if (!activeBranchId) {
       setActiveEncounter(null)
       return
     }
-    fetchActiveEncounter(patientId, activeBranch.id).then(({ data }) => {
+    fetchActiveEncounter(patientId, activeBranchId).then(({ data }) => {
       setActiveEncounter(data)
     })
-  }, [patientId, activeBranch?.id])
+  }, [patientId, activeBranchId])
 
   React.useEffect(() => {
     if (!patientId) return
-    setLoading(true)
-    Promise.all([
-      getPatient(patientId),
-      fetchPatientConsents(patientId),
-      fetchPatientAppointments(patientId),
-      fetchPatientTreatmentPlans(patientId),
-      getLatestMedicalHistory(patientId),
-      getPatientBalance(patientId),
-      getPatientBillingGate(patientId),
-      fetchPatientTimeline(patientId),
-    ])
-      .then(([patientRes, consentsRes, apptsRes, plansRes, medRes, balanceRes, gateRes, timelineRes]) => {
-        setPatient(patientRes.data)
-        setLoadError(patientRes.error)
-        setConsents(consentsRes.data)
-        setAppointments(apptsRes.data)
-        setTreatmentPlans(plansRes.data)
-        if (medRes.data) {
-          setMedicalHistory({
-            allergies: medRes.data.allergies,
-            medications: medRes.data.medications,
-            conditions: medRes.data.conditions,
-          })
-        } else {
-          setMedicalHistory(null)
-        }
-        setBalance(balanceRes.data)
-        setBalanceError(balanceRes.error)
-        setBillingGate(gateRes.data)
-        setTimeline(timelineRes.data)
-        setTimelineError(timelineRes.error)
-        setLoading(false)
-      })
-      .catch((err: any) => {
-        setLoadError(err?.message || "Failed to load patient profile")
-        setLoading(false)
-      })
+    const id = window.setTimeout(() => {
+      setLoading(true)
+      Promise.all([
+        getPatient(patientId),
+        fetchPatientConsents(patientId),
+        fetchPatientAppointments(patientId),
+        fetchPatientTreatmentPlans(patientId),
+        getLatestMedicalHistory(patientId),
+        getPatientBalance(patientId),
+        getPatientBillingGate(patientId),
+        fetchPatientTimeline(patientId),
+      ])
+        .then(([patientRes, consentsRes, apptsRes, plansRes, medRes, balanceRes, gateRes, timelineRes]) => {
+          setPatient(patientRes.data)
+          setLoadError(patientRes.error)
+          setConsents(consentsRes.data)
+          setAppointments(apptsRes.data)
+          setTreatmentPlans(plansRes.data)
+          if (medRes.data) {
+            setMedicalHistory({
+              allergies: medRes.data.allergies,
+              medications: medRes.data.medications,
+              conditions: medRes.data.conditions,
+            })
+          } else {
+            setMedicalHistory(null)
+          }
+          setBalance(balanceRes.data)
+          setBalanceError(balanceRes.error)
+          setBillingGate(gateRes.data)
+          setTimeline(timelineRes.data)
+          setTimelineError(timelineRes.error)
+          setLoading(false)
+        })
+        .catch((err: unknown) => {
+          setLoadError(err instanceof Error ? err.message : "Failed to load patient profile")
+          setLoading(false)
+        })
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [patientId])
 
   React.useEffect(() => {
-    if (!patientId || !activeBranch?.id) return
-    getPatientOdontogram(patientId, activeBranch.id).then(({ data }) => {
+    if (!patientId || !activeBranchId) return
+    getPatientOdontogram(patientId, activeBranchId).then(({ data }) => {
       const findings = data?.findings ?? []
       setHasChartFindings(
         findings.some(
@@ -260,24 +264,30 @@ export default function PatientProfilePage() {
         )
       )
     })
-  }, [patientId, activeBranch?.id])
+  }, [patientId, activeBranchId])
 
   React.useEffect(() => {
-    refreshActiveEncounter()
+    const id = window.setTimeout(() => refreshActiveEncounter(), 0)
+    return () => window.clearTimeout(id)
   }, [refreshActiveEncounter])
 
   React.useEffect(() => {
-    if (!patientId || !activeBranch?.id || !activeEncounter) {
-      setCarryForwardSources(null)
-      return
+    if (!patientId || !activeBranchId || !activeEncounter) {
+      const id = window.setTimeout(() => setCarryForwardSources(null), 0)
+      return () => window.clearTimeout(id)
     }
-    fetchCarryForwardSources(patientId, activeBranch.id, {
-      excludeEncounterId: activeEncounter.encounter.id,
-    }).then(({ data }) => setCarryForwardSources(data))
-  }, [patientId, activeBranch?.id, activeEncounter?.encounter.id])
+    const id = window.setTimeout(() => {
+      fetchCarryForwardSources(patientId, activeBranchId, {
+        excludeEncounterId: activeEncounter.encounter.id,
+      }).then(({ data }) => setCarryForwardSources(data))
+    }, 0)
+    return () => window.clearTimeout(id)
+  }, [patientId, activeBranchId, activeEncounter])
 
   React.useEffect(() => {
-    if (!patientId) return
+    if (!patientId) {
+      return
+    }
 
     const supabase = createClient()
     const channel = supabase
@@ -445,6 +455,11 @@ export default function PatientProfilePage() {
     }
     setClosingEncounter(false)
   }
+
+  const patientArrivalHref = `/queue?${new URLSearchParams({
+    walkinPatient: patientId,
+    walkinName: fullName,
+  }).toString()}`
 
   const profileMetrics = [
     {
@@ -625,11 +640,11 @@ export default function PatientProfilePage() {
           <p className="mt-1 text-sm text-neutral-600">
             {t(
               "visits.noActiveVisitHint",
-              "Check in this patient from the Queue board. Check-in opens the visit and puts the patient in Waiting."
+              "Send this patient to Queue when they physically arrive. Check-in opens today's visit and puts them in Waiting."
             )}
           </p>
           <Button size="sm" className="mt-3" asChild>
-            <Link href="/queue">{t("visits.checkInCta", "Open check-in list")}</Link>
+            <Link href={patientArrivalHref}>{t("visits.checkInCta", "Open patient arrival")}</Link>
           </Button>
         </ContentPanel>
       ) : null}
@@ -811,7 +826,7 @@ export default function PatientProfilePage() {
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <div>
                     <CardTitle>Medical Conditions & Allergies</CardTitle>
-                    <CardDescription>Patient's self-reported medical history.</CardDescription>
+                    <CardDescription>Patient&apos;s self-reported medical history.</CardDescription>
                   </div>
                   <Button variant="outline" size="sm" asChild>
                     <Link href={`/patients/${patientId}/medical-history`} transitionTypes={NAV_FORWARD_TRANSITION}>
@@ -1011,7 +1026,12 @@ export default function PatientProfilePage() {
                 </Button>
               </CardHeader>
               <CardContent>
-                <PatientEncountersWorkspace patientId={patientId} branchId={activeBranch?.id} hasChartFindings={hasChartFindings} />
+                <PatientEncountersWorkspace
+                  patientId={patientId}
+                  patientName={fullName}
+                  branchId={activeBranch?.id}
+                  hasChartFindings={hasChartFindings}
+                />
               </CardContent>
             </Card>
           )}

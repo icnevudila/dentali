@@ -8,14 +8,21 @@ import { useBranch } from "@/hooks/use-branch"
 import { usePermission } from "@/hooks/use-permission"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/hooks/use-locale"
-import { openPublicDevice } from "@/lib/kiosk/kiosk-service"
+import { buildPublicDeviceUrl, generateBranchPublicToken } from "@/lib/kiosk/kiosk-service"
 import { Button } from "@/components/ui/button"
 import { DentQLLogo } from "@/components/brand/dentql-logo"
+import { notify } from "@/lib/ui/notify"
 import {
   APP_NAV_GROUPS,
   defaultNavActive,
   type AppNavItem,
 } from "@/lib/navigation/app-nav"
+
+type PublicDevicePreview = {
+  type: "kiosk" | "display" | "portal"
+  label: string
+  url: string
+}
 
 const MobileNavContext = React.createContext<{
   open: boolean
@@ -33,7 +40,8 @@ export function MobileNavProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
   React.useEffect(() => {
-    setOpen(false)
+    const id = window.setTimeout(() => setOpen(false), 0)
+    return () => window.clearTimeout(id)
   }, [pathname])
 
   return (
@@ -64,10 +72,12 @@ function NavLink({
   item,
   pathname,
   onNavigate,
+  onPreviewPublicDevice,
 }: {
   item: AppNavItem
   pathname: string
   onNavigate?: () => void
+  onPreviewPublicDevice?: (preview: PublicDevicePreview) => void
 }) {
   const { t } = useLocale()
   const { activeBranch } = useBranch()
@@ -84,10 +94,19 @@ function NavLink({
     if (!item.publicDevice || !activeBranch || opening) return
 
     setOpening(true)
-    const { error } = await openPublicDevice(activeBranch.id, item.publicDevice)
+    const { data, error } = await generateBranchPublicToken(activeBranch.id, item.publicDevice)
     setOpening(false)
 
-    if (!error) onNavigate?.()
+    if (error || !data?.token) {
+      notify.error(error ?? t("display.linkFailed", "Failed to generate device link"))
+      return
+    }
+
+    onPreviewPublicDevice?.({
+      type: item.publicDevice,
+      label: t(item.nameKey, item.fallback),
+      url: buildPublicDeviceUrl(item.publicDevice, data.token),
+    })
   }
 
   if (item.publicDevice) {
@@ -126,14 +145,90 @@ function NavLink({
   )
 }
 
+function PublicDevicePreviewDialog({
+  preview,
+  onClose,
+}: {
+  preview: PublicDevicePreview | null
+  onClose: () => void
+}) {
+  const { t } = useLocale()
+
+  React.useEffect(() => {
+    if (!preview) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener("keydown", onKey)
+    }
+  }, [preview, onClose])
+
+  if (!preview) return null
+
+  return (
+    <div className="fixed inset-0 z-[240] flex items-center justify-center bg-neutral-950/55 p-3 sm:p-6">
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        aria-label={t("common.close", "Close")}
+        onClick={onClose}
+      />
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="public-device-preview-title"
+        className="relative flex h-[88dvh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+      >
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-200 px-4 py-3 sm:px-5">
+          <div className="min-w-0">
+            <p id="public-device-preview-title" className="text-sm font-semibold text-neutral-950">
+              {preview.label}
+            </p>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              {t(
+                "display.previewHint",
+                "Previewing the patient-facing screen inside the clinic app. Use full screen for the actual device."
+              )}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button size="sm" variant="outline" asChild>
+              <a href={preview.url} target="_blank" rel="noopener noreferrer">
+                {t("display.openFullscreen", "Open full screen")}
+              </a>
+            </Button>
+            <Button type="button" size="icon" variant="ghost" onClick={onClose} aria-label={t("common.close", "Close")}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </header>
+        <div className="min-h-0 flex-1 bg-neutral-100">
+          <iframe
+            title={preview.label}
+            src={preview.url}
+            className="h-full w-full border-0 bg-white"
+          />
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname() ?? ""
   const { hasPermission, loading } = usePermission()
   const { t } = useLocale()
+  const [publicDevicePreview, setPublicDevicePreview] = React.useState<PublicDevicePreview | null>(null)
 
   return (
-    <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-3">
-      {APP_NAV_GROUPS.map((group) => {
+    <>
+      <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-3">
+        {APP_NAV_GROUPS.map((group) => {
         const visibleItems = group.items.filter((item) => {
           if (loading || !item.permission) return true
           return hasPermission(item.permission)
@@ -147,13 +242,24 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             </p>
             <div className="flex flex-col gap-0.5">
               {visibleItems.map((item) => (
-                <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
+                <NavLink
+                  key={item.href}
+                  item={item}
+                  pathname={pathname}
+                  onNavigate={onNavigate}
+                  onPreviewPublicDevice={setPublicDevicePreview}
+                />
               ))}
             </div>
           </div>
         )
-      })}
-    </nav>
+        })}
+      </nav>
+      <PublicDevicePreviewDialog
+        preview={publicDevicePreview}
+        onClose={() => setPublicDevicePreview(null)}
+      />
+    </>
   )
 }
 

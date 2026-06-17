@@ -364,8 +364,8 @@ export function QueueBoard({
         {readOnly
           ? t("queue.historyBoardHint", "Read-only snapshot for the selected clinic day.")
           : t(
-              "queue.dragHintFourCol",
-              "Check in from the first column, then drag cards across Waiting → Called → In Chair."
+              "queue.liveBoardOperatingHint",
+              "Front desk checks in arrivals here. After check-in, move patients Waiting -> Called -> In Chair -> Complete."
             )}
       </p>
       <div className="overflow-x-auto pb-1">
@@ -411,8 +411,8 @@ export function QueueBoard({
                     arrivals.length === 0 ? (
                       <p className="text-xs text-neutral-400 py-4 text-center border border-dashed rounded-md px-2">
                         {t(
-                          "queue.arrivalsColumnEmpty",
-                          "No scheduled visits waiting for check-in. Use Walk-in check-in for others."
+                          "queue.arrivalsColumnEmptyOperational",
+                          "No scheduled arrivals waiting for check-in. Use Patient arrival for registered walk-ins, or New walk-in patient for first-time patients."
                         )}
                       </p>
                     ) : (

@@ -269,16 +269,22 @@ function EncounterDetailPanel({
 
 export function PatientEncountersWorkspace({
   patientId,
+  patientName,
   branchId,
   hasChartFindings = false,
   defaultExpandedId,
 }: {
   patientId: string
+  patientName?: string
   branchId?: string | null
   hasChartFindings?: boolean
   defaultExpandedId?: string | null
 }) {
   const { t, locale } = useLocale()
+  const patientArrivalHref = `/queue?${new URLSearchParams({
+    walkinPatient: patientId,
+    ...(patientName ? { walkinName: patientName } : {}),
+  }).toString()}`
   const [encounters, setEncounters] = React.useState<PatientEncounterSummary[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -307,10 +313,12 @@ export function PatientEncountersWorkspace({
   }, [patientId, branchId])
 
   React.useEffect(() => {
-    void loadList()
+    const id = window.setTimeout(() => void loadList(), 0)
+    return () => window.clearTimeout(id)
   }, [loadList])
 
   React.useEffect(() => {
+    const id = window.setTimeout(() => {
     if (defaultExpandedId) {
       setExpandedId(defaultExpandedId)
       void loadDetail(defaultExpandedId)
@@ -323,6 +331,8 @@ export function PatientEncountersWorkspace({
       setExpandedId(open.id)
       void loadDetail(open.id)
     }
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [encounters, defaultExpandedId, loadDetail])
 
   const toggleExpand = (id: string) => {
@@ -381,8 +391,14 @@ export function PatientEncountersWorkspace({
           <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50 px-4 py-8 text-center">
             <UserCheck className="h-8 w-8 mx-auto text-neutral-300 mb-2" />
             <p className="text-sm text-neutral-600">{t("visits.empty", "No visits recorded yet.")}</p>
+            <p className="mx-auto mt-1 max-w-md text-xs text-neutral-500">
+              {t(
+                "visits.emptyArrivalHint",
+                "When the patient arrives, open Patient arrival from Queue. Check-in creates the visit and puts them in Waiting."
+              )}
+            </p>
             <Button variant="outline" size="sm" className="mt-3" asChild>
-              <Link href="/queue">{t("visits.checkInCta", "Check in from queue")}</Link>
+              <Link href={patientArrivalHref}>{t("visits.checkInCta", "Open patient arrival")}</Link>
             </Button>
           </div>
         ) : (

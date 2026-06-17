@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { useLocale } from "@/hooks/use-locale"
 import type { PatientRecord } from "@/lib/patients/patient-service"
 
-type WalkInCheckInDialogProps = {
+export type WalkInCheckInDialogProps = {
   open: boolean
   branchName?: string
   patientQuery: string
@@ -95,7 +95,7 @@ export function WalkInCheckInDialog({
                 </span>
                 <div>
                   <h2 id="walk-in-check-in-title" className="text-lg font-semibold text-neutral-900">
-                    {t("queue.walkInTitle", "Walk-in check-in")}
+                    {t("queue.patientArrivalTitle", "Patient arrival")}
                   </h2>
                   {branchName ? (
                     <p className="text-xs text-neutral-500">{branchName}</p>
@@ -104,14 +104,14 @@ export function WalkInCheckInDialog({
               </div>
               <p className="mt-2 text-sm text-neutral-600">
                 {t(
-                  "queue.walkInSubtitle",
+                  "queue.patientArrivalSubtitle",
                   "Find the patient, add an optional note, then check in to Waiting."
                 )}
               </p>
               <p className="mt-1 text-xs text-neutral-500">
                 {t(
-                  "queue.walkInNoAppointmentHint",
-                  "No appointment is required. If the patient has no file yet, register them first and return here."
+                  "queue.patientArrivalHint",
+                  "Use this for registered walk-ins or patients opened from a profile. If the patient has no file yet, register them first and return here."
                 )}
               </p>
             </div>
