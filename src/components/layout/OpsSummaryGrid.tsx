@@ -99,7 +99,7 @@ export function OpsSummaryGrid({
           {cells}
         </HorizontalSnapStrip>
       ) : (
-        <div className={cn("grid gap-2", columnsClassName)}>{cells}</div>
+        <div className={cn("grid w-full min-w-0 gap-2", columnsClassName)}>{cells}</div>
       )}
     </div>
   )

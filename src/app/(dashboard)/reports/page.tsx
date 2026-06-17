@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useCallback, useRef } from "react"
+import { useEffect, useMemo, useState, useCallback } from "react"
 import Link from "next/link"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import {
@@ -33,7 +33,7 @@ import { useOwnerAnalytics } from "@/hooks/use-owner-analytics"
 import { StatusBreakdown } from "@/components/charts/StatusBreakdown"
 import { ReportQuickLinks, type ReportLink } from "@/components/reports/ReportQuickLinks"
 import { ReportsSectionBlock } from "@/components/reports/ReportsSectionBlock"
-import { ReportsSectionNav } from "@/components/reports/ReportsSectionNav"
+import { ReportsSectionNav, type ReportsSectionGroup } from "@/components/reports/ReportsSectionNav"
 import { ReportPanelCaption } from "@/components/reports/ReportPanelCaption"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
@@ -67,6 +67,14 @@ import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 const PERIOD_OPTIONS = [7, 30, 90] as const
 type PeriodDays = (typeof PERIOD_OPTIONS)[number]
 
+const FOCUS_SECTION_MAP: Record<string, string> = {
+  appointments: "operations",
+  queue: "operations",
+  billing: "finance",
+  clinical: "clinical",
+  devices: "devices",
+}
+
 export default function ReportsHubPage() {
   const { activeBranch } = useBranch()
   const { t, locale } = useLocale()
@@ -81,7 +89,7 @@ export default function ReportsHubPage() {
   const periodLabel = String(periodDays)
   const patientPeriodDays = periodDays < 30 ? 30 : periodDays
   const focus = searchParams.get("focus")
-  const deepLinkScrolledRef = useRef(false)
+  const [activeSection, setActiveSection] = useState("today")
 
   const sectionNav = useMemo(
     () => [
@@ -96,6 +104,46 @@ export default function ReportsHubPage() {
       { id: "modules", label: t("reports.sectionModules", "Drill-down") },
     ],
     [t]
+  )
+
+  const sectionGroups = useMemo<ReportsSectionGroup[]>(
+    () => [
+      {
+        label: t("reports.navPulse", "Pulse"),
+        sections: sectionNav.filter((s) => ["today", "overview"].includes(s.id)),
+      },
+      {
+        label: t("reports.navOperations", "Operations"),
+        sections: sectionNav.filter((s) => ["operations", "clinical"].includes(s.id)),
+      },
+      {
+        label: t("reports.navBusiness", "Business"),
+        sections: sectionNav.filter((s) => ["finance", "benchmark"].includes(s.id)),
+      },
+      {
+        label: t("reports.navRisk", "Risk & devices"),
+        sections: sectionNav.filter((s) => ["compliance", "devices"].includes(s.id)),
+      },
+      {
+        sections: sectionNav.filter((s) => s.id === "modules"),
+      },
+    ],
+    [sectionNav, t]
+  )
+
+  const sectionIds = useMemo(() => sectionNav.map((section) => section.id), [sectionNav])
+
+  const selectSection = useCallback(
+    (id: string) => {
+      setActiveSection(id)
+      const params = new URLSearchParams(searchParams.toString())
+      const qs = params.toString()
+      router.replace(`${pathname}${qs ? `?${qs}` : ""}#${id}`, { scroll: false })
+      requestAnimationFrame(() => {
+        document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" })
+      })
+    },
+    [pathname, router, searchParams]
   )
 
   const syncPeriodToUrl = useCallback(
@@ -130,31 +178,14 @@ export default function ReportsHubPage() {
 
   useEffect(() => {
     const hash = window.location.hash.replace("#", "")
-    if (!hash || deepLinkScrolledRef.current) return
-    deepLinkScrolledRef.current = true
-    const timer = window.setTimeout(() => {
-      document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "start" })
-    }, 120)
-    return () => window.clearTimeout(timer)
-  }, [])
-
-  useEffect(() => {
-    if (!focus || deepLinkScrolledRef.current) return
-    const focusSection: Record<string, string> = {
-      appointments: "operations",
-      queue: "operations",
-      billing: "finance",
-      clinical: "clinical",
-      devices: "devices",
+    if (sectionIds.includes(hash)) {
+      setActiveSection(hash)
+      return
     }
-    const target = focusSection[focus]
-    if (!target) return
-    deepLinkScrolledRef.current = true
-    const timer = window.setTimeout(() => {
-      document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" })
-    }, 160)
-    return () => window.clearTimeout(timer)
-  }, [focus])
+    if (focus && FOCUS_SECTION_MAP[focus]) {
+      setActiveSection(FOCUS_SECTION_MAP[focus])
+    }
+  }, [focus, sectionIds])
 
   const focusCopy = useMemo(() => {
     if (!focus) return null
@@ -461,6 +492,7 @@ export default function ReportsHubPage() {
 
   return (
     <ModulePageShell
+      maxWidth="max-w-[1600px]"
       eyebrow={t("reports.eyebrow", "Analytics") + " · " + t("reports.title", "Reports Hub")}
       icon={BarChart3}
       title={t("reports.title", "Reports Hub")}
@@ -530,10 +562,11 @@ export default function ReportsHubPage() {
         ) : null
       }
       metrics={hubMetrics}
+      metricsClassName="grid-cols-2 lg:grid-cols-4"
       error={error}
       onRetry={() => void reload()}
       retryLabel={t("common.retry", "Retry")}
-      panelClassName="space-y-10"
+      panelClassName="space-y-8"
     >
       {activeBranch && summary ? (
         <ReportsHubPrintDocument
@@ -557,8 +590,12 @@ export default function ReportsHubPage() {
 
       {activeBranch ? (
         <>
-          <ReportsSectionNav sections={sectionNav} />
-          {focusCopy ? (
+          <ReportsSectionNav
+            groups={sectionGroups}
+            activeId={activeSection}
+            onSelect={selectSection}
+          />
+          {focusCopy && focus && FOCUS_SECTION_MAP[focus] === activeSection ? (
             <div className="rounded-xl border border-primary-200 bg-primary-50/60 px-4 py-3 text-sm">
               <p className="font-semibold text-primary-900">{focusCopy.title}</p>
               <p className="mt-1 text-primary-800/80">{focusCopy.description}</p>
@@ -567,7 +604,7 @@ export default function ReportsHubPage() {
         </>
       ) : null}
 
-      {activeBranch ? (
+      {activeBranch && activeSection === "today" ? (
         <ReportsSectionBlock
           id="today"
           icon={Clock3}
@@ -583,10 +620,14 @@ export default function ReportsHubPage() {
             </Button>
           }
         >
-          <MetricStrip items={todayPulseMetrics} className="lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6" />
+          <MetricStrip
+            items={todayPulseMetrics}
+            className="grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6"
+          />
         </ReportsSectionBlock>
       ) : null}
 
+      {activeSection === "overview" ? (
       <ReportsSectionBlock
         id="overview"
         icon={TrendingUp}
@@ -657,8 +698,9 @@ export default function ReportsHubPage() {
           </div>
         ) : null}
       </ReportsSectionBlock>
+      ) : null}
 
-      {activeBranch ? (
+      {activeBranch && activeSection === "operations" ? (
         <ReportsSectionBlock
           id="operations"
           icon={Calendar}
@@ -725,7 +767,7 @@ export default function ReportsHubPage() {
         </ReportsSectionBlock>
       ) : null}
 
-      {activeBranch ? (
+      {activeBranch && activeSection === "clinical" ? (
         <ReportsSectionBlock
           id="clinical"
           icon={Users}
@@ -774,7 +816,7 @@ export default function ReportsHubPage() {
         </ReportsSectionBlock>
       ) : null}
 
-      {activeBranch ? (
+      {activeBranch && activeSection === "finance" ? (
         <ReportsSectionBlock
           id="finance"
           icon={Wallet}
@@ -820,6 +862,7 @@ export default function ReportsHubPage() {
         </ReportsSectionBlock>
       ) : null}
 
+      {activeSection === "benchmark" ? (
       <ReportsSectionBlock
         id="benchmark"
         icon={BarChart3}
@@ -840,8 +883,9 @@ export default function ReportsHubPage() {
           <BranchBenchmarkPanel periodDays={periodDays} />
         </ReportPanelCaption>
       </ReportsSectionBlock>
+      ) : null}
 
-      {activeBranch ? (
+      {activeBranch && activeSection === "compliance" ? (
         <ReportsSectionBlock
           id="compliance"
           icon={Shield}
@@ -894,7 +938,7 @@ export default function ReportsHubPage() {
         </ReportsSectionBlock>
       ) : null}
 
-      {activeBranch ? (
+      {activeBranch && activeSection === "devices" ? (
         <ReportsSectionBlock
           id="devices"
           icon={Monitor}
@@ -933,6 +977,7 @@ export default function ReportsHubPage() {
         </ReportsSectionBlock>
       ) : null}
 
+      {activeSection === "modules" ? (
       <ReportsSectionBlock
         id="modules"
         icon={ScrollText}
@@ -948,6 +993,7 @@ export default function ReportsHubPage() {
           {t("reports.auditPermissionNote", "Audit log access depends on your role permissions.")}
         </p>
       </ReportsSectionBlock>
+      ) : null}
     </ModulePageShell>
   )
 }
