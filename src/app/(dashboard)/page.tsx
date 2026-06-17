@@ -30,8 +30,7 @@ import {
   BarChart3,
 } from "lucide-react"
 
-const DASHBOARD_PERIOD_OPTIONS = [7, 30, 90] as const
-type DashboardPeriodDays = (typeof DASHBOARD_PERIOD_OPTIONS)[number]
+type DashboardPeriodDays = 7 | 30 | 90
 
 export default function DashboardPage() {
   const { activeBranch } = useBranch()
@@ -136,6 +135,7 @@ export default function DashboardPage() {
                 loading={reportsLoading}
                 periodDays={chartPeriodDays}
                 onPeriodChange={setChartPeriodDays}
+                reportsHref={`/reports?period=${chartPeriodDays}&focus=appointments#operations`}
                 labels={{
                   weekAppointments: t(
                     "dashboard.chartAppointments",
@@ -212,7 +212,9 @@ export default function DashboardPage() {
               <div className="flex flex-wrap gap-2">
                 <WorkflowSettingsLink />
                 <Button variant="outline" size="sm" asChild>
-                  <Link href="/reports">{t("dashboard.viewReportsHub", "Open Reports Hub")}</Link>
+                  <Link href={`/reports?period=${chartPeriodDays}#operations`}>
+                    {t("dashboard.viewReportsHub", "Open Reports Hub")}
+                  </Link>
                 </Button>
               </div>
             }
@@ -224,7 +226,7 @@ export default function DashboardPage() {
                   "dashboard.previewQueueDescription",
                   "Arrival speed, wait duration, and status movement for front-desk rebalancing."
                 )}
-                href="/reports#operations"
+                href={`/reports?period=${chartPeriodDays}&focus=queue#operations`}
                 linkLabel={t("dashboard.previewQueueLink", "Queue reports")}
               />
               <ReportDrillLink
@@ -233,7 +235,7 @@ export default function DashboardPage() {
                   "dashboard.previewPatientsDescription",
                   "Intake completion, registry quality, and patient growth trends."
                 )}
-                href="/reports#clinical"
+                href={`/reports?period=${chartPeriodDays}&focus=clinical#clinical`}
                 linkLabel={t("dashboard.previewPatientsLink", "Registry reports")}
               />
               <ReportDrillLink
@@ -242,7 +244,7 @@ export default function DashboardPage() {
                   "dashboard.previewDisplayDescription",
                   "Kiosk traffic, TV display health, and public link management."
                 )}
-                href="/reports#devices"
+                href={`/reports?period=${chartPeriodDays}&focus=devices#devices`}
                 linkLabel={t("dashboard.previewDisplayLink", "Device reports")}
               />
             </div>
@@ -256,7 +258,7 @@ export default function DashboardPage() {
               "dashboard.benchmarkLinkDescription",
               "Compare appointments and collections across branches for the selected period."
             )}
-            href="/reports#benchmark"
+            href={`/reports?period=${chartPeriodDays}#benchmark`}
             linkLabel={t("dashboard.benchmarkLinkCta", "Open branch benchmark")}
           />
         ) : null}

@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Download, Printer, RefreshCw, Save, Wallet, CheckCircle2, XCircle, FileWarning, Receipt, PackageX } from "lucide-react"
+import { ArrowLeft, Download, Printer, RefreshCw, Save, Wallet, CheckCircle2, XCircle, FileWarning, Receipt, PackageX, Lock } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { MetricStrip } from "@/components/layout/MetricStrip"
@@ -16,6 +16,7 @@ import { addDaysToKey, parseDateKey } from "@/lib/appointments/week-calendar"
 import {
   fetchCloseoutHistory,
   fetchDailyCloseout,
+  finalizeCloseoutDay,
   saveCloseoutSnapshot,
   type CloseoutSnapshot,
   type DailyCloseout,
@@ -55,6 +56,7 @@ function DailyCloseoutContent() {
   const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<CloseoutSnapshot[]>([])
   const [savingSnapshot, setSavingSnapshot] = useState(false)
+  const [finalizingDay, setFinalizingDay] = useState(false)
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -185,10 +187,13 @@ function DailyCloseoutContent() {
     ]
   }, [data, previousData, t])
 
-  const snapshotSavedForDay = useMemo(
-    () => history.some((snap) => snap.snapshot_date === clinicDay),
+  const todaySnapshot = useMemo(
+    () => history.find((snap) => snap.snapshot_date === clinicDay),
     [history, clinicDay]
   )
+
+  const snapshotSavedForDay = Boolean(todaySnapshot)
+  const dayFinalized = todaySnapshot?.finalized === true
 
   const handleSaveSnapshot = async () => {
     if (!isToday) return
@@ -207,6 +212,27 @@ function DailyCloseoutContent() {
           ? t("closeout.snapshotUpdated", "Closeout snapshot updated for today")
           : t("closeout.snapshotSaved", "Closeout snapshot saved for today")
       )
+      void reload()
+    }
+  }
+
+  const handleFinalizeDay = async () => {
+    if (!isToday || dayFinalized) return
+    const ok = window.confirm(
+      t(
+        "closeout.finalizeConfirm",
+        "Finalize today's closeout? This locks billing edits for this clinic day until an admin reverses it."
+      )
+    )
+    if (!ok) return
+    setFinalizingDay(true)
+    const { error: err } = await finalizeCloseoutDay(activeBranch?.id ?? null, clinicDay)
+    setFinalizingDay(false)
+    if (err) {
+      setError(err)
+      notify.error(err)
+    } else {
+      notify.success(t("closeout.finalized", "Clinic day finalized — billing is locked for today"))
       void reload()
     }
   }
@@ -293,21 +319,39 @@ function DailyCloseoutContent() {
               variant="outline"
               size="sm"
               onClick={() => void handleSaveSnapshot()}
-              disabled={!data || savingSnapshot || !isToday}
+              disabled={!data || savingSnapshot || !isToday || dayFinalized}
               title={
-                !isToday
-                  ? t("closeout.snapshotTodayOnly", "Snapshots can only be saved for today")
-                  : snapshotSavedForDay
-                    ? t("closeout.snapshotResaveHint", "Updates today's saved closeout record")
-                    : undefined
+                dayFinalized
+                  ? t("closeout.dayLockedHint", "This day is finalized — billing is locked")
+                  : !isToday
+                    ? t("closeout.snapshotTodayOnly", "Snapshots can only be saved for today")
+                    : snapshotSavedForDay
+                      ? t("closeout.snapshotResaveHint", "Updates today's draft closeout record")
+                      : undefined
               }
             >
               <Save className="mr-1.5 h-3.5 w-3.5" />
               {snapshotSavedForDay
-                ? t("closeout.updateSnapshot", "Update snapshot")
-                : t("closeout.saveSnapshot", "Save closeout snapshot")}
+                ? t("closeout.updateSnapshot", "Update draft snapshot")
+                : t("closeout.saveSnapshot", "Save draft snapshot")}
             </Button>
-            <Button size="sm" onClick={handleExport} disabled={!data}>
+            <Button
+              size="sm"
+              variant={dayFinalized ? "outline" : "default"}
+              onClick={() => void handleFinalizeDay()}
+              disabled={!data || finalizingDay || !isToday || dayFinalized}
+              title={
+                dayFinalized
+                  ? t("closeout.alreadyFinalized", "Day already finalized")
+                  : t("closeout.finalizeHint", "Run at end of shift to lock billing for this day")
+              }
+            >
+              <Lock className="mr-1.5 h-3.5 w-3.5" />
+              {dayFinalized
+                ? t("closeout.dayFinalized", "Day finalized")
+                : t("closeout.finalizeDay", "Finalize day & lock billing")}
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleExport} disabled={!data}>
               <Download className="mr-1.5 h-3.5 w-3.5" />
               {t("closeout.exportCsv", "Export CSV")}
             </Button>
@@ -340,7 +384,7 @@ function DailyCloseoutContent() {
                 <li>
                   {t(
                     "closeout.howItWorksSnapshot",
-                    "Save snapshot freezes today's totals for audit. Saving again updates the same day — no duplicate rows."
+                    "Save draft snapshot anytime for audit — it does not lock billing. Finalize at end of shift to lock invoice edits for the day."
                   )}
                 </li>
                 <li>
@@ -350,9 +394,13 @@ function DailyCloseoutContent() {
                   )}
                 </li>
               </ul>
-              {isToday && snapshotSavedForDay ? (
+              {isToday && dayFinalized ? (
                 <Badge variant="success" className="mt-3 font-normal">
-                  {t("closeout.snapshotOnFile", "Snapshot on file for today")}
+                  {t("closeout.dayLockedBadge", "Billing locked for today")}
+                </Badge>
+              ) : isToday && snapshotSavedForDay ? (
+                <Badge variant="outline" className="mt-3 font-normal">
+                  {t("closeout.draftOnFile", "Draft snapshot on file — not locked")}
                 </Badge>
               ) : null}
             </div>
@@ -360,10 +408,15 @@ function DailyCloseoutContent() {
             <MetricStrip items={metrics} className="lg:grid-cols-3" />
             <p className="text-sm text-neutral-500">
               {isToday
-                ? t(
-                    "closeout.snapshotHint",
-                    "Save the snapshot at the end of the shift so the day can be audited later."
-                  )
+                ? dayFinalized
+                  ? t(
+                      "closeout.finalizedHint",
+                      "This clinic day is finalized. Invoice and payment edits are locked."
+                    )
+                  : t(
+                      "closeout.snapshotHint",
+                      "Save a draft anytime. Use Finalize at end of shift to lock billing for the day."
+                    )
                 : t(
                     "closeout.pastDayHint",
                     "Viewing closeout for a past clinic day. Use Today to close the current shift."
@@ -441,7 +494,16 @@ function DailyCloseoutContent() {
                   {history.map((snap) => (
                     <li key={snap.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                       <span className="font-medium text-neutral-800">{snap.snapshot_date}</span>
-                      <span className="text-neutral-500">
+                      <span className="flex items-center gap-2 text-neutral-500">
+                        {snap.finalized ? (
+                          <Badge variant="outline" className="font-normal text-xs">
+                            {t("closeout.finalizedLabel", "Finalized")}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="font-normal text-xs">
+                            {t("closeout.draftLabel", "Draft")}
+                          </Badge>
+                        )}
                         ₱{Number((snap.payload as DailyCloseout)?.collected ?? 0).toLocaleString()} collected
                       </span>
                     </li>

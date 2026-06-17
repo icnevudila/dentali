@@ -46,6 +46,7 @@ import {
 } from "@/lib/clinical/clinical-visit-journey"
 import { getPatientOdontogram } from "@/lib/odontogram/dental-chart-service"
 import { PatientEncountersWorkspace } from "@/components/patients/PatientEncountersWorkspace"
+import { PatientWorkflowGuide } from "@/components/patients/PatientWorkflowGuide"
 import {
   closePatientEncounter,
   fetchActiveEncounter,
@@ -622,6 +623,23 @@ export default function PatientProfilePage() {
                 label: t("visits.openVisitsLog", "Open visits log"),
               }
         }
+      />
+
+      <PatientWorkflowGuide
+        patientId={patientId}
+        hasMedicalHistory={Boolean(
+          medicalHistory &&
+            (medicalHistory.allergies.length > 0 ||
+              medicalHistory.medications.length > 0 ||
+              medicalHistory.conditions.length > 0)
+        )}
+        pendingConsents={pendingConsents}
+        upcomingAppointments={upcomingAppointments}
+        activeVisit={Boolean(activeEncounter && activeEncounter.encounter.status === "open")}
+        hasChartFindings={hasChartFindings}
+        treatmentPlansCount={treatmentPlans.length}
+        openBalance={balance?.open_balance ?? 0}
+        patientArrivalHref={patientArrivalHref}
       />
 
       {activeEncounter && carryForwardSources ? (

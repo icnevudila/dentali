@@ -113,7 +113,7 @@ export function buildCockpitItems(
         label: labels.todayAppointments,
         hint: labels.todayAppointmentsHint,
         value: stats.today_appointments,
-        href: "/appointments",
+        href: "/appointments?view=today",
         icon: Calendar,
       },
     ]
@@ -154,11 +154,11 @@ export function buildCockpitItems(
   // front_desk
   return [
     {
-      id: "appointments",
-      label: labels.todayAppointments,
-      hint: labels.todayAppointmentsHint,
-      value: stats.today_appointments,
-      href: "/appointments",
+        id: "appointments",
+        label: labels.todayAppointments,
+        hint: labels.todayAppointmentsHint,
+        value: stats.today_appointments,
+        href: "/appointments?view=today",
       icon: Calendar,
     },
     {

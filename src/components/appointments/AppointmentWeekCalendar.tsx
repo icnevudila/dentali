@@ -69,6 +69,9 @@ export function AppointmentWeekCalendar({
       if (saved === "month" || saved === "week" || saved === "day") {
         return saved
       }
+      if (window.matchMedia("(max-width: 767px)").matches) {
+        return "week"
+      }
     }
     return "month"
   })
@@ -286,7 +289,7 @@ export function AppointmentWeekCalendar({
       {/* Monthly Grid View */}
       {viewMode === "month" && (
         <div className="overflow-x-auto border border-neutral-200 rounded-lg">
-          <div className="grid grid-cols-7 gap-px bg-neutral-200 min-w-[750px] overflow-hidden">
+          <div className="grid min-w-0 grid-cols-7 gap-px overflow-hidden bg-neutral-200 sm:min-w-[750px]">
           {/* Weekday labels */}
           {DAY_LABELS.map((label) => (
             <div key={label} className="bg-neutral-50 p-2 text-center text-[10px] font-bold text-neutral-500 uppercase">
@@ -374,7 +377,7 @@ export function AppointmentWeekCalendar({
       {/* Weekly Grid View */}
       {viewMode === "week" && (
         <div className="overflow-x-auto pb-2">
-          <div className="grid grid-cols-7 gap-1 sm:gap-2 min-w-[700px]">
+          <div className="grid min-w-0 grid-cols-7 gap-1 sm:min-w-[700px] sm:gap-2">
           {weekDays.map((day, i) => {
             const key = toDateKey(day)
             const dayAppts = groupedAppointments.get(key) ?? []

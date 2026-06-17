@@ -383,6 +383,7 @@ export type CloseoutSnapshot = {
   branch_id: string | null
   payload: DailyCloseout
   created_at: string
+  finalized?: boolean
 }
 
 export async function fetchHmoPipelineAnalytics(
@@ -582,6 +583,20 @@ export async function saveCloseoutSnapshot(
   })
   if (error) return { data: null, error: error.message, updated: !!existing?.id }
   return { data: String(data), error: null, updated: !!existing?.id }
+}
+
+export async function finalizeCloseoutDay(
+  branchId: string | null,
+  date?: string
+): Promise<{ data: string | null; error: string | null }> {
+  const supabase = createClient()
+  const targetDate = date ?? toDateKey(new Date())
+  const { data, error } = await supabase.rpc("finalize_closeout_snapshot", {
+    p_branch_id: branchId,
+    p_date: targetDate,
+  })
+  if (error) return { data: null, error: error.message }
+  return { data: String(data), error: null }
 }
 
 export async function fetchCloseoutHistory(

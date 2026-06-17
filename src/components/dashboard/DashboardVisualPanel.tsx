@@ -14,6 +14,7 @@ type DashboardVisualPanelProps = {
   loading: boolean
   periodDays: PeriodDays
   onPeriodChange: (days: PeriodDays) => void
+  reportsHref?: string
   labels: {
     weekAppointments: string
     weekCollections: string
@@ -34,6 +35,7 @@ export function DashboardVisualPanel({
   loading,
   periodDays,
   onPeriodChange,
+  reportsHref,
   labels,
 }: DashboardVisualPanelProps) {
   return (
@@ -63,7 +65,7 @@ export function DashboardVisualPanel({
           </div>
         </div>
         <Button variant="outline" size="sm" asChild className="gap-1.5">
-          <Link href="/reports">
+          <Link href={reportsHref ?? `/reports?period=${periodDays}&focus=appointments#operations`}>
             <BarChart3 className="h-3.5 w-3.5" />
             {labels.viewReports}
           </Link>

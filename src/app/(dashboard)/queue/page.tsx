@@ -31,6 +31,7 @@ import {
 import {
   classifyTodayArrivals,
 } from "@/lib/queue/appointment-arrival"
+import { filterPendingCheckInAppointments } from "@/lib/queue/pending-arrivals"
 import { OpenEncounterCheckInDialog } from "@/components/queue/OpenEncounterCheckInDialog"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -239,12 +240,10 @@ function QueuePageContent() {
     })()
   }, [activeBranch, today, dayEntries, t, isToday])
 
-  const queuedAppointmentIds = React.useMemo(
-    () => new Set(dayEntries.map((e) => e.appointment_id).filter(Boolean)),
-    [dayEntries]
+  const pendingAppointmentCheckIns = React.useMemo(
+    () => filterPendingCheckInAppointments(todayAppointments, dayEntries),
+    [todayAppointments, dayEntries]
   )
-
-  const pendingAppointmentCheckIns = todayAppointments.filter((a) => !queuedAppointmentIds.has(a.id))
 
   const arrivalBuckets = React.useMemo(
     () => classifyTodayArrivals(pendingAppointmentCheckIns),

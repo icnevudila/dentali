@@ -1,12 +1,14 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import Link from "next/link"
 
 export type OpsSummaryCell = {
   label: string
   value: string | number
   sub?: string
   emphasis?: "default" | "warning" | "success"
+  href?: string
 }
 
 type OpsSummaryGridProps = {
@@ -22,21 +24,37 @@ function SummaryCell({
   value,
   sub,
   emphasis = "default",
+  href,
 }: OpsSummaryCell) {
-  return (
+  const content = (
     <div
       className={cn(
-        "rounded-lg border px-3 py-2.5",
+        "h-full rounded-lg border px-3 py-2.5 transition-colors",
         emphasis === "warning" && "border-amber-200/90 bg-amber-50/50",
         emphasis === "success" && "border-emerald-200/90 bg-emerald-50/40",
-        emphasis === "default" && "border-neutral-200/80 bg-neutral-50/60"
+        emphasis === "default" && "border-neutral-200/80 bg-neutral-50/60",
+        href && "hover:border-primary-200 hover:bg-primary-50/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30"
       )}
     >
       <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">{label}</p>
       <p className="mt-0.5 text-xl font-bold tabular-nums text-neutral-950">{value}</p>
-      {sub ? <p className="mt-0.5 text-[11px] text-neutral-500">{sub}</p> : null}
+      {sub ? (
+        <p className={cn("mt-0.5 text-[11px]", href ? "text-primary-600" : "text-neutral-500")}>
+          {sub}
+        </p>
+      ) : null}
     </div>
   )
+
+  if (href) {
+    return (
+      <Link href={href} className="block rounded-lg">
+        {content}
+      </Link>
+    )
+  }
+
+  return content
 }
 
 export function OpsSummaryGrid({

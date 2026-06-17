@@ -25,7 +25,13 @@ export function ReportsSectionBlock({
   id,
 }: ReportsSectionBlockProps) {
   return (
-    <section id={id} className={cn("space-y-3 scroll-mt-20", className)}>
+    <section
+      id={id}
+      className={cn(
+        "space-y-3 scroll-mt-20 rounded-2xl transition-colors target:bg-primary-50/35 target:ring-1 target:ring-primary-200",
+        className
+      )}
+    >
       <SectionEyebrow icon={icon}>{eyebrow}</SectionEyebrow>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">

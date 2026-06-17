@@ -180,7 +180,7 @@ export function MonthlyAppointmentsSnapshot({
       ) : null}
 
       <div className="mt-4 overflow-x-auto">
-        <div className="grid min-w-[860px] grid-cols-7 gap-2">
+        <div className="grid min-w-0 grid-cols-7 gap-2 sm:min-w-[860px]">
           {DAY_LABELS.map((dayLabel) => (
             <div
               key={dayLabel}

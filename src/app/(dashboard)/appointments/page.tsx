@@ -35,6 +35,8 @@ import {
 } from "@/lib/appointments/provider-availability-service"
 import { sendAppointmentReminder } from "@/lib/notifications/notification-service"
 import { notifyWaitlistOnSlotOpen } from "@/lib/waitlist/waitlist-service"
+import { fetchQueueEntriesForDay, type QueueEntry } from "@/lib/queue/queue-service"
+import { filterPendingCheckInAppointments } from "@/lib/queue/pending-arrivals"
 import { usePermission } from "@/hooks/use-permission"
 import { fetchOrgStaff, type StaffMember } from "@/lib/staff/staff-service"
 import { AppointmentWeekCalendar } from "@/components/appointments/AppointmentWeekCalendar"
@@ -127,6 +129,7 @@ function AppointmentsPageContent() {
   const [forceBillingOverride, setForceBillingOverride] = React.useState(false)
   const [availabilityRows, setAvailabilityRows] = React.useState<ProviderAvailabilityRow[]>([])
   const [availabilityLoading, setAvailabilityLoading] = React.useState(false)
+  const [todayQueueEntries, setTodayQueueEntries] = React.useState<QueueEntry[]>([])
 
   const today = toDateKey(new Date())
 
@@ -151,12 +154,16 @@ function AppointmentsPageContent() {
     setLoading(true)
     const start = toDateKey(addDays(weekStart, -15))
     const end = toDateKey(addDays(weekStart, 30))
-    fetchAppointmentsRange(activeBranch.id, start, end).then(({ data, error: err }) => {
-      setWeekAppointments(data)
-      setError(err)
+    void Promise.all([
+      fetchAppointmentsRange(activeBranch.id, start, end),
+      fetchQueueEntriesForDay(activeBranch.id, today),
+    ]).then(([weekRes, queueRes]) => {
+      setWeekAppointments(weekRes.data)
+      setTodayQueueEntries(queueRes.data)
+      setError(weekRes.error ?? queueRes.error)
       setLoading(false)
     })
-  }, [activeBranch, weekStart])
+  }, [activeBranch, weekStart, today])
 
   React.useEffect(() => {
     loadWeek()
@@ -396,20 +403,18 @@ function AppointmentsPageContent() {
     }
   }
 
-  const todayAwaitingCheckinCount = React.useMemo(
-    () =>
-      weekAppointments.filter(
-        (a) =>
-          appointmentDateKey(a.scheduled_at) === today &&
-          (a.status === "scheduled" || a.status === "confirmed")
-      ).length,
-    [weekAppointments, today]
-  )
+  const todayAwaitingCheckinCount = React.useMemo(() => {
+    const todayAppts = weekAppointments.filter(
+      (a) => appointmentDateKey(a.scheduled_at) === today
+    )
+    return filterPendingCheckInAppointments(todayAppts, todayQueueEntries).length
+  }, [weekAppointments, today, todayQueueEntries])
 
   const metricItems = React.useMemo(() => {
     const todayAppts = weekAppointments.filter((a) => appointmentDateKey(a.scheduled_at) === selectedDate)
-    const todayAwaitingCheckin = todayAppts.filter(
-      (a) => a.status === "scheduled" || a.status === "confirmed"
+    const todayAwaitingCheckin = filterPendingCheckInAppointments(
+      todayAppts,
+      selectedDate === today ? todayQueueEntries : []
     ).length
     const todayPortal = todayAppts.filter((a) => resolveBookingSource(a) === "portal").length
     const weekPortal = weekAppointments.filter((a) => resolveBookingSource(a) === "portal").length

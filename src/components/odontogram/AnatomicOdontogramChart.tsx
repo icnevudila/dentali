@@ -67,7 +67,7 @@ export function AnatomicOdontogramChart({
 
       <div
         ref={containerRef}
-        className={`w-full min-w-[480px] md:min-w-0 [&_svg]:h-auto [&_svg]:max-h-[720px] [&_svg]:w-full [&_svg]:rounded-xl ${loadState !== "ready" ? "hidden" : ""}`}
+        className={`w-full min-w-0 [&_svg]:h-auto [&_svg]:max-h-[720px] [&_svg]:w-full [&_svg]:rounded-xl ${loadState !== "ready" ? "hidden" : ""}`}
         role="application"
         aria-label={ariaLabel}
       />

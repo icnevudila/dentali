@@ -1,7 +1,8 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import {
   BarChart3,
   Calendar,
@@ -20,7 +21,6 @@ import {
   FileWarning,
   Clock3,
   Monitor,
-  Timer,
 } from "lucide-react"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { MetricStrip } from "@/components/layout/MetricStrip"
@@ -63,6 +63,7 @@ type PeriodDays = (typeof PERIOD_OPTIONS)[number]
 export default function ReportsHubPage() {
   const { activeBranch } = useBranch()
   const { t, locale } = useLocale()
+  const searchParams = useSearchParams()
   const [periodDays, setPeriodDays] = useState<PeriodDays>(7)
   const { summary, loading, error, reload } = useReportsSummary(periodDays, locale)
   const { data: ownerAnalytics } = useOwnerAnalytics(periodDays, locale)
@@ -70,6 +71,60 @@ export default function ReportsHubPage() {
 
   const periodLabel = String(periodDays)
   const patientPeriodDays = periodDays < 30 ? 30 : periodDays
+  const focus = searchParams.get("focus")
+
+  useEffect(() => {
+    const nextPeriod = Number(searchParams.get("period"))
+    if (PERIOD_OPTIONS.includes(nextPeriod as PeriodDays)) {
+      const id = window.setTimeout(() => {
+        setPeriodDays(nextPeriod as PeriodDays)
+      }, 0)
+      return () => window.clearTimeout(id)
+    }
+    return undefined
+  }, [searchParams])
+
+  const focusCopy = useMemo(() => {
+    if (!focus) return null
+    const copy: Record<string, { title: string; description: string }> = {
+      appointments: {
+        title: t("reports.focusAppointmentsTitle", "Opened from appointments KPI"),
+        description: t(
+          "reports.focusAppointmentsDescription",
+          "Review schedule volume, monthly booking board, status mix, no-shows, and queue conversion for the selected period."
+        ),
+      },
+      queue: {
+        title: t("reports.focusQueueTitle", "Opened from queue KPI"),
+        description: t(
+          "reports.focusQueueDescription",
+          "Use queue pressure, waiting duration, and chair-time panels to see where front-desk handoffs slow down."
+        ),
+      },
+      billing: {
+        title: t("reports.focusBillingTitle", "Opened from billing KPI"),
+        description: t(
+          "reports.focusBillingDescription",
+          "Collections, open balances, AR, HMO, and PhilHealth signals are grouped in Finance for action."
+        ),
+      },
+      clinical: {
+        title: t("reports.focusClinicalTitle", "Opened from clinical KPI"),
+        description: t(
+          "reports.focusClinicalDescription",
+          "Check registry readiness, consents, chart findings, and ortho workload before patients reach the chair."
+        ),
+      },
+      devices: {
+        title: t("reports.focusDevicesTitle", "Opened from patient-facing flow"),
+        description: t(
+          "reports.focusDevicesDescription",
+          "Kiosk, TV display, and public-link health are here so reception can avoid stale patient-facing screens."
+        ),
+      },
+    }
+    return copy[focus] ?? null
+  }, [focus, t])
 
   const quickLinks = useMemo<ReportLink[]>(
     () => [
@@ -120,36 +175,36 @@ export default function ReportsHubPage() {
     {
       label: metricPeriod("reports.metricAppointments", "Appointments ({days}d)"),
       value: loading ? "—" : (summary?.totals.appointments ?? 0),
-      hint: t("reports.metricAppointmentsOpen", "Open appointments calendar"),
+      hint: t("reports.metricAppointmentsOpen", "Open appointments reports"),
       icon: Calendar,
-      href: "/appointments",
+      href: `/reports?period=${periodDays}&focus=appointments#operations`,
     },
     {
       label: metricPeriod("reports.metricCompleted", "Completed ({days}d)"),
       value: loading ? "—" : (summary?.totals.completed ?? 0),
-      hint: t("reports.metricCompletedOpen", "View completed visits"),
+      hint: t("reports.metricCompletedOpen", "Review visit completion"),
       icon: CheckCircle2,
       variant:
         (summary?.totals.completed ?? 0) > 0 && !loading ? ("success" as const) : ("default" as const),
-      href: "/appointments",
+      href: `/reports?period=${periodDays}&focus=appointments#operations`,
     },
     {
       label: metricPeriod("reports.metricCollected", "Collected ({days}d)"),
       value: loading ? "—" : `₱${(summary?.totals.collected ?? 0).toLocaleString()}`,
-      hint: t("reports.metricCollectedOpen", "Open billing ledger"),
+      hint: t("reports.metricCollectedOpen", "Open finance reports"),
       icon: Wallet,
       variant:
         (summary?.totals.collected ?? 0) > 0 && !loading ? ("success" as const) : ("default" as const),
-      href: "/billing",
+      href: `/reports?period=${periodDays}&focus=billing#finance`,
     },
     {
       label: metricPeriod("reports.metricNoShow", "No-shows ({days}d)"),
       value: loading ? "—" : (summary?.totals.noShow ?? 0),
-      hint: t("reports.metricNoShowOpen", "Review appointments"),
+      hint: t("reports.metricNoShowOpen", "Review appointment leakage"),
       icon: XCircle,
       variant:
         (summary?.totals.noShow ?? 0) > 0 && !loading ? ("warning" as const) : ("default" as const),
-      href: "/appointments",
+      href: `/reports?period=${periodDays}&focus=appointments#operations`,
     },
   ]
 
@@ -159,7 +214,7 @@ export default function ReportsHubPage() {
       value: stats.today_appointments,
       hint: t("reports.metricAppointmentsOpen", "Open appointments calendar"),
       icon: Calendar,
-      href: "/appointments",
+      href: "/appointments?view=today",
     },
     {
       label: t("dashboard.collectedToday", "Collected Today"),
@@ -167,7 +222,7 @@ export default function ReportsHubPage() {
       hint: t("reports.metricCollectedOpen", "Open billing ledger"),
       icon: Wallet,
       variant: stats.today_collected > 0 ? ("success" as const) : ("default" as const),
-      href: "/billing",
+      href: "/reports/closeout",
     },
     {
       label: t("dashboard.pendingConsents", "Pending Consents"),
@@ -281,6 +336,15 @@ export default function ReportsHubPage() {
         <p className="text-sm text-neutral-500">
           {t("dashboard.selectBranch", "Select a branch to view stats")}
         </p>
+      ) : null}
+
+      {activeBranch ? (
+        focusCopy ? (
+          <div className="rounded-xl border border-primary-200 bg-primary-50/60 px-4 py-3 text-sm">
+            <p className="font-semibold text-primary-900">{focusCopy.title}</p>
+            <p className="mt-1 text-primary-800/80">{focusCopy.description}</p>
+          </div>
+        ) : null
       ) : null}
 
       {activeBranch ? (

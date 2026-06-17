@@ -368,8 +368,8 @@ export function QueueBoard({
               "Front desk checks in arrivals here. After check-in, move patients Waiting -> Called -> In Chair -> Complete."
             )}
       </p>
-      <div className="overflow-x-auto pb-1">
-        <div className="grid min-w-[64rem] grid-cols-4 gap-4">
+      <div className="overflow-x-auto pb-1 xl:overflow-visible">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:min-w-[64rem]">
           {BOARD_COLUMNS.map((column) => {
             const colEntries =
               column.id === "arrivals"
