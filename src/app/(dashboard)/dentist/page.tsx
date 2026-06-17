@@ -42,7 +42,7 @@ import type { PatientRecord } from "@/lib/patients/patient-service"
 import { fetchQueueEntries, fetchQueueEntriesForDay, type QueueEntry } from "@/lib/queue/queue-service"
 import type { ToothFinding } from "@/lib/types/dental"
 import { createClient } from "@/lib/supabase/client"
-import { Armchair, MapPin, Stethoscope, Timer, Users, Calendar } from "lucide-react"
+import { Armchair, MapPin, Stethoscope, Timer, Users, Calendar, UserCheck, FileText, Receipt } from "lucide-react"
 
 const PAGE_SIZE = 20
 
@@ -439,6 +439,72 @@ function DentistPageContent() {
               activeKey={summaryKeyFromFilter(filter)}
               onItemClick={handleSummaryClick}
             />
+          ) : null}
+
+          {activeBranch ? (
+            <>
+              <details className="rounded-xl border border-primary-100 bg-primary-50/35 px-3 py-2 text-sm text-neutral-700 shadow-[0_1px_2px_rgba(15,23,42,0.03)] md:hidden">
+                <summary className="cursor-pointer list-none font-semibold text-neutral-950">
+                  {t("dentist.mobileFlowSummary", "Flow: Queue -> Visit -> Checkout")}
+                </summary>
+                <p className="mt-1 text-xs leading-5 text-neutral-500">
+                  {t(
+                    "dentist.mobileFlowHint",
+                    "Patients appear here after Queue check-in. Use row actions for notes, chart, plan, and billing."
+                  )}
+                </p>
+              </details>
+              <div className="hidden gap-3 rounded-xl border border-primary-100 bg-primary-50/35 p-4 text-sm text-neutral-700 shadow-[0_1px_2px_rgba(15,23,42,0.03)] md:grid md:grid-cols-3">
+                <div className="flex gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-primary-700">
+                    <UserCheck className="h-4 w-4" aria-hidden />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-neutral-950">
+                      {t("dentist.flowCheckinTitle", "1. Physical arrival starts in Queue")}
+                    </p>
+                    <p className="mt-0.5 text-xs leading-5 text-neutral-500">
+                      {t(
+                        "dentist.flowCheckinHint",
+                        "Appointments and walk-ins become today's dentist work only after Queue check-in creates a visit."
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-primary-700">
+                    <FileText className="h-4 w-4" aria-hidden />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-neutral-950">
+                      {t("dentist.flowClinicalTitle", "2. Treat from active visit")}
+                    </p>
+                    <p className="mt-0.5 text-xs leading-5 text-neutral-500">
+                      {t(
+                        "dentist.flowClinicalHint",
+                        "Use row actions for visits, notes, chart, treatment plan, and patient-specific billing."
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-primary-700">
+                    <Receipt className="h-4 w-4" aria-hidden />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-neutral-950">
+                      {t("dentist.flowCheckoutTitle", "3. Complete, bill, then checkout")}
+                    </p>
+                    <p className="mt-0.5 text-xs leading-5 text-neutral-500">
+                      {t(
+                        "dentist.flowCheckoutHint",
+                        "Served patients open the checkout wizard; missing notes or balances stay soft-gated with audit."
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </>
           ) : null}
 
           {activeBranch ? (

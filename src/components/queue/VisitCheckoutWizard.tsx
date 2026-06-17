@@ -13,6 +13,7 @@ import {
   X,
   Check,
   Loader2,
+  AlertTriangle,
 } from "lucide-react"
 import { useLocale } from "@/hooks/use-locale"
 import { Button } from "@/components/ui/button"
@@ -51,15 +52,21 @@ export function VisitCheckoutWizard({
   const [closingEncounter, setClosingEncounter] = React.useState(false)
   const [encounterClosed, setEncounterClosed] = React.useState(false)
 
-  React.useEffect(() => setMounted(true), [])
+  React.useEffect(() => {
+    const id = window.setTimeout(() => setMounted(true), 0)
+    return () => window.clearTimeout(id)
+  }, [])
 
   React.useEffect(() => {
     if (!open) return
-    setStep(1)
-    setEncounterClosed(false)
+    const id = window.setTimeout(() => {
+      setStep(1)
+      setEncounterClosed(false)
+    }, 0)
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
     return () => {
+      window.clearTimeout(id)
       document.body.style.overflow = prevOverflow
     }
   }, [open])
@@ -83,14 +90,14 @@ export function VisitCheckoutWizard({
 
   if (!open || !mounted) return null
 
-  const noteHref = `/patients/${patientId}?tab=clinical-notes${encounterId ? `&encounter=${encounterId}` : ""}`
+  const noteHref = `/patients/${patientId}/notes${encounterId ? `?encounter=${encounterId}` : ""}`
   const billingHref = billingGate?.primary_open_invoice_id
     ? `/billing/${billingGate.primary_open_invoice_id}`
     : `/patients/${patientId}/treatment-plan${encounterId ? `?encounter=${encounterId}` : ""}`
   const paymentHref = billingGate?.primary_open_invoice_id
     ? `/billing/${billingGate.primary_open_invoice_id}`
-    : `/patients/${patientId}?tab=record`
-  const encounterHref = `/patients/${patientId}?tab=encounters`
+    : `/billing?patient=${patientId}`
+  const encounterHref = `/patients/${patientId}/visits${encounterId ? `?encounter=${encounterId}` : ""}`
 
   const modal = (
     <div
@@ -159,10 +166,28 @@ export function VisitCheckoutWizard({
         </div>
 
         <div className="px-6 py-5 space-y-4 min-h-[140px]">
+          <div className="rounded-lg border border-amber-200/80 bg-amber-50/70 px-3 py-2 text-xs leading-5 text-amber-900">
+            <div className="flex gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              <p className="sm:hidden">
+                {t("queue.checkoutSoftGateShort", "Missing items stay in closeout; continue if needed.")}
+              </p>
+              <p className="hidden sm:block">
+                {t(
+                  "queue.checkoutSoftGateHint",
+                  "Soft gate: if notes, billing, or payment are not ready, finish urgent clinic work first and return here. Exceptions stay visible in closeout and audit."
+                )}
+              </p>
+            </div>
+          </div>
+
           {step === 1 ? (
             <>
               <p className="text-sm text-neutral-600">
-                {t("queue.notePrompt", "Add a clinical note while the visit is fresh.")}
+                {t(
+                  "queue.notePrompt",
+                  "Add or sign the clinical note while the visit is fresh. If the patient must leave first, this remains visible as a missing note."
+                )}
               </p>
               <Button className="w-full gap-2" asChild>
                 <Link href={noteHref} onClick={() => onOpenChange(false)}>
@@ -177,7 +202,10 @@ export function VisitCheckoutWizard({
             <>
               <p className="text-sm text-neutral-600">
                 {billingGate?.has_billing_gap
-                  ? t("queue.checkoutBillingGap", "Complete treatment plan or open invoice before checkout.")
+                  ? t(
+                      "queue.checkoutBillingGap",
+                      "Review treatment plan or open invoice. You can continue, but closeout will still highlight the balance or missing invoice."
+                    )
                   : t("queue.checkoutBillingOk", "Review billing or treatment plan for this visit.")}
               </p>
               <Button className="w-full gap-2" variant="outline" asChild>
@@ -196,7 +224,10 @@ export function VisitCheckoutWizard({
               <p className="text-sm text-neutral-600">
                 {billingGate?.primary_open_invoice_id
                   ? t("queue.checkoutPaymentDue", "Collect outstanding payment before the patient leaves.")
-                  : t("queue.checkoutPaymentClear", "No open invoice — confirm billing is complete.")}
+                  : t(
+                      "queue.checkoutPaymentClear",
+                      "No open invoice found. Confirm billing is complete or create an invoice from the treatment plan."
+                    )}
               </p>
               {billingGate?.primary_open_invoice_id ? (
                 <Button className="w-full gap-2" asChild>
@@ -226,7 +257,7 @@ export function VisitCheckoutWizard({
               <p className="text-sm text-neutral-600">
                 {t(
                   "queue.checkoutClosePrompt",
-                  "Close this visit so it no longer appears as an open encounter on the dashboard."
+                  "Close this visit so it no longer appears as an open encounter. If billing or notes are incomplete, leave it open and return from Dentist or Patient Visits."
                 )}
               </p>
               <Button
