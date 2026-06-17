@@ -84,7 +84,7 @@ begin
 end;
 $$;
 
--- 4) Portal/Kiosk kimlik doğrulama helper
+-- 4) Portal/Kiosk kimlik doğrulama helper (read-only, STABLE)
 create or replace function public._portal_resolve_patient(
   p_session_id uuid,
   p_phone text,
@@ -126,11 +126,29 @@ begin
     raise exception 'Patient not found';
   end if;
 
-  insert into public.patient_branch_links (patient_id, branch_id)
-  values (v_patient_id, v_session.branch_id)
-  on conflict (patient_id, branch_id) do nothing;
-
   return v_patient_id;
+end;
+$$;
+
+-- Branch link writes (VOLATILE — never call from STABLE functions)
+create or replace function public._portal_ensure_branch_link(
+  p_patient_id uuid,
+  p_branch_id uuid
+)
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+begin
+  if p_patient_id is null or p_branch_id is null then
+    return;
+  end if;
+
+  insert into public.patient_branch_links (patient_id, branch_id)
+  values (p_patient_id, p_branch_id)
+  on conflict (patient_id, branch_id) do nothing;
 end;
 $$;
 
@@ -166,6 +184,7 @@ begin
   end if;
 
   v_patient_id := public._portal_resolve_patient(p_session_id, p_phone, p_last_name);
+  perform public._portal_ensure_branch_link(v_patient_id, v_session.branch_id);
 
   perform public._ensure_intake_consents_for_patient(
     v_patient_id,
@@ -251,6 +270,7 @@ begin
   end if;
 
   v_patient_id := public._portal_resolve_patient(p_session_id, p_phone, p_last_name);
+  perform public._portal_ensure_branch_link(v_patient_id, v_session.branch_id);
 
   perform public._ensure_intake_consents_for_patient(
     v_patient_id,
@@ -496,6 +516,7 @@ $$;
 grant execute on function public._pending_intake_consent_count(uuid, uuid) to authenticated;
 grant execute on function public._ensure_intake_consents_for_patient(uuid, uuid, uuid, text) to authenticated;
 grant execute on function public._portal_resolve_patient(uuid, text, text) to anon, authenticated;
+grant execute on function public._portal_ensure_branch_link(uuid, uuid) to anon, authenticated;
 grant execute on function public.create_portal_consent_sign_token(uuid, text, text, text) to anon, authenticated;
 grant execute on function public.create_kiosk_consent_sign_token(uuid, text, text, text) to anon, authenticated;
 grant execute on function public.submit_portal_appointment(uuid, text, text, uuid, date, time, text) to anon, authenticated;
