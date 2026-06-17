@@ -15,6 +15,7 @@ function lt(text: LandingText, locale: string) {
 
 const ROUTE_NAV = [
   { href: "/pricing", labelKey: "pricing" as const },
+  { href: "/blog", labelKey: "blog" as const },
   { href: "/quote", labelKey: "quote" as const },
 ]
 

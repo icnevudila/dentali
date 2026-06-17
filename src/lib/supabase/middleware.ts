@@ -34,18 +34,33 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const isPublicPath =
-    request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/signup') ||
-    request.nextUrl.pathname.startsWith('/pricing') ||
-    request.nextUrl.pathname.startsWith('/quote') ||
-    request.nextUrl.pathname.startsWith('/auth') ||
-    request.nextUrl.pathname.startsWith('/welcome') ||
-    request.nextUrl.pathname.startsWith('/showcase') ||
-    request.nextUrl.pathname.startsWith('/kiosk') ||
-    request.nextUrl.pathname.startsWith('/display') ||
-    request.nextUrl.pathname.startsWith('/sign') ||
-    request.nextUrl.pathname.startsWith('/ui-preview')
+  const pathname = request.nextUrl.pathname
+
+  const PUBLIC_PATH_PREFIXES = [
+    '/login',
+    '/signup',
+    '/auth',
+    '/welcome',
+    '/pricing',
+    '/quote',
+    '/about',
+    '/contact',
+    '/privacy',
+    '/terms',
+    '/security',
+    '/blog',
+    '/resources',
+    '/showcase',
+    '/kiosk',
+    '/display',
+    '/sign',
+    '/portal',
+    '/ui-preview',
+  ] as const
+
+  const isPublicPath = PUBLIC_PATH_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  )
 
   if (!user && !isPublicPath) {
     const url = request.nextUrl.clone()

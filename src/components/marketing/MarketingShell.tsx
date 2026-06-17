@@ -12,6 +12,7 @@ import { BRAND_NAME } from "@/lib/brand"
 const NAV_ITEMS = [
   { href: "/welcome#features", labelKey: "marketing.navProduct", fallback: "Product" },
   { href: "/pricing", labelKey: "marketing.navPricing", fallback: "Pricing" },
+  { href: "/blog", labelKey: "marketing.navBlog", fallback: "Blog" },
   { href: "/quote", labelKey: "marketing.navQuote", fallback: "Get a quote" },
 ] as const
 

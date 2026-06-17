@@ -2,7 +2,6 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { BLOG_POSTS, getBlogPost } from "@/lib/marketing/blog-data"
-import { MarketingShell } from "@/components/marketing/MarketingShell"
 import { BlogCoverImage } from "@/components/marketing/BlogCoverImage"
 import { MarkdownContent } from "@/components/marketing/MarkdownContent"
 import { BlogArticleJsonLd } from "@/components/marketing/BlogArticleJsonLd"
@@ -80,7 +79,7 @@ export default async function BlogPostPage({ params }: Props) {
         ]
 
   return (
-    <MarketingShell>
+    <>
       <BlogArticleJsonLd post={post} urlPath={`/blog/${slug}`} />
 
       <article className="bg-white">
@@ -163,6 +162,6 @@ export default async function BlogPostPage({ params }: Props) {
           </aside>
         ) : null}
       </article>
-    </MarketingShell>
+    </>
   )
 }

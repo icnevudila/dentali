@@ -60,7 +60,7 @@ export function LandingFooter() {
               </h4>
               <ul className="space-y-2.5 text-sm">
                 <li>
-                  <Link href="#features" className="text-neutral-600 hover:text-primary-600 transition">
+                  <Link href="/welcome#features" className="text-neutral-600 hover:text-primary-600 transition">
                     {lt(LANDING_HEADINGS.footer.featuresLink, locale)}
                   </Link>
                 </li>

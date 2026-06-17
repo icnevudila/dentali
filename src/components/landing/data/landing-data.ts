@@ -693,6 +693,7 @@ export const LANDING_HEADINGS = {
   nav: {
     product: t("Product", "Ürün"),
     pricing: t("Pricing", "Fiyatlandırma"),
+    blog: t("Blog", "Blog"),
     quote: t("Get a quote", "Teklif alın"),
     signIn: t("Sign in", "Giriş yap"),
     startTrial: t("Start free trial", "Ücretsiz dene"),

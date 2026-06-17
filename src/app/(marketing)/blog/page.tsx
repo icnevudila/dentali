@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { BLOG_POSTS } from "@/lib/marketing/blog-data"
-import { MarketingShell } from "@/components/marketing/MarketingShell"
 import { BlogPostCard } from "@/components/marketing/BlogPostCard"
 import { BlogCoverImage } from "@/components/marketing/BlogCoverImage"
 import { getSiteUrl } from "@/lib/site-url"
@@ -29,8 +28,7 @@ export const metadata: Metadata = {
 
 export default function BlogPage() {
   return (
-    <MarketingShell>
-      <div className="bg-neutral-50/50 py-12 md:py-20">
+    <div className="bg-neutral-50/50 py-12 md:py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="max-w-3xl">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 ring-1 ring-primary-600/10">
@@ -83,6 +81,5 @@ export default function BlogPage() {
           </div>
         </div>
       </div>
-    </MarketingShell>
   )
 }
