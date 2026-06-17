@@ -18,9 +18,11 @@ import {
   fetchPortalSnapshot,
   type PortalSnapshot,
 } from "@/lib/portal/portal-status-service"
+import { savePortalSignReturn } from "@/lib/portal/portal-sign-return"
 import { notify } from "@/lib/ui/notify"
 
 type PortalStatusPanelProps = {
+  portalToken: string
   sessionId: string
   phone: string
   lastName: string
@@ -40,6 +42,7 @@ function queueStatusLabel(status: string, t: (k: string, f: string) => string): 
 }
 
 export function PortalStatusPanel({
+  portalToken,
   sessionId,
   phone,
   lastName,
@@ -80,7 +83,8 @@ export function PortalStatusPanel({
       return
     }
     if (data?.token) {
-      window.location.href = `/sign/${data.token}`
+      savePortalSignReturn({ portalToken, phone, lastName })
+      window.location.href = `/sign/${data.token}?from=portal`
     }
   }
 

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { useLocale } from "@/hooks/use-locale"
 import { PORTAL_VISIT_REASONS, type PortalVisitReasonId } from "@/lib/portal/visit-reasons"
 import { PortalStatusPanel } from "@/components/portal/PortalStatusPanel"
+import { readPortalSignReturn } from "@/lib/portal/portal-sign-return"
 import { PublicChannelBrand } from "@/components/brand/public-channel-brand"
 import { notify } from "@/lib/ui/notify"
 import { 
@@ -64,6 +65,7 @@ function PortalPageContent() {
   const searchParams = useSearchParams()
   const { t } = useLocale()
   const token = searchParams?.get("token")
+  const resume = searchParams?.get("resume")
 
   const [step, setStep] = React.useState<Step>("loading")
   const [sessionId, setSessionId] = React.useState("")
@@ -110,7 +112,7 @@ function PortalPageContent() {
       return
     }
 
-    createKioskSession(token).then(({ data, error }) => {
+    createKioskSession(token).then(async ({ data, error }) => {
       if (error || !data) {
         portalError(error ?? "Connection is invalid or has expired.")
         setStep("error")
@@ -119,9 +121,25 @@ function PortalPageContent() {
       setSessionId(data.session_id)
       setBranchId(data.branch_id)
       setBranchName(data.branch_name)
+
+      const saved = resume === "status" ? readPortalSignReturn(token) : null
+      if (saved) {
+        setPhone(saved.phone)
+        setLastName(saved.lastName)
+        const { error: verifyError } = await verifyPortalPatient(
+          data.session_id,
+          saved.phone,
+          saved.lastName
+        )
+        if (!verifyError) {
+          setStep("status")
+          return
+        }
+      }
+
       setStep("welcome")
     })
-  }, [token, portalError])
+  }, [token, resume, portalError])
 
   const handleIdentitySubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -512,6 +530,7 @@ function PortalPageContent() {
 
         {step === "status" && sessionId ? (
           <PortalStatusPanel
+            portalToken={token ?? ""}
             sessionId={sessionId}
             phone={phone}
             lastName={lastName}

@@ -9,11 +9,18 @@ import { useLocale } from "@/hooks/use-locale"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { KioskStepIndicator, kioskStepFromFlow } from "@/components/kiosk/KioskStepIndicator"
+import { KioskConsentStep } from "@/components/kiosk/KioskConsentStep"
+import {
+  fetchKioskConsentSnapshot,
+  hasPendingKioskConsents,
+  type PortalSnapshot,
+} from "@/lib/kiosk/kiosk-consent-service"
+import { readKioskSignReturn } from "@/lib/kiosk/kiosk-sign-return"
 import { PublicChannelBrand } from "@/components/brand/public-channel-brand"
 import { CheckCircle2, AlertCircle, Loader2, Users, MapPin } from "lucide-react"
 import { updateKioskMood, getKioskQueueStats } from "@/lib/kiosk/kiosk-service"
 
-type Step = "loading" | "welcome" | "form" | "mood" | "success" | "error" | "intakeForm" | "intakeSuccess" | "pending_approval"
+type Step = "loading" | "welcome" | "form" | "consents" | "mood" | "success" | "error" | "intakeForm" | "intakeSuccess" | "pending_approval"
 
 const AUTO_RESET_MS = 8_000
 const FORM_IDLE_MS = 120_000
@@ -21,6 +28,7 @@ const FORM_IDLE_MS = 120_000
 function KioskContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get("token") ?? ""
+  const resume = searchParams.get("resume")
   const { t } = useLocale()
 
   const [step, setStep] = React.useState<Step>("loading")
@@ -38,6 +46,7 @@ function KioskContent() {
   const [submitting, setSubmitting] = React.useState(false)
   const [isScreensaver, setIsScreensaver] = React.useState(false)
   const [liveQueue, setLiveQueue] = React.useState<{ serving: string[]; waitCount: number } | null>(null)
+  const [consentSnapshot, setConsentSnapshot] = React.useState<PortalSnapshot | null>(null)
 
   const resetToWelcome = React.useCallback(() => {
     setStep("welcome")
@@ -49,6 +58,7 @@ function KioskContent() {
     setQueueCode("")
     setEntryId("")
     setIntakeId("")
+    setConsentSnapshot(null)
   }, [])
 
   React.useEffect(() => {
@@ -58,7 +68,7 @@ function KioskContent() {
       return
     }
 
-    createKioskSession(token).then(({ data, error }) => {
+    createKioskSession(token).then(async ({ data, error }) => {
       if (error || !data) {
         setStep("error")
         setErrorMsg(error ?? t("kiosk.sessionFailed", "Unable to start kiosk session."))
@@ -67,9 +77,26 @@ function KioskContent() {
       setSessionId(data.session_id)
       setBranchName(data.branch_name)
       setBranchId(data.branch_id)
+
+      const saved = resume === "consents" ? readKioskSignReturn(token) : null
+      if (saved) {
+        setPhone(saved.phone)
+        setLastName(saved.lastName)
+        const { data: snapshot, error: snapError } = await fetchKioskConsentSnapshot(
+          data.session_id,
+          saved.phone,
+          saved.lastName
+        )
+        if (!snapError && snapshot) {
+          setConsentSnapshot(snapshot)
+          setStep("consents")
+          return
+        }
+      }
+
       setStep("welcome")
     })
-  }, [token, t])
+  }, [token, resume, t])
 
   React.useEffect(() => {
     if (step !== "success" && step !== "intakeSuccess" && step !== "pending_approval") return
@@ -78,7 +105,7 @@ function KioskContent() {
   }, [step, resetToWelcome])
 
   React.useEffect(() => {
-    if (step !== "form" && step !== "intakeForm") return
+    if (step !== "form" && step !== "intakeForm" && step !== "consents") return
     const id = setTimeout(resetToWelcome, FORM_IDLE_MS)
     return () => clearTimeout(id)
   }, [step, phone, lastName, firstName, email, resetToWelcome])
@@ -156,31 +183,7 @@ function KioskContent() {
     }
   }
 
-  const handleCheckIn = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitting(true)
-    setErrorMsg("")
-    const { data, error } = await submitKioskCheckin(sessionId, phone, lastName)
-    setSubmitting(false)
-    if (error || !data) {
-      if (error && error.includes("REGISTRATION_PENDING")) {
-        setStep("pending_approval")
-        playPendingSound(
-          t("kiosk.speechPending", "Your registration has been received but is pending approval at the front desk. Kaydınız alınmıştır ancak henüz banko tarafından onaylanmamıştır.")
-        )
-      } else {
-        setErrorMsg(error ?? t("kiosk.checkInFailed", "Check-in failed. Please see the front desk."))
-      }
-      return
-    }
-    setQueueCode(data.display_code)
-    if (data.entry_id) setEntryId(data.entry_id)
-    
-    // Go to mood step before success
-    setStep("mood")
-  }
-
-  const playPendingSound = (speechText: string) => {
+  const playPendingSound = React.useCallback((speechText: string) => {
     try {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext
       if (AudioContext) {
@@ -207,14 +210,87 @@ function KioskContent() {
         setTimeout(() => {
           window.speechSynthesis.cancel()
           const utterance = new SpeechSynthesisUtterance(speechText)
-          utterance.lang = "tr-TR" // Or dynamic based on text
+          utterance.lang = "tr-TR"
           utterance.rate = 0.9
           window.speechSynthesis.speak(utterance)
         }, 400)
       }
-    } catch (e) {
+    } catch {
       // Ignore
     }
+  }, [])
+
+  const performCheckIn = React.useCallback(async () => {
+    setSubmitting(true)
+    setErrorMsg("")
+    const { data, error } = await submitKioskCheckin(sessionId, phone, lastName)
+    setSubmitting(false)
+    if (error || !data) {
+      if (error && error.includes("REGISTRATION_PENDING")) {
+        setStep("pending_approval")
+        playPendingSound(
+          t(
+            "kiosk.speechPending",
+            "Your registration has been received but is pending approval at the front desk. Kaydınız alınmıştır ancak henüz banko tarafından onaylanmamıştır."
+          )
+        )
+      } else if (error && /intake forms|sign intake/i.test(error)) {
+        const { data: snapshot, error: snapError } = await fetchKioskConsentSnapshot(
+          sessionId,
+          phone,
+          lastName
+        )
+        if (!snapError && snapshot && hasPendingKioskConsents(snapshot)) {
+          setConsentSnapshot(snapshot)
+          setStep("consents")
+          setErrorMsg("")
+        } else {
+          setErrorMsg(error ?? t("kiosk.checkInFailed", "Check-in failed. Please see the front desk."))
+        }
+      } else {
+        setErrorMsg(error ?? t("kiosk.checkInFailed", "Check-in failed. Please see the front desk."))
+      }
+      return
+    }
+    setQueueCode(data.display_code)
+    if (data.entry_id) setEntryId(data.entry_id)
+    setStep("mood")
+  }, [sessionId, phone, lastName, t, playPendingSound])
+
+  const handleAllConsentsSigned = React.useCallback(() => {
+    void performCheckIn()
+  }, [performCheckIn])
+
+  const handleCheckIn = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setErrorMsg("")
+
+    const { data: snapshot, error } = await fetchKioskConsentSnapshot(sessionId, phone, lastName)
+    setSubmitting(false)
+
+    if (error || !snapshot) {
+      if (error?.includes("REGISTRATION_PENDING")) {
+        setStep("pending_approval")
+        playPendingSound(
+          t(
+            "kiosk.speechPending",
+            "Your registration has been received but is pending approval at the front desk. Kaydınız alınmıştır ancak henüz banko tarafından onaylanmamıştır."
+          )
+        )
+        return
+      }
+      setErrorMsg(error ?? t("kiosk.checkInFailed", "Check-in failed. Please see the front desk."))
+      return
+    }
+
+    if (hasPendingKioskConsents(snapshot)) {
+      setConsentSnapshot(snapshot)
+      setStep("consents")
+      return
+    }
+
+    await performCheckIn()
   }
 
   const handleMoodSelect = async (mood: string) => {
@@ -507,6 +583,19 @@ function KioskContent() {
             </form>
           </div>
         )}
+
+        {step === "consents" && sessionId ? (
+          <KioskConsentStep
+            kioskToken={token}
+            sessionId={sessionId}
+            phone={phone}
+            lastName={lastName}
+            branchName={branchName}
+            initialSnapshot={consentSnapshot}
+            onBack={() => setStep("form")}
+            onAllSigned={handleAllConsentsSigned}
+          />
+        ) : null}
 
         {step === "mood" && (
           <div className="rounded-[2rem] border border-white bg-white/70 p-10 text-center shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-8 fade-in duration-500">

@@ -1,7 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { ShieldCheck, PenTool, CheckCircle2 } from "lucide-react"
+import Link from "next/link"
+import { useSearchParams } from "next/navigation"
+import { ShieldCheck, PenTool, CheckCircle2, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useRouteParams } from "@/hooks/use-route-params"
@@ -31,9 +33,21 @@ import { ConsentScrollProgress } from "@/components/consent/ConsentScrollProgres
 import { ConsentSigningSteps } from "@/components/consent/ConsentSigningSteps"
 import { ConsentFieldProgress } from "@/components/consent/ConsentFieldProgress"
 import { useConsentScrollGate } from "@/hooks/use-consent-scroll-gate"
+import { readPortalSignReturn } from "@/lib/portal/portal-sign-return"
+import { readKioskSignReturn } from "@/lib/kiosk/kiosk-sign-return"
+import { useLocale } from "@/hooks/use-locale"
 
 export default function PublicConsentSignPage() {
   const { token } = useRouteParams<{ token: string }>()
+  const searchParams = useSearchParams()
+  const { t } = useLocale()
+  const fromChannel = searchParams?.get("from")
+  const fromPortal = fromChannel === "portal"
+  const fromKiosk = fromChannel === "kiosk"
+  const [portalReturn, setPortalReturn] = React.useState<ReturnType<
+    typeof readPortalSignReturn
+  >>(null)
+  const [kioskReturn, setKioskReturn] = React.useState<ReturnType<typeof readKioskSignReturn>>(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [ctx, setCtx] = React.useState<Awaited<ReturnType<typeof fetchConsentBySigningToken>>["data"]>(null)
@@ -44,6 +58,15 @@ export default function PublicConsentSignPage() {
   const [signerName, setSignerName] = React.useState("")
   const [signerRole, setSignerRole] = React.useState<SignerRole>("patient")
   const [fieldResponses, setFieldResponses] = React.useState<ConsentFieldResponses>({})
+
+  React.useEffect(() => {
+    if (fromPortal) {
+      setPortalReturn(readPortalSignReturn())
+    }
+    if (fromKiosk) {
+      setKioskReturn(readKioskSignReturn())
+    }
+  }, [fromPortal, fromKiosk])
 
   React.useEffect(() => {
     if (!token) return
@@ -160,10 +183,53 @@ export default function PublicConsentSignPage() {
 
         {isSigned ? (
           <Card className="border-emerald-200 bg-emerald-50/50">
-            <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+            <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
               <CheckCircle2 className="h-12 w-12 text-emerald-600" />
-              <p className="font-medium text-emerald-900">Thank you — your consent has been recorded.</p>
-              <p className="text-sm text-emerald-800">You may close this page or return to the front desk.</p>
+              <p className="font-medium text-emerald-900">
+                {t("consent.signSuccessTitle", "Thank you — your consent has been recorded.")}
+              </p>
+              {portalReturn ? (
+                <>
+                  <p className="text-sm text-emerald-800">
+                    {t(
+                      "consent.signSuccessPortalHint",
+                      "You can return to your visit page to see updated status."
+                    )}
+                  </p>
+                  <Button asChild className="mt-1">
+                    <Link
+                      href={`/portal?token=${encodeURIComponent(portalReturn.portalToken)}&resume=status`}
+                    >
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      {t("consent.backToMyVisit", "Back to My visit")}
+                    </Link>
+                  </Button>
+                </>
+              ) : kioskReturn ? (
+                <>
+                  <p className="text-sm text-emerald-800">
+                    {t(
+                      "consent.signSuccessKioskHint",
+                      "Return to the kiosk to finish check-in."
+                    )}
+                  </p>
+                  <Button asChild className="mt-1">
+                    <Link
+                      href={`/kiosk?token=${encodeURIComponent(kioskReturn.kioskToken)}&resume=consents`}
+                    >
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      {t("consent.backToKiosk", "Back to check-in")}
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                <p className="text-sm text-emerald-800">
+                  {t(
+                    "consent.signSuccessCloseHint",
+                    "You may close this page or return to the front desk."
+                  )}
+                </p>
+              )}
             </CardContent>
           </Card>
         ) : (
