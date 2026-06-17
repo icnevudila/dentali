@@ -8,7 +8,7 @@ import { isPrimaryToothNumber } from "@/lib/odontogram/svg-assets"
 import { Button } from "@/components/ui/button"
 import { ToothDetailDrawer } from "./ToothDetailDrawer"
 import { cn } from "@/lib/utils"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { MousePointerClick, ShieldAlert } from "lucide-react"
 
 interface OdontogramWorkspaceProps {
@@ -34,13 +34,28 @@ export function OdontogramWorkspace({
 
   React.useEffect(() => {
     if (initialSelectedTooth == null) return
-    setSelectedTooth(initialSelectedTooth)
-    setShowPrimary(isPrimaryToothNumber(initialSelectedTooth))
+    const id = window.setTimeout(() => {
+      setSelectedTooth(initialSelectedTooth)
+      setShowPrimary(isPrimaryToothNumber(initialSelectedTooth))
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [initialSelectedTooth])
 
   React.useEffect(() => {
     onSelectedToothChange?.(selectedTooth)
   }, [selectedTooth, onSelectedToothChange])
+
+  React.useEffect(() => {
+    if (!selectedTooth || readOnly || typeof window === "undefined") return
+    if (window.innerWidth >= 1280) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [selectedTooth, readOnly])
 
   const handleToothClick = (number: number) => {
     if (readOnly) return
@@ -135,21 +150,31 @@ export function OdontogramWorkspace({
         <div className={cn(
           "w-full shrink-0 xl:w-[380px] print:hidden",
           selectedTooth && !readOnly
-            ? "fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 xl:relative xl:inset-auto xl:z-0 xl:flex xl:items-start xl:justify-start xl:bg-transparent xl:backdrop-blur-none xl:p-0"
+            ? "fixed inset-0 z-50 flex items-end justify-center xl:relative xl:inset-auto xl:z-0 xl:flex xl:items-start xl:justify-start"
             : "hidden xl:block"
         )}>
           {selectedTooth && !readOnly ? (
-            <div className="w-full max-w-md xl:max-w-none">
-              <ToothDetailDrawer
-                selectedTooth={selectedTooth}
-                currentFinding={selectedFinding}
-                onClose={() => setSelectedTooth(null)}
-                onSaveFinding={(f) => {
-                  onSaveFinding(f)
-                }}
-                data-testid="tooth-drawer"
+            <>
+              <button
+                type="button"
+                className="absolute inset-0 bg-black/40 backdrop-blur-sm xl:hidden"
+                aria-label="Close tooth detail"
+                onClick={() => setSelectedTooth(null)}
               />
-            </div>
+              <div className="relative z-[1] w-full xl:max-w-none">
+                <div className="max-h-[88dvh] overflow-hidden rounded-t-[1.75rem] xl:max-h-none xl:rounded-none">
+                  <ToothDetailDrawer
+                    selectedTooth={selectedTooth}
+                    currentFinding={selectedFinding}
+                    onClose={() => setSelectedTooth(null)}
+                    onSaveFinding={(f) => {
+                      onSaveFinding(f)
+                    }}
+                    data-testid="tooth-drawer"
+                  />
+                </div>
+              </div>
+            </>
           ) : (
             <Card className="flex min-h-[420px] xl:min-h-[560px] flex-col border-neutral-200 shadow-sm bg-neutral-50/50 justify-center items-center text-center p-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-50 text-primary-600 mb-4 ring-8 ring-primary-50/50 animate-pulse">

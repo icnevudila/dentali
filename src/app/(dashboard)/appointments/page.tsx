@@ -66,6 +66,7 @@ import { DirectionalTransition } from "@/components/layout/DirectionalTransition
 import { useOperationalRefresh } from "@/hooks/use-operational-refresh"
 import { resolveBookingSource } from "@/lib/appointments/booking-source"
 import type { BookingSource } from "@/lib/appointments/booking-source"
+import { WorkflowStatusBanner } from "@/components/layout/WorkflowStatusBanner"
 
 export default function AppointmentsPage() {
   return (
@@ -607,6 +608,28 @@ function AppointmentsPageContent() {
               </Button>
             </div>
           ) : null}
+
+          <WorkflowStatusBanner
+            title={t("appointments.workflowBannerTitle", "Automation affecting appointments")}
+            description={t(
+              "appointments.workflowBannerDescription",
+              "Check-in handoff, no-show handling, and waitlist follow-up depend on branch workflow toggles."
+            )}
+            items={[
+              {
+                key: "auto_checkin_updates_appointment",
+                label: t("appointments.workflowCheckinSync", "Queue check-in sync"),
+              },
+              {
+                key: "auto_waitlist_on_slot_open",
+                label: t("appointments.workflowWaitlist", "Waitlist slot alerts"),
+              },
+              {
+                key: "auto_no_show_after_grace",
+                label: t("appointments.workflowNoShow", "Auto no-show rule"),
+              },
+            ]}
+          />
 
           {activeBranch ? (
             <AppointmentsDaySummary

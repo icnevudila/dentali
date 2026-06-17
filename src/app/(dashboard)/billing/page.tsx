@@ -25,6 +25,7 @@ import { RecordRow } from "@/components/layout/RecordRow"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
+import { WorkflowStatusBanner } from "@/components/layout/WorkflowStatusBanner"
 
 const STATUS_FILTERS: InvoiceStatusFilter[] = ["all", "open", "paid", "void"]
 
@@ -163,6 +164,28 @@ function BillingPageContent() {
           />
         ) : null}
 
+        <WorkflowStatusBanner
+          title={t("billing.workflowBannerTitle", "Automation affecting billing")}
+          description={t(
+            "billing.workflowBannerDescription",
+            "Invoice drafting, booking or check-in billing gates, and reminder automations depend on branch settings."
+          )}
+          items={[
+            {
+              key: "auto_approve_creates_invoice",
+              label: t("billing.workflowInvoiceDraft", "Plan approval event"),
+            },
+            {
+              key: "billing_gate_block_services",
+              label: t("billing.workflowBillingGate", "Booking and check-in gate"),
+            },
+            {
+              key: "auto_payment_reminder",
+              label: t("billing.workflowReminder", "Payment reminders"),
+            },
+          ]}
+        />
+
         {activeBranch ? (
           <ReportDrillLink
             title={t("billing.reportsTitle", "Collections and AR analytics")}
@@ -233,14 +256,44 @@ function BillingPageContent() {
                 <Receipt className="mx-auto mb-3 h-10 w-10 text-neutral-300" aria-hidden />
                 <p className="text-neutral-600">{t("billing.empty", "No invoices yet.")}</p>
                 <p className="mt-2 text-sm text-neutral-500">
-                  {t("billing.emptyHint", "Approve a treatment plan and convert it to an invoice.")}
+                  {patientFilter
+                    ? t(
+                        "billing.emptyPatientHint",
+                        "This patient has no invoices yet. Start from the treatment plan or create a manual invoice."
+                      )
+                    : t(
+                        "billing.emptyHint",
+                        "Approve a treatment plan and convert it to an invoice."
+                      )}
                 </p>
-                <Button variant="outline" className="mt-4" asChild>
-                  <Link href="/patients">{t("billing.goToPatients", "Go to Patients")}</Link>
-                </Button>
-                <Button variant="ghost" className="mt-4 ml-2" asChild>
-                  <Link href="/settings/workflow">{t("billing.workflowSettings", "Automation settings")}</Link>
-                </Button>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  {patientFilter ? (
+                    <>
+                      <Button onClick={() => setShowCreate(true)}>
+                        {t("billing.createInvoice", "New invoice")}
+                      </Button>
+                      <Button variant="outline" asChild>
+                        <Link href={`/patients/${patientFilter}/treatment-plan`}>
+                          {t("billing.openTreatmentPlan", "Open treatment plan")}
+                        </Link>
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="outline" asChild>
+                        <Link href="/patients">{t("billing.goToPatients", "Go to Patients")}</Link>
+                      </Button>
+                      <Button onClick={() => setShowCreate(true)}>
+                        {t("billing.createInvoice", "New invoice")}
+                      </Button>
+                    </>
+                  )}
+                  <Button variant="ghost" asChild>
+                    <Link href="/settings/workflow">
+                      {t("billing.workflowSettings", "Automation settings")}
+                    </Link>
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="space-y-2">

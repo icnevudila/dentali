@@ -51,12 +51,20 @@ export function TypedConfirmDialog({
 
   React.useEffect(() => {
     if (!open) {
-      setValue("")
-      setMismatch(false)
-      return
+      const id = window.setTimeout(() => {
+        setValue("")
+        setMismatch(false)
+      }, 0)
+      return () => window.clearTimeout(id)
     }
+    const resetId = window.setTimeout(() => {
+      setMismatch(false)
+    }, 0)
     const id = window.setTimeout(() => inputRef.current?.focus(), 50)
-    return () => window.clearTimeout(id)
+    return () => {
+      window.clearTimeout(resetId)
+      window.clearTimeout(id)
+    }
   }, [open])
 
   React.useEffect(() => {
@@ -98,7 +106,7 @@ export function TypedConfirmDialog({
     >
       <Card
         className={cn(
-          "w-full max-w-md bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:rounded-xl sm:slide-in-from-bottom-0 sm:zoom-in-95",
+          "flex max-h-[min(92vh,100dvh)] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[92vh] sm:rounded-xl sm:slide-in-from-bottom-0 sm:zoom-in-95",
           borderTone
         )}
         onClick={(e) => e.stopPropagation()}
@@ -106,7 +114,8 @@ export function TypedConfirmDialog({
         aria-modal="true"
         aria-labelledby="typed-confirm-title"
       >
-        <CardHeader className="border-b pb-2">
+        <CardHeader className="shrink-0 border-b px-5 pb-3 pt-3 sm:px-6 sm:pt-6">
+          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-300 sm:hidden" aria-hidden />
           <CardTitle id="typed-confirm-title" className="flex items-center justify-between gap-2 text-base">
             <span className={cn("flex items-center gap-2", titleTone)}>
               <Icon className="h-4 w-4 shrink-0" aria-hidden />
@@ -123,7 +132,7 @@ export function TypedConfirmDialog({
             </Button>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 pt-4">
+        <CardContent className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 sm:px-6">
           <p className="text-sm leading-6 text-neutral-700">{description}</p>
           <form className="space-y-3" onSubmit={(e) => void handleSubmit(e)}>
             <div>
@@ -155,18 +164,26 @@ export function TypedConfirmDialog({
                 </p>
               ) : null}
             </div>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={loading}
-              >
-                {cancelLabel ?? t("common.cancel", "Cancel")}
-              </Button>
-              <Button type="submit" disabled={loading || !value.trim()} variant="default">
-                {loading ? t("common.loading", "Loading…") : confirmLabel}
-              </Button>
+            <div className="sticky bottom-0 -mx-5 mt-5 border-t border-neutral-100 bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 sm:-mx-6 sm:px-6">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={loading}
+                  className="h-11 w-full sm:w-auto"
+                >
+                  {cancelLabel ?? t("common.cancel", "Cancel")}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading || !value.trim()}
+                  variant="default"
+                  className="h-11 w-full sm:w-auto"
+                >
+                  {loading ? t("common.loading", "Loading…") : confirmLabel}
+                </Button>
+              </div>
             </div>
           </form>
         </CardContent>

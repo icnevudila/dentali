@@ -67,6 +67,7 @@ import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { ClinicDayBar } from "@/components/layout/ClinicDayBar"
 import { useClinicDay } from "@/hooks/use-clinic-day"
 import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
+import { WorkflowStatusBanner } from "@/components/layout/WorkflowStatusBanner"
 
 type Tab = "board" | "history"
 
@@ -908,6 +909,28 @@ function QueuePageContent() {
                   ).replace("{day}", formattedDay)
                 : null
             }
+          />
+
+          <WorkflowStatusBanner
+            title={t("queue.workflowBannerTitle", "Automation affecting queue flow")}
+            description={t(
+              "queue.workflowBannerDescription",
+              "Check-in gates, linked appointment updates, and served follow-up can be different per branch."
+            )}
+            items={[
+              {
+                key: "consent_gate_checkin",
+                label: t("queue.workflowConsentGate", "Consent gate"),
+              },
+              {
+                key: "auto_checkin_updates_appointment",
+                label: t("queue.workflowAppointmentSync", "Appointment sync"),
+              },
+              {
+                key: "auto_served_completes_appointment",
+                label: t("queue.workflowServed", "Served completes appointment"),
+              },
+            ]}
           />
 
           <QueueDaySummary

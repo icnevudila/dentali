@@ -38,10 +38,27 @@ export function MedicalHistoryVersionDrawer({
 
   React.useEffect(() => {
     if (open && versions.length >= 2) {
-      setCompareA(versions[1]?.version ?? "")
-      setCompareB(versions[0]?.version ?? "")
+      const id = window.setTimeout(() => {
+        setCompareA(versions[1]?.version ?? "")
+        setCompareB(versions[0]?.version ?? "")
+      }, 0)
+      return () => window.clearTimeout(id)
     }
   }, [open, versions])
+
+  React.useEffect(() => {
+    if (!open) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      window.removeEventListener("keydown", onKey)
+    }
+  }, [open, onClose])
 
   if (!open) return null
 
@@ -61,20 +78,24 @@ export function MedicalHistoryVersionDrawer({
     recordA && recordB && (recordA.notes ?? "") !== (recordB.notes ?? "")
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      <button type="button" className="absolute inset-0 bg-black/30" onClick={onClose} aria-label="Close" />
-      <div className="relative w-full max-w-md bg-white shadow-xl h-full overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-neutral-200 px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <History className="h-5 w-5 text-neutral-500" />
-            <h2 className="font-semibold text-neutral-950">Version history</h2>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:justify-end">
+      <button type="button" className="absolute inset-0" onClick={onClose} aria-label="Close" />
+      <div className="relative flex h-[min(92vh,100dvh)] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:h-full sm:rounded-none">
+        <div className="sticky top-0 border-b border-neutral-200 bg-white px-4 py-3">
+          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-300 sm:hidden" aria-hidden />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <History className="h-5 w-5 text-neutral-500" />
+              <h2 className="font-semibold text-neutral-950">Version history</h2>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
         </div>
 
-        <div className="p-4 space-y-6">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+          <div className="space-y-6">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">All versions</CardTitle>
@@ -183,6 +204,7 @@ export function MedicalHistoryVersionDrawer({
               </CardContent>
             </Card>
           )}
+          </div>
         </div>
       </div>
     </div>

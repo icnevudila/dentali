@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Package, Trash2 } from "lucide-react"
+import { Package, Trash2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -53,8 +53,24 @@ export function ProcedureBomEditor({
   }, [branchId, procedureId])
 
   useEffect(() => {
-    void load()
+    const id = window.setTimeout(() => {
+      void load()
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [load])
+
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !saving) onClose()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      window.removeEventListener("keydown", onKey)
+    }
+  }, [onClose, saving])
 
   const handleAdd = async () => {
     const qty = parseFloat(quantity)
@@ -89,33 +105,42 @@ export function ProcedureBomEditor({
   const availableItems = items.filter((item) => !usedIds.has(item.id))
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+      onClick={() => {
+        if (!saving) onClose()
+      }}
+    >
       <div
-        className="w-full max-w-lg rounded-xl border border-neutral-200 bg-white shadow-xl"
+        className="flex max-h-[min(92vh,100dvh)] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-neutral-200 bg-white shadow-xl sm:max-h-[92vh] sm:rounded-xl"
         role="dialog"
         aria-labelledby="bom-editor-title"
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-3 border-b border-neutral-100 px-5 py-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-              {t("settings.procedureBom", "Procedure BOM")}
-            </p>
-            <h2 id="bom-editor-title" className="text-base font-semibold text-neutral-900">
-              {procedureName}
-            </h2>
-            <p className="mt-1 text-xs text-neutral-500">
-              {t(
-                "settings.procedureBomHint",
-                "Materials auto-deduct from inventory when the procedure is marked served."
-              )}
-            </p>
+        <div className="shrink-0 border-b border-neutral-100 px-5 py-4 sm:px-6">
+          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-300 sm:hidden" aria-hidden />
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                {t("settings.procedureBom", "Procedure BOM")}
+              </p>
+              <h2 id="bom-editor-title" className="text-base font-semibold text-neutral-900">
+                {procedureName}
+              </h2>
+              <p className="mt-1 text-xs text-neutral-500">
+                {t(
+                  "settings.procedureBomHint",
+                  "Materials auto-deduct from inventory when the procedure is marked served."
+                )}
+              </p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onClose} disabled={saving} aria-label={t("common.close", "Close")}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            {t("common.close", "Close")}
-          </Button>
         </div>
 
-        <div className="space-y-4 px-5 py-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:px-6">
           {error ? (
             <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
               {error}
@@ -186,6 +211,12 @@ export function ProcedureBomEditor({
               disabled={saving || !selectedItemId}
             >
               {t("common.add", "Add")}
+            </Button>
+          </div>
+
+          <div className="sticky bottom-0 -mx-5 mt-6 border-t border-neutral-100 bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 sm:-mx-6 sm:px-6">
+            <Button variant="outline" onClick={onClose} disabled={saving} className="h-11 w-full">
+              {t("common.close", "Close")}
             </Button>
           </div>
         </div>

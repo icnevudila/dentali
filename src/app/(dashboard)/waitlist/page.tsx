@@ -35,6 +35,7 @@ import { WaitlistAddDialog } from "@/components/waitlist/WaitlistAddDialog"
 import { WaitlistOpsSummary } from "@/components/waitlist/WaitlistOpsSummary"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { notify } from "@/lib/ui/notify"
+import { WorkflowStatusBanner } from "@/components/layout/WorkflowStatusBanner"
 
 type TabFilter = "active" | "history"
 
@@ -241,6 +242,22 @@ export default function WaitlistPage() {
             {t("waitlist.history", "History")}
           </Button>
         </div>
+
+        {activeBranch && tab === "active" ? (
+          <WorkflowStatusBanner
+            title={t("waitlist.workflowBannerTitle", "Automation affecting waitlist")}
+            description={t(
+              "waitlist.workflowBannerDescription",
+              "Open-slot notifications and follow-up depend on branch workflow settings."
+            )}
+            items={[
+              {
+                key: "auto_waitlist_on_slot_open",
+                label: t("waitlist.workflowSlotAlerts", "Open-slot alerts"),
+              },
+            ]}
+          />
+        ) : null}
 
         {activeBranch && tab === "active" ? (
           <ReportDrillLink

@@ -12,6 +12,7 @@ import { BRAND_NAME } from "@/lib/brand"
 const NAV_ITEMS = [
   { href: "/welcome#features", labelKey: "marketing.navProduct", fallback: "Product" },
   { href: "/pricing", labelKey: "marketing.navPricing", fallback: "Pricing" },
+  { href: "/resources", labelKey: "marketing.navResources", fallback: "Resources" },
   { href: "/blog", labelKey: "marketing.navBlog", fallback: "Blog" },
   { href: "/quote", labelKey: "marketing.navQuote", fallback: "Get a quote" },
 ] as const
@@ -104,11 +105,29 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
             <Link href="/pricing" className="hover:text-primary-700">
               {t("marketing.navPricing", "Pricing")}
             </Link>
+            <Link href="/resources" className="hover:text-primary-700">
+              {t("marketing.navResources", "Resources")}
+            </Link>
             <Link href="/quote" className="hover:text-primary-700">
               {t("marketing.navQuote", "Get a quote")}
             </Link>
             <Link href="/blog" className="hover:text-primary-700">
               Blog
+            </Link>
+            <Link href="/about" className="hover:text-primary-700">
+              {t("marketing.navAbout", "About")}
+            </Link>
+            <Link href="/contact" className="hover:text-primary-700">
+              {t("marketing.navContact", "Contact")}
+            </Link>
+            <Link href="/security" className="hover:text-primary-700">
+              {t("marketing.navSecurity", "Security")}
+            </Link>
+            <Link href="/privacy" className="hover:text-primary-700">
+              {t("marketing.navPrivacy", "Privacy")}
+            </Link>
+            <Link href="/terms" className="hover:text-primary-700">
+              {t("marketing.navTerms", "Terms")}
             </Link>
             <Link href="/login" className="hover:text-primary-700">
               {t("marketing.signIn", "Sign in")}

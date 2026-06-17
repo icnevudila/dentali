@@ -22,7 +22,7 @@ export function LandingFooter() {
           
           {/* Logo & Slogan Column */}
           <div className="md:col-span-5 space-y-4">
-            <DentQLLogo href="/" size="md" />
+            <DentQLLogo href="/welcome" size="md" />
             <p className="text-sm text-neutral-500 max-w-sm">
               {lt(LANDING_HEADINGS.footer.slogan, locale)}
             </p>
@@ -95,6 +95,11 @@ export function LandingFooter() {
                 <li>
                   <Link href="/blog" className="text-neutral-600 hover:text-primary-600 transition">
                     {lt(LANDING_HEADINGS.footer.blogLink, locale)}
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/resources" className="text-neutral-600 hover:text-primary-600 transition">
+                    {locale === "tr" ? "Kaynaklar" : "Resources"}
                   </Link>
                 </li>
               </ul>

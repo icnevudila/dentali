@@ -12,7 +12,6 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Button } from "@/components/ui/button"
 import { X, Check, MousePointerClick } from "lucide-react"
 import { ToothSurfaceMap } from "./ToothSurfaceMap"
-import { ToothSurfaceAtlas } from "./ToothSurfaceAtlas"
 import { isPrimaryToothNumber } from "@/lib/odontogram/svg-assets"
 import { cn } from "@/lib/utils"
 
@@ -35,27 +34,32 @@ export function ToothDetailDrawer({
 }: ToothDetailDrawerProps) {
   const [draft, setDraft] = React.useState<Partial<ToothFinding>>({})
 
-  React.useEffect(() => {
-    if (currentFinding) {
-      setDraft(currentFinding)
-    } else {
-      setDraft({
-        condition: null,
-        surfaces: [],
-        restoration_type: null,
-        surgery_type: null,
-        notes: "",
-        dentition_type: selectedTooth && isPrimaryToothNumber(selectedTooth) ? "primary" : "permanent",
-      })
-    }
-  }, [selectedTooth, currentFinding])
+  const initialDraft = React.useMemo<Partial<ToothFinding>>(() => {
+    if (!selectedTooth) return {}
+    if (currentFinding) return currentFinding
 
-  if (!selectedTooth) return null
+    return {
+      condition: null,
+      surfaces: [],
+      restoration_type: null,
+      surgery_type: null,
+      notes: "",
+      dentition_type: isPrimaryToothNumber(selectedTooth) ? "primary" : "permanent",
+    }
+  }, [currentFinding, selectedTooth])
+
+  React.useEffect(() => {
+    const id = window.setTimeout(() => {
+      setDraft(initialDraft)
+    }, 0)
+    return () => window.clearTimeout(id)
+  }, [initialDraft])
 
   const surfacesDisabled =
     draft.condition != null && MISSING_CONDITIONS.has(draft.condition)
 
   const saveDraft = React.useCallback((updatedDraft: Partial<ToothFinding>) => {
+    if (!selectedTooth) return
     onSaveFinding({
       ...updatedDraft,
       tooth_number: selectedTooth.toString(),
@@ -65,6 +69,8 @@ export function ToothDetailDrawer({
       status: "active",
     })
   }, [selectedTooth, onSaveFinding])
+
+  if (!selectedTooth) return null
 
   const handleSurfaceClick = (surface: ToothSurface) => {
     if (surfacesDisabled) return
@@ -113,13 +119,13 @@ export function ToothDetailDrawer({
   }
 
   const clearFinding = () => {
-    const updated = {
+    const updated: Partial<ToothFinding> = {
       condition: null,
       surfaces: [],
       restoration_type: null,
       surgery_type: null,
       notes: "",
-      dentition_type: (isPrimaryToothNumber(selectedTooth) ? "primary" : "permanent") as any,
+      dentition_type: isPrimaryToothNumber(selectedTooth) ? "primary" : "permanent",
     }
     setDraft(updated)
     saveDraft(updated)
@@ -128,9 +134,11 @@ export function ToothDetailDrawer({
   return (
     <Card
       data-testid={testId}
-      className="flex h-full flex-col border-neutral-200 shadow-lg sticky top-4"
+      className="flex h-full max-h-full flex-col overflow-hidden border-neutral-200 shadow-lg xl:sticky xl:top-4"
     >
-      <CardHeader className="flex flex-row items-start justify-between gap-2 border-b border-neutral-200 bg-neutral-50 pb-4">
+      <CardHeader className="shrink-0 border-b border-neutral-200 bg-neutral-50 px-5 pb-4 pt-3 sm:px-6 sm:pt-6">
+        <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-300 xl:hidden" aria-hidden />
+        <div className="flex flex-row items-start justify-between gap-2">
         <div>
           <CardTitle className="text-xl">Tooth {selectedTooth}</CardTitle>
           <CardDescription>FDI · condition, surfaces, restoration, notes</CardDescription>
@@ -138,9 +146,10 @@ export function ToothDetailDrawer({
         <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close tooth panel">
           <X className="h-4 w-4" />
         </Button>
+        </div>
       </CardHeader>
 
-      <CardContent className="flex-1 space-y-6 overflow-y-auto p-5">
+      <CardContent className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-4 sm:px-5 sm:pt-5">
         <div className="relative flex flex-col items-center rounded-xl border border-neutral-200 bg-neutral-50/50 p-5">
           <div className="absolute left-3 top-3 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
             <MousePointerClick className="h-3 w-3" /> Surfaces
@@ -241,7 +250,7 @@ export function ToothDetailDrawer({
         </section>
       </CardContent>
 
-      <CardFooter className="border-t border-neutral-200 bg-neutral-50 p-4">
+      <CardFooter className="shrink-0 border-t border-neutral-200 bg-neutral-50 p-4">
         <Button variant="outline" className="w-full gap-2" onClick={onClose}>
           <Check className="h-4 w-4" />
           Done / Close Panel
