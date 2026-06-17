@@ -141,7 +141,12 @@ export function AppointmentEditDialog({
     const preferred =
       originalDate === date ? originalTime : undefined
     setTime((prev) =>
-      pickDefaultSlotTime(data, preferred ?? prev, originalDate === date ? originalTime : undefined)
+      pickDefaultSlotTime(
+        data,
+        preferred ?? prev,
+        originalDate === date ? originalTime : undefined,
+        date
+      )
     )
   }, [open, branchId, providerId, date, appointment, originalDate, originalTime])
 
@@ -293,6 +298,7 @@ export function AppointmentEditDialog({
                   selectedTime={time}
                   onSelect={setTime}
                   currentTime={originalDate === date ? originalTime : undefined}
+                  date={date}
                   loading={slotsLoading}
                 />
                 {!slotsLoading && slots.length === 0 ? (

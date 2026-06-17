@@ -104,7 +104,7 @@ export function WaitlistBookDialog({
       setSlots(data)
       setSlotsLoading(false)
       if (slotError) notify.error(slotError)
-      setTime((prev) => pickDefaultSlotTime(data, prev))
+      setTime((prev) => pickDefaultSlotTime(data, prev, undefined, date))
     })
   }, [open, activeBranch, providerId, date])
 
@@ -212,10 +212,11 @@ export function WaitlistBookDialog({
               </p>
             ) : (
               <AppointmentSlotButtons
-                slots={slots}
-                selectedTime={time}
-                onSelect={setTime}
-                loading={slotsLoading}
+              slots={slots}
+              selectedTime={time}
+              onSelect={setTime}
+              date={date}
+              loading={slotsLoading}
                 emptyMessage={t("appointments.noSlotsBook", "No open slots — pick another day.")}
               />
             )}

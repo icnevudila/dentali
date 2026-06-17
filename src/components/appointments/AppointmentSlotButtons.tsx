@@ -1,6 +1,7 @@
 "use client"
 
 import { useLocale } from "@/hooks/use-locale"
+import { isPastManilaSlot } from "@/lib/appointments/appointment-slots"
 import type { AppointmentSlot } from "@/lib/appointments/provider-availability-service"
 import { cn } from "@/lib/utils"
 
@@ -10,6 +11,8 @@ export function AppointmentSlotButtons({
   selectedTime,
   onSelect,
   currentTime,
+  date,
+  disablePast = true,
   loading,
   emptyMessage,
 }: {
@@ -17,6 +20,8 @@ export function AppointmentSlotButtons({
   selectedTime: string
   onSelect: (time: string) => void
   currentTime?: string
+  date?: string
+  disablePast?: boolean
   loading?: boolean
   emptyMessage?: string
 }) {
@@ -38,7 +43,8 @@ export function AppointmentSlotButtons({
     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
       {slots.map((slot) => {
         const isCurrent = currentTime === slot.time
-        const selectable = slot.available || isCurrent
+        const isPast = Boolean(date && disablePast && isPastManilaSlot(date, slot.time) && !isCurrent)
+        const selectable = (slot.available || isCurrent) && !isPast
         const isSelected = selectedTime === slot.time
 
         return (
@@ -60,7 +66,11 @@ export function AppointmentSlotButtons({
             )}
           >
             {slot.time}
-            {!slot.available && !isCurrent ? (
+            {isPast ? (
+              <span className="ml-1 text-[10px] font-normal opacity-70">
+                ({t("appointments.slotPast", "Past")})
+              </span>
+            ) : !slot.available && !isCurrent ? (
               <span className="ml-1 text-[10px] font-normal opacity-70">
                 ({t("appointments.slotFull", "Full")})
               </span>

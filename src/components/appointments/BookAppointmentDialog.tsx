@@ -86,7 +86,7 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
       setSlots(data)
       setSlotsLoading(false)
       if (slotError) notify.error(slotError)
-      setTime((prev) => pickDefaultSlotTime(data, prev))
+      setTime((prev) => pickDefaultSlotTime(data, prev, undefined, date))
     })
   }, [open, activeBranch, providerId, date])
 
@@ -202,6 +202,7 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
                 slots={slots}
                 selectedTime={time}
                 onSelect={setTime}
+                date={date}
                 loading={slotsLoading}
                 emptyMessage={t("appointments.noSlotsBook", "No open slots — pick another day.")}
               />

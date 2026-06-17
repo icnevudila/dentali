@@ -19,7 +19,6 @@ import {
 import {
   checkInAppointment,
   fetchAppointments,
-  autoNoShowForBranch,
   type AppointmentRecord,
 } from "@/lib/appointments/appointment-service"
 import { toDateKey } from "@/lib/appointments/week-calendar"
@@ -233,15 +232,6 @@ function QueuePageContent() {
   React.useEffect(() => {
     if (!activeBranch || !isToday) return
     void (async () => {
-      const { data: noShowResult } = await autoNoShowForBranch(activeBranch.id)
-      if (noShowResult && noShowResult.marked > 0) {
-        notify.info(
-          t("queue.autoNoShowMarked", "{n} overdue appointment(s) marked no-show.").replace(
-            "{n}",
-            String(noShowResult.marked)
-          )
-        )
-      }
       const { data } = await fetchAppointments(activeBranch.id, today)
       setTodayAppointments(
         data.filter((a) => a.status === "scheduled" || a.status === "confirmed")

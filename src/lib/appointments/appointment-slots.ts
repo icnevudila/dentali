@@ -24,20 +24,29 @@ export async function fetchPreparedAppointmentSlots(params: {
 export function pickDefaultSlotTime(
   slots: AppointmentSlot[],
   preferred?: string,
-  currentEditable?: string
+  currentEditable?: string,
+  date?: string
 ): string {
+  const usableSlots = date
+    ? slots.filter((slot) => !isPastManilaSlot(date, slot.time) || slot.time === currentEditable)
+    : slots
+
   if (
     preferred &&
-    slots.some(
+    usableSlots.some(
       (slot) =>
         slot.time === preferred && (slot.available || slot.time === currentEditable)
     )
   ) {
     return preferred
   }
-  return slots.find((slot) => slot.available)?.time ?? ""
+  return usableSlots.find((slot) => slot.available)?.time ?? ""
 }
 
 export function manilaScheduledAtIso(date: string, time: string): string {
   return new Date(`${date}T${time}:00+08:00`).toISOString()
+}
+
+export function isPastManilaSlot(date: string, time: string): boolean {
+  return new Date(`${date}T${time}:00+08:00`).getTime() < Date.now()
 }

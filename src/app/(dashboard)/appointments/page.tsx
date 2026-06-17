@@ -214,7 +214,7 @@ function AppointmentsPageContent() {
       setSlots(data)
       setSlotsLoading(false)
       if (slotError) notify.error(slotError)
-      setTime((prev) => pickDefaultSlotTime(data, prev))
+      setTime((prev) => pickDefaultSlotTime(data, prev, undefined, date))
     })
   }, [activeBranch, selectedProviderId, date])
 
@@ -598,9 +598,29 @@ function AppointmentsPageContent() {
         ) : null}
 
         {showBook && (
-          <Card className="border-primary-200/60 shadow-sm">
+          <div className="fixed inset-0 z-[220] flex items-end justify-center bg-neutral-950/45 p-0 sm:items-center sm:p-4">
+            <button
+              type="button"
+              className="absolute inset-0 cursor-default"
+              aria-label={t("common.close", "Close")}
+              onClick={() => setShowBook(false)}
+            />
+          <Card className="relative z-[221] max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border-primary-200/60 shadow-2xl sm:rounded-2xl">
             <CardHeader>
-              <CardTitle className="text-base">{t("appointments.newAppointment", "New Appointment")}</CardTitle>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base">{t("appointments.newAppointment", "New Appointment")}</CardTitle>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {t(
+                      "appointments.bookModalHint",
+                      "Booking schedules a future arrival. Use Queue > Patient arrival if the patient is already in clinic."
+                    )}
+                  </p>
+                </div>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setShowBook(false)}>
+                  {t("common.close", "Close")}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleBook} className="grid gap-4 sm:grid-cols-2">
@@ -726,7 +746,7 @@ function AppointmentsPageContent() {
                               date,
                             })
                             setSlots(newSlots)
-                            setTime((prev) => pickDefaultSlotTime(newSlots, prev))
+                            setTime((prev) => pickDefaultSlotTime(newSlots, prev, undefined, date))
                             notify.success(t("appointments.slotsConfigured", "Working hours configured."))
                           } catch (err: unknown) {
                             notify.error(
@@ -745,6 +765,7 @@ function AppointmentsPageContent() {
                       slots={slots}
                       selectedTime={time}
                       onSelect={setTime}
+                      date={date}
                       loading={slotsLoading}
                       emptyMessage={t(
                         "appointments.noSlotsBook",
@@ -836,6 +857,7 @@ function AppointmentsPageContent() {
               </form>
             </CardContent>
           </Card>
+          </div>
         )}
 
         {loading ? (
