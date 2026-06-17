@@ -599,6 +599,20 @@ export async function finalizeCloseoutDay(
   return { data: String(data), error: null }
 }
 
+export async function reopenTodayCloseoutDay(
+  branchId: string | null,
+  date?: string
+): Promise<{ data: string | null; error: string | null }> {
+  const supabase = createClient()
+  const targetDate = date ?? toDateKey(new Date())
+  const { data, error } = await supabase.rpc("reopen_today_closeout_snapshot", {
+    p_branch_id: branchId,
+    p_date: targetDate,
+  })
+  if (error) return { data: null, error: error.message }
+  return { data: String(data), error: null }
+}
+
 export async function fetchCloseoutHistory(
   branchId: string | null,
   limit = 30

@@ -10,6 +10,7 @@ import {
   fetchEffectiveNotificationTemplates,
   fetchNotificationLogs,
   fetchNotificationStatus,
+  logManualWhatsAppNotification,
   maskPhone,
   renderPreview,
   sendSms,
@@ -32,6 +33,7 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { MapPin } from "lucide-react"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
+import { buildWhatsAppSendUrl } from "@/lib/notifications/whatsapp"
 
 const SAMPLE_VARS: Record<string, string> = {
   patient_name: "Maria Santos",
@@ -79,6 +81,7 @@ export default function NotificationsSettingsPage() {
   const [resetting, setResetting] = React.useState(false)
   const [testPhone, setTestPhone] = React.useState("")
   const [sending, setSending] = React.useState(false)
+  const [openingWhatsApp, setOpeningWhatsApp] = React.useState(false)
   const [tab, setTab] = React.useState<"templates" | "logs">("templates")
 
   const selected = templates.find((tpl) => tpl.template_key === selectedKey) ?? templates[0]
@@ -106,15 +109,22 @@ export default function NotificationsSettingsPage() {
   }, [activeBranch, selectedKey])
 
   React.useEffect(() => {
-    load()
+    const id = window.setTimeout(() => {
+      load()
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [load])
 
   React.useEffect(() => {
     if (selected) {
-      setEditBody(selected.effective_body)
-      setOrgEditBody(selected.org_default_body)
+      const id = window.setTimeout(() => {
+        setEditBody(selected.effective_body)
+        setOrgEditBody(selected.org_default_body)
+      }, 0)
+      return () => window.clearTimeout(id)
     }
-  }, [selected?.template_key, selected?.effective_body, selected?.org_default_body])
+    return undefined
+  }, [selected])
 
   const handleSave = async () => {
     if (!selected || !activeBranch || !canWrite) return
@@ -191,9 +201,32 @@ export default function NotificationsSettingsPage() {
     }
   }
 
+  const handleOpenWhatsApp = async () => {
+    if (!selected || !activeBranch || !testPhone.trim() || !whatsAppHref) return
+    setOpeningWhatsApp(true)
+    const opened = window.open(whatsAppHref, "_blank", "noopener,noreferrer")
+    const { error: err } = await logManualWhatsAppNotification({
+      phone: testPhone.trim(),
+      body: preview,
+      branchId: activeBranch.id,
+      templateKey: selected.template_key,
+    })
+    setOpeningWhatsApp(false)
+    if (err) {
+      setError(err)
+    } else {
+      setTab("logs")
+      load()
+    }
+    if (!opened) {
+      setError(t("settings.notificationsPopupBlocked", "WhatsApp popup was blocked by the browser."))
+    }
+  }
+
   const preview = selected
     ? renderPreview(templateScope === "org" && canEditOrg ? orgEditBody : editBody, SAMPLE_VARS)
     : ""
+  const whatsAppHref = testPhone.trim() ? buildWhatsAppSendUrl(testPhone.trim(), preview) : null
   const isDirty =
     templateScope === "org" && canEditOrg
       ? selected
@@ -474,6 +507,28 @@ export default function NotificationsSettingsPage() {
                             />
                             <Button className="gap-2 shrink-0" disabled={sending || !testPhone.trim()} onClick={handleTestSend}>
                               <Send className="h-4 w-4" /> {t("settings.notificationsTest", "Test")}
+                            </Button>
+                          </div>
+                          <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+                            <p className="font-medium text-neutral-800">
+                              {t("settings.notificationsManualWhatsApp", "Manual WhatsApp option")}
+                            </p>
+                            <p className="mt-1">
+                              {t(
+                                "settings.notificationsManualWhatsAppHint",
+                                "Opens the same preview in WhatsApp. No paid WhatsApp API is used; keep SMS dry-run on while testing templates."
+                              )}
+                            </p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="mt-2"
+                              disabled={!whatsAppHref || openingWhatsApp}
+                              onClick={() => void handleOpenWhatsApp()}
+                            >
+                              {openingWhatsApp
+                                ? t("settings.notificationsLoggingWhatsApp", "Logging…")
+                                : t("settings.notificationsOpenWhatsApp", "Open WhatsApp")}
                             </Button>
                           </div>
                         </div>

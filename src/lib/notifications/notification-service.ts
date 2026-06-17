@@ -241,6 +241,26 @@ export async function sendSms(params: {
   }
 }
 
+export async function logManualWhatsAppNotification(params: {
+  phone: string
+  body: string
+  branchId: string
+  templateKey?: string
+  patientId?: string
+}): Promise<{ data: { log_id: string } | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("log_manual_whatsapp_notification", {
+    p_branch_id: params.branchId,
+    p_phone: params.phone,
+    p_body: params.body,
+    p_template_key: params.templateKey ?? null,
+    p_patient_id: params.patientId ?? null,
+  })
+
+  if (error) return { data: null, error: error.message }
+  return { data: { log_id: String(data) }, error: null }
+}
+
 export async function sendEmail(params: {
   to: string
   subject: string

@@ -676,10 +676,10 @@ export default function ReportsHubPage() {
         >
           <div className="grid min-w-0 gap-4 2xl:grid-cols-2">
             <ReportPanelCaption
-              title={t("reports.panelAppointmentsTitle", "Appointments and monthly booking board")}
+              title={t("reports.panelAppointmentsTitle", "Appointment calendar report")}
               description={t(
                 "reports.panelAppointmentsDescription",
-                "Follow occupancy, no-shows, cancellations, and the read-only monthly booking board to see who is booked and what kind of visit is coming."
+                "Read the schedule like the appointment page: who is booked, which dentist is assigned, the visit reason, and daily load."
               )}
             >
               <AppointmentsAnalyticsPanel branchId={activeBranch.id} periodDays={periodDays} />

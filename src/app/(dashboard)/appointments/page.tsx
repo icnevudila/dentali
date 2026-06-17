@@ -82,6 +82,8 @@ function AppointmentsPageContent() {
   const viewToday = searchParams.get("view") === "today"
   const dateParam = searchParams.get("date")
   const appointmentParam = searchParams.get("appointment")
+  const patientParam = searchParams.get("patient")
+  const patientNameParam = searchParams.get("patientName")
   const sourceParam = searchParams.get("source")
   const bookingSourceFilter: BookingSource | null =
     sourceParam === "portal" || sourceParam === "kiosk" || sourceParam === "walk_in" || sourceParam === "phone"
@@ -182,6 +184,20 @@ function AppointmentsPageContent() {
     }, 0)
     return () => window.clearTimeout(id)
   }, [dateParam])
+
+  React.useEffect(() => {
+    if (!patientParam) return
+    const id = window.setTimeout(() => {
+      const bookingDate =
+        dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : selectedDate
+      setSelectedPatientId(patientParam)
+      setPatientQuery(patientNameParam ?? "Selected Patient")
+      setPatients([])
+      setShowBook(true)
+      setDate(bookingDate)
+    }, 0)
+    return () => window.clearTimeout(id)
+  }, [dateParam, patientNameParam, patientParam, selectedDate])
 
   React.useEffect(() => {
     if (!appointmentParam || !activeBranch) return
@@ -868,6 +884,7 @@ function AppointmentsPageContent() {
                     disabled={
                       booking ||
                       !selectedPatientId ||
+                      !date ||
                       !time ||
                       slots.length === 0 ||
                       (bookingBillingGate?.has_billing_gap && !forceBillingOverride)

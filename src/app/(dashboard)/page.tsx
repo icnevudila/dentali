@@ -17,7 +17,6 @@ import { DashboardVisualPanel } from "@/components/dashboard/DashboardVisualPane
 import { AttentionPanel } from "@/components/dashboard/AttentionPanel"
 import { DailyCloseoutCard } from "@/components/dashboard/DailyCloseoutCard"
 import { DashboardOpsSummary } from "@/components/dashboard/DashboardOpsSummary"
-import { MonthlyAppointmentsSnapshot } from "@/components/analytics/MonthlyAppointmentsSnapshot"
 import { useReportsSummary } from "@/hooks/use-reports-summary"
 import {
   Plus,
@@ -157,7 +156,6 @@ export default function DashboardPage() {
                   ).replace("{days}", chartPeriodLabel),
                 }}
               />
-              <MonthlyAppointmentsSnapshot branchId={activeBranch.id} />
             </div>
             <div className="w-full shrink-0 space-y-4 xl:w-72">
             <AttentionPanel

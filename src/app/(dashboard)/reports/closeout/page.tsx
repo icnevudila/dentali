@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Download, Printer, RefreshCw, Save, Wallet, CheckCircle2, XCircle, FileWarning, Receipt, PackageX, Lock } from "lucide-react"
+import { ArrowLeft, Download, Printer, RefreshCw, Save, Wallet, CheckCircle2, XCircle, FileWarning, Receipt, PackageX, Lock, Unlock } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { MetricStrip } from "@/components/layout/MetricStrip"
@@ -12,11 +12,12 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { useBranch } from "@/hooks/use-branch"
 import { useClinicDay } from "@/hooks/use-clinic-day"
 import { useLocale } from "@/hooks/use-locale"
-import { addDaysToKey, parseDateKey } from "@/lib/appointments/week-calendar"
+import { parseDateKey } from "@/lib/appointments/week-calendar"
 import {
   fetchCloseoutHistory,
   fetchDailyCloseout,
   finalizeCloseoutDay,
+  reopenTodayCloseoutDay,
   saveCloseoutSnapshot,
   type CloseoutSnapshot,
   type DailyCloseout,
@@ -57,6 +58,7 @@ function DailyCloseoutContent() {
   const [history, setHistory] = useState<CloseoutSnapshot[]>([])
   const [savingSnapshot, setSavingSnapshot] = useState(false)
   const [finalizingDay, setFinalizingDay] = useState(false)
+  const [reopeningDay, setReopeningDay] = useState(false)
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -75,7 +77,10 @@ function DailyCloseoutContent() {
   }, [activeBranch?.id, clinicDay, previousDay])
 
   useEffect(() => {
-    void reload()
+    const id = window.setTimeout(() => {
+      void reload()
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [reload])
 
   const dayLabel = isToday
@@ -218,13 +223,16 @@ function DailyCloseoutContent() {
 
   const handleFinalizeDay = async () => {
     if (!isToday || dayFinalized) return
-    const ok = window.confirm(
+    const confirmation = window.prompt(
       t(
         "closeout.finalizeConfirm",
-        "Finalize today's closeout? This locks billing edits for this clinic day until an admin reverses it."
+        "Type FINALIZE to lock billing edits for today's clinic day."
       )
     )
-    if (!ok) return
+    if (confirmation !== "FINALIZE") {
+      notify.error(t("closeout.finalizeCancelled", "Closeout was not finalized"))
+      return
+    }
     setFinalizingDay(true)
     const { error: err } = await finalizeCloseoutDay(activeBranch?.id ?? null, clinicDay)
     setFinalizingDay(false)
@@ -233,6 +241,30 @@ function DailyCloseoutContent() {
       notify.error(err)
     } else {
       notify.success(t("closeout.finalized", "Clinic day finalized — billing is locked for today"))
+      void reload()
+    }
+  }
+
+  const handleReopenDay = async () => {
+    if (!isToday || !dayFinalized) return
+    const confirmation = window.prompt(
+      t(
+        "closeout.reopenConfirm",
+        "Type REOPEN to unlock today's billing edits and return the closeout to draft."
+      )
+    )
+    if (confirmation !== "REOPEN") {
+      notify.error(t("closeout.reopenCancelled", "Closeout remains finalized"))
+      return
+    }
+    setReopeningDay(true)
+    const { error: err } = await reopenTodayCloseoutDay(activeBranch?.id ?? null, clinicDay)
+    setReopeningDay(false)
+    if (err) {
+      setError(err)
+      notify.error(err)
+    } else {
+      notify.success(t("closeout.reopened", "Clinic day reopened — billing edits are unlocked"))
       void reload()
     }
   }
@@ -351,6 +383,20 @@ function DailyCloseoutContent() {
                 ? t("closeout.dayFinalized", "Day finalized")
                 : t("closeout.finalizeDay", "Finalize day & lock billing")}
             </Button>
+            {isToday && dayFinalized ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void handleReopenDay()}
+                disabled={!data || reopeningDay}
+                title={t("closeout.reopenHint", "Admin-only undo for an accidental same-day closeout")}
+              >
+                <Unlock className="mr-1.5 h-3.5 w-3.5" />
+                {reopeningDay
+                  ? t("closeout.reopening", "Reopening…")
+                  : t("closeout.reopenToday", "Reopen today")}
+              </Button>
+            ) : null}
             <Button size="sm" variant="outline" onClick={handleExport} disabled={!data}>
               <Download className="mr-1.5 h-3.5 w-3.5" />
               {t("closeout.exportCsv", "Export CSV")}
@@ -411,7 +457,7 @@ function DailyCloseoutContent() {
                 ? dayFinalized
                   ? t(
                       "closeout.finalizedHint",
-                      "This clinic day is finalized. Invoice and payment edits are locked."
+                      "This clinic day is finalized. Invoice and payment edits are locked; admins can reopen today's closeout if it was finalized by mistake."
                     )
                   : t(
                       "closeout.snapshotHint",

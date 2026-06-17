@@ -9,10 +9,14 @@ import type { PatientRecord } from "@/lib/patients/patient-service"
 import { cn } from "@/lib/utils"
 import {
   Calendar,
+  ClipboardList,
+  FileText,
   ExternalLink,
   MoreHorizontal,
   Pencil,
   Phone,
+  Receipt,
+  Stethoscope,
   UserRound,
 } from "lucide-react"
 
@@ -32,7 +36,8 @@ export function PatientRowActions({ patient, className, listContext = "registry"
   const buttonRef = React.useRef<HTMLButtonElement>(null)
 
   React.useEffect(() => {
-    setMounted(true)
+    const id = window.setTimeout(() => setMounted(true), 0)
+    return () => window.clearTimeout(id)
   }, [])
 
   const updateMenuPosition = React.useCallback(() => {
@@ -86,6 +91,8 @@ export function PatientRowActions({ patient, className, listContext = "registry"
   }
 
   const phoneDigits = patient.phone?.replace(/\D/g, "") ?? ""
+  const fullName = `${patient.first_name} ${patient.last_name}`.trim()
+  const appointmentHref = `/appointments?patient=${patient.id}&patientName=${encodeURIComponent(fullName)}`
 
   const menu =
     open && mounted ? (
@@ -116,12 +123,51 @@ export function PatientRowActions({ patient, className, listContext = "registry"
             {t("patients.actionEdit", "Edit demographics")}
           </MenuLink>
           <MenuLink
-            href={`/appointments`}
+            href={appointmentHref}
             icon={Calendar}
             onNavigate={() => setOpen(false)}
           >
             {t("patients.actionAppointment", "Schedule visit")}
           </MenuLink>
+          {listContext === "daily" ? (
+            <>
+              <MenuLink
+                href={`/patients/${patient.id}/visits`}
+                icon={ClipboardList}
+                onNavigate={() => setOpen(false)}
+              >
+                {t("patients.actionVisits", "Open visits")}
+              </MenuLink>
+              <MenuLink
+                href={`/patients/${patient.id}/notes`}
+                icon={FileText}
+                onNavigate={() => setOpen(false)}
+              >
+                {t("patients.actionClinicalNotes", "Clinical notes")}
+              </MenuLink>
+              <MenuLink
+                href={`/patients/${patient.id}/chart`}
+                icon={Stethoscope}
+                onNavigate={() => setOpen(false)}
+              >
+                {t("patients.actionDentalChart", "Dental chart")}
+              </MenuLink>
+              <MenuLink
+                href={`/patients/${patient.id}/treatment-plan`}
+                icon={ClipboardList}
+                onNavigate={() => setOpen(false)}
+              >
+                {t("patients.actionTreatmentPlan", "Treatment plan")}
+              </MenuLink>
+              <MenuLink
+                href={`/billing?patient=${patient.id}`}
+                icon={Receipt}
+                onNavigate={() => setOpen(false)}
+              >
+                {t("patients.actionBilling", "Billing")}
+              </MenuLink>
+            </>
+          ) : null}
           {phoneDigits ? (
             <a
               role="menuitem"
