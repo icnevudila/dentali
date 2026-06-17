@@ -39,7 +39,7 @@ export function ModuleAnalyticsPanel({
   return (
     <div
       className={cn(
-        "rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]",
+        "min-w-0 rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]",
         className
       )}
     >

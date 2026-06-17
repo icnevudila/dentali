@@ -94,7 +94,8 @@ function BillingPageContent() {
     )
     const outstanding = open.reduce((sum, inv) => sum + (inv.total_amount - inv.paid_amount), 0)
     const paid = scopedInvoices.filter((inv) => inv.status === "paid").length
-    return { total: scopedInvoices.length, open: open.length, outstanding, paid }
+    const overdue = filterOverdueInvoices(scopedInvoices).length
+    return { total: scopedInvoices.length, open: open.length, outstanding, paid, overdue }
   }, [scopedInvoices])
 
   const filterLabel = (f: InvoiceStatusFilter) => {
@@ -151,6 +152,7 @@ function BillingPageContent() {
             open={billingStats.open}
             outstanding={billingStats.outstanding}
             paid={billingStats.paid}
+            overdue={billingStats.overdue}
             loading={loading}
             branchName={activeBranch.name}
           />

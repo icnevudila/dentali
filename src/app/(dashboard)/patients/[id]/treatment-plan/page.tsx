@@ -544,12 +544,12 @@ function TreatmentPlanContent() {
         ) : (
           <>
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
                   <CardTitle>{planTitle}</CardTitle>
                   <Badge className="mt-2">{planStatus}</Badge>
                 </div>
-                <p className="text-lg font-bold">₱{total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</p>
+                <p className="shrink-0 text-lg font-bold">₱{total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</p>
               </CardHeader>
               <CardContent>
                 {items.length === 0 ? (

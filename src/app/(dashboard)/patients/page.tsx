@@ -86,6 +86,7 @@ function PatientsPageContent() {
   const urlQuery = searchParams.get("q") ?? ""
   const urlPage = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1)
   const attentionConsents = searchParams.get("attention") === "consents"
+  const attentionIntake = searchParams.get("attention") === "intake"
   const intakeSourceParam = searchParams.get("intakeSource")
   const intakeSourceFilter: IntakeSourceFilter =
     intakeSourceParam === "kiosk" ||
@@ -204,6 +205,11 @@ function PatientsPageContent() {
       document.getElementById("pending-intake-panel")?.scrollIntoView({ behavior: "smooth", block: "start" })
     })
   }, [router, searchParams])
+
+  React.useEffect(() => {
+    if (!attentionIntake) return
+    scrollToIntakePanel("all")
+  }, [attentionIntake, scrollToIntakePanel])
 
   const handleIntakeCountsChange = React.useCallback((counts: IntakeDraftCounts) => {
     setIntakeCounts(counts)
@@ -336,6 +342,23 @@ function PatientsPageContent() {
                 {t(
                   "patients.attentionConsentsHint",
                   "Open a patient profile → Consents tab to collect or follow up on unsigned forms."
+                )}
+              </p>
+              <Button variant="outline" size="sm" className="mt-2" asChild>
+                <Link href="/patients">{t("billing.clearFilter", "Clear filter")}</Link>
+              </Button>
+            </div>
+          ) : null}
+
+          {attentionIntake ? (
+            <div className="rounded-xl border border-amber-200/80 bg-amber-50/50 px-4 py-3 text-sm text-amber-950 animate-fade-rise">
+              <p className="font-medium">
+                {t("patients.attentionIntakeTitle", "Pending intake drafts need review")}
+              </p>
+              <p className="mt-1 text-amber-900/80">
+                {t(
+                  "patients.attentionIntakeHint",
+                  "Review kiosk and portal registrations below before check-in."
                 )}
               </p>
               <Button variant="outline" size="sm" className="mt-2" asChild>

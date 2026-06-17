@@ -176,7 +176,7 @@ export function ProviderAvailabilityPanel({
           ) : canWrite && branchId ? (
             <>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                <label className="text-sm flex-1 min-w-[200px]">
+                <label className="min-w-0 flex-1 text-sm sm:min-w-[200px]">
                   <span className="font-medium text-neutral-700">
                     {t("appointments.editProvider", "Provider")}
                   </span>
@@ -203,7 +203,8 @@ export function ProviderAvailabilityPanel({
               ) : null}
 
               <div className="overflow-x-auto rounded-lg border border-neutral-200">
-                <div className="grid min-w-[520px] grid-cols-[88px_1fr_1fr_72px_64px] gap-2 border-b border-neutral-100 bg-neutral-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
+                <div className="min-w-0 sm:min-w-[520px]">
+                <div className="grid grid-cols-[88px_1fr_1fr_72px_64px] gap-2 border-b border-neutral-100 bg-neutral-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
                   <span>{t("appointments.colDay", "Day")}</span>
                   <span>{t("appointments.colStart", "Start")}</span>
                   <span>{t("appointments.colEnd", "End")}</span>
@@ -255,6 +256,7 @@ export function ProviderAvailabilityPanel({
                       </label>
                     </div>
                   ))}
+                </div>
                 </div>
               </div>
 

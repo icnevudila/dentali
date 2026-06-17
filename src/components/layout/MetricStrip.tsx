@@ -17,7 +17,7 @@ export function MetricStrip({ items, className }: { items: MetricItem[]; classNa
   if (items.length === 0) return null
 
   return (
-    <div className={cn("grid gap-3 sm:grid-cols-2 lg:grid-cols-4", className)}>
+    <div className={cn("grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4", className)}>
       {items.map((item, index) => {
         const Icon = item.icon
         const inner = (

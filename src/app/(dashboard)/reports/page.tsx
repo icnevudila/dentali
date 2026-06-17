@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useCallback } from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import {
   BarChart3,
   Calendar,
@@ -21,6 +21,9 @@ import {
   FileWarning,
   Clock3,
   Monitor,
+  UserCheck,
+  Timer,
+  AlertTriangle,
 } from "lucide-react"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { MetricStrip } from "@/components/layout/MetricStrip"
@@ -29,6 +32,7 @@ import { useOwnerAnalytics } from "@/hooks/use-owner-analytics"
 import { StatusBreakdown } from "@/components/charts/StatusBreakdown"
 import { ReportQuickLinks, type ReportLink } from "@/components/reports/ReportQuickLinks"
 import { ReportsSectionBlock } from "@/components/reports/ReportsSectionBlock"
+import { ReportsSectionNav } from "@/components/reports/ReportsSectionNav"
 import { ReportPanelCaption } from "@/components/reports/ReportPanelCaption"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
@@ -64,6 +68,8 @@ export default function ReportsHubPage() {
   const { activeBranch } = useBranch()
   const { t, locale } = useLocale()
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
   const [periodDays, setPeriodDays] = useState<PeriodDays>(7)
   const { summary, loading, error, reload } = useReportsSummary(periodDays, locale)
   const { data: ownerAnalytics } = useOwnerAnalytics(periodDays, locale)
@@ -72,6 +78,40 @@ export default function ReportsHubPage() {
   const periodLabel = String(periodDays)
   const patientPeriodDays = periodDays < 30 ? 30 : periodDays
   const focus = searchParams.get("focus")
+
+  const sectionNav = useMemo(
+    () => [
+      { id: "today", label: t("reports.sectionToday", "Today") },
+      { id: "overview", label: t("reports.sectionOverview", "Overview") },
+      { id: "operations", label: t("reports.operationsEyebrow", "Operations") },
+      { id: "clinical", label: t("reports.clinicalEyebrow", "Clinical") },
+      { id: "finance", label: t("reports.financeEyebrow", "Finance") },
+      { id: "benchmark", label: t("reports.benchmarkEyebrow", "Owner view") },
+      { id: "compliance", label: t("reports.complianceEyebrow", "Compliance") },
+      { id: "devices", label: t("reports.devicesEyebrow", "Patient-facing") },
+      { id: "modules", label: t("reports.sectionModules", "Drill-down") },
+    ],
+    [t]
+  )
+
+  const syncPeriodToUrl = useCallback(
+    (days: PeriodDays) => {
+      const params = new URLSearchParams(searchParams.toString())
+      params.set("period", String(days))
+      const hash = typeof window !== "undefined" ? window.location.hash : ""
+      const qs = params.toString()
+      router.replace(`${pathname}?${qs}${hash}`, { scroll: false })
+    },
+    [pathname, router, searchParams]
+  )
+
+  const handlePeriodChange = useCallback(
+    (days: PeriodDays) => {
+      setPeriodDays(days)
+      syncPeriodToUrl(days)
+    },
+    [syncPeriodToUrl]
+  )
 
   useEffect(() => {
     const nextPeriod = Number(searchParams.get("period"))
@@ -83,6 +123,15 @@ export default function ReportsHubPage() {
     }
     return undefined
   }, [searchParams])
+
+  useEffect(() => {
+    const hash = window.location.hash.replace("#", "")
+    if (!hash) return
+    const timer = window.setTimeout(() => {
+      document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "start" })
+    }, 120)
+    return () => window.clearTimeout(timer)
+  }, [focus, periodDays, loading])
 
   const focusCopy = useMemo(() => {
     if (!focus) return null
@@ -131,20 +180,50 @@ export default function ReportsHubPage() {
       {
         title: t("reports.linkAppointments", "Appointments"),
         description: t("reports.linkAppointmentsDesc", "Schedule, check-in, and day view"),
-        href: "/appointments",
+        href: "/appointments?view=today",
         icon: Calendar,
+      },
+      {
+        title: t("reports.linkQueue", "Queue"),
+        description: t("reports.linkQueueDesc", "Live board, check-in, and patient flow"),
+        href: "/queue",
+        icon: UserCheck,
+      },
+      {
+        title: t("reports.linkWaitlist", "Waitlist"),
+        description: t("reports.linkWaitlistDesc", "Off-calendar demand and slot recovery"),
+        href: "/waitlist",
+        icon: Timer,
       },
       {
         title: t("reports.linkBilling", "Billing & invoices"),
         description: t("reports.linkBillingDesc", "Open invoices and payment ledger"),
-        href: "/billing",
+        href: "/billing?focus=open",
         icon: Receipt,
+      },
+      {
+        title: t("reports.linkCloseout", "Daily closeout"),
+        description: t("reports.linkCloseoutDesc", "End-of-day collections and balances"),
+        href: "/reports/closeout",
+        icon: Wallet,
       },
       {
         title: t("reports.linkPatients", "Patient registry"),
         description: t("reports.linkPatientsDesc", "Demographics and consent status"),
         href: "/patients",
         icon: Users,
+      },
+      {
+        title: t("reports.linkHmo", "HMO claims"),
+        description: t("reports.linkHmoDesc", "Draft and submitted reimbursements"),
+        href: "/billing/hmo?status=draft",
+        icon: FileWarning,
+      },
+      {
+        title: t("reports.linkPhilHealth", "PhilHealth"),
+        description: t("reports.linkPhilHealthDesc", "Pending claim preparation"),
+        href: "/billing/philhealth?status=pending",
+        icon: Shield,
       },
       {
         title: t("reports.linkAudit", "Audit log"),
@@ -161,7 +240,7 @@ export default function ReportsHubPage() {
       {
         title: t("reports.linkInventory", "Inventory"),
         description: t("reports.linkInventoryDesc", "Stock levels and low-stock alerts"),
-        href: "/inventory",
+        href: "/inventory?alerts=1",
         icon: Package,
       },
     ],
@@ -212,33 +291,105 @@ export default function ReportsHubPage() {
     {
       label: t("dashboard.todayAppointments", "Today's Appointments"),
       value: stats.today_appointments,
-      hint: t("reports.metricAppointmentsOpen", "Open appointments calendar"),
+      hint: t("reports.metricAppointmentsOpen", "Open today's calendar"),
       icon: Calendar,
       href: "/appointments?view=today",
     },
     {
+      label: t("dashboard.awaitingCheckin", "Awaiting check-in"),
+      value: stats.appointments_awaiting_checkin,
+      hint: t("dashboard.awaitingCheckinHint", "Queue check-in column"),
+      icon: UserCheck,
+      variant: stats.appointments_awaiting_checkin > 0 ? ("warning" as const) : ("default" as const),
+      href: "/queue?focus=checkin",
+    },
+    {
+      label: t("dashboard.queueWaiting", "In queue"),
+      value: stats.queue_waiting,
+      hint: t("queue.metricWaitingHint", "Waiting board column"),
+      icon: Timer,
+      variant: stats.queue_waiting > 0 ? ("warning" as const) : ("default" as const),
+      href: "/queue?focus=waiting",
+    },
+    {
+      label: t("dashboard.waitlistWaiting", "Waitlist"),
+      value: stats.waitlist_waiting,
+      hint: t("dashboard.waitlistWaitingHint", "Open waitlist"),
+      icon: Clock3,
+      variant: stats.waitlist_waiting > 0 ? ("warning" as const) : ("default" as const),
+      href: "/waitlist",
+    },
+    {
       label: t("dashboard.collectedToday", "Collected Today"),
       value: `₱${stats.today_collected.toLocaleString()}`,
-      hint: t("reports.metricCollectedOpen", "Open billing ledger"),
+      hint: t("reports.closeout", "Daily closeout report"),
       icon: Wallet,
       variant: stats.today_collected > 0 ? ("success" as const) : ("default" as const),
       href: "/reports/closeout",
     },
     {
+      label: t("dashboard.openInvoices", "Open Invoices"),
+      value: stats.open_invoices,
+      hint: t("billing.openOnly", "Open only"),
+      icon: Receipt,
+      variant: stats.open_invoices > 0 ? ("warning" as const) : ("default" as const),
+      href: "/billing?focus=open",
+    },
+    {
+      label: t("dashboard.overdueInvoices", "Overdue"),
+      value: stats.overdue_invoices,
+      hint: t("billing.overdueOnly", "Overdue only"),
+      icon: AlertTriangle,
+      variant: stats.overdue_invoices > 0 ? ("warning" as const) : ("default" as const),
+      href: "/billing?focus=overdue",
+    },
+    {
       label: t("dashboard.pendingConsents", "Pending Consents"),
       value: stats.pending_consents,
-      hint: t("dashboard.pendingConsentsHint", "Awaiting patient signature"),
+      hint: t("dashboard.pendingConsentsHint", "Registry filter"),
       icon: FileWarning,
       variant: stats.pending_consents > 0 ? ("warning" as const) : ("default" as const),
       href: "/patients?attention=consents",
     },
     {
-      label: t("dashboard.openInvoices", "Open Invoices"),
-      value: stats.open_invoices,
-      hint: t("dashboard.viewBilling", "View billing"),
+      label: t("dashboard.pendingIntakeDrafts", "Intake drafts"),
+      value: stats.pending_intake_drafts,
+      hint: t("patients.metricPendingIntakeHint", "Review registrations"),
+      icon: Users,
+      variant: stats.pending_intake_drafts > 0 ? ("warning" as const) : ("default" as const),
+      href: "/patients?attention=intake",
+    },
+    {
+      label: t("dashboard.missingNotes", "Missing notes"),
+      value: stats.missing_clinical_notes,
+      hint: t("appointments.focusMissingNotes", "Appointments filter"),
+      icon: FileWarning,
+      variant: stats.missing_clinical_notes > 0 ? ("warning" as const) : ("default" as const),
+      href: "/appointments?focus=missing-notes",
+    },
+    {
+      label: t("dashboard.lowStockItems", "Low stock"),
+      value: stats.low_stock_items,
+      hint: t("inventory.filterAlerts", "Alerts only"),
+      icon: Package,
+      variant: stats.low_stock_items > 0 ? ("warning" as const) : ("default" as const),
+      href: "/inventory?alerts=1",
+    },
+    {
+      label: t("dashboard.hmoDraft", "HMO drafts"),
+      value: stats.hmo_draft_claims,
+      hint: t("reports.linkHmoDesc", "Draft claims"),
       icon: Receipt,
-      variant: stats.open_invoices > 0 ? ("warning" as const) : ("default" as const),
-      href: "/billing?focus=open",
+      variant: stats.hmo_draft_claims > 0 ? ("warning" as const) : ("default" as const),
+      href: "/billing/hmo?status=draft",
+    },
+    {
+      label: t("dashboard.philhealthPending", "PhilHealth"),
+      value: stats.philhealth_pending,
+      hint: t("reports.linkPhilHealthDesc", "Pending claims"),
+      icon: Shield,
+      variant: stats.philhealth_pending > 0 ? ("warning" as const) : ("default" as const),
+      href: "/billing/philhealth?status=pending",
     },
   ]
 
@@ -286,7 +437,7 @@ export default function ReportsHubPage() {
               <button
                 key={days}
                 type="button"
-                onClick={() => setPeriodDays(days)}
+                onClick={() => handlePeriodChange(days)}
                 className={cn(
                   "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
                   periodDays === days
@@ -339,16 +490,20 @@ export default function ReportsHubPage() {
       ) : null}
 
       {activeBranch ? (
-        focusCopy ? (
-          <div className="rounded-xl border border-primary-200 bg-primary-50/60 px-4 py-3 text-sm">
-            <p className="font-semibold text-primary-900">{focusCopy.title}</p>
-            <p className="mt-1 text-primary-800/80">{focusCopy.description}</p>
-          </div>
-        ) : null
+        <>
+          <ReportsSectionNav sections={sectionNav} />
+          {focusCopy ? (
+            <div className="rounded-xl border border-primary-200 bg-primary-50/60 px-4 py-3 text-sm">
+              <p className="font-semibold text-primary-900">{focusCopy.title}</p>
+              <p className="mt-1 text-primary-800/80">{focusCopy.description}</p>
+            </div>
+          ) : null}
+        </>
       ) : null}
 
       {activeBranch ? (
         <ReportsSectionBlock
+          id="today"
           icon={Clock3}
           eyebrow={t("reports.sectionToday", "Today")}
           title={t("reports.todayPulseTitle", "Today's pulse")}
@@ -362,11 +517,12 @@ export default function ReportsHubPage() {
             </Button>
           }
         >
-          <MetricStrip items={todayPulseMetrics} />
+          <MetricStrip items={todayPulseMetrics} className="lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6" />
         </ReportsSectionBlock>
       ) : null}
 
       <ReportsSectionBlock
+        id="overview"
         icon={TrendingUp}
         eyebrow={t("reports.sectionOverview", "Overview")}
         title={trendsTitle}
@@ -375,8 +531,8 @@ export default function ReportsHubPage() {
           "Use these top-line charts to spot branch momentum fast: visit volume, cash movement, and appointment status mix."
         )}
       >
-        <div className="grid gap-4 xl:grid-cols-3">
-          <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/30 p-4">
+        <div className="grid min-w-0 gap-4 xl:grid-cols-3">
+          <div className="min-w-0 rounded-xl border border-neutral-200/80 bg-neutral-50/30 p-4">
             <h3 className="mb-1 text-sm font-semibold text-neutral-900">{appointmentsChartTitle}</h3>
             <p className="mb-3 text-xs text-neutral-500">
               {t("reports.chartAppointmentsHint", "How busy the calendar has been across the selected period.")}
@@ -387,7 +543,7 @@ export default function ReportsHubPage() {
               height={220}
             />
           </div>
-          <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/30 p-4">
+          <div className="min-w-0 rounded-xl border border-neutral-200/80 bg-neutral-50/30 p-4">
             <h3 className="mb-1 text-sm font-semibold text-neutral-900">{collectionsChartTitle}</h3>
             <p className="mb-3 text-xs text-neutral-500">
               {t("reports.chartCollectionsHint", "Payments posted each day for the active branch.")}
@@ -399,7 +555,7 @@ export default function ReportsHubPage() {
               height={220}
             />
           </div>
-          <div className="rounded-xl border border-neutral-200/80 bg-white p-4">
+          <div className="min-w-0 rounded-xl border border-neutral-200/80 bg-white p-4">
             <h3 className="mb-1 text-sm font-semibold text-neutral-900">
               {t("reports.sectionStatus", "Appointment mix")}
             </h3>
@@ -419,7 +575,7 @@ export default function ReportsHubPage() {
         </div>
 
         {ownerAnalytics?.branchCompare && ownerAnalytics.branchCompare.length > 0 ? (
-          <div className="rounded-xl border border-neutral-200/80 bg-white p-4">
+          <div className="min-w-0 rounded-xl border border-neutral-200/80 bg-white p-4">
             <h3 className="mb-1 text-sm font-semibold text-neutral-900">
               {t("reports.branchCompare", "Open invoices by branch")}
             </h3>
@@ -452,7 +608,7 @@ export default function ReportsHubPage() {
             </Button>
           }
         >
-          <div className="grid gap-4 2xl:grid-cols-2">
+          <div className="grid min-w-0 gap-4 2xl:grid-cols-2">
             <ReportPanelCaption
               title={t("reports.panelAppointmentsTitle", "Appointments and monthly booking board")}
               description={t(
@@ -519,7 +675,7 @@ export default function ReportsHubPage() {
             </Button>
           }
         >
-          <div className="grid gap-4 2xl:grid-cols-2">
+          <div className="grid min-w-0 gap-4 2xl:grid-cols-2">
             <ReportPanelCaption
               title={t("reports.panelPatientsTitle", "Registry and consent health")}
               description={t(
@@ -574,7 +730,7 @@ export default function ReportsHubPage() {
             >
               <FinanceSummaryPanel branchId={activeBranch.id} />
             </ReportPanelCaption>
-            <div className="grid gap-4 2xl:grid-cols-2">
+            <div className="grid min-w-0 gap-4 2xl:grid-cols-2">
               <ReportPanelCaption
                 title={t("reports.panelHmoTitle", "HMO pipeline")}
                 description={t(
@@ -640,7 +796,7 @@ export default function ReportsHubPage() {
             </div>
           }
         >
-          <div className="grid gap-4 2xl:grid-cols-3">
+          <div className="grid min-w-0 gap-4 2xl:grid-cols-3">
             <ReportPanelCaption
               title={t("reports.panelInventoryTitle", "Inventory risk")}
               description={t(
@@ -712,6 +868,7 @@ export default function ReportsHubPage() {
       ) : null}
 
       <ReportsSectionBlock
+        id="modules"
         icon={ScrollText}
         eyebrow={t("reports.sectionModules", "Drill-down")}
         title={t("reports.sectionModulesTitle", "Jump into the source modules")}

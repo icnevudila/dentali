@@ -45,7 +45,7 @@ export function AppointmentsAnalyticsPanel({
   const periodLabel = String(periodDays)
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <div className="rounded-xl border border-neutral-200/80 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
         <p className="text-xs font-medium text-neutral-500">
           {t("appointments.occupancy", "Schedule occupancy ({days}d)").replace(
@@ -60,7 +60,7 @@ export function AppointmentsAnalyticsPanel({
 
       <MonthlyAppointmentsSnapshot branchId={branchId} />
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-neutral-200/80 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-medium text-neutral-500">
@@ -95,7 +95,7 @@ export function AppointmentsAnalyticsPanel({
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <ModuleAnalyticsPanel
           title={t("appointments.hourlyLoad", "Hourly load")}
           subtitle={t("appointments.hourlyLoadHint", "Appointments by hour")}

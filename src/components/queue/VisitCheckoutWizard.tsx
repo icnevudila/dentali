@@ -3,16 +3,29 @@
 import * as React from "react"
 import { createPortal } from "react-dom"
 import Link from "next/link"
-import { FileText, Receipt, Wallet, ChevronRight, ChevronLeft, X, Check } from "lucide-react"
+import {
+  FileText,
+  Receipt,
+  Wallet,
+  DoorClosed,
+  ChevronRight,
+  ChevronLeft,
+  X,
+  Check,
+  Loader2,
+} from "lucide-react"
 import { useLocale } from "@/hooks/use-locale"
 import { Button } from "@/components/ui/button"
 import type { PatientBillingGate } from "@/lib/billing/invoice-service"
+import { closePatientEncounter } from "@/lib/clinical/encounter-service"
+import { notify } from "@/lib/ui/notify"
 import { cn } from "@/lib/utils"
 
 const STEPS = [
   { id: 1, icon: FileText, labelKey: "queue.checkoutStepNote", fallback: "Clinical note" },
   { id: 2, icon: Receipt, labelKey: "queue.checkoutStepBilling", fallback: "Billing & plan" },
   { id: 3, icon: Wallet, labelKey: "queue.checkoutStepPayment", fallback: "Collect payment" },
+  { id: 4, icon: DoorClosed, labelKey: "queue.checkoutStepClose", fallback: "Close visit" },
 ] as const
 
 export type VisitCheckoutWizardProps = {
@@ -21,6 +34,7 @@ export type VisitCheckoutWizardProps = {
   patientId: string
   patientName: string
   billingGate: PatientBillingGate | null
+  encounterId?: string | null
 }
 
 export function VisitCheckoutWizard({
@@ -29,16 +43,20 @@ export function VisitCheckoutWizard({
   patientId,
   patientName,
   billingGate,
+  encounterId,
 }: VisitCheckoutWizardProps) {
   const { t } = useLocale()
   const [mounted, setMounted] = React.useState(false)
   const [step, setStep] = React.useState(1)
+  const [closingEncounter, setClosingEncounter] = React.useState(false)
+  const [encounterClosed, setEncounterClosed] = React.useState(false)
 
   React.useEffect(() => setMounted(true), [])
 
   React.useEffect(() => {
     if (!open) return
     setStep(1)
+    setEncounterClosed(false)
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
     return () => {
@@ -46,15 +64,33 @@ export function VisitCheckoutWizard({
     }
   }, [open])
 
+  const maxStep = encounterId ? 4 : 3
+  const visibleSteps = encounterId ? STEPS : STEPS.slice(0, 3)
+
+  const handleCloseEncounter = async () => {
+    if (!encounterId || closingEncounter) return
+    setClosingEncounter(true)
+    const { error } = await closePatientEncounter(encounterId)
+    setClosingEncounter(false)
+    if (error) {
+      notify.error(error)
+      return
+    }
+    setEncounterClosed(true)
+    notify.success(t("queue.encounterClosed", "Visit closed"))
+    onOpenChange(false)
+  }
+
   if (!open || !mounted) return null
 
-  const noteHref = `/patients/${patientId}?tab=clinical-notes`
+  const noteHref = `/patients/${patientId}?tab=clinical-notes${encounterId ? `&encounter=${encounterId}` : ""}`
   const billingHref = billingGate?.primary_open_invoice_id
     ? `/billing/${billingGate.primary_open_invoice_id}`
-    : `/patients/${patientId}/treatment-plan`
+    : `/patients/${patientId}/treatment-plan${encounterId ? `?encounter=${encounterId}` : ""}`
   const paymentHref = billingGate?.primary_open_invoice_id
     ? `/billing/${billingGate.primary_open_invoice_id}`
     : `/patients/${patientId}?tab=record`
+  const encounterHref = `/patients/${patientId}?tab=encounters`
 
   const modal = (
     <div
@@ -88,10 +124,10 @@ export function VisitCheckoutWizard({
         </div>
 
         <div className="flex items-center gap-1 px-6 pt-4">
-          {STEPS.map((s, i) => {
+          {visibleSteps.map((s, i) => {
             const Icon = s.icon
             const active = step === s.id
-            const done = step > s.id
+            const done = step > s.id || (s.id === 4 && encounterClosed)
             return (
               <React.Fragment key={s.id}>
                 <div
@@ -114,7 +150,7 @@ export function VisitCheckoutWizard({
                     {t(s.labelKey, s.fallback)}
                   </span>
                 </div>
-                {i < STEPS.length - 1 ? (
+                {i < visibleSteps.length - 1 ? (
                   <div className={cn("h-0.5 w-4 shrink-0", done ? "bg-emerald-300" : "bg-neutral-200")} />
                 ) : null}
               </React.Fragment>
@@ -170,11 +206,46 @@ export function VisitCheckoutWizard({
                   </Link>
                 </Button>
               ) : (
-                <Button className="w-full gap-2" variant="outline" onClick={() => onOpenChange(false)}>
+                <Button
+                  className="w-full gap-2"
+                  variant="outline"
+                  onClick={() => {
+                    if (encounterId) setStep(4)
+                    else onOpenChange(false)
+                  }}
+                >
                   <Check className="h-4 w-4" />
-                  {t("queue.checkoutDone", "Done")}
+                  {encounterId ? t("common.next", "Next") : t("queue.checkoutDone", "Done")}
                 </Button>
               )}
+            </>
+          ) : null}
+
+          {step === 4 && encounterId ? (
+            <>
+              <p className="text-sm text-neutral-600">
+                {t(
+                  "queue.checkoutClosePrompt",
+                  "Close this visit so it no longer appears as an open encounter on the dashboard."
+                )}
+              </p>
+              <Button
+                className="w-full gap-2"
+                disabled={closingEncounter || encounterClosed}
+                onClick={() => void handleCloseEncounter()}
+              >
+                {closingEncounter ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <DoorClosed className="h-4 w-4" />
+                )}
+                {t("queue.closeVisit", "Close visit")}
+              </Button>
+              <Button className="w-full gap-2" variant="ghost" size="sm" asChild>
+                <Link href={encounterHref} onClick={() => onOpenChange(false)}>
+                  {t("queue.viewEncounterRecord", "View encounter record")}
+                </Link>
+              </Button>
             </>
           ) : null}
         </div>
@@ -191,7 +262,7 @@ export function VisitCheckoutWizard({
             <ChevronLeft className="h-4 w-4" />
             {t("common.back", "Back")}
           </Button>
-          {step < 3 ? (
+          {step < maxStep ? (
             <Button type="button" size="sm" onClick={() => setStep((s) => s + 1)} className="gap-1">
               {t("common.next", "Next")}
               <ChevronRight className="h-4 w-4" />

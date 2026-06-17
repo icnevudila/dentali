@@ -18,9 +18,6 @@ import { AttentionPanel } from "@/components/dashboard/AttentionPanel"
 import { DailyCloseoutCard } from "@/components/dashboard/DailyCloseoutCard"
 import { DashboardOpsSummary } from "@/components/dashboard/DashboardOpsSummary"
 import { MonthlyAppointmentsSnapshot } from "@/components/analytics/MonthlyAppointmentsSnapshot"
-import { ReportsSectionBlock } from "@/components/reports/ReportsSectionBlock"
-import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
-import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { useReportsSummary } from "@/hooks/use-reports-summary"
 import {
   Plus,
@@ -125,8 +122,8 @@ export default function DashboardPage() {
         ) : null}
 
         {activeBranch ? (
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
-            <div className="min-w-0 flex-1 space-y-4">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
+            <div className="min-w-0 flex-1 space-y-6">
               <SectionEyebrow icon={BarChart3}>
                 {t("dashboard.sectionInsights", "Branch trends")}
               </SectionEyebrow>
@@ -162,11 +159,12 @@ export default function DashboardPage() {
               />
               <MonthlyAppointmentsSnapshot branchId={activeBranch.id} />
             </div>
-            <div className="w-full shrink-0 space-y-4 xl:w-80">
+            <div className="w-full shrink-0 space-y-4 xl:w-72">
             <AttentionPanel
               stats={stats}
               permissions={permissions}
               workflowSettings={workflowSettings}
+              interactive={false}
               labels={{
                 title: t("dashboard.attentionTitle", "Needs attention"),
                 allClear: t("dashboard.attentionClear", "All clear — nothing urgent right now."),
@@ -194,74 +192,11 @@ export default function DashboardPage() {
                 ),
               }}
             />
-            <DailyCloseoutCard stats={stats} />
+            <DailyCloseoutCard stats={stats} interactive={false} />
             </div>
           </div>
         ) : null}
 
-        {activeBranch ? (
-          <ReportsSectionBlock
-            icon={BarChart3}
-            eyebrow={t("dashboard.previewEyebrow", "Operational preview")}
-            title={t("dashboard.previewTitle", "Branch flow at a glance")}
-            description={t(
-              "dashboard.previewDescription",
-              "Operational KPIs stay on this page. Full queue, registry, and display analytics live in Reports."
-            )}
-            action={
-              <div className="flex flex-wrap gap-2">
-                <WorkflowSettingsLink />
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/reports?period=${chartPeriodDays}#operations`}>
-                    {t("dashboard.viewReportsHub", "Open Reports Hub")}
-                  </Link>
-                </Button>
-              </div>
-            }
-          >
-            <div className="grid gap-4 xl:grid-cols-3">
-              <ReportDrillLink
-                title={t("dashboard.previewQueueTitle", "Queue pressure")}
-                description={t(
-                  "dashboard.previewQueueDescription",
-                  "Arrival speed, wait duration, and status movement for front-desk rebalancing."
-                )}
-                href={`/reports?period=${chartPeriodDays}&focus=queue#operations`}
-                linkLabel={t("dashboard.previewQueueLink", "Queue reports")}
-              />
-              <ReportDrillLink
-                title={t("dashboard.previewPatientsTitle", "Record readiness")}
-                description={t(
-                  "dashboard.previewPatientsDescription",
-                  "Intake completion, registry quality, and patient growth trends."
-                )}
-                href={`/reports?period=${chartPeriodDays}&focus=clinical#clinical`}
-                linkLabel={t("dashboard.previewPatientsLink", "Registry reports")}
-              />
-              <ReportDrillLink
-                title={t("dashboard.previewDisplayTitle", "Display and public flow")}
-                description={t(
-                  "dashboard.previewDisplayDescription",
-                  "Kiosk traffic, TV display health, and public link management."
-                )}
-                href={`/reports?period=${chartPeriodDays}&focus=devices#devices`}
-                linkLabel={t("dashboard.previewDisplayLink", "Device reports")}
-              />
-            </div>
-          </ReportsSectionBlock>
-        ) : null}
-
-        {activeBranch ? (
-          <ReportDrillLink
-            title={t("dashboard.benchmarkLinkTitle", "Multi-branch benchmark")}
-            description={t(
-              "dashboard.benchmarkLinkDescription",
-              "Compare appointments and collections across branches for the selected period."
-            )}
-            href={`/reports?period=${chartPeriodDays}#benchmark`}
-            linkLabel={t("dashboard.benchmarkLinkCta", "Open branch benchmark")}
-          />
-        ) : null}
       </ContentPanel>
     </DirectionalTransition>
   )

@@ -445,7 +445,7 @@ begin
   from public.queue_entries qe
   where qe.organization_id = v_org
     and (p_branch_id is null or qe.branch_id = p_branch_id)
-    and qe.status in ('waiting', 'ready');
+    and qe.status in ('waiting', 'ready', 'now_serving', 'in_chair');
 
   select count(*) into v_waitlist_waiting
   from public.waitlist_entries we
@@ -511,7 +511,7 @@ begin
     where a.organization_id = v_org
       and a.branch_id = p_branch_id
       and (a.scheduled_at at time zone 'Asia/Manila')::date = (now() at time zone 'Asia/Manila')::date
-      and a.status in ('scheduled', 'confirmed')
+      and a.status in ('scheduled', 'confirmed', 'checked_in')
       and not exists (
         select 1
         from public.queue_entries qe

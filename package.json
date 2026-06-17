@@ -13,6 +13,7 @@
     "test:e2e": "powershell -NoProfile -Command \"$env:PLAYWRIGHT_BASE_URL=$null; npx playwright test\"",
     "test:e2e:smoke": "powershell -NoProfile -Command \"$env:PLAYWRIGHT_BASE_URL=$null; npx playwright test --grep @smoke\"",
     "test:e2e:public": "powershell -NoProfile -Command \"$env:PLAYWRIGHT_BASE_URL=$null; npx playwright test e2e/public.smoke.spec.ts\"",
+    "test:e2e:patient-flow": "powershell -NoProfile -Command \"$env:PLAYWRIGHT_BASE_URL=$null; npx playwright test e2e/patient-flow.smoke.spec.ts\"",
     "db:push": "npx supabase db push",
     "db:link": "npx supabase link --project-ref ahipxdlxyuvqikcybjpm",
     "db:bundle": "powershell -ExecutionPolicy Bypass -File scripts/bundle-migrations-idempotent.ps1",
@@ -26,6 +27,8 @@
     "db:bundle:master": "powershell -ExecutionPolicy Bypass -File scripts/bundle-apply-master.ps1",
     "verify:attention": "npx tsx scripts/verify-attention-rules.ts",
     "verify:mask": "npx tsx scripts/verify-mask-patient-name.ts",
+    "verify:pending-arrivals": "npx tsx scripts/verify-pending-arrivals.ts",
+    "verify:encounter-journey": "npx tsx scripts/verify-encounter-journey.ts",
     "odontogram:generate-svgs": "node scripts/generate-odontogram-svgs.mjs"
   },
   "dependencies": {

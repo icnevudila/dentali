@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useBranch } from "@/hooks/use-branch"
@@ -47,7 +47,9 @@ function InventoryPageContent() {
   const { user } = useAuth()
   const { t } = useLocale()
   const searchParams = useSearchParams()
-  const alertsOnly = searchParams.get("alerts") === "1"
+  const router = useRouter()
+  const alertsOnly =
+    searchParams.get("alerts") === "1" || searchParams.get("focus") === "low-stock"
   const [items, setItems] = React.useState<InventoryItem[]>([])
   const [alerts, setAlerts] = React.useState<LowStockAlert[]>([])
   const [bannerDismissed, setBannerDismissed] = React.useState(false)
@@ -225,9 +227,10 @@ function InventoryPageContent() {
     {
       label: t("inventory.lowStock", "Low stock"),
       value: loading ? "—" : lowCount,
-      hint: t("inventory.metricLowHint", "Below minimum level"),
+      hint: t("inventory.metricLowHint", "Below minimum — tap to filter"),
       variant: lowCount > 0 ? ("warning" as const) : ("default" as const),
       icon: AlertTriangle,
+      onClick: () => router.replace("/inventory?alerts=1", { scroll: false }),
     },
     {
       label: t("inventory.metricCritical", "Critical"),

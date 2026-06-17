@@ -103,6 +103,7 @@ function QueuePageContent() {
   const highlightAppointmentId = searchParams.get("appointment")
   const walkinPatientParam = searchParams.get("walkinPatient")
   const walkinNameParam = searchParams.get("walkinName")
+  const focusParam = searchParams.get("focus")
   const { activeBranch, branchRevision } = useBranch()
   const { t } = useLocale()
   const { clinicDay, isToday, formattedDay, previousDay } = useClinicDay()
@@ -129,6 +130,7 @@ function QueuePageContent() {
     patientId: string
     patientName: string
     billingGate: PatientBillingGate | null
+    encounterId: string | null
   } | null>(null)
   const [encounterPrompt, setEncounterPrompt] = React.useState<OpenEncounterPrompt | null>(null)
   const [encounterDialogOpen, setEncounterDialogOpen] = React.useState(false)
@@ -235,7 +237,9 @@ function QueuePageContent() {
     void (async () => {
       const { data } = await fetchAppointments(activeBranch.id, today)
       setTodayAppointments(
-        data.filter((a) => a.status === "scheduled" || a.status === "confirmed")
+        data.filter((a) =>
+          a.status === "scheduled" || a.status === "confirmed" || a.status === "checked_in"
+        )
       )
     })()
   }, [activeBranch, today, dayEntries, t, isToday])
@@ -356,6 +360,7 @@ function QueuePageContent() {
           patientId: entry.patient_id,
           patientName: entry.patient_name ?? "Patient",
           billingGate,
+          encounterId: entry.encounter_id ?? null,
         })
       }
       const isRevert =
@@ -590,6 +595,25 @@ function QueuePageContent() {
     [dayEntries]
   )
 
+  const scrollToQueueSection = React.useCallback((sectionId: string) => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+  }, [])
+
+  React.useEffect(() => {
+    if (!isToday || loading) return
+    if (focusParam === "checkin" || focusParam === "arrivals") {
+      setTab("board")
+      const timer = window.setTimeout(() => scrollToQueueSection("queue-arrivals"), 200)
+      return () => window.clearTimeout(timer)
+    }
+    if (focusParam === "waiting") {
+      setTab("board")
+      const timer = window.setTimeout(() => scrollToQueueSection("queue-waiting"), 200)
+      return () => window.clearTimeout(timer)
+    }
+    return undefined
+  }, [focusParam, isToday, loading, scrollToQueueSection])
+
   const metricItems =
     tab === "board" && isToday
       ? [
@@ -603,7 +627,8 @@ function QueuePageContent() {
           {
             label: t("queue.metricWaiting", "Waiting"),
             value: loading ? "—" : dayStats.waiting,
-            hint: t("queue.metricWaitingHint", "Not yet called"),
+            hint: t("queue.metricWaitingHint", "Not yet called — tap to jump"),
+            onClick: () => scrollToQueueSection("queue-waiting"),
           },
           {
             label: t("queue.metricServing", "Called / chair"),
@@ -749,6 +774,7 @@ function QueuePageContent() {
               patientId={checkoutWizard.patientId}
               patientName={checkoutWizard.patientName}
               billingGate={checkoutWizard.billingGate}
+              encounterId={checkoutWizard.encounterId}
             />
           ) : null}
 

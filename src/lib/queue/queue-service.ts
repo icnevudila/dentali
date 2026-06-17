@@ -10,6 +10,7 @@ export interface QueueEntry {
   patient_name?: string
   patient_number?: string | null
   appointment_id: string | null
+  encounter_id?: string | null
   provider_id?: string | null
   display_code: string
   status: QueueStatus
@@ -36,7 +37,7 @@ export async function fetchQueueEntries(
   let query = supabase
     .from("queue_entries")
     .select(
-      "id, patient_id, appointment_id, display_code, status, chair_label, notes, checked_in_at, called_at, in_chair_at, completed_at, patient_mood, patients(first_name, last_name, patient_number), appointments(provider_id)"
+      "id, patient_id, appointment_id, encounter_id, display_code, status, chair_label, notes, checked_in_at, called_at, in_chair_at, completed_at, patient_mood, patients(first_name, last_name, patient_number), appointments(provider_id)"
     )
     .eq("branch_id", branchId)
     .order("checked_in_at", { ascending: true })
@@ -65,6 +66,7 @@ export async function fetchQueueEntries(
       patient_name: patient ? `${patient.first_name} ${patient.last_name}` : undefined,
       patient_number: patient?.patient_number ?? null,
       appointment_id: row.appointment_id,
+      encounter_id: (row as { encounter_id?: string | null }).encounter_id ?? null,
       provider_id: appointment?.provider_id ?? null,
       display_code: row.display_code,
       status: row.status as QueueStatus,
@@ -105,7 +107,7 @@ export async function fetchQueueEntriesForDay(
   const { data, error } = await supabase
     .from("queue_entries")
     .select(
-      "id, patient_id, appointment_id, display_code, status, chair_label, notes, checked_in_at, called_at, in_chair_at, completed_at, patient_mood, patients(first_name, last_name, patient_number), appointments(provider_id)"
+      "id, patient_id, appointment_id, encounter_id, display_code, status, chair_label, notes, checked_in_at, called_at, in_chair_at, completed_at, patient_mood, patients(first_name, last_name, patient_number), appointments(provider_id)"
     )
     .eq("branch_id", branchId)
     .gte("checked_in_at", start)
@@ -128,6 +130,7 @@ export async function fetchQueueEntriesForDay(
       patient_name: patient ? `${patient.first_name} ${patient.last_name}` : undefined,
       patient_number: patient?.patient_number ?? null,
       appointment_id: row.appointment_id,
+      encounter_id: (row as { encounter_id?: string | null }).encounter_id ?? null,
       provider_id: appointment?.provider_id ?? null,
       display_code: row.display_code,
       status: row.status as QueueStatus,

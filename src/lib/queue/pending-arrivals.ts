@@ -3,6 +3,8 @@ import type { QueueEntry } from "@/lib/queue/queue-service"
 
 const ACTIVE_QUEUE_STATUSES = new Set(["waiting", "ready", "now_serving", "in_chair"])
 
+const PENDING_CHECK_IN_APPOINTMENT_STATUSES = new Set(["scheduled", "confirmed", "checked_in"])
+
 /** Appointment IDs linked to a queue entry that is still in clinic today. */
 export function activeQueuedAppointmentIds(dayEntries: QueueEntry[]): Set<string> {
   const ids = new Set<string>()
@@ -20,7 +22,6 @@ export function filterPendingCheckInAppointments(
 ): AppointmentRecord[] {
   const queued = activeQueuedAppointmentIds(dayEntries)
   return appointments.filter(
-    (a) =>
-      (a.status === "scheduled" || a.status === "confirmed") && !queued.has(a.id)
+    (a) => PENDING_CHECK_IN_APPOINTMENT_STATUSES.has(a.status) && !queued.has(a.id)
   )
 }

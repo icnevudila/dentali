@@ -51,7 +51,7 @@ export function ScheduleHeatmap({
 
   return (
     <div className={cn("overflow-x-auto", className)}>
-      <div className="min-w-[320px]">
+      <div className="min-w-0 w-max sm:min-w-[320px]">
         <div
           className="grid gap-1"
           style={{ gridTemplateColumns: `3rem repeat(${hours.length}, minmax(2rem, 1fr))` }}

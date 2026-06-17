@@ -414,7 +414,7 @@ function HmoClaimsPageContent() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[780px] text-sm">
+                  <table className="w-full min-w-0 text-sm sm:min-w-[780px]">
                     <thead>
                       <tr className="border-b text-neutral-500">
                         <th className="pb-2 text-left">Claim #</th>

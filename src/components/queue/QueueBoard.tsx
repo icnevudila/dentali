@@ -381,7 +381,7 @@ export function QueueBoard({
             return (
               <div
                 key={column.id}
-                id={column.id === "arrivals" ? "queue-arrivals" : undefined}
+                id={`queue-${column.id}`}
                 className={cn(
                   "rounded-lg border border-neutral-200 p-4 min-h-[220px] shadow-sm transition-colors",
                   column.borderClass,

@@ -185,13 +185,14 @@ export function PeriodontalPocketPanel({
           <BadgePill label="Teeth" value={stats.teethRecorded} tone="neutral" />
         </div>
       </CardHeader>
-      <CardContent className="max-h-[420px] overflow-auto p-0">
+      <CardContent className="max-h-[420px] min-w-0 overflow-auto p-0">
         {loading ? (
           <div className="flex h-40 items-center justify-center text-sm text-neutral-400">
             Loading periodontal chart…
           </div>
         ) : (
-        <table className="w-full min-w-[520px] border-collapse text-xs">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-0 border-collapse text-xs sm:min-w-[520px]">
           <thead className="sticky top-0 z-10 bg-neutral-50 text-[10px] uppercase tracking-wide text-neutral-500">
             <tr>
               <th className="border-b border-neutral-200 px-2 py-2 text-left">#</th>
@@ -232,6 +233,7 @@ export function PeriodontalPocketPanel({
             })}
           </tbody>
         </table>
+        </div>
         )}
       </CardContent>
       <div className="border-t border-neutral-100 px-4 py-2">

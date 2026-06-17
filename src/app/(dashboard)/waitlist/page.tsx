@@ -173,8 +173,9 @@ export default function WaitlistPage() {
           {
             label: t("waitlist.metricWaiting", "Waiting"),
             value: loading ? "—" : waitingCount,
-            hint: t("waitlist.metricWaitingHint", "Not yet contacted"),
+            hint: t("waitlist.metricWaitingHint", "Active entries — tap to review"),
             variant: !loading ? ("warning" as const) : ("default" as const),
+            href: "/waitlist",
           },
         ]
       : []

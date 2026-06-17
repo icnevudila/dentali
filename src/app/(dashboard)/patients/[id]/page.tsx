@@ -697,7 +697,7 @@ export default function PatientProfilePage() {
       />
 
       {/* TWO-COLUMN SIDEBAR & CONTENT LAYOUT */}
-      <div id="patient-profile-tabs" className="mt-4 flex flex-col gap-6 items-start xl:flex-row">
+      <div id="patient-profile-tabs" className="mt-4 flex min-w-0 flex-col items-start gap-6 xl:flex-row">
         {/* SIDEBAR TABS NAVIGATION */}
         <aside className="w-full shrink-0 xl:w-60">
           {/* Mobile dropdown selector */}
@@ -889,7 +889,7 @@ export default function PatientProfilePage() {
           {/* DENTAL CHART TAB */}
           {activeTab === "dental-chart" && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle>Clinical Odontogram</CardTitle>
                   <CardDescription>Interactive representation of tooth conditions.</CardDescription>
@@ -933,7 +933,7 @@ export default function PatientProfilePage() {
           {/* ORTHODONTICS TAB */}
           {activeTab === "orthodontics" && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle>Orthodontic Treatment Record</CardTitle>
                   <CardDescription>Adjustment log, next visits, and payment balance.</CardDescription>
@@ -952,7 +952,7 @@ export default function PatientProfilePage() {
 
           {activeTab === "prescriptions" && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle>Prescriptions</CardTitle>
                   <CardDescription>Medication orders with allergy checks and printable Rx.</CardDescription>
@@ -974,7 +974,7 @@ export default function PatientProfilePage() {
           {/* TREATMENT PLANS TAB */}
           {activeTab === "treatment-plans" && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle>Proposed Treatments</CardTitle>
                   <CardDescription>Active and historical treatment plans.</CardDescription>
@@ -1032,7 +1032,7 @@ export default function PatientProfilePage() {
           {/* VISITS TAB */}
           {activeTab === "visits" && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle>Visits History</CardTitle>
                   <CardDescription>Comprehensive record of all clinic check-ins, SOAP notes, appointments and dental treatments.</CardDescription>
@@ -1115,7 +1115,7 @@ export default function PatientProfilePage() {
           {activeTab === "appointments" && (
             <div className="space-y-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle>Appointment History</CardTitle>
                   <CardDescription>Past and upcoming visits.</CardDescription>

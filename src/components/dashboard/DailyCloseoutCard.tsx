@@ -14,9 +14,12 @@ import { cn } from "@/lib/utils"
 export function DailyCloseoutCard({
   className,
   stats,
+  interactive = true,
 }: {
   className?: string
   stats: DashboardStats
+  /** When false, no navigation — dashboard display only */
+  interactive?: boolean
 }) {
   const { activeBranch } = useBranch()
   const { t } = useLocale()
@@ -48,15 +51,8 @@ export function DailyCloseoutCard({
   const openBalance = closeout?.openBalance ?? 0
   const missingNotes = stats.missing_clinical_notes
 
-  return (
-    <Link
-      href="/reports/closeout"
-      transitionTypes={NAV_FORWARD_TRANSITION}
-      className={cn(
-        "group block rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors hover:border-primary-200 hover:bg-primary-50/30",
-        className
-      )}
-    >
+  const inner = (
+    <>
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Wallet className="h-4 w-4 text-primary-600" aria-hidden />
@@ -64,10 +60,12 @@ export function DailyCloseoutCard({
             {t("dashboard.closeoutCardTitle", "Daily closeout")}
           </h3>
         </div>
-        <ArrowRight
-          className="h-4 w-4 text-neutral-400 transition-transform group-hover:translate-x-0.5 group-hover:text-primary-600"
-          aria-hidden
-        />
+        {interactive ? (
+          <ArrowRight
+            className="h-4 w-4 text-neutral-400 transition-transform group-hover:translate-x-0.5 group-hover:text-primary-600"
+            aria-hidden
+          />
+        ) : null}
       </div>
 
       <div className="grid grid-cols-3 gap-3 text-center">
@@ -105,7 +103,9 @@ export function DailyCloseoutCard({
       </div>
 
       <p className="mt-3 text-xs text-neutral-500">
-        {t("dashboard.closeoutCardHint", "End-of-day summary — tap to open full closeout report")}
+        {interactive
+          ? t("dashboard.closeoutCardHint", "End-of-day summary — tap to open full closeout report")
+          : t("dashboard.closeoutCardStaticHint", "End-of-day snapshot for this branch")}
       </p>
 
       {!loading && (openBalance > 0 || missingNotes > 0) ? (
@@ -123,6 +123,32 @@ export function DailyCloseoutCard({
                 )}
         </p>
       ) : null}
+    </>
+  )
+
+  if (!interactive) {
+    return (
+      <div
+        className={cn(
+          "rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]",
+          className
+        )}
+      >
+        {inner}
+      </div>
+    )
+  }
+
+  return (
+    <Link
+      href="/reports/closeout"
+      transitionTypes={NAV_FORWARD_TRANSITION}
+      className={cn(
+        "group block rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors hover:border-primary-200 hover:bg-primary-50/30",
+        className
+      )}
+    >
+      {inner}
     </Link>
   )
 }

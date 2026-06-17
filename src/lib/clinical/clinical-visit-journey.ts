@@ -56,10 +56,10 @@ function hasSignedConsent(consents: PatientConsent[], slug: string) {
 function appointmentProgress(appointments: AppointmentRecord[]) {
   const active = appointments.filter((a) => a.status !== "cancelled")
   const hasBooked = active.some((a) =>
-    ["scheduled", "confirmed", "checked_in", "in_progress", "completed"].includes(a.status)
+    ["scheduled", "confirmed", "checked_in", "completed"].includes(a.status)
   )
   const hasCheckedIn = active.some((a) =>
-    ["checked_in", "in_progress", "completed"].includes(a.status)
+    ["checked_in", "completed"].includes(a.status)
   )
   const hasCompletedVisit = active.some((a) => a.status === "completed")
   return { hasBooked, hasCheckedIn, hasCompletedVisit }
@@ -159,7 +159,7 @@ export function buildClinicalVisitJourney(params: {
     consents: consentsDone,
     appointment: hasBooked,
     checkin: hasCheckedIn || hasCompletedVisit,
-    chair: hasCheckedIn || hasCompletedVisit,
+    chair: hasCompletedVisit,
     "clinical-note": hasClinicalNote,
     chart: hasChartFindings,
     "treatment-plan": hasPlan,
@@ -324,6 +324,18 @@ export function buildEncounterVisitJourney(params: {
   const chairDone = Boolean(
     queue && ["in_chair", "served"].includes(queue.status)
   )
+  const chairLabel =
+    queue?.status === "ready"
+      ? "Called — patient ready for chair"
+      : queue?.status === "now_serving"
+        ? "Now serving — escort to chair"
+        : queue?.chair_label
+          ? `Chair ${queue.chair_label}`
+          : queue?.status === "in_chair"
+            ? "Patient seated — clinical work in progress"
+            : queue?.status === "served"
+              ? "Treatment complete"
+              : "Patient seated and clinical work in progress"
   const hasNote = notes.length > 0
   const hasSignedNote = notes.some((n) => n.status === "signed")
   const hasPlan = plans.length > 0
@@ -391,9 +403,7 @@ export function buildEncounterVisitJourney(params: {
     {
       id: "chair",
       label: "Chair / treatment",
-      description: queue?.chair_label
-        ? `Chair ${queue.chair_label}`
-        : "Patient seated and clinical work in progress",
+      description: chairLabel,
       status: statuses.chair,
       href: "/queue",
       phase: "visit",

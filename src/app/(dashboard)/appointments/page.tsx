@@ -85,6 +85,7 @@ function AppointmentsPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const focusMissingNotes = searchParams.get("focus") === "missing-notes"
+  const viewToday = searchParams.get("view") === "today"
   const dateParam = searchParams.get("date")
   const appointmentParam = searchParams.get("appointment")
   const sourceParam = searchParams.get("source")
@@ -170,6 +171,12 @@ function AppointmentsPageContent() {
   }, [loadWeek])
 
   React.useEffect(() => {
+    if (!viewToday) return
+    setSelectedDate(today)
+    setWeekStart(startOfWeekMonday(parseDateKey(today)))
+  }, [viewToday, today])
+
+  React.useEffect(() => {
     if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return
     setSelectedDate(dateParam)
     setWeekStart(startOfWeekMonday(parseDateKey(dateParam)))
@@ -185,7 +192,7 @@ function AppointmentsPageContent() {
     })
   }, [appointmentParam, activeBranch])
 
-  useOperationalRefresh(["appointments"], loadWeek)
+  useOperationalRefresh(["appointments", "queue_entries"], loadWeek)
 
   React.useEffect(() => {
     if (!activeBranch) return
@@ -429,7 +436,7 @@ function AppointmentsPageContent() {
         hint: t("appointments.metricAwaitingCheckinHint", "Not yet checked in today"),
         icon: UserCheck,
         variant: todayAwaitingCheckin > 0 ? ("warning" as const) : ("default" as const),
-        href: "/queue",
+        href: "/queue?focus=checkin",
       })
     }
 
@@ -454,6 +461,7 @@ function AppointmentsPageContent() {
     weekAppointments,
     selectedDate,
     today,
+    todayQueueEntries,
     loading,
     t,
     bookingSourceFilter,
@@ -526,6 +534,18 @@ function AppointmentsPageContent() {
               </p>
               <Button variant="outline" size="sm" className="mt-2" asChild>
                 <Link href="/queue">{t("appointments.openQueue", "Open queue board")}</Link>
+              </Button>
+            </div>
+          ) : null}
+
+          {viewToday ? (
+            <div className="rounded-xl border border-primary-200/80 bg-primary-50/50 px-4 py-3 text-sm text-primary-950 animate-fade-rise">
+              <p className="font-medium">{t("appointments.viewTodayTitle", "Showing today")}</p>
+              <p className="mt-1 text-primary-900/80">
+                {t("appointments.viewTodayHint", "Calendar focused on today's schedule.")}
+              </p>
+              <Button variant="outline" size="sm" className="mt-2" asChild>
+                <Link href="/appointments">{t("billing.clearFilter", "Clear filter")}</Link>
               </Button>
             </div>
           ) : null}

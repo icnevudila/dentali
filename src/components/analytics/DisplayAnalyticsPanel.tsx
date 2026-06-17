@@ -75,7 +75,7 @@ export function DisplayAnalyticsPanel({
       <p className="text-sm font-medium text-neutral-800">
         {t("display.analyticsTitle", "Kiosk & TV display")}
       </p>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <div className="rounded-xl border border-neutral-200/80 bg-white px-4 py-3">
           <p className="text-xs font-medium text-neutral-500">
             {t("display.activeTvLinks", "Active TV links")}

@@ -279,7 +279,10 @@ export async function checkInAppointment(
     forceCheckin?: boolean
     reuseEncounterId?: string
   }
-): Promise<{ data: { queue_id: string; display_code: string } | null; error: string | null }> {
+): Promise<{
+  data: { queue_id: string; display_code: string; encounter_id?: string | null } | null
+  error: string | null
+}> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("check_in_appointment", {
     p_appointment_id: appointmentId,
@@ -289,6 +292,13 @@ export async function checkInAppointment(
   })
 
   if (error) return { data: null, error: error.message }
-  const raw = data as { queue_id: string; display_code: string }
-  return { data: { queue_id: raw.queue_id, display_code: raw.display_code }, error: null }
+  const raw = data as { queue_id: string; display_code: string; encounter_id?: string | null }
+  return {
+    data: {
+      queue_id: raw.queue_id,
+      display_code: raw.display_code,
+      encounter_id: raw.encounter_id ?? null,
+    },
+    error: null,
+  }
 }

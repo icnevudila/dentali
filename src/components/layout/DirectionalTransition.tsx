@@ -23,7 +23,9 @@ export function DirectionalTransition({ children, className }: DirectionalTransi
       }}
       default="none"
     >
-      <div className={cn("animate-page-enter", className)}>{children}</div>
+      <div className={cn("animate-page-enter min-w-0 max-w-full overflow-x-hidden", className)}>
+        {children}
+      </div>
     </ViewTransition>
   )
 }

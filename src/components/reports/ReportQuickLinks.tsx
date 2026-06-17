@@ -14,12 +14,12 @@ export type ReportLink = {
 
 export function ReportQuickLinks({ links }: { links: ReportLink[] }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {links.map((link) => {
         const Icon = link.icon
         return (
           <Link
-            key={link.href}
+            key={link.title}
             href={link.href}
             className={cn(
               "group rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]",

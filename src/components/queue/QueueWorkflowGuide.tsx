@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { CalendarCheck, ClipboardList, Stethoscope, UserPlus, Users } from "lucide-react"
+import { CalendarCheck, ClipboardList, Receipt, Stethoscope, UserPlus, Users } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -40,7 +40,15 @@ export function QueueWorkflowGuide() {
       title: t("queue.flowDentistTitle", "Dentist handoff"),
       body: t(
         "queue.flowDentistBody",
-        "Dentists work from Waiting, Called, and In Chair. They do not create check-ins."
+        "Move patients Waiting → Called → In Chair on the board. Clinical notes and chart open from the dentist workspace."
+      ),
+    },
+    {
+      icon: Receipt,
+      title: t("queue.flowCheckoutTitle", "Served & billing"),
+      body: t(
+        "queue.flowCheckoutBody",
+        "Mark Served when treatment ends. Workflow can draft an invoice; collect payment in Billing, then close the visit."
       ),
     },
   ]
@@ -79,7 +87,7 @@ export function QueueWorkflowGuide() {
             </Button>
           </div>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-4 grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {steps.map((step) => {
             const Icon = step.icon
             return (

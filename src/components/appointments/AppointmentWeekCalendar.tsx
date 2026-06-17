@@ -42,6 +42,8 @@ interface AppointmentWeekCalendarProps {
   remindingId?: string | null
   dragHint?: string
   providers: StaffMember[]
+  /** When false (default), completed visits must go through Queue → Served. */
+  allowDirectComplete?: boolean
 }
 
 export function AppointmentWeekCalendar({
@@ -61,6 +63,7 @@ export function AppointmentWeekCalendar({
   remindingId,
   dragHint,
   providers,
+  allowDirectComplete = false,
 }: AppointmentWeekCalendarProps) {
   const { t } = useLocale()
   const [viewMode, setViewMode] = React.useState<"month" | "week" | "day">(() => {
@@ -555,6 +558,7 @@ export function AppointmentWeekCalendar({
                                   : t("appointments.checkInBtn", "Check in")}
                               </Button>
                             ) : null}
+                            {allowDirectComplete ? (
                             <Button
                               variant="outline"
                               size="icon"
@@ -565,6 +569,19 @@ export function AppointmentWeekCalendar({
                             >
                               <Check className="h-4 w-4" />
                             </Button>
+                            ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 gap-1 px-2 text-primary-700"
+                              asChild
+                            >
+                              <Link href="/queue" title={t("appointments.openQueueCheckIn", "Open Queue to check in")}>
+                                <UserCheck className="h-3.5 w-3.5" />
+                                {t("queue.title", "Queue")}
+                              </Link>
+                            </Button>
+                            )}
                             <Button
                               variant="outline"
                               size="icon"
@@ -735,6 +752,7 @@ export function AppointmentWeekCalendar({
                               <UserCheck className="h-4 w-4" />
                             </Button>
                           ) : null}
+                          {allowDirectComplete ? (
                           <Button
                             variant="outline"
                             size="icon"
@@ -745,6 +763,19 @@ export function AppointmentWeekCalendar({
                           >
                             <Check className="h-4 w-4" />
                           </Button>
+                          ) : (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 text-primary-600 hover:text-primary-700 hover:bg-primary-50"
+                            asChild
+                            title={t("appointments.openQueueCheckIn", "Open Queue to check in")}
+                          >
+                            <Link href="/queue">
+                              <UserCheck className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="icon"

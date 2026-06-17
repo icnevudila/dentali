@@ -60,7 +60,7 @@ export function ModulePageShell({
       className={cn("mx-auto w-full min-w-0 max-w-full overflow-x-hidden", maxWidth, className)}
       data-print-content="true"
     >
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         <SectionEyebrow icon={icon}>{eyebrow}</SectionEyebrow>
 
         <PageHeader title={title} description={description} actions={actions} />

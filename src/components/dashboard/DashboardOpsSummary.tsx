@@ -11,75 +11,132 @@ type DashboardOpsSummaryProps = {
   className?: string
 }
 
+function emphasisForCount(count: number, warnAbove = 0): "default" | "warning" | "success" {
+  if (count > warnAbove) return "warning"
+  return "default"
+}
+
 export function DashboardOpsSummary({ stats, loading, className }: DashboardOpsSummaryProps) {
   const { t } = useLocale()
 
-  const items = [
+  const val = (n: number) => (loading ? "—" : n)
+  const money = (n: number) => (loading ? "—" : `₱${n.toLocaleString()}`)
+
+  const operations = [
     {
       label: t("dashboard.todayAppointments", "Appointments"),
-      value: loading ? "—" : stats.today_appointments,
+      value: val(stats.today_appointments),
       sub: t("dashboard.todayAppointmentsHint", "Scheduled today"),
-      href: "/appointments",
-    },
-    {
-      label: t("dashboard.queueWaiting", "In queue"),
-      value: loading ? "—" : stats.queue_waiting,
-      sub: t("dashboard.viewQueue", "Live board"),
-      href: "/queue?focus=waiting",
-      emphasis:
-        !loading && stats.queue_waiting > 0 ? ("warning" as const) : ("default" as const),
     },
     {
       label: t("dashboard.awaitingCheckin", "To check in"),
-      value: loading ? "—" : stats.appointments_awaiting_checkin,
-      sub: t("dashboard.awaitingCheckinHint", "On Queue arrivals"),
-      href: "/queue?focus=checkin",
-      emphasis:
-        !loading && stats.appointments_awaiting_checkin > 0
-          ? ("warning" as const)
-          : ("default" as const),
+      value: val(stats.appointments_awaiting_checkin),
+      sub: t("dashboard.awaitingCheckinHint", "Not yet on queue board"),
+      emphasis: emphasisForCount(stats.appointments_awaiting_checkin, 0),
     },
     {
+      label: t("dashboard.queueWaiting", "In queue"),
+      value: val(stats.queue_waiting),
+      sub: t("dashboard.queueWaitingHint", "Waiting through in-chair"),
+      emphasis: emphasisForCount(stats.queue_waiting, 0),
+    },
+    {
+      label: t("dashboard.waitlistWaiting", "Waitlist"),
+      value: val(stats.waitlist_waiting),
+      sub: t("dashboard.waitlistWaitingHint", "Awaiting contact or slot"),
+      emphasis: emphasisForCount(stats.waitlist_waiting, 0),
+    },
+    {
+      label: t("dashboard.activePatients", "Active patients"),
+      value: val(stats.active_patients),
+      sub: t("dashboard.activePatientsHint", "Registry total"),
+    },
+  ]
+
+  const finance = [
+    {
       label: t("dashboard.collectedToday", "Collected"),
-      value: loading ? "—" : `₱${stats.today_collected.toLocaleString()}`,
+      value: money(stats.today_collected),
       sub: t("dashboard.collectedTodayHint", "Payments today"),
-      href: "/reports/closeout",
-      emphasis:
-        !loading && stats.today_collected > 0 ? ("success" as const) : ("default" as const),
+      emphasis: !loading && stats.today_collected > 0 ? ("success" as const) : ("default" as const),
     },
     {
       label: t("dashboard.openInvoices", "Open invoices"),
-      value: loading ? "—" : stats.open_invoices,
-      sub: t("dashboard.viewBilling", "Billing ledger"),
-      href: "/billing?focus=open",
-      emphasis:
-        !loading && stats.open_invoices > 0 ? ("warning" as const) : ("default" as const),
+      value: val(stats.open_invoices),
+      sub: t("dashboard.openInvoicesHint", "Outstanding balance"),
+      emphasis: emphasisForCount(stats.open_invoices, 0),
     },
     {
+      label: t("dashboard.overdueInvoices", "Overdue"),
+      value: val(stats.overdue_invoices),
+      sub: t("dashboard.overdueInvoicesHint", "Past due"),
+      emphasis: emphasisForCount(stats.overdue_invoices, 0),
+    },
+    {
+      label: t("dashboard.hmoDraft", "HMO drafts"),
+      value: val(stats.hmo_draft_claims),
+      sub: t("dashboard.hmoDraftHint", "Not yet submitted"),
+      emphasis: emphasisForCount(stats.hmo_draft_claims, 0),
+    },
+    {
+      label: t("dashboard.philhealthPending", "PhilHealth"),
+      value: val(stats.philhealth_pending),
+      sub: t("dashboard.philhealthPendingHint", "Pending claims"),
+      emphasis: emphasisForCount(stats.philhealth_pending, 0),
+    },
+  ]
+
+  const records = [
+    {
       label: t("dashboard.pendingConsents", "Consents"),
-      value: loading ? "—" : stats.pending_consents,
+      value: val(stats.pending_consents),
       sub: t("dashboard.pendingConsentsHint", "Awaiting signature"),
-      href: "/patients?attention=consents",
-      emphasis:
-        !loading && stats.pending_consents > 0 ? ("warning" as const) : ("default" as const),
+      emphasis: emphasisForCount(stats.pending_consents, 0),
+    },
+    {
+      label: t("dashboard.pendingIntakeDrafts", "Intake drafts"),
+      value: val(stats.pending_intake_drafts),
+      sub: t("dashboard.pendingIntakeDraftsHint", "Kiosk & portal"),
+      emphasis: emphasisForCount(stats.pending_intake_drafts, 0),
+    },
+    {
+      label: t("dashboard.missingNotes", "Missing notes"),
+      value: val(stats.missing_clinical_notes),
+      sub: t("dashboard.missingNotesHint", "Last 7 days"),
+      emphasis: emphasisForCount(stats.missing_clinical_notes, 0),
+    },
+    {
+      label: t("dashboard.openEncountersStale", "Stale visits"),
+      value: val(stats.open_encounters_stale),
+      sub: t("dashboard.openEncountersStaleHint", "Open from prior days"),
+      emphasis: emphasisForCount(stats.open_encounters_stale, 0),
     },
     {
       label: t("dashboard.lowStockItems", "Low stock"),
-      value: loading ? "—" : stats.low_stock_items,
-      sub: t("dashboard.viewInventory", "Inventory"),
-      href: "/inventory?focus=low-stock",
-      emphasis:
-        !loading && stats.low_stock_items > 0 ? ("warning" as const) : ("default" as const),
+      value: val(stats.low_stock_items),
+      sub: t("dashboard.lowStockHint", "Below reorder level"),
+      emphasis: emphasisForCount(stats.low_stock_items, 0),
     },
   ]
 
   return (
-    <OpsSummaryGrid
-      className={cn(className)}
-      title={t("dashboard.opsSummaryTitle", "Today's clinic summary")}
-      subtitle={t("dashboard.opsSummarySubtitle", "Live branch totals — details in each module")}
-      items={items}
-      columnsClassName="sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7"
-    />
+    <div className={cn("space-y-4", className)}>
+      <OpsSummaryGrid
+        title={t("dashboard.opsOperationsTitle", "Operations today")}
+        subtitle={t("dashboard.opsSummarySubtitle", "Live branch totals — open modules for actions")}
+        items={operations}
+        columnsClassName="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+      />
+      <OpsSummaryGrid
+        title={t("dashboard.opsFinanceTitle", "Finance & claims")}
+        items={finance}
+        columnsClassName="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+      />
+      <OpsSummaryGrid
+        title={t("dashboard.opsRecordsTitle", "Records & stock")}
+        items={records}
+        columnsClassName="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+      />
+    </div>
   )
 }

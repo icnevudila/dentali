@@ -1,22 +1,28 @@
 -- =============================================================================
--- dentQL — Clinic flow SQL paketi (Queue check-in + Closeout + Dashboard)
+-- dentQL — PATIENT FLOW MASTER SQL (tek paket, tekrar çalıştırılabilir)
 -- =============================================================================
--- NEREYE: Supabase Dashboard → SQL Editor → yapıştır → Run
--- TEKRAR ÇALIŞTIRMA: Güvenli (CREATE OR REPLACE, IF NOT EXISTS, DROP IF EXISTS)
--- ÖN KOŞUL: Önceki migration'ların hiçbiri uygulanmamış olsa da çalışır.
---             Kısmen uygulanmış ortamda da çalışır.
+-- NEREYE: Supabase Dashboard → SQL Editor → tümünü yapıştır → Run
+-- ÖN KOŞUL: Temel migration'lar (queue, appointments, encounters, closeout)
+-- TEKRAR: Güvenli — CREATE OR REPLACE, IF NOT EXISTS, idempotent repair
 --
 -- Bu paket şunları yapar:
---   1) Bugün yanlışlıkla no_show olan randevuları scheduled'a geri alır
---   2) Geçmiş saate randevu oluşturmayı engeller
---   3) Otomatik no-show'u kapatır (manuel işaretleme)
---   4) Closeout: taslak snapshot kilitlemez; sadece finalize edilince kilitler
---   5) Dashboard "awaiting check-in" sayısını aktif kuyrukla hizalar
+--   A) Veri onarımı (no_show, yetim checked_in)
+--   B) Workflow varsayılanları (hasta akışı açık, otomatik no-show kapalı)
+--   C) Geçmiş saate randevu engeli
+--   D) Closeout: taslak kilitlemez, finalize kilitle
+--   E) check_in_appointment: yetim checked_in otomatik onarım
+--   F2) update_appointment_status: completed yalnızca Queue Served sonrası
+--   G) update_queue_status: iptal → randevu confirmed, served → completed
+--   G) Dashboard KPI anahtarları (UI ile uyumlu)
 -- =============================================================================
 
+begin;
+
 -- -----------------------------------------------------------------------------
--- 1) Data repair — wrongly hidden same-day arrivals (no queue check-in yet)
+-- A) Veri onarımı
 -- -----------------------------------------------------------------------------
+
+-- Bugün yanlışlıkla no_show olan, kuyruğa hiç girmemiş randevular
 update public.appointments a
 set status = 'scheduled',
     updated_at = now()
@@ -35,8 +41,72 @@ where a.status = 'no_show'
     )
   );
 
+-- Bugün checked_in ama aktif kuyrukta değil → confirmed (yeniden check-in)
+update public.appointments a
+set status = 'confirmed',
+    updated_at = now()
+where a.status = 'checked_in'
+  and (a.scheduled_at at time zone 'Asia/Manila')::date = (now() at time zone 'Asia/Manila')::date
+  and not exists (
+    select 1
+    from public.queue_entries qe
+    where qe.appointment_id = a.id
+      and qe.branch_id = a.branch_id
+      and qe.status in ('waiting', 'ready', 'now_serving', 'in_chair')
+  );
+
 -- -----------------------------------------------------------------------------
--- 2) Booking guard — no past-time appointments (walk-ins use queue arrival)
+-- B) Workflow varsayılanları — hasta akışı otomasyonu açık, no-show manuel
+-- -----------------------------------------------------------------------------
+create or replace function public._default_workflow_settings()
+returns jsonb
+language sql
+immutable
+as $$
+  select jsonb_build_object(
+    'auto_checkin_updates_appointment', true,
+    'auto_served_completes_appointment', true,
+    'consent_gate_checkin', true,
+    'auto_approve_creates_invoice', true,
+    'auto_hmo_claim_on_invoice', true,
+    'auto_waitlist_on_slot_open', true,
+    'auto_sms_reminders', true,
+    'auto_payment_reminder', true,
+    'auto_hygiene_recall', true,
+    'auto_owner_digest_sms', false,
+    'auto_no_show_after_grace', false,
+    'auto_draft_soap_on_chair', true,
+    'auto_served_creates_invoice', true,
+    'auto_close_encounter_on_payment', true,
+    'billing_gate_block_services', true
+  );
+$$;
+
+-- Mevcut şubeler: hasta akışı toggle'ları yoksa aç; no-show otomasyonunu kapat
+do $$
+begin
+  if to_regclass('public.branch_workflow_settings') is not null then
+    update public.branch_workflow_settings bws
+    set settings = coalesce(bws.settings, '{}'::jsonb)
+      || jsonb_build_object(
+        'auto_checkin_updates_appointment',
+          coalesce((bws.settings->>'auto_checkin_updates_appointment')::boolean, true),
+        'auto_served_completes_appointment',
+          coalesce((bws.settings->>'auto_served_completes_appointment')::boolean, true),
+        'auto_served_creates_invoice',
+          coalesce((bws.settings->>'auto_served_creates_invoice')::boolean, true),
+        'auto_close_encounter_on_payment',
+          coalesce((bws.settings->>'auto_close_encounter_on_payment')::boolean, true),
+        'auto_draft_soap_on_chair',
+          coalesce((bws.settings->>'auto_draft_soap_on_chair')::boolean, true),
+        'auto_no_show_after_grace', false
+      ),
+      updated_at = now();
+  end if;
+end $$;
+
+-- -----------------------------------------------------------------------------
+-- C) Geçmiş saate randevu engeli
 -- -----------------------------------------------------------------------------
 create or replace function public.create_appointment_validated(p_payload jsonb)
 returns jsonb
@@ -122,7 +192,7 @@ $$;
 grant execute on function public.create_appointment_validated(jsonb) to authenticated;
 
 -- -----------------------------------------------------------------------------
--- 3) Auto no-show OFF — staff marks manually
+-- D) Otomatik no-show kapalı (personel manuel işaretler)
 -- -----------------------------------------------------------------------------
 create or replace function public.auto_no_show_for_branch(
   p_branch_id uuid,
@@ -175,17 +245,13 @@ grant execute on function public.auto_no_show_for_branch(uuid, int) to authentic
 grant execute on function public.auto_mark_overdue_appointments_no_show(int) to service_role;
 
 -- -----------------------------------------------------------------------------
--- 4) Closeout — draft snapshot vs finalize (billing lock only when finalized)
+-- E) Closeout — taslak kilitlemez, finalize kilitle
 -- -----------------------------------------------------------------------------
 do $$
 begin
   if to_regclass('public.closeout_snapshots') is not null then
     alter table public.closeout_snapshots
       add column if not exists finalized boolean not null default false;
-
-    update public.closeout_snapshots
-    set finalized = false
-    where finalized is distinct from true;
   end if;
 end $$;
 
@@ -407,7 +473,345 @@ grant execute on function public.finalize_closeout_snapshot(uuid, date) to authe
 grant execute on function public.get_closeout_history(uuid, int) to authenticated;
 
 -- -----------------------------------------------------------------------------
--- 5) Dashboard awaiting check-in — exclude active queue board entries
+-- F) check_in_appointment — yetim checked_in otomatik onarım
+-- -----------------------------------------------------------------------------
+create or replace function public.check_in_appointment(
+  p_appointment_id uuid,
+  p_force_billing_override boolean default false,
+  p_force_checkin boolean default false,
+  p_reuse_encounter_id uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_appt record;
+  v_payload jsonb;
+  v_result jsonb;
+  v_has_active_queue boolean;
+begin
+  select a.* into v_appt
+  from public.appointments a
+  where a.id = p_appointment_id
+    and a.organization_id = public.current_user_org_id();
+
+  if v_appt.id is null then
+    raise exception 'Appointment not found';
+  end if;
+
+  select exists (
+    select 1
+    from public.queue_entries qe
+    where qe.appointment_id = v_appt.id
+      and qe.branch_id = v_appt.branch_id
+      and qe.status in ('waiting', 'ready', 'now_serving', 'in_chair')
+  ) into v_has_active_queue;
+
+  if v_appt.status = 'checked_in' then
+    if v_has_active_queue then
+      raise exception 'Appointment is already checked in';
+    end if;
+
+    update public.appointments
+    set status = 'confirmed',
+        updated_at = now()
+    where id = v_appt.id;
+
+    v_appt.status := 'confirmed';
+  end if;
+
+  if v_appt.status not in ('scheduled', 'confirmed') then
+    raise exception 'Appointment cannot be checked in (status: %)', v_appt.status;
+  end if;
+
+  v_payload := jsonb_build_object(
+    'branch_id', v_appt.branch_id,
+    'patient_id', v_appt.patient_id,
+    'appointment_id', v_appt.id,
+    'notes', coalesce(v_appt.purpose, 'Appointment check-in'),
+    'force_checkin', p_force_checkin,
+    'force_billing_override', p_force_billing_override
+  );
+
+  if p_reuse_encounter_id is not null then
+    v_payload := v_payload || jsonb_build_object('reuse_encounter_id', p_reuse_encounter_id);
+  end if;
+
+  v_result := public.check_in_patient(v_payload);
+
+  return jsonb_build_object(
+    'queue_id', v_result->>'id',
+    'display_code', v_result->>'display_code',
+    'encounter_id', v_result->>'encounter_id',
+    'appointment_id', v_appt.id,
+    'reused_encounter', coalesce((v_result->>'reused_encounter')::boolean, false)
+  );
+end;
+$$;
+
+grant execute on function public.check_in_appointment(uuid, boolean, boolean, uuid) to authenticated;
+
+-- -----------------------------------------------------------------------------
+-- F2) update_appointment_status — completed yalnızca Queue Served sonrası
+-- -----------------------------------------------------------------------------
+create or replace function public.update_appointment_status(
+  p_appointment_id uuid,
+  p_status text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_appt record;
+begin
+  if p_appointment_id is null then
+    raise exception 'appointment_id is required';
+  end if;
+
+  if p_status not in ('completed', 'cancelled', 'confirmed') then
+    raise exception 'Unsupported status transition: %', p_status;
+  end if;
+
+  select a.* into v_appt
+  from public.appointments a
+  where a.id = p_appointment_id
+    and a.organization_id = public.current_user_org_id();
+
+  if not found then
+    raise exception 'Appointment not found';
+  end if;
+
+  if not public.has_permission('appointments.write', v_appt.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if p_status = 'completed' and v_appt.status not in ('scheduled', 'confirmed', 'checked_in') then
+    raise exception 'Cannot mark appointment as completed from status %', v_appt.status;
+  end if;
+
+  if p_status = 'completed' and not exists (
+    select 1
+    from public.queue_entries qe
+    where qe.appointment_id = p_appointment_id
+      and qe.status = 'served'
+  ) then
+    raise exception 'Mark the patient as Served on the Queue board before completing this appointment.';
+  end if;
+
+  if p_status = 'cancelled' and v_appt.status in ('completed', 'cancelled', 'no_show') then
+    raise exception 'Appointment cannot be cancelled';
+  end if;
+
+  if p_status = 'confirmed' and v_appt.status not in ('scheduled') then
+    raise exception 'Only scheduled appointments can be confirmed';
+  end if;
+
+  update public.appointments
+  set status = p_status, updated_at = now()
+  where id = p_appointment_id;
+
+  if p_status = 'cancelled' and public._workflow_enabled(v_appt.branch_id, 'auto_waitlist_on_slot_open') then
+    insert into public.slot_notification_queue (
+      organization_id, branch_id, slot_at, source_appointment_id
+    ) values (
+      v_appt.organization_id, v_appt.branch_id, v_appt.scheduled_at, p_appointment_id
+    );
+    perform public.emit_workflow_event(
+      v_appt.branch_id, 'slot.opened', 'appointment', p_appointment_id::text,
+      jsonb_build_object('slot_at', v_appt.scheduled_at, 'reason', 'cancelled')
+    );
+  end if;
+
+  if p_status = 'completed' then
+    perform public.emit_workflow_event(
+      v_appt.branch_id, 'appointment.completed', 'appointment', p_appointment_id::text,
+      jsonb_build_object('patient_id', v_appt.patient_id, 'scheduled_at', v_appt.scheduled_at)
+    );
+  end if;
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_appt.organization_id, v_appt.branch_id, auth.uid(),
+    'appointment.status_change', 'appointment', p_appointment_id::text,
+    jsonb_build_object(
+      'previous_status', v_appt.status,
+      'new_status', p_status,
+      'patient_id', v_appt.patient_id,
+      'scheduled_at', v_appt.scheduled_at
+    )
+  );
+
+  return jsonb_build_object('id', p_appointment_id, 'status', p_status);
+end;
+$$;
+
+grant execute on function public.update_appointment_status(uuid, text) to authenticated;
+
+-- -----------------------------------------------------------------------------
+-- G) update_queue_status — iptal senkronu + served tamamlama
+-- -----------------------------------------------------------------------------
+create or replace function public.update_queue_status(
+  p_entry_id uuid,
+  p_status text,
+  p_chair_label text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_entry public.queue_entries%rowtype;
+  v_in_chair_at timestamptz;
+  v_completed_at timestamptz;
+  v_called_at timestamptz;
+  v_chair_label text;
+  v_backward boolean := false;
+  v_soap_draft_id uuid;
+  v_invoice_draft_id uuid;
+begin
+  select * into v_entry from public.queue_entries where id = p_entry_id;
+  if not found then
+    raise exception 'Queue entry not found';
+  end if;
+
+  if not public.has_permission('queue.manage', v_entry.branch_id) then
+    raise exception 'Permission denied';
+  end if;
+
+  if p_status not in ('waiting', 'ready', 'now_serving', 'in_chair', 'served', 'cancelled') then
+    raise exception 'Invalid status';
+  end if;
+
+  if p_status = v_entry.status and p_chair_label is null then
+    return jsonb_build_object('id', p_entry_id, 'status', p_status);
+  end if;
+
+  v_in_chair_at := v_entry.in_chair_at;
+  v_completed_at := v_entry.completed_at;
+  v_called_at := v_entry.called_at;
+  v_chair_label := coalesce(p_chair_label, v_entry.chair_label);
+
+  v_backward := (
+    (v_entry.status = 'in_chair' and p_status in ('now_serving', 'ready', 'waiting'))
+    or (v_entry.status = 'now_serving' and p_status in ('ready', 'waiting'))
+    or (v_entry.status = 'ready' and p_status = 'waiting')
+    or (v_entry.status = 'served' and p_status in ('in_chair', 'now_serving', 'ready', 'waiting'))
+  );
+
+  if p_status = 'in_chair' and v_entry.status is distinct from 'in_chair' then
+    v_in_chair_at := now();
+  elsif p_status in ('waiting', 'ready', 'now_serving') and v_entry.status = 'in_chair' then
+    v_in_chair_at := null;
+    if p_status in ('waiting', 'ready') then
+      v_chair_label := null;
+    end if;
+  end if;
+
+  if p_status = 'now_serving' then
+    v_called_at := now();
+  elsif p_status in ('waiting', 'ready') and v_entry.status in ('now_serving', 'in_chair') then
+    v_called_at := null;
+  end if;
+
+  if p_status = 'served' and v_entry.status is distinct from 'served' then
+    v_completed_at := now();
+  elsif p_status in ('waiting', 'ready', 'now_serving', 'in_chair') and v_entry.status = 'served' then
+    v_completed_at := null;
+  end if;
+
+  update public.queue_entries
+  set status = p_status,
+      chair_label = v_chair_label,
+      called_at = v_called_at,
+      in_chair_at = v_in_chair_at,
+      completed_at = v_completed_at,
+      updated_by = auth.uid(),
+      updated_at = now()
+  where id = p_entry_id;
+
+  if p_status = 'served'
+    and v_entry.appointment_id is not null
+    and public._workflow_enabled(v_entry.branch_id, 'auto_served_completes_appointment') then
+    update public.appointments
+    set status = 'completed', updated_at = now()
+    where id = v_entry.appointment_id
+      and status in ('checked_in', 'scheduled', 'confirmed');
+  end if;
+
+  if v_backward
+    and v_entry.status = 'served'
+    and v_entry.appointment_id is not null
+    and public._workflow_enabled(v_entry.branch_id, 'auto_served_completes_appointment') then
+    update public.appointments
+    set status = 'checked_in', updated_at = now()
+    where id = v_entry.appointment_id
+      and status = 'completed';
+  end if;
+
+  if p_status = 'cancelled'
+    and v_entry.status is distinct from 'cancelled'
+    and v_entry.appointment_id is not null then
+    update public.appointments
+    set status = 'confirmed', updated_at = now()
+    where id = v_entry.appointment_id
+      and status = 'checked_in';
+  end if;
+
+  if p_status = 'in_chair' and v_entry.status is distinct from 'in_chair' and v_entry.encounter_id is not null then
+    v_soap_draft_id := public._maybe_draft_soap_for_encounter(v_entry.encounter_id);
+  end if;
+
+  if p_status = 'served' and v_entry.status is distinct from 'served' and v_entry.encounter_id is not null then
+    v_invoice_draft_id := public._maybe_invoice_from_served_encounter(v_entry.encounter_id);
+  end if;
+
+  perform public.emit_workflow_event(
+    v_entry.branch_id, 'queue.status_changed', 'queue_entry', p_entry_id::text,
+    jsonb_build_object(
+      'status', p_status,
+      'previous_status', v_entry.status,
+      'backward', v_backward,
+      'appointment_id', v_entry.appointment_id,
+      'soap_draft_id', v_soap_draft_id,
+      'invoice_draft_id', v_invoice_draft_id
+    )
+  );
+
+  insert into public.organization_audit_logs (
+    organization_id, branch_id, profile_id, action, entity_type, entity_id, metadata
+  ) values (
+    v_entry.organization_id, v_entry.branch_id, auth.uid(),
+    case when v_backward then 'queue.status_revert' else 'queue.status_change' end,
+    'queue_entry', p_entry_id::text,
+    jsonb_build_object(
+      'previous_status', v_entry.status,
+      'new_status', p_status,
+      'patient_id', v_entry.patient_id,
+      'display_code', v_entry.display_code,
+      'backward', v_backward
+    )
+  );
+
+  return jsonb_build_object(
+    'id', p_entry_id,
+    'status', p_status,
+    'backward', v_backward,
+    'soap_draft_id', v_soap_draft_id,
+    'invoice_draft_id', v_invoice_draft_id
+  );
+end;
+$$;
+
+grant execute on function public.update_queue_status(uuid, text, text) to authenticated;
+
+-- -----------------------------------------------------------------------------
+-- H) Dashboard KPI — UI anahtarları ile uyumlu (active_patients, low_stock_items, …)
 -- -----------------------------------------------------------------------------
 create or replace function public.get_dashboard_stats(p_branch_id uuid default null)
 returns jsonb
@@ -578,27 +982,10 @@ $$;
 
 grant execute on function public.get_dashboard_stats(uuid) to authenticated;
 
--- -----------------------------------------------------------------------------
--- 6) Stale checked_in today with no active queue → confirmed (re-check-in)
--- -----------------------------------------------------------------------------
-update public.appointments a
-set status = 'confirmed',
-    updated_at = now()
-where a.status = 'checked_in'
-  and (a.scheduled_at at time zone 'Asia/Manila')::date = (now() at time zone 'Asia/Manila')::date
-  and not exists (
-    select 1
-    from public.queue_entries qe
-    where qe.appointment_id = a.id
-      and qe.branch_id = a.branch_id
-      and qe.status in ('waiting', 'ready', 'now_serving', 'in_chair')
-  );
-
--- Queue cancel, check-in orphan repair, workflow defaults:
--- supabase/scripts/APPLY_PATIENT_FLOW_MASTER.sql (tek paket — bunu kullan)
+commit;
 
 -- =============================================================================
--- DOĞRULAMA (sadece okuma — hata vermez)
+-- DOĞRULAMA (commit sonrası — hata vermez, sonuçları kontrol et)
 -- =============================================================================
 select
   exists(
@@ -609,16 +996,42 @@ select
   exists(
     select 1 from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public' and p.proname = 'create_appointment_validated'
-  ) as create_appointment_ok,
-  exists(
-    select 1 from information_schema.columns
-    where table_schema = 'public'
-      and table_name = 'closeout_snapshots'
-      and column_name = 'finalized'
-  ) as closeout_finalized_column_ok,
+    where n.nspname = 'public' and p.proname = 'check_in_appointment'
+  ) as check_in_appointment_ok,
   (
-    select (p.prosrc like '%disabled%true%')
+    select coalesce(
+      pg_get_functiondef(p.oid) ilike '%if v_appt.status = ''checked_in'' then%'
+      and pg_get_functiondef(p.oid) ilike '%Appointment is already checked in%',
+      false
+    )
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'check_in_appointment'
+    limit 1
+  ) as check_in_orphan_repair_ok,
+  (
+    select coalesce(p.prosrc like '%Mark the patient as Served%', false)
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'update_appointment_status'
+    limit 1
+  ) as appointment_complete_guard_ok,
+  (
+    select coalesce(p.prosrc like '%cancelled%' and p.prosrc like '%confirmed%', false)
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'update_queue_status'
+    limit 1
+  ) as queue_cancel_sync_ok,
+  (
+    select coalesce(p.prosrc like '%active_patients%', false)
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'get_dashboard_stats'
+    limit 1
+  ) as dashboard_keys_ok,
+  (
+    select coalesce(p.prosrc like '%No-show is manual only%', false)
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.proname = 'auto_no_show_for_branch'

@@ -8,6 +8,7 @@ type BillingOpsSummaryProps = {
   open: number
   outstanding: number
   paid: number
+  overdue?: number
   loading?: boolean
   branchName?: string | null
 }
@@ -17,6 +18,7 @@ export function BillingOpsSummary({
   open,
   outstanding,
   paid,
+  overdue = 0,
   loading,
   branchName,
 }: BillingOpsSummaryProps) {
@@ -35,8 +37,16 @@ export function BillingOpsSummary({
         {
           label: t("billing.filterOpen", "Open"),
           value: loading ? "—" : open,
-          sub: t("billing.metricOpenHint", "Outstanding balance"),
+          sub: t("billing.metricOpenHint", "Tap to filter open"),
           emphasis: !loading && open > 0 ? "warning" : "default",
+          href: "/billing?focus=open",
+        },
+        {
+          label: t("billing.overdue", "Overdue"),
+          value: loading ? "—" : overdue,
+          sub: t("billing.metricOverdueHint", "Past due — tap to filter"),
+          emphasis: !loading && overdue > 0 ? "warning" : "default",
+          href: "/billing?focus=overdue",
         },
         {
           label: t("billing.balance", "Outstanding"),
@@ -51,7 +61,7 @@ export function BillingOpsSummary({
           emphasis: !loading && paid > 0 ? "success" : "default",
         },
       ]}
-      columnsClassName="sm:grid-cols-2 lg:grid-cols-4"
+      columnsClassName="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
     />
   )
 }

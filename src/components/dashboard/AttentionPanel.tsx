@@ -10,6 +10,8 @@ type AttentionPanelProps = {
   stats: DashboardStats
   permissions?: ReadonlySet<string>
   workflowSettings?: Record<string, boolean> | null
+  /** When false, shows counts only — no navigation (dashboard mode). */
+  interactive?: boolean
   labels: {
     title: string
     allClear: string
@@ -33,6 +35,7 @@ export function AttentionPanel({
   stats,
   permissions,
   workflowSettings,
+  interactive = true,
   labels,
 }: AttentionPanelProps) {
   const items = buildAttentionItems(
@@ -68,17 +71,18 @@ export function AttentionPanel({
         <p className="text-sm text-neutral-500">{labels.allClear}</p>
       ) : (
         <ul className="space-y-2">
-          {items.map((item) => (
-            <li key={item.id}>
-              <Link
-                href={item.href}
-                className={cn(
-                  "flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors",
-                  item.tone === "amber" && "border-amber-200/80 bg-amber-50/50 hover:bg-amber-50",
-                  item.tone === "sky" && "border-sky-200/80 bg-sky-50/40 hover:bg-sky-50/70",
-                  item.tone === "red" && "border-red-200/80 bg-red-50/40 hover:bg-red-50/60"
-                )}
-              >
+          {items.map((item) => {
+            const rowClass = cn(
+              "flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors",
+              item.tone === "amber" && "border-amber-200/80 bg-amber-50/50",
+              item.tone === "sky" && "border-sky-200/80 bg-sky-50/40",
+              item.tone === "red" && "border-red-200/80 bg-red-50/40",
+              interactive && item.tone === "amber" && "hover:bg-amber-50",
+              interactive && item.tone === "sky" && "hover:bg-sky-50/70",
+              interactive && item.tone === "red" && "hover:bg-red-50/60"
+            )
+            const body = (
+              <>
                 <span className="min-w-0 text-neutral-700">
                   <span className="mr-2 font-bold tabular-nums text-neutral-950">{item.count}</span>
                   {item.label}
@@ -88,10 +92,23 @@ export function AttentionPanel({
                     </span>
                   ) : null}
                 </span>
-                <ArrowRight className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
-              </Link>
-            </li>
-          ))}
+                {interactive ? (
+                  <ArrowRight className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
+                ) : null}
+              </>
+            )
+            return (
+              <li key={item.id}>
+                {interactive ? (
+                  <Link href={item.href} className={rowClass}>
+                    {body}
+                  </Link>
+                ) : (
+                  <div className={rowClass}>{body}</div>
+                )}
+              </li>
+            )
+          })}
         </ul>
       )}
     </div>
