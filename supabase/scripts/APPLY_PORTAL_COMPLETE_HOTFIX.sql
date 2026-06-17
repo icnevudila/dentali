@@ -3,7 +3,7 @@
 -- Düzeltir:
 --   • INSERT is not allowed in a non-volatile function
 --   • column "source" of relation "patient_consents" does not exist
---   • column i.balance_due does not exist
+--   • function gen_random_bytes(integer) does not exist (use gen_random_uuid)
 -- Idempotent — güvenle tekrar çalıştırılabilir.
 -- =============================================================================
 
@@ -257,7 +257,7 @@ begin
     raise exception 'Consent record could not be created';
   end if;
 
-  v_token := encode(gen_random_bytes(24), 'hex');
+  v_token := replace(gen_random_uuid()::text, '-', '');
 
   insert into public.consent_signing_tokens (
     patient_consent_id, token, channel, expires_at, created_by

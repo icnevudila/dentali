@@ -263,7 +263,7 @@ begin
     end if;
   end if;
 
-  v_token := encode(gen_random_bytes(24), 'hex');
+  v_token := replace(gen_random_uuid()::text, '-', '');
 
   insert into public.consent_signing_tokens (
     patient_consent_id, token, channel, expires_at, created_by
