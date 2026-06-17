@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
@@ -13,7 +13,6 @@ import {
   checkInPatient,
   fetchQueueEntriesForDay,
   updateQueueStatus,
-  waitMinutes,
   type QueueEntry,
   type QueueStatus,
 } from "@/lib/queue/queue-service"
@@ -92,7 +91,10 @@ export default function QueuePage() {
 
 function QueuePageContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const highlightAppointmentId = searchParams.get("appointment")
+  const walkinPatientParam = searchParams.get("walkinPatient")
+  const walkinNameParam = searchParams.get("walkinName")
   const { activeBranch, branchRevision } = useBranch()
   const { t } = useLocale()
   const { clinicDay, isToday, formattedDay, previousDay } = useClinicDay()
@@ -124,6 +126,7 @@ function QueuePageContent() {
   const [encounterDialogOpen, setEncounterDialogOpen] = React.useState(false)
   const [pendingCheckIn, setPendingCheckIn] = React.useState<PendingCheckInAction | null>(null)
   const [encounterResolving, setEncounterResolving] = React.useState(false)
+  const seededWalkInRef = React.useRef(false)
 
   const today = toDateKey(new Date())
 
@@ -137,6 +140,21 @@ function QueuePageContent() {
     setBillingOverridePending(false)
     setShowCheckIn(true)
   }
+
+  React.useEffect(() => {
+    if (seededWalkInRef.current || !walkinPatientParam) return
+    const label = walkinNameParam ?? ""
+    seededWalkInRef.current = true
+    setSelectedPatientId(walkinPatientParam)
+    setSelectedPatientName(label)
+    setPatientQuery(label)
+    setPatients([])
+    setCheckInNotes("")
+    setConsentOverridePending(false)
+    setBillingOverridePending(false)
+    setShowCheckIn(true)
+    router.replace("/queue", { scroll: false })
+  }, [router, walkinNameParam, walkinPatientParam])
 
   const closeCheckInModal = () => {
     setPatientQuery("")
@@ -193,8 +211,8 @@ function QueuePageContent() {
 
   React.useEffect(() => {
     if (!activeBranch || !isToday) {
-      setPrevDayServed(null)
-      return
+      const id = window.setTimeout(() => setPrevDayServed(null), 0)
+      return () => window.clearTimeout(id)
     }
     void fetchQueueEntriesForDay(activeBranch.id, previousDay).then(({ data }) => {
       setPrevDayServed(data.filter((e) => e.status === "served").length)
@@ -631,8 +649,13 @@ function QueuePageContent() {
                 >
                   <Megaphone className="h-4 w-4" /> {t("queue.callNext", "Call next")}
                 </Button>
+                <Button variant="outline" className="gap-2" asChild>
+                  <Link href="/patients/new?returnTo=queue">
+                    <Plus className="h-4 w-4" /> {t("queue.newWalkInPatient", "New walk-in patient")}
+                  </Link>
+                </Button>
                 <Button className="gap-2 shadow-sm" onClick={openCheckInModal}>
-                  <Plus className="h-4 w-4" /> {t("queue.checkIn", "Check in")}
+                  <UserCheck className="h-4 w-4" /> {t("queue.walkInTitle", "Walk-in check-in")}
                 </Button>
               </>
               ) : (

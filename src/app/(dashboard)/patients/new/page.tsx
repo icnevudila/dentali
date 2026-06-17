@@ -91,6 +91,7 @@ export default function NewPatientPage() {
 function NewPatientPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const returnTo = searchParams.get("returnTo")
   const { user } = useAuth()
   const { activeBranch } = useBranch()
   const { t } = useLocale()
@@ -293,6 +294,14 @@ function NewPatientPageContent() {
       clearDraftForReview()
     }
     setIsSubmitting(false)
+    if (returnTo === "queue") {
+      const params = new URLSearchParams({
+        walkinPatient: created.id,
+        walkinName: `${data.firstName} ${data.lastName}`.trim(),
+      })
+      router.push(`/queue?${params.toString()}`)
+      return
+    }
     router.push(`/patients/${created.id}?intake=complete`)
   }
 

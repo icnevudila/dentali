@@ -108,6 +108,12 @@ export function WalkInCheckInDialog({
                   "Find the patient, add an optional note, then check in to Waiting."
                 )}
               </p>
+              <p className="mt-1 text-xs text-neutral-500">
+                {t(
+                  "queue.walkInNoAppointmentHint",
+                  "No appointment is required. If the patient has no file yet, register them first and return here."
+                )}
+              </p>
             </div>
             <button
               type="button"
@@ -201,6 +207,13 @@ export function WalkInCheckInDialog({
                     <p className="mt-2 text-xs text-neutral-500">
                       {t("queue.walkInNoResults", "No patients found — try another spelling or register a new patient.")}
                     </p>
+                  ) : null}
+                  {searching ? (
+                    <Button asChild variant="link" size="sm" className="mt-1 h-auto p-0 text-primary-700">
+                      <Link href="/patients/new?returnTo=queue">
+                        {t("queue.registerWalkInPatient", "Register new walk-in patient")}
+                      </Link>
+                    </Button>
                   ) : null}
                   {patientQuery.length > 0 && patientQuery.length < 2 ? (
                     <p className="mt-2 text-xs text-neutral-500">
