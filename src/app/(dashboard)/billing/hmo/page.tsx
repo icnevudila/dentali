@@ -101,13 +101,16 @@ function HmoClaimsPageContent() {
   }, [activeBranch])
 
   React.useEffect(() => {
-    load()
+    const id = window.setTimeout(() => {
+      load()
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [load])
 
   React.useEffect(() => {
     if (!activeBranch || patientQuery.length < 2) {
-      setPatients([])
-      return
+      const id = window.setTimeout(() => setPatients([]), 0)
+      return () => window.clearTimeout(id)
     }
     const t = setTimeout(
       () => searchPatients(patientQuery, activeBranch.id).then(({ data }) => setPatients(data)),

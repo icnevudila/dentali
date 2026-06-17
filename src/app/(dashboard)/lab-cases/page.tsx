@@ -30,7 +30,7 @@ export default function LabCasesPage() {
     if (error) toast.error(error)
     setCases(data)
     setLoading(false)
-  }, [activeBranch?.id])
+  }, [activeBranch])
 
   const handleLabCaseCreated = React.useCallback(
     async (created?: PatientWithLabCase) => {
@@ -48,7 +48,10 @@ export default function LabCasesPage() {
   )
 
   React.useEffect(() => {
-    loadCases()
+    const id = window.setTimeout(() => {
+      loadCases()
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [loadCases])
 
   const handleMarkReceived = async (id: string) => {

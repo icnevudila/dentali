@@ -29,8 +29,6 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { FileHeart, Plus, RotateCcw } from "lucide-react"
 import { IntegrationEnvBanner } from "@/components/layout/IntegrationEnvBanner"
-import { MetricStrip } from "@/components/layout/MetricStrip"
-import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
@@ -94,22 +92,33 @@ function PhilHealthPageContent() {
     })
   }, [activeBranch])
 
-  React.useEffect(() => { load() }, [load])
+  React.useEffect(() => {
+    const id = window.setTimeout(() => {
+      load()
+    }, 0)
+    return () => window.clearTimeout(id)
+  }, [load])
 
   React.useEffect(() => {
     if (!selected) {
-      setSyncLogs([])
-      return
+      const id = window.setTimeout(() => setSyncLogs([]), 0)
+      return () => window.clearTimeout(id)
     }
-    setLogsLoading(true)
-    fetchPhilHealthSyncLogs(selected.id).then(({ data }) => {
-      setSyncLogs(data)
-      setLogsLoading(false)
-    })
-  }, [selected?.id])
+    const id = window.setTimeout(() => {
+      setLogsLoading(true)
+      fetchPhilHealthSyncLogs(selected.id).then(({ data }) => {
+        setSyncLogs(data)
+        setLogsLoading(false)
+      })
+    }, 0)
+    return () => window.clearTimeout(id)
+  }, [selected])
 
   React.useEffect(() => {
-    if (!activeBranch || patientQuery.length < 2) { setPatients([]); return }
+    if (!activeBranch || patientQuery.length < 2) {
+      const id = window.setTimeout(() => setPatients([]), 0)
+      return () => window.clearTimeout(id)
+    }
     const timer = setTimeout(() => searchPatients(patientQuery, activeBranch.id).then(({ data }) => setPatients(data)), 300)
     return () => clearTimeout(timer)
   }, [patientQuery, activeBranch])
