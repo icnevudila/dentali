@@ -370,7 +370,7 @@ function PortalPageContent() {
 
       <PublicChannelBrand variant="header" suffix={t("portal.brandSuffix", "Portal")} />
 
-      <div className="relative z-10 w-full max-w-[440px] my-12">
+      <div className="relative z-10 my-12 w-full max-w-md sm:max-w-xl px-1">
         {renderStepper()}
 
         {step === "loading" && (

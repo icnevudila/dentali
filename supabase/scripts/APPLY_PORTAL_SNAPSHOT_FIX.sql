@@ -1,6 +1,10 @@
 -- Fix: "INSERT is not allowed in a non-volatile function"
--- Cause: _portal_resolve_patient was STABLE but performed INSERT.
--- Run in Supabase SQL Editor.
+-- Fix: column "source" of relation "patient_consents" does not exist
+-- Fix: column i.balance_due does not exist (use total_amount - paid_amount)
+-- Run this ONE file in Supabase SQL Editor after APPLY_CONSENT_E2E_MASTER.sql.
+
+alter table public.patient_consents
+  add column if not exists source text;
 
 -- Read-only patient lookup (safe inside STABLE snapshot)
 create or replace function public._portal_resolve_patient(
@@ -132,12 +136,12 @@ begin
       and qe.checked_in_at < v_queue.checked_in_at;
   end if;
 
-  select coalesce(sum(i.balance_due), 0) into v_balance
+  select coalesce(sum(greatest(i.total_amount - i.paid_amount, 0)), 0) into v_balance
   from public.invoices i
   where i.patient_id = v_patient_id
-    and i.branch_id = v_session.branch_id
-    and i.status in ('issued', 'partial')
-    and coalesce(i.balance_due, 0) > 0;
+    and i.organization_id = v_session.organization_id
+    and i.status not in ('void', 'paid')
+    and greatest(i.total_amount - i.paid_amount, 0) > 0;
 
   v_pending := public._pending_intake_consent_count(v_patient_id, v_session.organization_id);
 

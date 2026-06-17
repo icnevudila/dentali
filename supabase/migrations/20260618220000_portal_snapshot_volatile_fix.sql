@@ -125,12 +125,12 @@ begin
       and qe.checked_in_at < v_queue.checked_in_at;
   end if;
 
-  select coalesce(sum(i.balance_due), 0) into v_balance
+  select coalesce(sum(greatest(i.total_amount - i.paid_amount, 0)), 0) into v_balance
   from public.invoices i
   where i.patient_id = v_patient_id
-    and i.branch_id = v_session.branch_id
-    and i.status in ('issued', 'partial')
-    and coalesce(i.balance_due, 0) > 0;
+    and i.organization_id = v_session.organization_id
+    and i.status not in ('void', 'paid')
+    and greatest(i.total_amount - i.paid_amount, 0) > 0;
 
   v_pending := public._pending_intake_consent_count(v_patient_id, v_session.organization_id);
 

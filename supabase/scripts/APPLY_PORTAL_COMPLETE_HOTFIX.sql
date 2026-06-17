@@ -1,36 +1,16 @@
--- Patient experience hub: portal snapshot, portal/kiosk consent signing, review SMS
+-- =============================================================================
+-- PORTAL COMPLETE HOTFIX — tek dosya, Supabase SQL Editor'da bir kez çalıştırın
+-- Düzeltir:
+--   • INSERT is not allowed in a non-volatile function
+--   • column "source" of relation "patient_consents" does not exist
+--   • column i.balance_due does not exist
+-- Idempotent — güvenle tekrar çalıştırılabilir.
+-- =============================================================================
 
--- Allow portal channel on consent signing tokens
-alter table public.consent_signing_tokens drop constraint if exists consent_signing_tokens_channel_check;
-alter table public.consent_signing_tokens add constraint consent_signing_tokens_channel_check
-  check (channel in ('kiosk', 'sms', 'email', 'qr', 'portal'));
+alter table public.patient_consents
+  add column if not exists source text;
 
--- Workflow default: review SMS after served (opt-in)
-create or replace function public._default_workflow_settings()
-returns jsonb
-language sql
-immutable
-as $$
-  select jsonb_build_object(
-    'auto_checkin_updates_appointment', true,
-    'auto_served_completes_appointment', true,
-    'consent_gate_checkin', true,
-    'auto_approve_creates_invoice', true,
-    'auto_hmo_claim_on_invoice', true,
-    'auto_waitlist_on_slot_open', true,
-    'auto_sms_reminders', true,
-    'auto_payment_reminder', true,
-    'auto_hygiene_recall', true,
-    'auto_owner_digest_sms', false,
-    'auto_no_show_after_grace', true,
-    'auto_draft_soap_on_chair', true,
-    'auto_served_creates_invoice', true,
-    'auto_close_encounter_on_payment', true,
-    'auto_review_request_sms', false
-  );
-$$;
-
--- Resolve patient from portal/kiosk session + identity
+-- Read-only patient lookup (safe inside STABLE snapshot)
 create or replace function public._portal_resolve_patient(
   p_session_id uuid,
   p_phone text,
@@ -47,7 +27,10 @@ declare
   v_phone_norm text;
   v_patient_id uuid;
 begin
-  select * into v_session from public.kiosk_sessions where id = p_session_id;
+  select * into v_session
+  from public.kiosk_sessions
+  where id = p_session_id;
+
   if not found or v_session.expires_at < now() then
     raise exception 'Session expired. Please refresh the page.';
   end if;
@@ -59,8 +42,6 @@ begin
 
   select p.id into v_patient_id
   from public.patients p
-  inner join public.patient_branch_links pbl
-    on pbl.patient_id = p.id and pbl.branch_id = v_session.branch_id
   where p.organization_id = v_session.organization_id
     and p.status = 'active'
     and lower(p.last_name) = lower(trim(p_last_name))
@@ -75,7 +56,29 @@ begin
 end;
 $$;
 
--- Portal status: queue position, balance, consent summary
+-- Writes belong in a VOLATILE helper
+create or replace function public._portal_ensure_branch_link(
+  p_patient_id uuid,
+  p_branch_id uuid
+)
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+begin
+  if p_patient_id is null or p_branch_id is null then
+    return;
+  end if;
+
+  insert into public.patient_branch_links (patient_id, branch_id)
+  values (p_patient_id, p_branch_id)
+  on conflict (patient_id, branch_id) do nothing;
+end;
+$$;
+
+-- Portal snapshot: volatile so we can seed branch link + pending consents
 create or replace function public.get_patient_portal_snapshot(
   p_session_id uuid,
   p_phone text,
@@ -83,7 +86,7 @@ create or replace function public.get_patient_portal_snapshot(
 )
 returns jsonb
 language plpgsql
-stable
+volatile
 security definer
 set search_path = public
 as $$
@@ -105,6 +108,13 @@ begin
   end if;
 
   v_patient_id := public._portal_resolve_patient(p_session_id, p_phone, p_last_name);
+  perform public._portal_ensure_branch_link(v_patient_id, v_session.branch_id);
+  perform public._ensure_intake_consents_for_patient(
+    v_patient_id,
+    v_session.organization_id,
+    v_session.branch_id,
+    'portal'
+  );
 
   select p.id, p.first_name, p.last_name
   into v_patient
@@ -185,9 +195,7 @@ begin
 end;
 $$;
 
-grant execute on function public.get_patient_portal_snapshot(uuid, text, text) to anon, authenticated;
-
--- Create consent record if missing, then issue portal signing token
+-- Portal consent token: ensure branch link here (not in STABLE resolve)
 create or replace function public.create_portal_consent_sign_token(
   p_session_id uuid,
   p_phone text,
@@ -216,6 +224,13 @@ begin
   end if;
 
   v_patient_id := public._portal_resolve_patient(p_session_id, p_phone, p_last_name);
+  perform public._portal_ensure_branch_link(v_patient_id, v_session.branch_id);
+  perform public._ensure_intake_consents_for_patient(
+    v_patient_id,
+    v_session.organization_id,
+    v_session.branch_id,
+    'portal'
+  );
 
   select pc.id into v_consent_id
   from public.patient_consents pc
@@ -239,28 +254,7 @@ begin
       return jsonb_build_object('already_signed', true, 'consent_id', v_consent_id);
     end if;
 
-    insert into public.patient_consents (
-      organization_id, branch_id, patient_id, template_slug, template_name, status, source
-    )
-    select
-      v_session.organization_id,
-      v_session.branch_id,
-      v_patient_id,
-      ct.slug,
-      ct.name,
-      'pending',
-      'portal'
-    from public.consent_templates ct
-    where ct.slug = v_slug
-      and ct.is_active = true
-      and (ct.organization_id = v_session.organization_id or ct.organization_id is null)
-    order by ct.organization_id nulls last
-    limit 1
-    returning id into v_consent_id;
-
-    if v_consent_id is null then
-      raise exception 'Consent template not found';
-    end if;
+    raise exception 'Consent record could not be created';
   end if;
 
   v_token := encode(gen_random_bytes(24), 'hex');
@@ -283,109 +277,7 @@ begin
 end;
 $$;
 
+grant execute on function public._portal_resolve_patient(uuid, text, text) to anon, authenticated;
+grant execute on function public._portal_ensure_branch_link(uuid, uuid) to anon, authenticated;
+grant execute on function public.get_patient_portal_snapshot(uuid, text, text) to anon, authenticated;
 grant execute on function public.create_portal_consent_sign_token(uuid, text, text, text) to anon, authenticated;
-
--- Review request SMS after served
-insert into public.notification_templates (organization_id, template_key, name, channel, body)
-select
-  o.id,
-  'google_review_request',
-  'Google review request',
-  'sms',
-  'Hi {{patient_name}}, thank you for visiting {{clinic_name}}! If you had a great experience, we would appreciate a quick Google review: {{review_url}}'
-from public.organizations o
-where not exists (
-  select 1 from public.notification_templates nt
-  where nt.organization_id = o.id and nt.template_key = 'google_review_request'
-);
-
-create or replace function public.prepare_review_request_sms(p_queue_entry_id uuid)
-returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_entry public.queue_entries%rowtype;
-  v_patient record;
-  v_branch record;
-  v_tpl record;
-  v_review_url text;
-  v_body text;
-  v_phone text;
-begin
-  select * into v_entry from public.queue_entries where id = p_queue_entry_id;
-  if v_entry.id is null then
-    raise exception 'Queue entry not found';
-  end if;
-
-  if not public._workflow_enabled(v_entry.branch_id, 'auto_review_request_sms') then
-    return jsonb_build_object('skipped', true, 'reason', 'workflow_disabled');
-  end if;
-
-  if v_entry.status <> 'served' then
-    return jsonb_build_object('skipped', true, 'reason', 'not_served');
-  end if;
-
-  select p.id, p.first_name, p.last_name, p.phone
-  into v_patient
-  from public.patients p
-  where p.id = v_entry.patient_id;
-
-  v_phone := regexp_replace(coalesce(v_patient.phone, ''), '\D', '', 'g');
-  if length(v_phone) < 10 then
-    return jsonb_build_object('skipped', true, 'reason', 'no_phone');
-  end if;
-
-  if exists (
-    select 1 from public.notification_logs nl
-    where nl.patient_id = v_patient.id
-      and nl.branch_id = v_entry.branch_id
-      and nl.template_key = 'google_review_request'
-      and nl.created_at > now() - interval '30 days'
-      and nl.status in ('sent', 'queued', 'dry_run')
-  ) then
-    return jsonb_build_object('skipped', true, 'reason', 'recently_sent');
-  end if;
-
-  select b.name, b.organization_id into v_branch
-  from public.branches b where b.id = v_entry.branch_id;
-
-  select value into v_review_url
-  from public.branch_settings
-  where branch_id = v_entry.branch_id and key = 'google_review_url'
-  limit 1;
-
-  if coalesce(trim(v_review_url), '') = '' then
-    v_review_url := 'https://g.page/r/review';
-  end if;
-
-  select nt.body into v_tpl
-  from public.notification_templates nt
-  where nt.organization_id = v_branch.organization_id
-    and nt.template_key = 'google_review_request'
-    and nt.is_active = true
-    and nt.branch_id is null
-  limit 1;
-
-  v_body := public._render_notification_body(
-    coalesce(v_tpl.body, 'Thank you for visiting {{clinic_name}}! Review us: {{review_url}}'),
-    jsonb_build_object(
-      'patient_name', trim(coalesce(v_patient.first_name, '') || ' ' || coalesce(v_patient.last_name, '')),
-      'clinic_name', v_branch.name,
-      'review_url', v_review_url
-    )
-  );
-
-  return jsonb_build_object(
-    'skipped', false,
-    'phone', v_phone,
-    'body', v_body,
-    'patient_id', v_patient.id,
-    'branch_id', v_entry.branch_id,
-    'template_key', 'google_review_request'
-  );
-end;
-$$;
-
-grant execute on function public.prepare_review_request_sms(uuid) to authenticated;

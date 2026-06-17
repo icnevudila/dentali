@@ -94,7 +94,7 @@ export function PortalStatusPanel({
   }
 
   return (
-    <div className="mx-auto w-full max-w-lg space-y-6 animate-in fade-in duration-300">
+    <div className="mx-auto w-full space-y-6 animate-in fade-in duration-300">
       <div className="flex items-center gap-3">
         <Button type="button" variant="ghost" size="icon" onClick={onBack} aria-label={t("common.back", "Back")}>
           <ArrowLeft className="h-5 w-5" />
