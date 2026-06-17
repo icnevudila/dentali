@@ -78,7 +78,8 @@ export function OwnerMorningDashboard({
         </p>
       </div>
       <MetricStrip
-        className="lg:grid-cols-6"
+        desktopCols={6}
+        className="lg:grid-cols-3 xl:grid-cols-6"
         items={items.map((item) => ({
           label: item.label,
           value: item.value,

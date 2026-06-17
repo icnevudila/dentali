@@ -6,6 +6,10 @@
 -- 0) Safety: needed for token generation
 create extension if not exists pgcrypto;
 
+-- 0b) Track where a pending consent was created (portal, appointment, kiosk, staff)
+alter table public.patient_consents
+  add column if not exists source text;
+
 -- 1) Consent signing token channel seti (portal dahil)
 alter table public.consent_signing_tokens
   drop constraint if exists consent_signing_tokens_channel_check;

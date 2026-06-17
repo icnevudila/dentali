@@ -4,7 +4,6 @@ import Link from "next/link"
 import { BarChart3, TrendingUp, Wallet, Activity } from "lucide-react"
 import { TrendArea, TrendLine } from "@/components/charts/ChartKit"
 import { StatusBreakdown } from "@/components/charts/StatusBreakdown"
-import { HorizontalSnapStrip } from "@/components/layout/HorizontalSnapStrip"
 import type { ReportsSummary } from "@/lib/reports/reports-service"
 import { Button } from "@/components/ui/button"
 
@@ -73,8 +72,8 @@ export function DashboardVisualPanel({
         </Button>
       </div>
 
-      <HorizontalSnapStrip desktopCols={4}>
-        <div className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] lg:col-span-1">
+      <div className="grid w-full min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-4">
+        <div className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
           <div className="mb-3 flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-primary-600" aria-hidden />
             <h3 className="text-sm font-semibold text-neutral-900">{labels.weekAppointments}</h3>
@@ -90,7 +89,7 @@ export function DashboardVisualPanel({
           )}
         </div>
 
-        <div className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] lg:col-span-1">
+        <div className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
           <div className="mb-3 flex items-center gap-2">
             <Wallet className="h-4 w-4 text-emerald-600" aria-hidden />
             <h3 className="text-sm font-semibold text-neutral-900">{labels.weekCollections}</h3>
@@ -107,7 +106,7 @@ export function DashboardVisualPanel({
           )}
         </div>
 
-        <div className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] lg:col-span-1">
+        <div className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
           <h3 className="mb-3 text-sm font-semibold text-neutral-900">{labels.statusMix}</h3>
           {loading || !summary ? (
             <div className="flex h-36 items-center justify-center text-sm text-neutral-400">{labels.loading}</div>
@@ -116,7 +115,7 @@ export function DashboardVisualPanel({
           )}
         </div>
 
-        <div className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] lg:col-span-1">
+        <div className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
           <div className="mb-3 flex items-center gap-2">
             <Activity className="h-4 w-4 text-amber-600" aria-hidden />
             <h3 className="text-sm font-semibold text-neutral-900">Visit outcomes</h3>
@@ -149,7 +148,7 @@ export function DashboardVisualPanel({
             </div>
           )}
         </div>
-      </HorizontalSnapStrip>
+      </div>
     </section>
   )
 }

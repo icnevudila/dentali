@@ -109,7 +109,7 @@ export function MetricStrip({
   items: MetricItem[]
   className?: string
   snapOnMobile?: boolean
-  desktopCols?: 2 | 3 | 4
+  desktopCols?: 2 | 3 | 4 | 5 | 6
 }) {
   if (items.length === 0) return null
 
@@ -124,10 +124,18 @@ export function MetricStrip({
   }
 
   const desktopGrid =
-    desktopCols === 2 ? "lg:grid-cols-2" : desktopCols === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"
+    desktopCols === 2
+      ? "lg:grid-cols-2"
+      : desktopCols === 3
+        ? "lg:grid-cols-3"
+        : desktopCols === 5
+          ? "lg:grid-cols-5"
+          : desktopCols === 6
+            ? "lg:grid-cols-6"
+            : "lg:grid-cols-4"
 
   return (
-    <div className={cn("grid min-w-0 gap-3 sm:grid-cols-2", desktopGrid, className)}>
+    <div className={cn("grid w-full min-w-0 gap-3 sm:grid-cols-2", desktopGrid, className)}>
       {items.map((item, index) => (
         <MetricCard key={item.label} item={item} index={index} />
       ))}

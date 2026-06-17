@@ -67,7 +67,7 @@ export default function DashboardPage() {
   }, [activeBranch, loading, stats, t])
 
   return (
-    <DirectionalTransition className="mx-auto w-full max-w-7xl">
+    <DirectionalTransition className="mx-auto w-full max-w-[1600px]">
       <ContentPanel padding="lg" className="space-y-8">
         <SectionEyebrow icon={LayoutDashboard} hideOnMobile>
           {t("dashboard.eyebrow", "Overview")} · {t("dashboard.title", "Dashboard")}
@@ -138,8 +138,8 @@ export default function DashboardPage() {
         ) : null}
 
         {activeBranch ? (
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
-            <div className="min-w-0 flex-1 space-y-6">
+          <div className="grid w-full min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(260px,300px)] xl:items-start">
+            <div className="min-w-0 space-y-6">
               <SectionEyebrow icon={BarChart3}>
                 {t("dashboard.sectionInsights", "Branch trends")}
               </SectionEyebrow>
@@ -174,7 +174,7 @@ export default function DashboardPage() {
                 }}
               />
             </div>
-            <div className="w-full shrink-0 space-y-4 xl:w-72">
+            <div className="min-w-0 space-y-4 xl:sticky xl:top-6">
             <AutomationInbox
               stats={stats}
               reportsSummary={reportsSummary}

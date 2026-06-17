@@ -140,17 +140,17 @@ export function DashboardOpsSummary({ stats, loading, className }: DashboardOpsS
         title={t("dashboard.opsOperationsTitle", "Operations today")}
         subtitle={t("dashboard.opsSummarySubtitle", "Live branch totals — open modules for actions")}
         items={operations}
-        columnsClassName="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+        columnsClassName="sm:grid-cols-2 lg:grid-cols-5"
       />
       <OpsSummaryGrid
         title={t("dashboard.opsFinanceTitle", "Finance & claims")}
         items={finance}
-        columnsClassName="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+        columnsClassName="sm:grid-cols-2 lg:grid-cols-5"
       />
       <OpsSummaryGrid
         title={t("dashboard.opsRecordsTitle", "Records & stock")}
         items={records}
-        columnsClassName="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+        columnsClassName="sm:grid-cols-2 lg:grid-cols-5"
       />
     </div>
   )

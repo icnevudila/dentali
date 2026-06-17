@@ -9,7 +9,7 @@ type HorizontalSnapStripProps = {
   itemClassName?: string
   /** Tailwind breakpoint where horizontal scroll becomes a static grid/flex column */
   desktopLayout?: "grid" | "flex-col"
-  desktopCols?: 2 | 3 | 4
+  desktopCols?: 2 | 3 | 4 | 5 | 6
 }
 
 export function HorizontalSnapStrip({
@@ -24,11 +24,16 @@ export function HorizontalSnapStrip({
       ? "lg:grid-cols-2"
       : desktopCols === 3
         ? "lg:grid-cols-3"
-        : "lg:grid-cols-4"
+        : desktopCols === 5
+          ? "lg:grid-cols-5"
+          : desktopCols === 6
+            ? "lg:grid-cols-6"
+            : "lg:grid-cols-4"
 
   return (
     <div
       className={cn(
+        "w-full min-w-0",
         "-mx-1 flex gap-4 overflow-x-auto px-1 pb-2 snap-x snap-mandatory scroll-px-4",
         "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         desktopLayout === "grid"

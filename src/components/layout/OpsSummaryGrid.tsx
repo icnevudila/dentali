@@ -95,7 +95,7 @@ export function OpsSummaryGrid({
         {subtitle ? <p className="text-xs text-neutral-500">{subtitle}</p> : null}
       </div>
       {snapOnMobile ? (
-        <HorizontalSnapStrip desktopLayout="grid" desktopCols={3} className={columnsClassName}>
+        <HorizontalSnapStrip desktopLayout="grid" desktopCols={5} className={columnsClassName}>
           {cells}
         </HorizontalSnapStrip>
       ) : (
