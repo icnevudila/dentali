@@ -8,6 +8,7 @@ import type { PatientEncounterDetail } from "@/lib/clinical/encounter-service"
 import { buildPatientRecordChecklist } from "@/lib/patients/patient-record-completeness"
 
 export type EncounterVisitStepId =
+  | "file"
   | "checkin"
   | "chair"
   | "clinical-note"
@@ -16,8 +17,10 @@ export type EncounterVisitStepId =
   | "plan-approved"
   | "invoice"
   | "payment"
+  | "discharge"
 
 export type ClinicalVisitStepId =
+  | "file"
   | "register"
   | "medical"
   | "consents"
@@ -30,6 +33,7 @@ export type ClinicalVisitStepId =
   | "plan-approved"
   | "invoice"
   | "payment"
+  | "discharge"
 
 export type ClinicalVisitStepStatus = "done" | "current" | "pending" | "blocked"
 
@@ -39,7 +43,7 @@ export type ClinicalVisitStep = {
   description: string
   status: ClinicalVisitStepStatus
   href?: string
-  phase: "intake" | "visit" | "clinical" | "billing"
+  phase: "intake" | "visit" | "clinical" | "billing" | "discharge"
 }
 
 export type ClinicalVisitJourney = {
@@ -47,6 +51,14 @@ export type ClinicalVisitJourney = {
   percentComplete: number
   nextStep: ClinicalVisitStep | null
   phaseLabel: string
+  readyToClose?: boolean
+}
+
+/** Dentist clinical work — chart tab on the patient profile (not queue). */
+export function encounterClinicalWorkHref(patientId: string, encounterId?: string | null) {
+  const params = new URLSearchParams({ tab: "dental-chart" })
+  if (encounterId) params.set("encounter", encounterId)
+  return `/patients/${patientId}?${params.toString()}`
 }
 
 function hasSignedConsent(consents: PatientConsent[], slug: string) {
@@ -66,24 +78,10 @@ function appointmentProgress(appointments: AppointmentRecord[]) {
 }
 
 function resolveStepStatuses(
-  flags: Record<ClinicalVisitStepId, boolean>
-): Record<ClinicalVisitStepId, ClinicalVisitStepStatus> {
-  const order: ClinicalVisitStepId[] = [
-    "register",
-    "medical",
-    "consents",
-    "appointment",
-    "checkin",
-    "chair",
-    "clinical-note",
-    "chart",
-    "treatment-plan",
-    "plan-approved",
-    "invoice",
-    "payment",
-  ]
-
-  const statuses = {} as Record<ClinicalVisitStepId, ClinicalVisitStepStatus>
+  order: ClinicalVisitStepId[],
+  flags: Partial<Record<ClinicalVisitStepId, boolean>>
+): Partial<Record<ClinicalVisitStepId, ClinicalVisitStepStatus>> {
+  const statuses = {} as Partial<Record<ClinicalVisitStepId, ClinicalVisitStepStatus>>
   let foundCurrent = false
 
   for (const id of order) {
@@ -100,6 +98,20 @@ function resolveStepStatuses(
   }
 
   return statuses
+}
+
+function stepStatus(
+  statuses: Partial<Record<ClinicalVisitStepId, ClinicalVisitStepStatus>>,
+  id: ClinicalVisitStepId
+): ClinicalVisitStepStatus {
+  return statuses[id] ?? "pending"
+}
+
+function encounterStepStatus(
+  statuses: Partial<Record<EncounterVisitStepId, ClinicalVisitStepStatus>>,
+  id: EncounterVisitStepId
+): ClinicalVisitStepStatus {
+  return statuses[id] ?? "pending"
 }
 
 export function buildClinicalVisitJourney(params: {
@@ -153,7 +165,22 @@ export function buildClinicalVisitJourney(params: {
   const paymentDone =
     hasApprovedPlan && missingPlanInvoices === 0 && (balance?.open_balance ?? 0) <= 0
 
-  const flags: Record<ClinicalVisitStepId, boolean> = {
+  const intakeOrder: ClinicalVisitStepId[] = [
+    "register",
+    "medical",
+    "consents",
+    "appointment",
+    "checkin",
+    "chair",
+    "clinical-note",
+    "chart",
+    "treatment-plan",
+    "plan-approved",
+    "invoice",
+    "payment",
+  ]
+
+  const flags: Partial<Record<ClinicalVisitStepId, boolean>> = {
     register: profileDone,
     medical: medicalDone,
     consents: consentsDone,
@@ -168,14 +195,14 @@ export function buildClinicalVisitJourney(params: {
     payment: paymentDone,
   }
 
-  const statuses = resolveStepStatuses(flags)
+  const statuses = resolveStepStatuses(intakeOrder, flags)
 
   const steps: ClinicalVisitStep[] = [
     {
       id: "register",
       label: "Patient registration",
       description: "Profile, contact, and demographics on file",
-      status: statuses.register,
+      status: stepStatus(statuses, "register"),
       href: profileDone ? undefined : `/patients/${patientId}/edit`,
       phase: "intake",
     },
@@ -183,7 +210,7 @@ export function buildClinicalVisitJourney(params: {
       id: "medical",
       label: "Medical history",
       description: "Allergies, medications, and conditions documented",
-      status: statuses.medical,
+      status: stepStatus(statuses, "medical"),
       href: medicalDone ? undefined : `/patients/${patientId}/medical-history`,
       phase: "intake",
     },
@@ -191,7 +218,7 @@ export function buildClinicalVisitJourney(params: {
       id: "consents",
       label: "Consents signed",
       description: "DPA and general treatment consent on file",
-      status: statuses.consents,
+      status: stepStatus(statuses, "consents"),
       href: consentsDone ? undefined : `/patients/${patientId}?tab=consents`,
       phase: "intake",
     },
@@ -199,7 +226,7 @@ export function buildClinicalVisitJourney(params: {
       id: "appointment",
       label: "Appointment booked",
       description: "Visit scheduled on the calendar",
-      status: statuses.appointment,
+      status: stepStatus(statuses, "appointment"),
       href: hasBooked ? `/appointments?patient=${patientId}` : `/appointments?patient=${patientId}`,
       phase: "visit",
     },
@@ -207,7 +234,7 @@ export function buildClinicalVisitJourney(params: {
       id: "checkin",
       label: "Check-in",
       description: "Front desk opened today's visit and queue entry",
-      status: statuses.checkin,
+      status: stepStatus(statuses, "checkin"),
       href: `/queue`,
       phase: "visit",
     },
@@ -215,7 +242,7 @@ export function buildClinicalVisitJourney(params: {
       id: "chair",
       label: "Chair / treatment",
       description: "Patient seated and clinical work in progress",
-      status: statuses.chair,
+      status: stepStatus(statuses, "chair"),
       href: `/dentist`,
       phase: "visit",
     },
@@ -223,7 +250,7 @@ export function buildClinicalVisitJourney(params: {
       id: "clinical-note",
       label: "Clinical note",
       description: "SOAP note recorded for this visit",
-      status: statuses["clinical-note"],
+      status: stepStatus(statuses, "clinical-note"),
       href: hasClinicalNote
         ? `/patients/${patientId}?tab=clinical-notes`
         : `/patients/${patientId}?tab=clinical-notes`,
@@ -233,7 +260,7 @@ export function buildClinicalVisitJourney(params: {
       id: "chart",
       label: "Dental chart",
       description: "Odontogram findings saved for treated teeth",
-      status: statuses.chart,
+      status: stepStatus(statuses, "chart"),
       href: `/patients/${patientId}/chart`,
       phase: "clinical",
     },
@@ -241,7 +268,7 @@ export function buildClinicalVisitJourney(params: {
       id: "treatment-plan",
       label: "Treatment plan",
       description: "Procedures proposed from chart or catalog",
-      status: statuses["treatment-plan"],
+      status: stepStatus(statuses, "treatment-plan"),
       href: `/patients/${patientId}/treatment-plan`,
       phase: "clinical",
     },
@@ -249,7 +276,7 @@ export function buildClinicalVisitJourney(params: {
       id: "plan-approved",
       label: "Plan approved",
       description: "Patient accepted plan — triggers invoice draft when workflow is on",
-      status: statuses["plan-approved"],
+      status: stepStatus(statuses, "plan-approved"),
       href: `/patients/${patientId}/treatment-plan`,
       phase: "clinical",
     },
@@ -257,7 +284,7 @@ export function buildClinicalVisitJourney(params: {
       id: "invoice",
       label: "Invoice issued",
       description: "Billing record created from approved plan or manual entry",
-      status: statuses.invoice,
+      status: stepStatus(statuses, "invoice"),
       href: `/billing?patient=${patientId}`,
       phase: "billing",
     },
@@ -265,7 +292,7 @@ export function buildClinicalVisitJourney(params: {
       id: "payment",
       label: "Payment collected",
       description: "Balance settled — cash, card, GCash, or HMO",
-      status: statuses.payment,
+      status: stepStatus(statuses, "payment"),
       href:
         (balance?.open_balance ?? 0) > 0
           ? `/billing?patient=${patientId}`
@@ -311,8 +338,16 @@ export function buildEncounterVisitJourney(params: {
   patientId: string
   detail: PatientEncounterDetail
   hasChartFindings?: boolean
+  fileReady?: boolean
+  pendingConsents?: number
 }): ClinicalVisitJourney & { encounterId: string; encounterStatus: string } {
-  const { patientId, detail, hasChartFindings = false } = params
+  const {
+    patientId,
+    detail,
+    hasChartFindings = false,
+    fileReady = true,
+    pendingConsents = 0,
+  } = params
   const enc = detail.encounter
   const queue = detail.queue
   const notes = detail.notes
@@ -344,6 +379,7 @@ export function buildEncounterVisitJourney(params: {
   const paymentDone = hasInvoice && encounterInvoicePaid(invoices)
 
   const flags: Record<EncounterVisitStepId, boolean> = {
+    file: fileReady,
     checkin: hasCheckin,
     chair: chairDone,
     "clinical-note": hasSignedNote || hasNote,
@@ -352,9 +388,11 @@ export function buildEncounterVisitJourney(params: {
     "plan-approved": hasApprovedPlan,
     invoice: hasInvoice,
     payment: paymentDone,
+    discharge: isClosed,
   }
 
   const order: EncounterVisitStepId[] = [
+    "file",
     "checkin",
     "chair",
     "clinical-note",
@@ -363,6 +401,7 @@ export function buildEncounterVisitJourney(params: {
     "plan-approved",
     "invoice",
     "payment",
+    "discharge",
   ]
 
   const statuses = {} as Record<EncounterVisitStepId, ClinicalVisitStepStatus>
@@ -389,7 +428,24 @@ export function buildEncounterVisitJourney(params: {
       ? `/billing/${invoices[0].id}`
       : `/billing?patient=${patientId}`
 
+  const fileHref =
+    pendingConsents > 0
+      ? `/patients/${patientId}?tab=consents`
+      : `/patients/${patientId}?tab=medical-history`
+
   const steps: ClinicalVisitStep[] = [
+    {
+      id: "file",
+      label: "Patient file",
+      description: fileReady
+        ? "Registration, medical history, and consents clear"
+        : pendingConsents > 0
+          ? `${pendingConsents} consent form(s) awaiting signature`
+          : "Complete medical history and consents before treatment",
+      status: statuses.file,
+      href: fileReady ? undefined : fileHref,
+      phase: "intake",
+    },
     {
       id: "checkin",
       label: "Check-in",
@@ -405,7 +461,7 @@ export function buildEncounterVisitJourney(params: {
       label: "Chair / treatment",
       description: chairLabel,
       status: statuses.chair,
-      href: "/queue",
+      href: encounterClinicalWorkHref(patientId, enc.id),
       phase: "visit",
     },
     {
@@ -416,7 +472,7 @@ export function buildEncounterVisitJourney(params: {
         : hasNote
           ? "Draft note — sign when complete"
           : "Record examination findings",
-      status: statuses["clinical-note"],
+      status: encounterStepStatus(statuses, "clinical-note"),
       href: noteHref,
       phase: "clinical",
     },
@@ -424,7 +480,7 @@ export function buildEncounterVisitJourney(params: {
       id: "chart",
       label: "Dental chart",
       description: "Odontogram updated for treated teeth",
-      status: statuses.chart,
+      status: encounterStepStatus(statuses, "chart"),
       href: `/patients/${patientId}/chart`,
       phase: "clinical",
     },
@@ -432,7 +488,7 @@ export function buildEncounterVisitJourney(params: {
       id: "treatment-plan",
       label: "Treatment plan",
       description: "Procedures proposed for this visit",
-      status: statuses["treatment-plan"],
+      status: encounterStepStatus(statuses, "treatment-plan"),
       href: planHref,
       phase: "clinical",
     },
@@ -440,7 +496,7 @@ export function buildEncounterVisitJourney(params: {
       id: "plan-approved",
       label: "Plan approved",
       description: "Patient accepted proposed treatment",
-      status: statuses["plan-approved"],
+      status: encounterStepStatus(statuses, "plan-approved"),
       href: planHref,
       phase: "clinical",
     },
@@ -448,7 +504,7 @@ export function buildEncounterVisitJourney(params: {
       id: "invoice",
       label: "Invoice",
       description: "Billing record for this visit",
-      status: statuses.invoice,
+      status: encounterStepStatus(statuses, "invoice"),
       href: billingHref,
       phase: "billing",
     },
@@ -456,9 +512,19 @@ export function buildEncounterVisitJourney(params: {
       id: "payment",
       label: "Payment",
       description: "Visit balance settled",
-      status: statuses.payment,
+      status: encounterStepStatus(statuses, "payment"),
       href: billingHref,
       phase: "billing",
+    },
+    {
+      id: "discharge",
+      label: "Discharge & close visit",
+      description: isClosed
+        ? "Visit closed on file"
+        : "Close the visit, print abstract, and schedule follow-up if needed",
+      status: statuses.discharge,
+      href: `/patients/${patientId}?tab=epicrisis`,
+      phase: "discharge",
     },
   ]
 
@@ -466,24 +532,30 @@ export function buildEncounterVisitJourney(params: {
   const allDone = isClosed || doneCount === steps.length
   const percentComplete = allDone ? 100 : Math.round((doneCount / steps.length) * 100)
   const nextStep = allDone ? null : (steps.find((s) => s.status === "current") ?? null)
+  const readyToClose = !isClosed && nextStep?.id === "discharge"
 
   const phaseLabel = isClosed
     ? "Visit closed"
-    : allDone
+    : readyToClose
       ? "Ready to close visit"
-      : nextStep?.phase === "visit"
-        ? "Front desk — arrival"
-        : nextStep?.phase === "clinical"
-          ? "Chair — clinical work"
-          : nextStep?.phase === "billing"
-            ? "Billing — checkout"
-            : "Active visit"
+      : nextStep?.phase === "intake"
+        ? "Intake — file & consents"
+        : nextStep?.phase === "visit"
+          ? "Front desk — arrival"
+          : nextStep?.phase === "clinical"
+            ? "Chair — clinical work"
+            : nextStep?.phase === "billing"
+              ? "Billing — checkout"
+              : nextStep?.phase === "discharge"
+                ? "Discharge — close visit"
+                : "Active visit"
 
   return {
     steps,
     percentComplete,
     nextStep,
     phaseLabel,
+    readyToClose,
     encounterId: enc.id,
     encounterStatus: enc.status,
   }

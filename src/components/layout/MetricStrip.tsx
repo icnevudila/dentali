@@ -11,6 +11,7 @@ export type MetricItem = {
   variant?: "default" | "warning" | "success"
   href?: string
   onClick?: () => void
+  active?: boolean
 }
 
 export function MetricStrip({ items, className }: { items: MetricItem[]; className?: string }) {
@@ -27,7 +28,9 @@ export function MetricStrip({ items, className }: { items: MetricItem[]; classNa
               "group relative overflow-hidden rounded-xl border px-4 py-3.5 transition-shadow",
               item.variant === "warning" && "border-amber-200/90 bg-amber-50/60",
               item.variant === "success" && "border-emerald-200/90 bg-emerald-50/50",
+              item.active && "border-primary-300 bg-primary-50/60 ring-1 ring-primary-200/80",
               (!item.variant || item.variant === "default") &&
+                !item.active &&
                 "border-neutral-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)] hover:shadow-[0_2px_8px_rgba(15,23,42,0.05)]",
               (item.href || item.onClick) &&
                 "hover:border-primary-200 hover:bg-primary-50/20 active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30"

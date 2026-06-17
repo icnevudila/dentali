@@ -26,16 +26,44 @@ export function OpenEncounterCheckInDialog({
 }: OpenEncounterCheckInDialogProps) {
   const { t } = useLocale()
 
+  React.useEffect(() => {
+    if (!open) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !loading) onClose()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      window.removeEventListener("keydown", onKey)
+    }
+  }, [open, loading, onClose])
+
   if (!open || !prompt) return null
 
   const noteCount = prompt.encounter.notes.length
   const planCount = prompt.encounter.plans.length
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <Card className="w-full max-w-md bg-white shadow-xl animate-fade-rise border-amber-200">
+    <div
+      className="fixed inset-0 z-[200] flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
+      onClick={() => {
+        if (!loading) onClose()
+      }}
+    >
+      <Card
+        className="w-full max-w-md border-amber-200 bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:rounded-xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="open-encounter-title"
+      >
         <CardHeader className="pb-2 border-b">
-          <CardTitle className="text-base flex items-center justify-between gap-2">
+          <CardTitle
+            id="open-encounter-title"
+            className="text-base flex items-center justify-between gap-2"
+          >
             <span className="flex items-center gap-2 text-amber-900">
               <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
               {t("queue.openEncounterTitle", "Open visit found")}

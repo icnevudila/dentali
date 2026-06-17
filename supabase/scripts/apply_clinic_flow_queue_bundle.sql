@@ -36,6 +36,27 @@ where a.status = 'no_show'
   );
 
 -- -----------------------------------------------------------------------------
+-- 1b) Check-in consent helper (check_in_patient bağımlılığı)
+-- -----------------------------------------------------------------------------
+create or replace function public._pending_intake_consent_count(
+  p_patient_id uuid,
+  p_org uuid
+)
+returns int
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select count(*)::int
+  from public.patient_consents pc
+  where pc.patient_id = p_patient_id
+    and pc.organization_id = p_org
+    and pc.status = 'pending'
+    and pc.template_slug in ('general-treatment', 'dpa-consent');
+$$;
+
+-- -----------------------------------------------------------------------------
 -- 2) Booking guard — no past-time appointments (walk-ins use queue arrival)
 -- -----------------------------------------------------------------------------
 create or replace function public.create_appointment_validated(p_payload jsonb)

@@ -1,5 +1,6 @@
 "use client"
 
+import type { ReactNode } from "react"
 import Link from "next/link"
 import { CheckCircle2, Circle, CircleDot, ChevronRight, PartyPopper } from "lucide-react"
 import { ContentPanel } from "@/components/layout/ContentPanel"
@@ -23,6 +24,7 @@ type ClinicalVisitJourneyPanelProps = {
   journey: ClinicalVisitJourney
   compact?: boolean
   celebrate?: boolean
+  headerBadge?: ReactNode
   completionAction?: {
     href: string
     label: string
@@ -33,19 +35,83 @@ type ClinicalVisitJourneyPanelProps = {
     disabled?: boolean
     loading?: boolean
   }
+  onContinue?: (step: ClinicalVisitStep) => void | Promise<void>
+  continueLoading?: boolean
 }
 
 export function ClinicalVisitJourneyPanel({
   journey,
   compact = false,
   celebrate = false,
+  headerBadge,
   completionAction,
   finishAction,
+  onContinue,
+  continueLoading = false,
 }: ClinicalVisitJourneyPanelProps) {
   const { t } = useLocale()
-  const { steps, percentComplete, nextStep, phaseLabel } = journey
+  const { steps, percentComplete, nextStep, phaseLabel, readyToClose } = journey
   const isComplete = percentComplete >= 100 || !nextStep
   const showCelebration = isComplete || celebrate
+  const closeVisitStep = nextStep?.id === "discharge"
+
+  const renderNextStepAction = (size: "sm" | "lg" = "lg", className?: string) => {
+    if (!nextStep) return null
+
+    if ((closeVisitStep || readyToClose) && finishAction) {
+      return (
+        <Button
+          size={size}
+          className={className}
+          onClick={finishAction.onClick}
+          disabled={finishAction.disabled || finishAction.loading}
+        >
+          {finishAction.loading ? (
+            <span
+              className={cn(
+                "animate-spin rounded-full border-2 border-white/30 border-t-white",
+                size === "lg" ? "h-4 w-4" : "h-3.5 w-3.5"
+              )}
+            />
+          ) : null}
+          {finishAction.label}
+          <ChevronRight className={size === "lg" ? "h-4 w-4" : "h-3.5 w-3.5"} />
+        </Button>
+      )
+    }
+
+    return renderContinueButton(size, className)
+  }
+
+  const renderContinueButton = (size: "sm" | "lg" = "lg", className?: string) => {
+    if (!nextStep?.href) return null
+    const label = (
+      <>
+        {t("journey.continue", "Continue")}
+        <ChevronRight className={size === "lg" ? "h-4 w-4" : "h-3.5 w-3.5"} />
+      </>
+    )
+    if (onContinue) {
+      return (
+        <Button
+          size={size}
+          className={className}
+          disabled={continueLoading}
+          onClick={() => void onContinue(nextStep)}
+        >
+          {continueLoading ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+          ) : null}
+          {label}
+        </Button>
+      )
+    }
+    return (
+      <Button size={size} className={className} asChild>
+        <Link href={nextStep.href}>{label}</Link>
+      </Button>
+    )
+  }
 
   if (compact) {
     return (
@@ -62,12 +128,7 @@ export function ClinicalVisitJourneyPanel({
           {showCelebration ? (
             <Badge variant="success">{t("journey.completeBadge", "Complete")}</Badge>
           ) : nextStep ? (
-            <Button size="sm" asChild className="gap-1">
-              <Link href={nextStep.href ?? "#"}>
-                {nextStep.label}
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Link>
-            </Button>
+            renderNextStepAction("sm", "gap-1")
           ) : null}
         </div>
       </ContentPanel>
@@ -126,9 +187,12 @@ export function ClinicalVisitJourneyPanel({
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-neutral-950">
-            {t("journey.fullTitle", "A→Z clinic journey")}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-neutral-950">
+              {t("journey.fullTitle", "A→Z clinic journey")}
+            </p>
+            {headerBadge}
+          </div>
           <p className="mt-0.5 text-sm text-neutral-600">{phaseLabel}</p>
         </div>
         <div className="text-right">
@@ -164,14 +228,11 @@ export function ClinicalVisitJourneyPanel({
               <p className="mt-1 text-base font-semibold text-neutral-900">{nextStep.label}</p>
               <p className="mt-0.5 text-sm text-neutral-600">{nextStep.description}</p>
             </div>
-            {nextStep.href ? (
-              <Button size="lg" className="w-full shrink-0 gap-2 sm:w-auto" asChild>
-                <Link href={nextStep.href}>
-                  {t("journey.continue", "Continue")}
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            ) : null}
+            {nextStep.href && !closeVisitStep && !readyToClose
+              ? renderNextStepAction("lg", "w-full shrink-0 gap-2 sm:w-auto")
+              : (closeVisitStep || readyToClose) && finishAction
+                ? renderNextStepAction("lg", "w-full shrink-0 gap-2 sm:w-auto")
+                : null}
           </div>
         </div>
       ) : null}

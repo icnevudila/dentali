@@ -9,6 +9,8 @@ export type OpsSummaryCell = {
   sub?: string
   emphasis?: "default" | "warning" | "success"
   href?: string
+  onClick?: () => void
+  active?: boolean
 }
 
 type OpsSummaryGridProps = {
@@ -25,7 +27,10 @@ function SummaryCell({
   sub,
   emphasis = "default",
   href,
+  onClick,
+  active = false,
 }: OpsSummaryCell) {
+  const interactive = Boolean(href || onClick)
   const content = (
     <div
       className={cn(
@@ -33,18 +38,30 @@ function SummaryCell({
         emphasis === "warning" && "border-amber-200/90 bg-amber-50/50",
         emphasis === "success" && "border-emerald-200/90 bg-emerald-50/40",
         emphasis === "default" && "border-neutral-200/80 bg-neutral-50/60",
-        href && "hover:border-primary-200 hover:bg-primary-50/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30"
+        active && "border-primary-300 bg-primary-50/60 ring-1 ring-primary-200/80",
+        interactive &&
+          !active &&
+          "hover:border-primary-200 hover:bg-primary-50/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30",
+        onClick && "cursor-pointer"
       )}
     >
       <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">{label}</p>
       <p className="mt-0.5 text-xl font-bold tabular-nums text-neutral-950">{value}</p>
       {sub ? (
-        <p className={cn("mt-0.5 text-[11px]", href ? "text-primary-600" : "text-neutral-500")}>
+        <p className={cn("mt-0.5 text-[11px]", interactive ? "text-primary-600" : "text-neutral-500")}>
           {sub}
         </p>
       ) : null}
     </div>
   )
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className="block w-full rounded-lg text-left">
+        {content}
+      </button>
+    )
+  }
 
   if (href) {
     return (

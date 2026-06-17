@@ -41,7 +41,7 @@ export function DashboardOpsSummary({ stats, loading, className }: DashboardOpsS
       value: val(stats.queue_waiting),
       sub: t("dashboard.queueWaitingHint", "Waiting through in-chair"),
       emphasis: emphasisForCount(stats.queue_waiting, 0),
-      href: "/queue?focus=waiting",
+      href: "/queue?filter=queue_waiting",
     },
     {
       label: t("dashboard.waitlistWaiting", "Waitlist"),

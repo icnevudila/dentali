@@ -23,7 +23,7 @@ import { useBranch } from "@/hooks/use-branch"
 import { useClinicDay } from "@/hooks/use-clinic-day"
 import { useLocale } from "@/hooks/use-locale"
 import { ClinicDayBar } from "@/components/layout/ClinicDayBar"
-import { QueueDaySummary } from "@/components/queue/QueueDaySummary"
+import { QueueDaySummary, type QueueDaySummaryKey } from "@/components/queue/QueueDaySummary"
 import { computeQueueDayStats } from "@/lib/queue/queue-day-stats"
 import { toDateKey } from "@/lib/appointments/week-calendar"
 import { fetchOdontogramFindingsForPatients } from "@/lib/odontogram/dental-chart-service"
@@ -76,6 +76,7 @@ function DentistPageContent() {
   const { t } = useLocale()
   const { clinicDay, isToday, formattedDay } = useClinicDay()
   const searchRef = React.useRef<HTMLInputElement>(null)
+  const queueListRef = React.useRef<HTMLDivElement>(null)
 
   const urlQuery = searchParams.get("q") ?? ""
   const urlPage = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1)
@@ -173,6 +174,66 @@ function DentistPageContent() {
     syncUrl(debouncedQuery, 1, next, providerId)
   }
 
+  const summaryKeyFromFilter = React.useCallback(
+    (current: DentistBoardFilter): QueueDaySummaryKey | null => {
+      switch (current) {
+        case "all":
+          return "active"
+        case "day_all":
+          return "checked_in"
+        case "queue_waiting":
+        case "waiting":
+          return "waiting"
+        case "serving":
+        case "in_chair":
+        case "now_serving":
+          return "serving"
+        case "served":
+          return "served"
+        case "cancelled":
+          return "cancelled"
+        default:
+          return null
+      }
+    },
+    []
+  )
+
+  const scrollToQueueList = () => {
+    queueListRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+  }
+
+  const handleFilterAndScroll = (next: DentistBoardFilter) => {
+    handleFilterChange(next)
+    scrollToQueueList()
+  }
+
+  const handleSummaryClick = (key: QueueDaySummaryKey) => {
+    switch (key) {
+      case "arrivals":
+        router.push(isToday ? "/queue" : `/queue?date=${clinicDay}`)
+        return
+      case "checked_in":
+        handleFilterAndScroll("day_all")
+        return
+      case "active":
+        handleFilterAndScroll("all")
+        return
+      case "waiting":
+        handleFilterAndScroll("queue_waiting")
+        return
+      case "serving":
+        handleFilterAndScroll("serving")
+        return
+      case "served":
+        handleFilterAndScroll("served")
+        return
+      case "cancelled":
+        handleFilterAndScroll("cancelled")
+        return
+    }
+  }
+
   const handleProviderChange = (nextProviderId: string | null) => {
     if (providerLocked) return
     setProviderId(nextProviderId)
@@ -201,6 +262,7 @@ function DentistPageContent() {
         providerId,
         page,
         pageSize: PAGE_SIZE,
+        clinicDay,
       }),
       isToday
         ? fetchQueueEntries(activeBranch.id, true)
@@ -290,7 +352,8 @@ function DentistPageContent() {
       hint: t("dentist.metricInChairHint", "Being treated now"),
       icon: Armchair,
       variant: counts.inChair > 0 ? ("success" as const) : undefined,
-      onClick: () => handleFilterChange("in_chair"),
+      active: filter === "in_chair",
+      onClick: () => handleFilterAndScroll("in_chair"),
     },
     {
       label: t("dentist.metricServing", "Called"),
@@ -298,14 +361,16 @@ function DentistPageContent() {
       hint: t("dentist.metricServingHint", "On the way to chair"),
       icon: Stethoscope,
       variant: counts.nowServing > 0 ? ("warning" as const) : undefined,
-      onClick: () => handleFilterChange("now_serving"),
+      active: filter === "now_serving",
+      onClick: () => handleFilterAndScroll("now_serving"),
     },
     {
       label: t("dentist.metricWaiting", "Waiting"),
       value: loading && hasActiveBranch ? "—" : counts.waiting,
       hint: t("dentist.metricWaitingHint", "In line or marked ready"),
       icon: Timer,
-      onClick: () => handleFilterChange("waiting"),
+      active: filter === "waiting" || filter === "queue_waiting",
+      onClick: () => handleFilterAndScroll("waiting"),
     },
   ]
 
@@ -354,6 +419,8 @@ function DentistPageContent() {
               stats={dayStats}
               isToday={isToday}
               formattedDay={formattedDay}
+              activeKey={summaryKeyFromFilter(filter)}
+              onItemClick={handleSummaryClick}
             />
           ) : null}
 
@@ -386,7 +453,10 @@ function DentistPageContent() {
 
           <MetricStrip items={metricItems} className="lg:grid-cols-3" />
 
-          <div className="grid gap-6 xl:grid-cols-[15rem_minmax(0,1fr)] 2xl:grid-cols-[16.5rem_minmax(0,1fr)]">
+          <div
+            ref={queueListRef}
+            className="grid gap-6 xl:grid-cols-[15rem_minmax(0,1fr)] 2xl:grid-cols-[16.5rem_minmax(0,1fr)]"
+          >
             <DentistFilterBar
               filter={filter}
               onChange={handleFilterChange}

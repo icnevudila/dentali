@@ -8,6 +8,11 @@ import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
 import { searchPatients } from "@/lib/patients/patient-service"
+import { fetchPatientConsents } from "@/lib/patients/consent-service"
+import {
+  checkInConsentFormLabel,
+  resolveCheckInConsentHref,
+} from "@/lib/patients/checkin-consent"
 import {
   callNextPatient,
   checkInPatient,
@@ -49,9 +54,14 @@ import { createClient } from "@/lib/supabase/client"
 import { VisitCheckoutWizard } from "@/components/queue/VisitCheckoutWizard"
 import { PatientArrivalDialog } from "@/components/queue/PatientArrivalDialog"
 import { QueueBoard, type QueueBoardArrival } from "@/components/queue/QueueBoard"
-import { QueueDaySummary, type QueueDayStats } from "@/components/queue/QueueDaySummary"
+import { QueueDaySummary, type QueueDayStats, type QueueDaySummaryKey } from "@/components/queue/QueueDaySummary"
 import { QueueWorkflowGuide } from "@/components/queue/QueueWorkflowGuide"
 import { computeQueueDayStats } from "@/lib/queue/queue-day-stats"
+import {
+  filterQueueBoardEntries,
+  parseQueueBoardFilter,
+  type QueueBoardFilter,
+} from "@/lib/queue/queue-board-filter"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { ClinicDayBar } from "@/components/layout/ClinicDayBar"
 import { useClinicDay } from "@/hooks/use-clinic-day"
@@ -73,6 +83,8 @@ type CheckInGate = {
   message: string
   action: PendingCheckInAction
   reuseEncounterId: string | null
+  consentHref?: string
+  consentButtonLabel?: string
 }
 
 function sortQueueEntries(data: QueueEntry[]): QueueEntry[] {
@@ -104,10 +116,14 @@ function QueuePageContent() {
   const walkinPatientParam = searchParams.get("walkinPatient")
   const walkinNameParam = searchParams.get("walkinName")
   const focusParam = searchParams.get("focus")
+  const urlBoardFilter = parseQueueBoardFilter(searchParams.get("filter"))
   const { activeBranch, branchRevision } = useBranch()
   const { t } = useLocale()
   const { clinicDay, isToday, formattedDay, previousDay } = useClinicDay()
-  const [tab, setTab] = React.useState<Tab>("board")
+  const [tab, setTab] = React.useState<Tab>(
+    urlBoardFilter === "served" || urlBoardFilter === "cancelled" ? "history" : "board"
+  )
+  const [boardFilter, setBoardFilter] = React.useState<QueueBoardFilter>(urlBoardFilter)
   const [entries, setEntries] = React.useState<QueueEntry[]>([])
   const [dayEntries, setDayEntries] = React.useState<QueueEntry[]>([])
   const [prevDayServed, setPrevDayServed] = React.useState<number | null>(null)
@@ -125,6 +141,8 @@ function QueuePageContent() {
   const [todayAppointments, setTodayAppointments] = React.useState<AppointmentRecord[]>([])
   const [apptCheckInId, setApptCheckInId] = React.useState<string | null>(null)
   const [consentOverridePending, setConsentOverridePending] = React.useState(false)
+  const [walkInConsentHref, setWalkInConsentHref] = React.useState<string | null>(null)
+  const [walkInConsentLabel, setWalkInConsentLabel] = React.useState<string | null>(null)
   const [billingOverridePending, setBillingOverridePending] = React.useState(false)
   const [checkoutWizard, setCheckoutWizard] = React.useState<{
     patientId: string
@@ -138,8 +156,122 @@ function QueuePageContent() {
   const [encounterResolving, setEncounterResolving] = React.useState(false)
   const [checkInGate, setCheckInGate] = React.useState<CheckInGate | null>(null)
   const seededWalkInRef = React.useRef(false)
+  const queueBoardRef = React.useRef<HTMLDivElement>(null)
 
   const today = clinicDay
+
+  React.useEffect(() => {
+    setBoardFilter(urlBoardFilter)
+    if (urlBoardFilter === "served" || urlBoardFilter === "cancelled") {
+      setTab("history")
+    }
+  }, [urlBoardFilter])
+
+  const syncBoardFilterUrl = React.useCallback(
+    (next: QueueBoardFilter) => {
+      const params = new URLSearchParams(searchParams.toString())
+      if (next === "all") params.delete("filter")
+      else params.set("filter", next)
+      const qs = params.toString()
+      router.replace(qs ? `/queue?${qs}` : "/queue", { scroll: false })
+    },
+    [router, searchParams]
+  )
+
+  const scrollToQueueSection = React.useCallback((sectionId: string) => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    queueBoardRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+  }, [])
+
+  const scrollForBoardFilter = React.useCallback((filter: QueueBoardFilter) => {
+    switch (filter) {
+      case "queue_waiting":
+      case "waiting":
+        scrollToQueueSection("queue-waiting")
+        return
+      case "now_serving":
+      case "serving":
+        scrollToQueueSection("queue-serving")
+        return
+      case "in_chair":
+        scrollToQueueSection("queue-chair")
+        return
+      default:
+        scrollToQueueSection("queue-waiting")
+    }
+  }, [scrollToQueueSection])
+
+  const handleBoardFilterChange = React.useCallback(
+    (next: QueueBoardFilter, options?: { scroll?: boolean; scrollTo?: string }) => {
+      setBoardFilter(next)
+      if (next === "served" || next === "cancelled") {
+        setTab("history")
+      } else {
+        setTab("board")
+      }
+      syncBoardFilterUrl(next)
+      if (options?.scrollTo) {
+        scrollToQueueSection(options.scrollTo)
+      } else if (options?.scroll !== false && next !== "served" && next !== "cancelled" && next !== "all" && next !== "day_all") {
+        scrollForBoardFilter(next)
+      }
+    },
+    [scrollForBoardFilter, scrollToQueueSection, syncBoardFilterUrl]
+  )
+
+  const summaryKeyFromFilter = React.useCallback(
+    (current: QueueBoardFilter): QueueDaySummaryKey | null => {
+      switch (current) {
+        case "all":
+          return "active"
+        case "day_all":
+          return "checked_in"
+        case "queue_waiting":
+        case "waiting":
+          return "waiting"
+        case "serving":
+        case "in_chair":
+        case "now_serving":
+          return "serving"
+        case "served":
+          return "served"
+        case "cancelled":
+          return "cancelled"
+        default:
+          return null
+      }
+    },
+    []
+  )
+
+  const handleSummaryClick = React.useCallback(
+    (key: QueueDaySummaryKey) => {
+      switch (key) {
+        case "arrivals":
+          handleBoardFilterChange("all", { scrollTo: "queue-arrivals" })
+          return
+        case "checked_in":
+          handleBoardFilterChange("day_all", { scroll: false })
+          return
+        case "active":
+          handleBoardFilterChange("all", { scroll: false })
+          return
+        case "waiting":
+          handleBoardFilterChange("queue_waiting")
+          return
+        case "serving":
+          handleBoardFilterChange("serving")
+          return
+        case "served":
+          handleBoardFilterChange("served", { scroll: false })
+          return
+        case "cancelled":
+          handleBoardFilterChange("cancelled", { scroll: false })
+          return
+      }
+    },
+    [handleBoardFilterChange]
+  )
 
   const openCheckInModal = () => {
     setPatientQuery("")
@@ -148,6 +280,8 @@ function QueuePageContent() {
     setSelectedPatientName("")
     setCheckInNotes("")
     setConsentOverridePending(false)
+    setWalkInConsentHref(null)
+    setWalkInConsentLabel(null)
     setBillingOverridePending(false)
     setCheckInGate(null)
     setShowCheckIn(true)
@@ -163,6 +297,8 @@ function QueuePageContent() {
     setPatients([])
     setCheckInNotes("")
     setConsentOverridePending(false)
+    setWalkInConsentHref(null)
+    setWalkInConsentLabel(null)
     setBillingOverridePending(false)
     setShowCheckIn(true)
     router.replace("/queue", { scroll: false })
@@ -175,6 +311,8 @@ function QueuePageContent() {
     setSelectedPatientName("")
     setCheckInNotes("")
     setConsentOverridePending(false)
+    setWalkInConsentHref(null)
+    setWalkInConsentLabel(null)
     setBillingOverridePending(false)
     setCheckInGate(null)
     setShowCheckIn(false)
@@ -400,16 +538,26 @@ function QueuePageContent() {
   ) => {
     if (!action.forceCheckin && isConsentGateError(err)) {
       setError(null)
-      setCheckInGate({
-        kind: "consent",
-        message: t(
-          "queue.consentGateFriendly",
-          "Consent is required before check-in. Open the patient's consent forms, or override if clinic policy allows it."
-        ),
-        action,
-        reuseEncounterId,
+      void fetchPatientConsents(action.patientId).then(({ data: consents }) => {
+        const consentHref = resolveCheckInConsentHref(action.patientId, consents)
+        const consentButtonLabel = checkInConsentFormLabel(consents, t)
+        setCheckInGate({
+          kind: "consent",
+          message: t(
+            "queue.consentGateFriendly",
+            "Consent is required before check-in. Open the required form to sign, or override if clinic policy allows it."
+          ),
+          action,
+          reuseEncounterId,
+          consentHref,
+          consentButtonLabel,
+        })
+        if (action.mode === "walk_in") {
+          setConsentOverridePending(true)
+          setWalkInConsentHref(consentHref)
+          setWalkInConsentLabel(consentButtonLabel)
+        }
       })
-      if (action.mode === "walk_in") setConsentOverridePending(true)
       notify.info(t("queue.consentGateShort", "Consent required before check-in."))
       return true
     }
@@ -600,24 +748,40 @@ function QueuePageContent() {
     [dayEntries]
   )
 
-  const scrollToQueueSection = React.useCallback((sectionId: string) => {
-    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-  }, [])
+  const boardDisplayEntries = React.useMemo(() => {
+    if (tab === "history") {
+      const historyBase = dayEntries.filter((e) => ["served", "cancelled"].includes(e.status))
+      return filterQueueBoardEntries(
+        historyBase,
+        boardFilter === "all" ? "day_all" : boardFilter
+      )
+    }
+    const activeFilter =
+      boardFilter === "served" || boardFilter === "cancelled" ? "all" : boardFilter
+    return filterQueueBoardEntries(entries, activeFilter)
+  }, [boardFilter, dayEntries, entries, tab])
+
+  const handledFocusRef = React.useRef<string | null>(null)
 
   React.useEffect(() => {
-    if (!isToday || loading) return
+    if (!isToday || loading || !focusParam) return
+    if (handledFocusRef.current === focusParam) return
+    handledFocusRef.current = focusParam
     if (focusParam === "checkin" || focusParam === "arrivals") {
-      setTab("board")
-      const timer = window.setTimeout(() => scrollToQueueSection("queue-arrivals"), 200)
-      return () => window.clearTimeout(timer)
+      handleBoardFilterChange("all", { scrollTo: "queue-arrivals" })
+      return
     }
     if (focusParam === "waiting") {
-      setTab("board")
-      const timer = window.setTimeout(() => scrollToQueueSection("queue-waiting"), 200)
-      return () => window.clearTimeout(timer)
+      handleBoardFilterChange("queue_waiting")
     }
-    return undefined
-  }, [focusParam, isToday, loading, scrollToQueueSection])
+  }, [focusParam, handleBoardFilterChange, isToday, loading])
+
+  const handleTabChange = (next: Tab) => {
+    setTab(next)
+    if (next === "board" && (boardFilter === "served" || boardFilter === "cancelled")) {
+      handleBoardFilterChange("all", { scroll: false })
+    }
+  }
 
   const metricItems =
     tab === "board" && isToday
@@ -628,24 +792,31 @@ function QueuePageContent() {
             hint: t("queue.metricInQueueHint", "Waiting through in-chair"),
             icon: Users,
             variant: dayStats.active > 0 ? ("warning" as const) : ("default" as const),
+            active: boardFilter === "all",
+            onClick: () => handleBoardFilterChange("all", { scroll: false }),
           },
           {
             label: t("queue.metricWaiting", "Waiting"),
             value: loading ? "—" : dayStats.waiting,
-            hint: t("queue.metricWaitingHint", "Not yet called — tap to jump"),
-            onClick: () => scrollToQueueSection("queue-waiting"),
+            hint: t("queue.metricWaitingHint", "Not yet called — tap to filter"),
+            active: boardFilter === "queue_waiting" || boardFilter === "waiting",
+            onClick: () => handleBoardFilterChange("queue_waiting"),
           },
           {
             label: t("queue.metricServing", "Called / chair"),
             value: loading ? "—" : dayStats.serving,
-            hint: t("queue.metricServingHint", "Being seen"),
+            hint: t("queue.metricServingHint", "Being seen — tap to filter"),
             icon: UserCheck,
+            active: boardFilter === "serving",
+            onClick: () => handleBoardFilterChange("serving"),
           },
           {
             label: t("queue.summaryServed", "Served today"),
             value: loading ? "—" : dayStats.served,
             hint: t("queue.metricServedHint", "Completed this clinic day"),
             variant: dayStats.served > 0 ? ("success" as const) : ("default" as const),
+            active: boardFilter === "served",
+            onClick: () => handleBoardFilterChange("served", { scroll: false }),
           },
         ]
       : tab === "history" || !isToday
@@ -655,10 +826,14 @@ function QueuePageContent() {
               value: loading ? "—" : dayStats.served,
               hint: formattedDay,
               variant: dayStats.served > 0 ? ("success" as const) : ("default" as const),
+              active: boardFilter === "served",
+              onClick: () => handleBoardFilterChange("served", { scroll: false }),
             },
             {
               label: t("queue.summaryCancelled", "Cancelled"),
               value: loading ? "—" : dayStats.cancelled,
+              active: boardFilter === "cancelled",
+              onClick: () => handleBoardFilterChange("cancelled", { scroll: false }),
             },
             {
               label: t("queue.avgVisit", "Avg visit"),
@@ -727,6 +902,8 @@ function QueuePageContent() {
             formattedDay={formattedDay}
             prevDayServed={prevDayServed}
             arrivalsPending={isToday ? pendingAppointmentCheckIns.length : 0}
+            activeKey={summaryKeyFromFilter(boardFilter)}
+            onItemClick={handleSummaryClick}
           />
 
           {tab === "board" && isToday ? <QueueWorkflowGuide /> : null}
@@ -748,10 +925,10 @@ function QueuePageContent() {
           <MetricStrip items={metricItems} className="lg:grid-cols-4" />
 
           <div className="flex flex-wrap gap-2">
-            <Button variant={tab === "board" ? "default" : "outline"} size="sm" onClick={() => setTab("board")}>
+            <Button variant={tab === "board" ? "default" : "outline"} size="sm" onClick={() => handleTabChange("board")}>
               {isToday ? t("queue.liveBoard", "Live board") : t("queue.dayBoard", "Day board")}
             </Button>
-            <Button variant={tab === "history" ? "default" : "outline"} size="sm" onClick={() => setTab("history")}>
+            <Button variant={tab === "history" ? "default" : "outline"} size="sm" onClick={() => handleTabChange("history")}>
               {t("queue.history", "History")}
             </Button>
           </div>
@@ -822,12 +999,14 @@ function QueuePageContent() {
                     <Link
                       href={
                         checkInGate.kind === "consent"
-                          ? `/patients/${checkInGate.action.patientId}?tab=consents`
+                          ? (checkInGate.consentHref ??
+                              `/patients/${checkInGate.action.patientId}/consents/general-treatment`)
                           : `/billing?patient=${checkInGate.action.patientId}`
                       }
                     >
                       {checkInGate.kind === "consent"
-                        ? t("queue.openConsents", "Open consents")
+                        ? (checkInGate.consentButtonLabel ??
+                            t("queue.openRequiredConsent", "Sign required consent"))
                         : t("billing.openBilling", "Open billing")}
                     </Link>
                   </Button>
@@ -880,6 +1059,8 @@ function QueuePageContent() {
           checkingIn={checkingIn}
           billingOverridePending={billingOverridePending}
           consentOverridePending={consentOverridePending}
+          consentFormHref={walkInConsentHref}
+          consentFormLabel={walkInConsentLabel}
           onSubmit={handleCheckIn}
           onBillingOverride={() => void handleCheckIn({ preventDefault: () => {} } as React.FormEvent, false, true)}
           onConsentOverride={() => void handleCheckIn({ preventDefault: () => {} } as React.FormEvent, true)}
@@ -889,10 +1070,10 @@ function QueuePageContent() {
         {loading && entries.length === 0 && boardArrivals.length === 0 ? (
           <PageLoadingSkeleton variant="grid3" />
         ) : tab === "board" ? (
-          <div className="space-y-4">
+          <div ref={queueBoardRef} className="space-y-4">
             {activeBranch ? (
               <QueueBoard
-                entries={entries}
+                entries={boardDisplayEntries}
                 arrivals={isToday ? boardArrivals : []}
                 highlightAppointmentId={highlightAppointmentId}
                 apptCheckInId={apptCheckInId}
@@ -930,7 +1111,7 @@ function QueuePageContent() {
               linkLabel={t("queue.openDeviceReports", "Manage patient-facing screens")}
             />
         </div>
-      ) : entries.length === 0 ? (
+      ) : boardDisplayEntries.length === 0 ? (
           <p className="text-center py-12 text-neutral-500">
             {isToday
               ? t("queue.noHistoryToday", "No completed queue entries today.")
@@ -952,7 +1133,7 @@ function QueuePageContent() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {entries.map((e) => (
+                    {boardDisplayEntries.map((e) => (
                       <tr key={e.id}>
                         <td className="py-2 font-mono font-bold">{e.display_code}</td>
                         <td className="py-2">

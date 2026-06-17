@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
+import { addTransitionType, startTransition } from "react"
 import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users, Plus, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen, ScrollText } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
@@ -43,16 +44,17 @@ import { ClinicalVisitJourneyPanel } from "@/components/clinical/ClinicalVisitJo
 import {
   buildClinicalVisitJourney,
   buildEncounterVisitJourney,
+  type ClinicalVisitStep,
 } from "@/lib/clinical/clinical-visit-journey"
 import { getPatientOdontogram } from "@/lib/odontogram/dental-chart-service"
 import { PatientEncountersWorkspace } from "@/components/patients/PatientEncountersWorkspace"
-import { PatientWorkflowGuide } from "@/components/patients/PatientWorkflowGuide"
+import { VisitCheckoutWizard } from "@/components/queue/VisitCheckoutWizard"
 import {
-  closePatientEncounter,
   fetchActiveEncounter,
   type PatientEncounterDetail,
 } from "@/lib/clinical/encounter-service"
 import { fetchCarryForwardSources, type CarryForwardSources } from "@/lib/clinical/encounter-carry-forward"
+import { updateQueueStatus } from "@/lib/queue/queue-service"
 import { EncounterCarryForwardBanner } from "@/components/clinical/EncounterCarryForwardBanner"
 import { ManualInvoiceDrawer } from "@/components/billing/ManualInvoiceDrawer"
 import { cn } from "@/lib/utils"
@@ -130,7 +132,8 @@ export default function PatientProfilePage() {
   const [hasChartFindings, setHasChartFindings] = React.useState(false)
   const [activeEncounter, setActiveEncounter] = React.useState<PatientEncounterDetail | null>(null)
   const [carryForwardSources, setCarryForwardSources] = React.useState<CarryForwardSources | null>(null)
-  const [closingEncounter, setClosingEncounter] = React.useState(false)
+  const [journeyContinueLoading, setJourneyContinueLoading] = React.useState(false)
+  const [checkoutOpen, setCheckoutOpen] = React.useState(false)
   const [showInvoiceDrawer, setShowInvoiceDrawer] = React.useState(false)
   const intakeToastShown = React.useRef(false)
   const balanceClearedToastShown = React.useRef(false)
@@ -420,6 +423,13 @@ export default function PatientProfilePage() {
   const fullName = `${patient.first_name} ${patient.last_name}`
   const initials = `${patient.first_name[0] ?? ""}${patient.last_name[0] ?? ""}`.toUpperCase()
   const pendingConsents = consents.filter((c) => c.status === "pending").length
+  const hasMedicalHistory = Boolean(
+    medicalHistory &&
+      (medicalHistory.allergies.length > 0 ||
+        medicalHistory.medications.length > 0 ||
+        medicalHistory.conditions.length > 0)
+  )
+  const intakeFileReady = hasMedicalHistory && pendingConsents === 0
   const upcomingAppointments = appointments.filter(
     (a) => a.status !== "cancelled" && a.status !== "completed"
   ).length
@@ -442,20 +452,59 @@ export default function PatientProfilePage() {
         patientId,
         detail: activeEncounter,
         hasChartFindings,
+        fileReady: intakeFileReady,
+        pendingConsents,
       })
     : intakeJourney
 
-  const handleFinishVisit = async () => {
-    if (!activeEncounter) return
-    setClosingEncounter(true)
-    const { error } = await closePatientEncounter(activeEncounter.encounter.id)
-    if (error) notify.error(error)
-    else {
-      notify.success(t("visits.visitClosed", "Visit closed"))
-      refreshActiveEncounter()
-    }
-    setClosingEncounter(false)
+  const handleFinishVisit = () => {
+    setCheckoutOpen(true)
   }
+
+  const handleCheckoutClosed = (open: boolean) => {
+    setCheckoutOpen(open)
+    if (!open) refreshActiveEncounter()
+  }
+
+  const handleJourneyContinue = React.useCallback(
+    async (step: ClinicalVisitStep) => {
+      if (!step.href) return
+      setJourneyContinueLoading(true)
+      try {
+        if (step.id === "discharge") {
+          handleFinishVisit()
+          return
+        }
+
+        if (step.id === "chair" && activeEncounter?.queue) {
+          const queue = activeEncounter.queue
+          if (["waiting", "ready", "now_serving"].includes(queue.status)) {
+            const { error } = await updateQueueStatus(queue.id, "in_chair")
+            if (error) {
+              notify.error(error)
+              return
+            }
+            refreshActiveEncounter()
+          }
+        }
+
+        const tabMatch = step.href.match(/[?&]tab=([^&]+)/)
+        const tabId = tabMatch?.[1]
+        if (tabId && PATIENT_TABS.some((tab) => tab.id === tabId)) {
+          handleTabChangeAndScroll(tabId as PatientTabId)
+          return
+        }
+
+        startTransition(() => {
+          addTransitionType("nav-forward")
+          router.push(step.href!)
+        })
+      } finally {
+        setJourneyContinueLoading(false)
+      }
+    },
+    [activeEncounter, handleTabChangeAndScroll, refreshActiveEncounter, router]
+  )
 
   const patientArrivalHref = `/queue?${new URLSearchParams({
     walkinPatient: patientId,
@@ -598,17 +647,23 @@ export default function PatientProfilePage() {
 
       <ClinicalVisitJourneyPanel
         journey={visitJourney}
+        headerBadge={
+          activeEncounter?.encounter.status === "open" ? (
+            <Badge variant="info">{t("visits.activeVisit", "Active visit")}</Badge>
+          ) : undefined
+        }
         celebrate={
           activeEncounter
-            ? visitJourney.percentComplete >= 100 && activeEncounter.encounter.status === "open"
+            ? activeEncounter.encounter.status === "closed" || visitJourney.percentComplete >= 100
             : intakeComplete
         }
+        onContinue={activeEncounter ? handleJourneyContinue : undefined}
+        continueLoading={journeyContinueLoading}
         finishAction={
-          activeEncounter && activeEncounter.encounter.status === "open"
+          activeEncounter && activeEncounter.encounter.status === "open" && visitJourney.readyToClose
             ? {
-                label: t("visits.finishVisit", "Finish visit"),
-                onClick: () => void handleFinishVisit(),
-                loading: closingEncounter,
+                label: t("visits.closeVisit", "Close visit"),
+                onClick: handleFinishVisit,
               }
             : undefined
         }
@@ -618,29 +673,25 @@ export default function PatientProfilePage() {
                 href: `/patients/${patientId}/visits`,
                 label: t("visits.viewAllVisits", "View visit history"),
               }
-            : {
-                href: `/patients/${patientId}/visits`,
-                label: t("visits.openVisitsLog", "Open visits log"),
-              }
+            : activeEncounter.encounter.status === "closed"
+              ? {
+                  href: `/patients/${patientId}/visits`,
+                  label: t("visits.openVisitsLog", "Open visits log"),
+                }
+              : undefined
         }
       />
 
-      <PatientWorkflowGuide
-        patientId={patientId}
-        hasMedicalHistory={Boolean(
-          medicalHistory &&
-            (medicalHistory.allergies.length > 0 ||
-              medicalHistory.medications.length > 0 ||
-              medicalHistory.conditions.length > 0)
-        )}
-        pendingConsents={pendingConsents}
-        upcomingAppointments={upcomingAppointments}
-        activeVisit={Boolean(activeEncounter && activeEncounter.encounter.status === "open")}
-        hasChartFindings={hasChartFindings}
-        treatmentPlansCount={treatmentPlans.length}
-        openBalance={balance?.open_balance ?? 0}
-        patientArrivalHref={patientArrivalHref}
-      />
+      {activeEncounter && checkoutOpen ? (
+        <VisitCheckoutWizard
+          open
+          onOpenChange={handleCheckoutClosed}
+          patientId={patientId}
+          patientName={fullName}
+          billingGate={billingGate}
+          encounterId={activeEncounter.encounter.id}
+        />
+      ) : null}
 
       {activeEncounter && carryForwardSources ? (
         <EncounterCarryForwardBanner

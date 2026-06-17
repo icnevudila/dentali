@@ -22,7 +22,19 @@ type QueueDaySummaryProps = {
   prevDayServed?: number | null
   arrivalsPending?: number
   className?: string
+  activeKey?: QueueDaySummaryKey | null
+  onItemClick?: (key: QueueDaySummaryKey) => void
+  arrivalsHref?: string
 }
+
+export type QueueDaySummaryKey =
+  | "arrivals"
+  | "checked_in"
+  | "active"
+  | "waiting"
+  | "serving"
+  | "served"
+  | "cancelled"
 
 export function QueueDaySummary({
   stats,
@@ -31,8 +43,27 @@ export function QueueDaySummary({
   prevDayServed,
   arrivalsPending = 0,
   className,
+  activeKey = null,
+  onItemClick,
+  arrivalsHref,
 }: QueueDaySummaryProps) {
   const { t } = useLocale()
+
+  const cell = (
+    key: QueueDaySummaryKey,
+    item: {
+      label: string
+      value: string | number
+      sub?: string
+      emphasis?: "default" | "warning" | "success"
+      href?: string
+    }
+  ) => ({
+    ...item,
+    active: activeKey === key,
+    onClick: onItemClick ? () => onItemClick(key) : undefined,
+    href: key === "arrivals" && !onItemClick ? arrivalsHref : item.href,
+  })
 
   const servedDelta =
     isToday && prevDayServed != null ? stats.served - prevDayServed : null
@@ -64,44 +95,51 @@ export function QueueDaySummary({
       items={[
         ...(isToday
           ? [
-              {
+              cell("arrivals", {
                 label: t("queue.summaryArrivals", "To check in"),
                 value: arrivalsPending,
                 sub: t("queue.summaryArrivalsSub", "Scheduled, not in queue"),
                 emphasis: arrivalsPending > 0 ? ("warning" as const) : ("default" as const),
-              },
+              }),
             ]
           : []),
-        {
+        cell("checked_in", {
           label: t("queue.summaryCheckedIn", "Checked in"),
           value: stats.checkedIn,
-          sub: t("queue.summaryCheckedInSub", "Total visits this day"),
-        },
-        {
+          sub: onItemClick
+            ? t("queue.summaryTapFilter", "Tap to show all")
+            : t("queue.summaryCheckedInSub", "Total visits this day"),
+        }),
+        cell("active", {
           label: t("queue.summaryActive", "Active now"),
           value: stats.active,
           sub: isToday
-            ? t("queue.summaryActiveSub", "On the live board")
+            ? onItemClick
+              ? t("queue.summaryTapActive", "Tap to filter live board")
+              : t("queue.summaryActiveSub", "On the live board")
             : t("queue.summaryActivePast", "Unfinished at EOD"),
           emphasis: isToday && stats.active > 0 ? "warning" : "default",
-        },
-        {
+        }),
+        cell("waiting", {
           label: t("queue.summaryWaiting", "Waiting"),
           value: stats.waiting,
-        },
-        {
+          sub: onItemClick ? t("queue.summaryTapWaiting", "Tap to filter waiting") : undefined,
+        }),
+        cell("serving", {
           label: t("queue.summaryServing", "Called / chair"),
           value: stats.serving,
-        },
-        {
+          sub: onItemClick ? t("queue.summaryTapServing", "Tap to filter called") : undefined,
+        }),
+        cell("served", {
           label: t("queue.summaryServed", "Served"),
           value: stats.served,
           emphasis: stats.served > 0 ? "success" : "default",
-        },
-        {
+          sub: onItemClick ? t("queue.summaryTapServed", "Tap to filter completed") : undefined,
+        }),
+        cell("cancelled", {
           label: t("queue.summaryCancelled", "Cancelled"),
           value: stats.cancelled,
-        },
+        }),
         {
           label: isToday ? t("queue.avgWait", "Avg wait") : t("queue.avgVisit", "Avg visit"),
           value: isToday

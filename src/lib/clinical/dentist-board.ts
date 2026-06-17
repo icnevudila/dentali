@@ -3,9 +3,15 @@ import {
   fetchPatientRecordsByIds,
   type PatientRecord,
 } from "@/lib/patients/patient-service"
-import { fetchQueueEntries, type QueueEntry, type QueueStatus } from "@/lib/queue/queue-service"
+import { fetchQueueEntries, fetchQueueEntriesForDay, type QueueEntry, type QueueStatus } from "@/lib/queue/queue-service"
+import {
+  DAY_SCOPED_QUEUE_FILTERS,
+  filterQueueBoardEntries,
+  parseQueueBoardFilter,
+  type QueueBoardFilter,
+} from "@/lib/queue/queue-board-filter"
 
-export type DentistBoardFilter = "all" | "in_chair" | "now_serving" | "waiting"
+export type DentistBoardFilter = QueueBoardFilter
 
 const STATUS_PRIORITY: Record<QueueStatus, number> = {
   in_chair: 0,
@@ -28,16 +34,7 @@ export function filterDentistBoardEntries(
   entries: QueueEntry[],
   filter: DentistBoardFilter
 ): QueueEntry[] {
-  switch (filter) {
-    case "in_chair":
-      return entries.filter((e) => e.status === "in_chair")
-    case "now_serving":
-      return entries.filter((e) => e.status === "now_serving")
-    case "waiting":
-      return entries.filter((e) => e.status === "waiting" || e.status === "ready")
-    default:
-      return entries
-  }
+  return filterQueueBoardEntries(entries, filter)
 }
 
 export function countDentistBoardEntries(entries: QueueEntry[]) {
@@ -60,8 +57,7 @@ export function matchesDentistSearch(entry: QueueEntry, query: string): boolean 
 }
 
 export function parseDentistBoardFilter(value: string | null): DentistBoardFilter {
-  if (value === "in_chair" || value === "now_serving" || value === "waiting") return value
-  return "all"
+  return parseQueueBoardFilter(value)
 }
 
 export type ChairQueueSectionId = "in_chair" | "now_serving" | "waiting"
@@ -104,6 +100,8 @@ export function filterUpcomingByProvider(
   return appointments.filter((a) => a.provider_id == null || a.provider_id === providerId)
 }
 
+const DAY_SCOPED_FILTERS = DAY_SCOPED_QUEUE_FILTERS
+
 export async function searchDentistQueuePatients(
   branchId: string,
   options: {
@@ -112,6 +110,7 @@ export async function searchDentistQueuePatients(
     providerId?: string | null
     page?: number
     pageSize?: number
+    clinicDay?: string
   } = {}
 ): Promise<DentistQueueSearchResult> {
   const filter = options.filter ?? "all"
@@ -119,7 +118,10 @@ export async function searchDentistQueuePatients(
   const pageSize = Math.min(50, Math.max(1, options.pageSize ?? 20))
   const query = options.query ?? ""
 
-  const { data: entries, error } = await fetchQueueEntries(branchId, true)
+  const needsDayScope = DAY_SCOPED_FILTERS.includes(filter) && Boolean(options.clinicDay)
+  const { data: entries, error } = needsDayScope
+    ? await fetchQueueEntriesForDay(branchId, options.clinicDay!)
+    : await fetchQueueEntries(branchId, true)
   if (error) return { data: [], total: 0, queueByPatientId: {}, error }
 
   let filtered = filterDentistBoardByProvider(
