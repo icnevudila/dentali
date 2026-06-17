@@ -26,7 +26,6 @@ import {
   fetchAppointments,
   type AppointmentRecord,
 } from "@/lib/appointments/appointment-service"
-import { toDateKey } from "@/lib/appointments/week-calendar"
 import {
   applyEncounterCheckInChoice,
   loadOpenEncounterPrompt,
@@ -161,10 +160,13 @@ function QueuePageContent() {
   const today = clinicDay
 
   React.useEffect(() => {
-    setBoardFilter(urlBoardFilter)
-    if (urlBoardFilter === "served" || urlBoardFilter === "cancelled") {
-      setTab("history")
-    }
+    const id = window.setTimeout(() => {
+      setBoardFilter(urlBoardFilter)
+      if (urlBoardFilter === "served" || urlBoardFilter === "cancelled") {
+        setTab("history")
+      }
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [urlBoardFilter])
 
   const syncBoardFilterUrl = React.useCallback(
@@ -767,13 +769,16 @@ function QueuePageContent() {
     if (!isToday || loading || !focusParam) return
     if (handledFocusRef.current === focusParam) return
     handledFocusRef.current = focusParam
-    if (focusParam === "checkin" || focusParam === "arrivals") {
-      handleBoardFilterChange("all", { scrollTo: "queue-arrivals" })
-      return
-    }
-    if (focusParam === "waiting") {
-      handleBoardFilterChange("queue_waiting")
-    }
+    const id = window.setTimeout(() => {
+      if (focusParam === "checkin" || focusParam === "arrivals") {
+        handleBoardFilterChange("all", { scrollTo: "queue-arrivals" })
+        return
+      }
+      if (focusParam === "waiting") {
+        handleBoardFilterChange("queue_waiting")
+      }
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [focusParam, handleBoardFilterChange, isToday, loading])
 
   const handleTabChange = (next: Tab) => {

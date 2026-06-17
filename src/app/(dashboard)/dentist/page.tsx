@@ -72,7 +72,7 @@ function DentistPageContent() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
   const { roleName } = useStaffRole()
-  const { activeBranch, branchRevision, hasActiveBranch } = useBranch()
+  const { activeBranch, hasActiveBranch } = useBranch()
   const { t } = useLocale()
   const { clinicDay, isToday, formattedDay } = useClinicDay()
   const searchRef = React.useRef<HTMLInputElement>(null)
@@ -125,47 +125,61 @@ function DentistPageContent() {
 
   React.useEffect(() => {
     if (!activeBranch) {
-      setProviders([])
-      return
+      const id = window.setTimeout(() => setProviders([]), 0)
+      return () => window.clearTimeout(id)
     }
-    void fetchOrgStaff().then(({ data }) => {
-      const branchProviders = data.filter(
-        (member) =>
-          member.is_active &&
-          member.branch_names.includes(activeBranch.name) &&
-          member.role_name.toLowerCase() === "dentist"
-      )
-      setProviders(branchProviders)
-    })
+    const id = window.setTimeout(() => {
+      void fetchOrgStaff().then(({ data }) => {
+        const branchProviders = data.filter(
+          (member) =>
+            member.is_active &&
+            member.branch_names.includes(activeBranch.name) &&
+            member.role_name.toLowerCase() === "dentist"
+        )
+        setProviders(branchProviders)
+      })
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [activeBranch])
 
   React.useEffect(() => {
     if (!user || !providerLocked) return
-    setProviderId(user.id)
+    const id = window.setTimeout(() => setProviderId(user.id), 0)
+    return () => window.clearTimeout(id)
   }, [user, providerLocked])
 
   React.useEffect(() => {
-    if (providerLocked || urlProvider) {
-      setProviderId(urlProvider)
-      return
-    }
-    if (providers.length === 1) {
-      setProviderId(providers[0].profile_id)
-    }
+    const id = window.setTimeout(() => {
+      if (providerLocked || urlProvider) {
+        setProviderId(urlProvider)
+        return
+      }
+      if (providers.length === 1) {
+        setProviderId(providers[0].profile_id)
+      }
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [providerLocked, urlProvider, providers])
 
   React.useEffect(() => {
-    setQuery(urlQuery)
-    setPage(urlPage)
-    setFilter(urlFilter)
-    if (!providerLocked) setProviderId(urlProvider)
+    const id = window.setTimeout(() => {
+      setQuery(urlQuery)
+      setPage(urlPage)
+      setFilter(urlFilter)
+      if (!providerLocked) setProviderId(urlProvider)
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [urlQuery, urlPage, urlFilter, urlProvider, providerLocked])
 
   React.useEffect(() => {
     if (debouncedQuery !== urlQuery) {
-      setPage(1)
-      syncUrl(debouncedQuery, 1, filter, providerId)
+      const id = window.setTimeout(() => {
+        setPage(1)
+        syncUrl(debouncedQuery, 1, filter, providerId)
+      }, 0)
+      return () => window.clearTimeout(id)
     }
+    return undefined
   }, [debouncedQuery, urlQuery, syncUrl, filter, providerId])
 
   const handleFilterChange = (next: DentistBoardFilter) => {
@@ -294,10 +308,13 @@ function DentistPageContent() {
     } else {
       setChartFindingsByPatient({})
     }
-  }, [activeBranch, branchRevision, debouncedQuery, filter, page, providerId, isToday, clinicDay])
+  }, [activeBranch, debouncedQuery, filter, page, providerId, isToday, clinicDay])
 
   React.useEffect(() => {
-    loadPatients()
+    const id = window.setTimeout(() => {
+      loadPatients()
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [loadPatients])
 
   React.useEffect(() => {
