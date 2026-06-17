@@ -1,6 +1,5 @@
 "use client"
 
-import type { DashboardStats } from "@/lib/dashboard/dashboard-service"
 import type { ReportsSummary } from "@/lib/reports/reports-service"
 import { formatStatusLabel } from "@/lib/reports/reports-service"
 

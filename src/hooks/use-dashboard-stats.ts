@@ -70,25 +70,25 @@ export function useDashboardStats() {
     [branchId]
   )
 
-  const reloadRef = React.useRef(reload)
-  reloadRef.current = reload
-
   React.useEffect(() => {
-    if (!branchId) {
-      setLoading(false)
-      setLive(false)
-      return
-    }
-    if (getShowcaseSnapshot()) {
-      setStats(getShowcaseSnapshot()!.stats)
-      setLoading(false)
-      setLive(false)
-      setLastUpdated(new Date())
-      setError(null)
-      return
-    }
-    void reloadRef.current()
-  }, [branchId, branchRevision])
+    const id = window.setTimeout(() => {
+      if (!branchId) {
+        setLoading(false)
+        setLive(false)
+        return
+      }
+      if (getShowcaseSnapshot()) {
+        setStats(getShowcaseSnapshot()!.stats)
+        setLoading(false)
+        setLive(false)
+        setLastUpdated(new Date())
+        setError(null)
+        return
+      }
+      void reload()
+    }, 0)
+    return () => window.clearTimeout(id)
+  }, [branchId, branchRevision, reload])
 
   React.useEffect(() => {
     if (!branchId || getShowcaseSnapshot()) return
@@ -96,13 +96,13 @@ export function useDashboardStats() {
     const unsubscribe = subscribeDashboardKpiRealtime(
       branchId,
       () => {
-        void reloadRef.current({ silent: true })
+        void reload({ silent: true })
       },
       setLive
     )
 
     const fallbackInterval = setInterval(() => {
-      void reloadRef.current({ silent: true })
+      void reload({ silent: true })
     }, 120_000)
 
     return () => {
@@ -110,7 +110,7 @@ export function useDashboardStats() {
       setLive(false)
       unsubscribe()
     }
-  }, [branchId])
+  }, [branchId, reload])
 
   return { stats, loading, error, live, lastUpdated, reload }
 }

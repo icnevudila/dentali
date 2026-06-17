@@ -79,7 +79,7 @@ export default function PatientsPage() {
 function PatientsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { activeBranch, branchRevision, hasActiveBranch } = useBranch()
+  const { activeBranch, hasActiveBranch } = useBranch()
   const { t } = useLocale()
   const searchRef = React.useRef<HTMLInputElement>(null)
 
@@ -127,16 +127,23 @@ function PatientsPageContent() {
   )
 
   React.useEffect(() => {
-    setQuery(urlQuery)
-    setPage(urlPage)
-    setFilters(parsePatientListFilters(searchParams))
+    const id = window.setTimeout(() => {
+      setQuery(urlQuery)
+      setPage(urlPage)
+      setFilters(parsePatientListFilters(searchParams))
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [urlQuery, urlPage, searchParams])
 
   React.useEffect(() => {
     if (debouncedQuery !== urlQuery) {
-      setPage(1)
-      syncUrl(debouncedQuery, 1, filters)
+      const id = window.setTimeout(() => {
+        setPage(1)
+        syncUrl(debouncedQuery, 1, filters)
+      }, 0)
+      return () => window.clearTimeout(id)
     }
+    return undefined
   }, [debouncedQuery, urlQuery, syncUrl, filters])
 
   const handleFiltersChange = (next: PatientListFilters) => {
@@ -172,10 +179,13 @@ function PatientsPageContent() {
     } else {
       setChartFindingsByPatient({})
     }
-  }, [activeBranch, branchRevision, debouncedQuery, page, filters])
+  }, [activeBranch, debouncedQuery, page, filters])
 
   React.useEffect(() => {
-    loadPatients()
+    const id = window.setTimeout(() => {
+      loadPatients()
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [loadPatients])
 
   const handlePageChange = (nextPage: number) => {

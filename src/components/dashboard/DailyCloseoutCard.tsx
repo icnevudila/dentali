@@ -35,7 +35,10 @@ export function DailyCloseoutCard({
   }, [activeBranch])
 
   React.useEffect(() => {
-    void reload()
+    const id = window.setTimeout(() => {
+      void reload()
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [reload])
 
   useOperationalRefresh(

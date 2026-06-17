@@ -76,13 +76,16 @@ export default function WaitlistPage() {
   }, [activeBranch, tab])
 
   React.useEffect(() => {
-    load()
+    const id = window.setTimeout(() => {
+      load()
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [load])
 
   React.useEffect(() => {
     if (!activeBranch || patientQuery.length < 2) {
-      setPatients([])
-      return
+      const id = window.setTimeout(() => setPatients([]), 0)
+      return () => window.clearTimeout(id)
     }
     const timer = setTimeout(() => {
       searchPatients(patientQuery, activeBranch.id).then(({ data }) => setPatients(data))
@@ -92,10 +95,13 @@ export default function WaitlistPage() {
 
   React.useEffect(() => {
     if (!contactEntry) {
-      setContactHistory([])
-      return
+      const id = window.setTimeout(() => setContactHistory([]), 0)
+      return () => window.clearTimeout(id)
     }
-    fetchContactAttempts(contactEntry.id).then(({ data }) => setContactHistory(data))
+    const id = window.setTimeout(() => {
+      fetchContactAttempts(contactEntry.id).then(({ data }) => setContactHistory(data))
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [contactEntry])
 
   const waitingCount = entries.filter((e) => e.status === "waiting").length

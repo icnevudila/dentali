@@ -22,7 +22,7 @@ import {
   type LowStockAlert,
 } from "@/lib/inventory/inventory-service"
 import { LowStockAlertsBanner } from "@/components/inventory/LowStockAlertsBanner"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -129,10 +129,18 @@ function InventoryPageContent() {
     })
   }, [activeBranch])
 
-  React.useEffect(() => { load() }, [load])
+  React.useEffect(() => {
+    const id = window.setTimeout(() => {
+      load()
+    }, 0)
+    return () => window.clearTimeout(id)
+  }, [load])
 
   React.useEffect(() => {
-    setAlertsFilter(alertsOnly)
+    const id = window.setTimeout(() => {
+      setAlertsFilter(alertsOnly)
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [alertsOnly])
 
   const alertIds = React.useMemo(() => new Set(alerts.map((a) => a.id)), [alerts])

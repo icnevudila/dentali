@@ -12,7 +12,6 @@ import { fetchOrganization } from "@/lib/auth/auth-service"
 import { searchPatients } from "@/lib/patients/patient-service"
 import {
   createAppointment,
-  fetchAppointments,
   fetchAppointmentScheduledAt,
   fetchAppointmentsRange,
   rescheduleAppointment,
@@ -28,10 +27,8 @@ import {
   pickDefaultSlotTime,
 } from "@/lib/appointments/appointment-slots"
 import {
-  fetchBranchProviderAvailability,
   ensureProviderAvailabilityDefaults,
   type AppointmentSlot,
-  type ProviderAvailabilityRow,
 } from "@/lib/appointments/provider-availability-service"
 import { sendAppointmentReminder } from "@/lib/notifications/notification-service"
 import { notifyWaitlistOnSlotOpen } from "@/lib/waitlist/waitlist-service"
@@ -51,14 +48,13 @@ import {
   addDaysToKey,
   buildRescheduledAt,
   parseDateKey,
-  formatAppointmentTime,
   appointmentDateKey,
 } from "@/lib/appointments/week-calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Calendar, Plus, Check, X, LayoutGrid, List, ChevronLeft, ChevronRight, UserCheck, Bell, UserX, MapPin, Globe } from "lucide-react"
+import { Calendar, Plus, UserCheck, MapPin, Globe } from "lucide-react"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
@@ -70,8 +66,6 @@ import { DirectionalTransition } from "@/components/layout/DirectionalTransition
 import { useOperationalRefresh } from "@/hooks/use-operational-refresh"
 import { resolveBookingSource } from "@/lib/appointments/booking-source"
 import type { BookingSource } from "@/lib/appointments/booking-source"
-
-type ViewMode = "today" | "week"
 
 export default function AppointmentsPage() {
   return (
@@ -128,8 +122,6 @@ function AppointmentsPageContent() {
   const [slotsLoading, setSlotsLoading] = React.useState(false)
   const [bookingBillingGate, setBookingBillingGate] = React.useState<PatientBillingGate | null>(null)
   const [forceBillingOverride, setForceBillingOverride] = React.useState(false)
-  const [availabilityRows, setAvailabilityRows] = React.useState<ProviderAvailabilityRow[]>([])
-  const [availabilityLoading, setAvailabilityLoading] = React.useState(false)
   const [todayQueueEntries, setTodayQueueEntries] = React.useState<QueueEntry[]>([])
 
   const today = toDateKey(new Date())
@@ -167,19 +159,28 @@ function AppointmentsPageContent() {
   }, [activeBranch, weekStart, today])
 
   React.useEffect(() => {
-    loadWeek()
+    const id = window.setTimeout(() => {
+      loadWeek()
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [loadWeek])
 
   React.useEffect(() => {
     if (!viewToday) return
-    setSelectedDate(today)
-    setWeekStart(startOfWeekMonday(parseDateKey(today)))
+    const id = window.setTimeout(() => {
+      setSelectedDate(today)
+      setWeekStart(startOfWeekMonday(parseDateKey(today)))
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [viewToday, today])
 
   React.useEffect(() => {
     if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return
-    setSelectedDate(dateParam)
-    setWeekStart(startOfWeekMonday(parseDateKey(dateParam)))
+    const id = window.setTimeout(() => {
+      setSelectedDate(dateParam)
+      setWeekStart(startOfWeekMonday(parseDateKey(dateParam)))
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [dateParam])
 
   React.useEffect(() => {
@@ -196,46 +197,48 @@ function AppointmentsPageContent() {
 
   React.useEffect(() => {
     if (!activeBranch) return
-    setAvailabilityLoading(true)
-    fetchOrgStaff().then(async ({ data }) => {
-      const branchProviders = data.filter(
-        (s) => s.is_active && s.branch_names.includes(activeBranch.name)
-      )
-      setProviders(branchProviders)
-      if (branchProviders.length > 0) {
-        setSelectedProviderId((prev) => prev || branchProviders[0].profile_id)
-      }
-      for (const p of branchProviders) {
-        await ensureProviderAvailabilityDefaults(activeBranch.id, p.profile_id)
-      }
-      const { data: rows } = await fetchBranchProviderAvailability(activeBranch.id)
-      setAvailabilityRows(rows)
-      setAvailabilityLoading(false)
-    })
+    const id = window.setTimeout(() => {
+      fetchOrgStaff().then(async ({ data }) => {
+        const branchProviders = data.filter(
+          (s) => s.is_active && s.branch_names.includes(activeBranch.name)
+        )
+        setProviders(branchProviders)
+        if (branchProviders.length > 0) {
+          setSelectedProviderId((prev) => prev || branchProviders[0].profile_id)
+        }
+        for (const p of branchProviders) {
+          await ensureProviderAvailabilityDefaults(activeBranch.id, p.profile_id)
+        }
+      })
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [activeBranch])
 
   React.useEffect(() => {
     if (!activeBranch || !selectedProviderId || !date) {
-      setSlots([])
-      return
+      const id = window.setTimeout(() => setSlots([]), 0)
+      return () => window.clearTimeout(id)
     }
-    setSlotsLoading(true)
-    void fetchPreparedAppointmentSlots({
-      branchId: activeBranch.id,
-      providerId: selectedProviderId,
-      date,
-    }).then(({ data, error: slotError }) => {
-      setSlots(data)
-      setSlotsLoading(false)
-      if (slotError) notify.error(slotError)
-      setTime((prev) => pickDefaultSlotTime(data, prev, undefined, date))
-    })
+    const id = window.setTimeout(() => {
+      setSlotsLoading(true)
+      void fetchPreparedAppointmentSlots({
+        branchId: activeBranch.id,
+        providerId: selectedProviderId,
+        date,
+      }).then(({ data, error: slotError }) => {
+        setSlots(data)
+        setSlotsLoading(false)
+        if (slotError) notify.error(slotError)
+        setTime((prev) => pickDefaultSlotTime(data, prev, undefined, date))
+      })
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [activeBranch, selectedProviderId, date])
 
   React.useEffect(() => {
     if (!activeBranch || patientQuery.length < 2) {
-      setPatients([])
-      return
+      const id = window.setTimeout(() => setPatients([]), 0)
+      return () => window.clearTimeout(id)
     }
     const t = setTimeout(() => {
       searchPatients(patientQuery, activeBranch.id).then(({ data }) => setPatients(data))
@@ -245,12 +248,17 @@ function AppointmentsPageContent() {
 
   React.useEffect(() => {
     if (!selectedPatientId) {
-      setBookingBillingGate(null)
-      setForceBillingOverride(false)
-      return
+      const id = window.setTimeout(() => {
+        setBookingBillingGate(null)
+        setForceBillingOverride(false)
+      }, 0)
+      return () => window.clearTimeout(id)
     }
-    getPatientBillingGate(selectedPatientId).then(({ data }) => setBookingBillingGate(data))
-    setForceBillingOverride(false)
+    const id = window.setTimeout(() => {
+      getPatientBillingGate(selectedPatientId).then(({ data }) => setBookingBillingGate(data))
+      setForceBillingOverride(false)
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [selectedPatientId])
 
   const patchAppointment = React.useCallback((id: string, patch: Partial<AppointmentRecord>) => {
@@ -260,12 +268,6 @@ function AppointmentsPageContent() {
   const reload = () => {
     loadWeek()
   }
-
-  const reloadAvailability = React.useCallback(async () => {
-    if (!activeBranch) return
-    const { data: rows } = await fetchBranchProviderAvailability(activeBranch.id)
-    setAvailabilityRows(rows)
-  }, [activeBranch])
 
   const tryNotifyWaitlist = async (slotAt: string) => {
     if (!activeBranch) return

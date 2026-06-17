@@ -16,7 +16,6 @@ import {
   type InvoiceStatusFilter,
 } from "@/lib/billing/invoice-service"
 import { ManualInvoiceDrawer } from "@/components/billing/ManualInvoiceDrawer"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
@@ -56,24 +55,30 @@ function BillingPageContent() {
   }, [activeBranch])
 
   React.useEffect(() => {
-    load()
+    const id = window.setTimeout(() => {
+      load()
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [load, branchRevision])
 
   React.useEffect(() => {
-    if (patientFilter) {
-      getPatient(patientFilter).then(({ data }) => {
-        if (data) {
-          setPrefillPatientId(patientFilter)
-          setPrefillPatientLabel(`${data.first_name} ${data.last_name}`)
+    const id = window.setTimeout(() => {
+      if (patientFilter) {
+        getPatient(patientFilter).then(({ data }) => {
+          if (data) {
+            setPrefillPatientId(patientFilter)
+            setPrefillPatientLabel(`${data.first_name} ${data.last_name}`)
+          }
+        })
+        if (searchParams.get("create") === "true") {
+          setShowCreate(true)
         }
-      })
-      if (searchParams.get("create") === "true") {
-        setShowCreate(true)
+      } else {
+        setPrefillPatientId(undefined)
+        setPrefillPatientLabel(undefined)
       }
-    } else {
-      setPrefillPatientId(undefined)
-      setPrefillPatientLabel(undefined)
-    }
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [patientFilter, searchParams])
 
   const scopedInvoices = React.useMemo(

@@ -27,17 +27,20 @@ export function OwnerBranchKpiGrid({ branchCount, activeBranchName }: OwnerBranc
   const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
-    if (branchCount < 2) {
-      setRows([])
-      setLoading(false)
-      return
-    }
+    const id = window.setTimeout(() => {
+      if (branchCount < 2) {
+        setRows([])
+        setLoading(false)
+        return
+      }
 
-    setLoading(true)
-    fetchBranchBenchmark(7).then(({ data }) => {
-      setRows(data)
-      setLoading(false)
-    })
+      setLoading(true)
+      fetchBranchBenchmark(7).then(({ data }) => {
+        setRows(data)
+        setLoading(false)
+      })
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [branchCount])
 
   if (branchCount < 2) return null
