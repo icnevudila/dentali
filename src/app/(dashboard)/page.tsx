@@ -164,7 +164,7 @@ export default function DashboardPage() {
               stats={stats}
               permissions={permissions}
               workflowSettings={workflowSettings}
-              interactive={false}
+              interactive
               labels={{
                 title: t("dashboard.attentionTitle", "Needs attention"),
                 allClear: t("dashboard.attentionClear", "All clear — nothing urgent right now."),
@@ -192,7 +192,7 @@ export default function DashboardPage() {
                 ),
               }}
             />
-            <DailyCloseoutCard stats={stats} interactive={false} />
+            <DailyCloseoutCard stats={stats} interactive />
             </div>
           </div>
         ) : null}

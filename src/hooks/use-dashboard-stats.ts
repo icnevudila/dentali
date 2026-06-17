@@ -5,6 +5,10 @@ import { useBranch } from "@/hooks/use-branch"
 import { fetchDashboardStats, type DashboardStats } from "@/lib/dashboard/dashboard-service"
 import { subscribeDashboardKpiRealtime } from "@/lib/dashboard/dashboard-realtime"
 import { getShowcaseSnapshot } from "@/lib/showcase/intercept"
+import { fetchAppointments } from "@/lib/appointments/appointment-service"
+import { fetchQueueEntriesForDay } from "@/lib/queue/queue-service"
+import { filterPendingCheckInAppointments } from "@/lib/queue/pending-arrivals"
+import { toDateKey } from "@/lib/appointments/week-calendar"
 
 const EMPTY_STATS: DashboardStats = {
   active_patients: 0,
@@ -38,12 +42,29 @@ export function useDashboardStats() {
     async (opts?: { silent?: boolean }) => {
       if (!branchId) return
       if (!opts?.silent) setLoading(true)
-      const { data, error: err } = await fetchDashboardStats(branchId)
+      const today = toDateKey(new Date())
+      const [statsRes, appointmentsRes, queueRes] = await Promise.all([
+        fetchDashboardStats(branchId),
+        fetchAppointments(branchId, today),
+        fetchQueueEntriesForDay(branchId, today),
+      ])
+      const { data, error: err } = statsRes
       if (data) {
-        setStats(data)
+        const normalizedAwaiting = filterPendingCheckInAppointments(
+          appointmentsRes.data,
+          queueRes.data
+        ).length
+        const normalizedQueueWaiting = queueRes.data.filter((e) =>
+          ["waiting", "ready", "now_serving", "in_chair"].includes(e.status)
+        ).length
+        setStats({
+          ...data,
+          appointments_awaiting_checkin: normalizedAwaiting,
+          queue_waiting: normalizedQueueWaiting,
+        })
         setLastUpdated(new Date())
       }
-      setError(err)
+      setError(err ?? appointmentsRes.error ?? queueRes.error)
       setLoading(false)
     },
     [branchId]

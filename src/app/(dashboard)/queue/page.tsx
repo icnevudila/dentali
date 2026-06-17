@@ -139,7 +139,7 @@ function QueuePageContent() {
   const [checkInGate, setCheckInGate] = React.useState<CheckInGate | null>(null)
   const seededWalkInRef = React.useRef(false)
 
-  const today = toDateKey(new Date())
+  const today = clinicDay
 
   const openCheckInModal = () => {
     setPatientQuery("")
@@ -235,7 +235,12 @@ function QueuePageContent() {
   React.useEffect(() => {
     if (!activeBranch || !isToday) return
     void (async () => {
-      const { data } = await fetchAppointments(activeBranch.id, today)
+      const { data, error: appointmentsError } = await fetchAppointments(activeBranch.id, today)
+      if (appointmentsError) {
+        setError(appointmentsError)
+        setTodayAppointments([])
+        return
+      }
       setTodayAppointments(
         data.filter((a) =>
           a.status === "scheduled" || a.status === "confirmed" || a.status === "checked_in"

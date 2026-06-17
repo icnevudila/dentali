@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { BarChart3, TrendingUp, Wallet } from "lucide-react"
+import { BarChart3, TrendingUp, Wallet, Activity } from "lucide-react"
 import { TrendArea, TrendLine } from "@/components/charts/ChartKit"
 import { StatusBreakdown } from "@/components/charts/StatusBreakdown"
 import type { ReportsSummary } from "@/lib/reports/reports-service"
@@ -72,7 +72,7 @@ export function DashboardVisualPanel({
         </Button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+      <div className="grid gap-4 lg:grid-cols-4 lg:items-start">
         <div className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] lg:col-span-1">
           <div className="mb-3 flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-primary-600" aria-hidden />
@@ -112,6 +112,40 @@ export function DashboardVisualPanel({
             <div className="flex h-36 items-center justify-center text-sm text-neutral-400">{labels.loading}</div>
           ) : (
             <StatusBreakdown slices={summary.statusBreakdown} emptyLabel={labels.emptyStatus} />
+          )}
+        </div>
+
+        <div className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] lg:col-span-1">
+          <div className="mb-3 flex items-center gap-2">
+            <Activity className="h-4 w-4 text-amber-600" aria-hidden />
+            <h3 className="text-sm font-semibold text-neutral-900">Visit outcomes</h3>
+          </div>
+          {loading || !summary ? (
+            <div className="flex h-36 items-center justify-center text-sm text-neutral-400">{labels.loading}</div>
+          ) : (
+            <div className="space-y-2.5">
+              {[
+                { label: "Completed", value: summary.totals.completed, tone: "bg-emerald-500" },
+                { label: "No-show", value: summary.totals.noShow, tone: "bg-amber-500" },
+                { label: "Cancelled", value: summary.totals.cancelled, tone: "bg-rose-500" },
+              ].map((row) => {
+                const total = Math.max(summary.totals.appointments, 1)
+                const pct = Math.min(100, Math.round((row.value / total) * 100))
+                return (
+                  <div key={row.label} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-neutral-600">{row.label}</span>
+                      <span className="tabular-nums text-neutral-900">
+                        {row.value} ({pct}%)
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-full bg-neutral-100">
+                      <div className={`h-2 rounded-full ${row.tone}`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           )}
         </div>
       </div>
