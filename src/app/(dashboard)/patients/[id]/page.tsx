@@ -466,45 +466,42 @@ export default function PatientProfilePage() {
     if (!open) refreshActiveEncounter()
   }
 
-  const handleJourneyContinue = React.useCallback(
-    async (step: ClinicalVisitStep) => {
-      if (!step.href) return
-      setJourneyContinueLoading(true)
-      try {
-        if (step.id === "discharge") {
-          handleFinishVisit()
-          return
-        }
-
-        if (step.id === "chair" && activeEncounter?.queue) {
-          const queue = activeEncounter.queue
-          if (["waiting", "ready", "now_serving"].includes(queue.status)) {
-            const { error } = await updateQueueStatus(queue.id, "in_chair")
-            if (error) {
-              notify.error(error)
-              return
-            }
-            refreshActiveEncounter()
-          }
-        }
-
-        const tabMatch = step.href.match(/[?&]tab=([^&]+)/)
-        const tabId = tabMatch?.[1]
-        if (tabId && PATIENT_TABS.some((tab) => tab.id === tabId)) {
-          handleTabChangeAndScroll(tabId as PatientTabId)
-          return
-        }
-
-        startTransition(() => {
-          addTransitionType("nav-forward")
-          router.push(step.href!)
-        })
-      } finally {
-        setJourneyContinueLoading(false)
+  const handleJourneyContinue = async (step: ClinicalVisitStep) => {
+    if (!step.href) return
+    setJourneyContinueLoading(true)
+    try {
+      if (step.id === "discharge") {
+        handleFinishVisit()
+        return
       }
-    },
-    [activeEncounter, handleTabChangeAndScroll, refreshActiveEncounter, router]
-  )
+
+      if (step.id === "chair" && activeEncounter?.queue) {
+        const queue = activeEncounter.queue
+        if (["waiting", "ready", "now_serving"].includes(queue.status)) {
+          const { error } = await updateQueueStatus(queue.id, "in_chair")
+          if (error) {
+            notify.error(error)
+            return
+          }
+          refreshActiveEncounter()
+        }
+      }
+
+      const tabMatch = step.href.match(/[?&]tab=([^&]+)/)
+      const tabId = tabMatch?.[1]
+      if (tabId && PATIENT_TABS.some((tab) => tab.id === tabId)) {
+        handleTabChangeAndScroll(tabId as PatientTabId)
+        return
+      }
+
+      startTransition(() => {
+        addTransitionType("nav-forward")
+        router.push(step.href!)
+      })
+    } finally {
+      setJourneyContinueLoading(false)
+    }
+  }
 
   const patientArrivalHref = `/queue?${new URLSearchParams({
     walkinPatient: patientId,
