@@ -47,6 +47,16 @@ export async function dispatchBranchSms(params: {
 }): Promise<"dry_run" | "sent" | "failed"> {
   if (params.dryRun) return "dry_run"
 
-  const smsResult = await sendLiveSms(params.phone, params.messageBody)
+  const { data: settings } = await params.supabaseAdmin
+    .from("notification_branch_settings")
+    .select("sms_sender_name")
+    .eq("branch_id", params.branchId)
+    .maybeSingle()
+
+  const smsResult = await sendLiveSms(
+    params.phone,
+    params.messageBody,
+    settings?.sms_sender_name ?? null
+  )
   return smsResult.ok ? "sent" : "failed"
 }

@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
 
     const { data: branchSettings } = await supabaseAdmin
       .from("notification_branch_settings")
-      .select("dry_run_mode")
+      .select("dry_run_mode, sms_sender_name")
       .eq("branch_id", branchId)
       .maybeSingle()
 
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
     let errorMessage: string | null = null
 
     if (!dryRun) {
-      const smsResult = await sendLiveSms(phone, messageBody)
+      const smsResult = await sendLiveSms(phone, messageBody, branchSettings?.sms_sender_name ?? null)
       if (smsResult.ok) {
         providerRef = smsResult.providerRef
       } else {

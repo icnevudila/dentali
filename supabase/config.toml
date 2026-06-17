@@ -60,3 +60,9 @@ verify_jwt = false
 
 [functions.send-closeout-email-cron]
 verify_jwt = false
+
+[functions.send-email]
+verify_jwt = true
+
+[functions.notification-channel-health]
+verify_jwt = true

@@ -34,6 +34,7 @@ import { MapPin } from "lucide-react"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { buildWhatsAppSendUrl } from "@/lib/notifications/whatsapp"
+import { NotificationChannelSettingsPanel } from "@/components/notifications/NotificationChannelSettingsPanel"
 
 const SAMPLE_VARS: Record<string, string> = {
   patient_name: "Maria Santos",
@@ -82,7 +83,7 @@ export default function NotificationsSettingsPage() {
   const [testPhone, setTestPhone] = React.useState("")
   const [sending, setSending] = React.useState(false)
   const [openingWhatsApp, setOpeningWhatsApp] = React.useState(false)
-  const [tab, setTab] = React.useState<"templates" | "logs">("templates")
+  const [tab, setTab] = React.useState<"channels" | "templates" | "logs">("channels")
 
   const selected = templates.find((tpl) => tpl.template_key === selectedKey) ?? templates[0]
 
@@ -241,12 +242,12 @@ export default function NotificationsSettingsPage() {
       <ModulePageShell
         maxWidth=""
         className="w-full"
-        eyebrow={t("settings.notificationsEyebrow", "Messaging") + " · SMS"}
+        eyebrow={t("settings.notificationsEyebrow", "Messaging") + " · SMS / Email / WhatsApp"}
         icon={MessageSquare}
-        title={t("settings.notificationsTitle", "Notifications & SMS")}
+        title={t("settings.notificationsTitle", "Notifications & messaging")}
         description={t(
           "settings.notificationsBranchHint",
-          "Branch templates override org defaults for this location."
+          "Configure channels, templates, and delivery logs for this branch."
         )}
         actions={
           <div className="flex flex-wrap gap-2">
@@ -349,7 +350,10 @@ export default function NotificationsSettingsPage() {
           </Card>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant={tab === "channels" ? "default" : "outline"} size="sm" onClick={() => setTab("channels")}>
+            {t("settings.notificationsChannels", "Channels")}
+          </Button>
           <Button variant={tab === "templates" ? "default" : "outline"} size="sm" onClick={() => setTab("templates")}>
             {t("settings.notificationsTemplates", "Templates")}
           </Button>
@@ -358,7 +362,11 @@ export default function NotificationsSettingsPage() {
           </Button>
         </div>
 
-        {loading ? (
+        {loading && tab !== "channels" ? (
+          <PageLoadingSkeleton variant="inline" />
+        ) : tab === "channels" && activeBranch ? (
+          <NotificationChannelSettingsPanel branchId={activeBranch.id} canWrite={canWrite} />
+        ) : loading ? (
           <PageLoadingSkeleton variant="inline" />
         ) : tab === "templates" ? (
           templates.length === 0 ? (

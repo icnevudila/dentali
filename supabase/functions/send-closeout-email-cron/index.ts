@@ -1,4 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1"
+import {
+  buildEmailFromHeader,
+  emailShouldDryRun,
+  fetchBranchChannelSettings,
+} from "../_shared/notification-channel-config.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,26 +56,44 @@ function buildCloseoutHtml(date: string, payload: CloseoutPayload): string {
 async function sendViaResend(
   to: string,
   subject: string,
-  html: string
-): Promise<{ ok: boolean; error?: string }> {
+  html: string,
+  branchId: string | null,
+  supabaseAdmin: ReturnType<typeof createClient>
+): Promise<{ ok: boolean; error?: string; dry_run?: boolean }> {
+  const channelSettings = branchId
+    ? await fetchBranchChannelSettings(supabaseAdmin, branchId)
+    : null
+
+  if (emailShouldDryRun(channelSettings)) {
+    return { ok: true, dry_run: true }
+  }
+
   const apiKey = Deno.env.get("RESEND_API_KEY")
   if (!apiKey) return { ok: false, error: "RESEND_API_KEY not configured" }
 
-  const from = Deno.env.get("CLOSEOUT_EMAIL_FROM") ?? "Dentali Closeout <closeout@dentali.ph>"
+  const from = buildEmailFromHeader(channelSettings)
+  const replyTo = channelSettings?.email_reply_to ?? undefined
+
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from, to: [to], subject, html }),
+    body: JSON.stringify({
+      from,
+      to: [to],
+      subject,
+      html,
+      ...(replyTo ? { reply_to: [replyTo] } : {}),
+    }),
   })
 
   if (!res.ok) {
     const text = await res.text()
     return { ok: false, error: text.slice(0, 500) }
   }
-  return { ok: true }
+  return { ok: true, dry_run: false }
 }
 
 Deno.serve(async (req) => {
@@ -97,7 +120,7 @@ Deno.serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
-    const dryRun =
+    const globalDryRun =
       Deno.env.get("CLOSEOUT_EMAIL_DRY_RUN") === "true" || !Deno.env.get("RESEND_API_KEY")
 
     const { data: enqueued, error: enqueueError } = await supabaseAdmin.rpc(
@@ -124,6 +147,7 @@ Deno.serve(async (req) => {
 
     const rows = (batch ?? []) as {
       id: string
+      branch_id: string | null
       recipient_email: string
       snapshot_date: string
       payload: CloseoutPayload
@@ -137,7 +161,7 @@ Deno.serve(async (req) => {
       const subject = `Daily closeout — ${date}`
       const html = buildCloseoutHtml(date, row.payload ?? {})
 
-      if (dryRun) {
+      if (globalDryRun) {
         await supabaseAdmin.rpc("mark_closeout_email_sent", {
           p_id: row.id,
           p_status: "dry_run",
@@ -147,8 +171,21 @@ Deno.serve(async (req) => {
         continue
       }
 
-      const result = await sendViaResend(row.recipient_email, subject, html)
-      if (result.ok) {
+      const result = await sendViaResend(
+        row.recipient_email,
+        subject,
+        html,
+        row.branch_id,
+        supabaseAdmin
+      )
+      if (result.ok && result.dry_run) {
+        await supabaseAdmin.rpc("mark_closeout_email_sent", {
+          p_id: row.id,
+          p_status: "dry_run",
+          p_error: null,
+        })
+        sent += 1
+      } else if (result.ok) {
         await supabaseAdmin.rpc("mark_closeout_email_sent", {
           p_id: row.id,
           p_status: "sent",
@@ -168,7 +205,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        dry_run: dryRun,
+        dry_run: globalDryRun,
         enqueued: Number(enqueued ?? 0),
         processed: rows.length,
         sent,

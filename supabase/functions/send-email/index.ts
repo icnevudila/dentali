@@ -1,4 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1"
+import {
+  buildEmailFromHeader,
+  emailShouldDryRun,
+  fetchBranchChannelSettings,
+} from "../_shared/notification-channel-config.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,7 +58,6 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Verify user has permission to manage notifications
     const { data: allowed, error: permError } = await supabaseUser.rpc("has_permission", {
       p_permission: "notifications.write",
       p_branch: branchId,
@@ -66,6 +70,23 @@ Deno.serve(async (req) => {
       })
     }
 
+    const channelSettings = await fetchBranchChannelSettings(supabaseAdmin, branchId)
+    const dryRun = emailShouldDryRun(channelSettings)
+    const from = buildEmailFromHeader(channelSettings)
+    const replyTo = channelSettings?.email_reply_to ?? undefined
+
+    if (dryRun) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          dry_run: true,
+          from_preview: from,
+          message: "Email logged in dry-run mode — not sent to Resend.",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    }
+
     const apiKey = Deno.env.get("RESEND_API_KEY")
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "RESEND_API_KEY not configured on server" }), {
@@ -73,8 +94,6 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
-
-    const from = Deno.env.get("CLOSEOUT_EMAIL_FROM") ?? "Dentali <no-reply@dentali.ph>"
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -87,6 +106,7 @@ Deno.serve(async (req) => {
         to: [to],
         subject,
         html,
+        ...(replyTo ? { reply_to: [replyTo] } : {}),
       }),
     })
 
@@ -103,7 +123,9 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
+        dry_run: false,
         id: resData.id,
+        from_preview: from,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )

@@ -40,6 +40,26 @@ export interface NotificationStatus {
   dry_run_today: number
 }
 
+export type PatientChannelPreference = "whatsapp_manual" | "sms" | "email"
+
+export interface NotificationChannelSettings {
+  branch_id: string
+  dry_run_mode: boolean
+  email_dry_run_mode: boolean
+  clinic_display_name: string
+  email_from_address: string | null
+  email_reply_to: string | null
+  whatsapp_clinic_phone: string | null
+  sms_sender_name: string
+  default_patient_channel: PatientChannelPreference
+}
+
+export interface NotificationChannelHealth {
+  sms: { provider: string; configured: boolean; secret_name: string; optional_secret: string }
+  email: { provider: string; configured: boolean; secret_name: string; optional_secret: string }
+  whatsapp: { mode: string; configured: boolean; cost: string; note: string }
+}
+
 export const TEMPLATE_VARIABLES: Record<string, string[]> = {
   appointment_reminder: ["patient_name", "clinic_name", "appointment_date", "appointment_time"],
   waitlist_slot: ["patient_name", "clinic_name", "slot_date", "slot_time"],
@@ -183,6 +203,76 @@ export async function upsertDryRunMode(
   return { error: error?.message ?? null }
 }
 
+export async function fetchNotificationChannelSettings(
+  branchId: string
+): Promise<{ data: NotificationChannelSettings | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("get_notification_channel_settings", {
+    p_branch_id: branchId,
+  })
+
+  if (error) return { data: null, error: error.message }
+  return { data: data as NotificationChannelSettings, error: null }
+}
+
+export async function upsertNotificationChannelSettings(
+  settings: NotificationChannelSettings
+): Promise<{ data: NotificationChannelSettings | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("upsert_notification_channel_settings", {
+    p_payload: settings,
+  })
+
+  if (error) return { data: null, error: error.message }
+  return { data: data as NotificationChannelSettings, error: null }
+}
+
+export async function fetchNotificationChannelHealth(
+  branchId: string
+): Promise<{ data: NotificationChannelHealth | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.functions.invoke("notification-channel-health", {
+    body: { branch_id: branchId },
+  })
+
+  if (error) return { data: null, error: error.message }
+  if (data?.error) return { data: null, error: String(data.error) }
+  return { data: data as NotificationChannelHealth, error: null }
+}
+
+export function formatEmailFromPreview(displayName: string, address: string | null): string {
+  const name = displayName.trim() || "Clinic"
+  if (address?.trim()) return `${name} <${address.trim()}>`
+  return `${name} <onboarding@resend.dev>`
+}
+
+export async function sendTestEmail(params: {
+  to: string
+  branchId: string
+  clinicName: string
+}): Promise<{ data: { dry_run: boolean; from_preview?: string } | null; error: string | null }> {
+  const html = `<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif">
+    <p>This is a test email from <strong>${params.clinicName}</strong> via Dentali.</p>
+    <p>If you received this, your email channel is working.</p>
+  </body></html>`
+
+  const { data, error } = await sendEmail({
+    to: params.to,
+    subject: `Test email — ${params.clinicName}`,
+    html,
+    branchId: params.branchId,
+  })
+
+  if (error) return { data: null, error }
+  return {
+    data: {
+      dry_run: Boolean(data?.dry_run),
+      from_preview: data?.from_preview,
+    },
+    error: null,
+  }
+}
+
 export async function sendAppointmentReminder(
   appointmentId: string
 ): Promise<{
@@ -267,7 +357,7 @@ export async function sendEmail(params: {
   html: string
   branchId: string
 }): Promise<{
-  data: { id: string } | null
+  data: { id?: string; dry_run?: boolean; from_preview?: string } | null
   error: string | null
 }> {
   const supabase = createClient()
@@ -284,7 +374,9 @@ export async function sendEmail(params: {
   if (data?.error) return { data: null, error: String(data.error) }
   return {
     data: {
-      id: String(data.id),
+      id: data.id ? String(data.id) : undefined,
+      dry_run: data.dry_run != null ? Boolean(data.dry_run) : undefined,
+      from_preview: data.from_preview ? String(data.from_preview) : undefined,
     },
     error: null,
   }

@@ -10,13 +10,20 @@ function normalizePhilippinesNumber(phone: string): string {
 }
 
 /** Live SMS via Semaphore (PH). Requires SEMAPHORE_API_KEY secret. */
-export async function sendLiveSms(phone: string, message: string): Promise<SmsSendResult> {
+export async function sendLiveSms(
+  phone: string,
+  message: string,
+  senderNameOverride?: string | null
+): Promise<SmsSendResult> {
   const apiKey = Deno.env.get("SEMAPHORE_API_KEY")
   if (!apiKey) {
     return { ok: false, error: "SMS provider not configured (SEMAPHORE_API_KEY missing)" }
   }
 
-  const senderName = Deno.env.get("SEMAPHORE_SENDER_NAME") ?? "dentali"
+  const senderName =
+    senderNameOverride?.trim() ||
+    Deno.env.get("SEMAPHORE_SENDER_NAME")?.trim() ||
+    "dentali"
   const number = normalizePhilippinesNumber(phone)
 
   const res = await fetch("https://api.semaphore.co/api/v4/messages", {
