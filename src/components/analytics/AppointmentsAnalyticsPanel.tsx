@@ -3,9 +3,8 @@
 import { useCallback, useEffect, useState } from "react"
 import { fetchAppointmentsAnalytics } from "@/lib/analytics/analytics-service"
 import { ModuleAnalyticsPanel } from "@/components/analytics/ModuleAnalyticsPanel"
+import { AppointmentsPeriodReport } from "@/components/analytics/AppointmentsPeriodReport"
 import { MonthlyAppointmentsSnapshot } from "@/components/analytics/MonthlyAppointmentsSnapshot"
-import { Sparkline } from "@/components/charts/ChartKit"
-import { CHART_COLORS } from "@/lib/charts/chart-tokens"
 import { useLocale } from "@/hooks/use-locale"
 
 export function AppointmentsAnalyticsPanel({
@@ -40,84 +39,38 @@ export function AppointmentsAnalyticsPanel({
     void load()
   }, [load])
 
-  const noShowSpark = noShowTrend.map((d) => d.value)
-  const cancelSpark = cancelTrend.map((d) => d.value)
-  const periodLabel = String(periodDays)
-
   return (
-    <div className="min-w-0 space-y-4">
-      <div className="rounded-xl border border-neutral-200/80 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-        <p className="text-xs font-medium text-neutral-500">
-          {t("appointments.occupancy", "Schedule occupancy ({days}d)").replace(
-            "{days}",
-            periodLabel
-          )}
-        </p>
-        <p className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">
-          {loading ? "—" : `${occupancyPct}%`}
-        </p>
-      </div>
+    <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(17rem,22rem)]">
+      <div className="min-w-0 space-y-4">
+        <MonthlyAppointmentsSnapshot branchId={branchId} />
 
-      <MonthlyAppointmentsSnapshot branchId={branchId} />
-
-      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-neutral-200/80 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-medium text-neutral-500">
-              {t("appointments.noShowTrend", "No-show trend ({days}d)").replace(
-                "{days}",
-                periodLabel
-              )}
-            </p>
-            {!loading && noShowSpark.length >= 2 ? (
-              <Sparkline data={noShowSpark} color={CHART_COLORS.warning} />
-            ) : null}
-          </div>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-neutral-900">
-            {loading ? "—" : noShowSpark.reduce((a, b) => a + b, 0)}
-          </p>
-        </div>
-        <div className="rounded-xl border border-neutral-200/80 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-medium text-neutral-500">
-              {t("appointments.cancelTrend", "Cancel trend ({days}d)").replace(
-                "{days}",
-                periodLabel
-              )}
-            </p>
-            {!loading && cancelSpark.length >= 2 ? (
-              <Sparkline data={cancelSpark} color={CHART_COLORS.neutral} />
-            ) : null}
-          </div>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-neutral-900">
-            {loading ? "—" : cancelSpark.reduce((a, b) => a + b, 0)}
-          </p>
+        <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+          <ModuleAnalyticsPanel
+            title={t("appointments.hourlyLoad", "Hourly load")}
+            subtitle={t("appointments.hourlyLoadHint", "Appointments by hour")}
+            variant="line"
+            data={hourlyLoad}
+            loading={loading}
+            height={200}
+          />
+          <ModuleAnalyticsPanel
+            title={t("appointments.noShowTrend", "No-show trend")}
+            variant="area"
+            data={noShowTrend}
+            loading={loading}
+            height={200}
+          />
         </div>
       </div>
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-        <ModuleAnalyticsPanel
-          title={t("appointments.hourlyLoad", "Hourly load")}
-          subtitle={t("appointments.hourlyLoadHint", "Appointments by hour")}
-          variant="line"
-          data={hourlyLoad}
-          loading={loading}
-          height={180}
-        />
-        <ModuleAnalyticsPanel
-          title={t("appointments.noShowTrend", "No-show trend")}
-          variant="area"
-          data={noShowTrend}
-          loading={loading}
-          height={180}
-        />
-      </div>
-      <ModuleAnalyticsPanel
-        title={t("appointments.dentistUtil", "Dentist utilization")}
-        variant="pie"
-        data={providers}
+      <AppointmentsPeriodReport
+        periodDays={periodDays}
         loading={loading}
-        height={200}
+        occupancyPct={occupancyPct}
+        noShowTrend={noShowTrend}
+        cancelTrend={cancelTrend}
+        providers={providers}
+        hourlyLoad={hourlyLoad}
       />
     </div>
   )

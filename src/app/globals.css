@@ -359,7 +359,8 @@
   body:has(#consent-print-document) *,
   body:has(#patient-print-document) *,
   body:has(#chart-print-document) *,
-  body:has(#closeout-print-document) * {
+  body:has(#closeout-print-document) *,
+  body:has(#reports-hub-print-document) * {
     visibility: hidden;
   }
 
@@ -370,14 +371,17 @@
   body:has(#chart-print-document) #chart-print-document,
   body:has(#chart-print-document) #chart-print-document *,
   body:has(#closeout-print-document) #closeout-print-document,
-  body:has(#closeout-print-document) #closeout-print-document * {
+  body:has(#closeout-print-document) #closeout-print-document *,
+  body:has(#reports-hub-print-document) #reports-hub-print-document,
+  body:has(#reports-hub-print-document) #reports-hub-print-document * {
     visibility: visible;
   }
 
   #consent-print-document,
   #patient-print-document,
   #chart-print-document,
-  #closeout-print-document {
+  #closeout-print-document,
+  #reports-hub-print-document {
     position: absolute;
     left: 0;
     top: 0;
@@ -387,23 +391,27 @@
   }
 
   #chart-print-document,
-  #closeout-print-document {
+  #closeout-print-document,
+  #reports-hub-print-document {
     display: block !important;
     padding: 0 4mm;
   }
 
-  #closeout-print-document {
+  #closeout-print-document,
+  #reports-hub-print-document {
     color: #0f172a !important;
     font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
   }
 
-  #closeout-print-document .closeout-print-header {
+  #closeout-print-document .closeout-print-header,
+  #reports-hub-print-document .closeout-print-header {
     margin-bottom: 20px;
     padding-bottom: 14px;
     border-bottom: 2px solid #0f172a;
   }
 
-  #closeout-print-document .closeout-print-eyebrow {
+  #closeout-print-document .closeout-print-eyebrow,
+  #reports-hub-print-document .closeout-print-eyebrow {
     margin: 0;
     font-size: 11px;
     font-weight: 600;
@@ -412,7 +420,8 @@
     color: #64748b !important;
   }
 
-  #closeout-print-document .closeout-print-title {
+  #closeout-print-document .closeout-print-title,
+  #reports-hub-print-document .closeout-print-title {
     margin: 6px 0 0;
     font-size: 24px;
     font-weight: 700;
@@ -420,7 +429,8 @@
     color: #0f172a !important;
   }
 
-  #closeout-print-document .closeout-print-meta {
+  #closeout-print-document .closeout-print-meta,
+  #reports-hub-print-document .closeout-print-meta {
     display: flex !important;
     flex-wrap: wrap !important;
     gap: 8px 20px;
@@ -429,18 +439,21 @@
     color: #475569 !important;
   }
 
-  #closeout-print-document .closeout-print-subtitle {
+  #closeout-print-document .closeout-print-subtitle,
+  #reports-hub-print-document .closeout-print-subtitle {
     margin: 10px 0 0;
     font-size: 12px;
     color: #64748b !important;
   }
 
-  #closeout-print-document .closeout-print-section {
+  #closeout-print-document .closeout-print-section,
+  #reports-hub-print-document .closeout-print-section {
     margin-top: 22px;
     page-break-inside: avoid;
   }
 
-  #closeout-print-document .closeout-print-section-title {
+  #closeout-print-document .closeout-print-section-title,
+  #reports-hub-print-document .closeout-print-section-title {
     margin: 0 0 10px;
     font-size: 13px;
     font-weight: 700;
@@ -449,7 +462,8 @@
     color: #0f172a !important;
   }
 
-  #closeout-print-document .closeout-print-metrics-table {
+  #closeout-print-document .closeout-print-metrics-table,
+  #reports-hub-print-document .closeout-print-metrics-table {
     display: table !important;
     width: 100%;
     border-collapse: separate;
@@ -457,7 +471,8 @@
     margin: 0 -10px;
   }
 
-  #closeout-print-document .closeout-print-metrics-table td {
+  #closeout-print-document .closeout-print-metrics-table td,
+  #reports-hub-print-document .closeout-print-metrics-table td {
     display: table-cell !important;
     width: 33.33%;
     vertical-align: top;
@@ -467,14 +482,16 @@
     background: #f8fafc;
   }
 
-  #closeout-print-document .closeout-print-metric-label {
+  #closeout-print-document .closeout-print-metric-label,
+  #reports-hub-print-document .closeout-print-metric-label {
     margin: 0;
     font-size: 11px;
     font-weight: 600;
     color: #64748b !important;
   }
 
-  #closeout-print-document .closeout-print-metric-value {
+  #closeout-print-document .closeout-print-metric-value,
+  #reports-hub-print-document .closeout-print-metric-value {
     margin: 6px 0 0;
     font-size: 20px;
     font-weight: 700;
@@ -482,7 +499,8 @@
     color: #0f172a !important;
   }
 
-  #closeout-print-document .closeout-print-data-table {
+  #closeout-print-document .closeout-print-data-table,
+  #reports-hub-print-document .closeout-print-data-table {
     display: table !important;
     width: 100%;
     border-collapse: collapse;
@@ -490,7 +508,9 @@
   }
 
   #closeout-print-document .closeout-print-data-table th,
-  #closeout-print-document .closeout-print-data-table td {
+  #closeout-print-document .closeout-print-data-table td,
+  #reports-hub-print-document .closeout-print-data-table th,
+  #reports-hub-print-document .closeout-print-data-table td {
     display: table-cell !important;
     padding: 8px 10px;
     border: 1px solid #cbd5e1;
@@ -498,7 +518,8 @@
     color: #0f172a !important;
   }
 
-  #closeout-print-document .closeout-print-data-table th {
+  #closeout-print-document .closeout-print-data-table th,
+  #reports-hub-print-document .closeout-print-data-table th {
     background: #f1f5f9;
     font-weight: 700;
     font-size: 11px;
@@ -506,11 +527,13 @@
     letter-spacing: 0.04em;
   }
 
-  #closeout-print-document .closeout-print-data-table tbody tr:nth-child(even) td {
+  #closeout-print-document .closeout-print-data-table tbody tr:nth-child(even) td,
+  #reports-hub-print-document .closeout-print-data-table tbody tr:nth-child(even) td {
     background: #f8fafc;
   }
 
-  #closeout-print-document .closeout-print-num {
+  #closeout-print-document .closeout-print-num,
+  #reports-hub-print-document .closeout-print-num {
     text-align: right !important;
     font-variant-numeric: tabular-nums;
   }

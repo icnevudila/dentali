@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useCallback } from "react"
+import { useEffect, useMemo, useState, useCallback, useRef } from "react"
 import Link from "next/link"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import {
@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   XCircle,
   Download,
+  Printer,
   RefreshCw,
   MapPin,
   Shield,
@@ -39,6 +40,8 @@ import { useLocale } from "@/hooks/use-locale"
 import { useReportsSummary } from "@/hooks/use-reports-summary"
 import { useDashboardStats } from "@/hooks/use-dashboard-stats"
 import { buildReportsCsv, downloadReportsCsv } from "@/lib/reports/reports-export"
+import { printCurrentPage } from "@/lib/utils/print"
+import { ReportsHubPrintDocument } from "@/components/reports/ReportsHubPrintDocument"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -78,6 +81,7 @@ export default function ReportsHubPage() {
   const periodLabel = String(periodDays)
   const patientPeriodDays = periodDays < 30 ? 30 : periodDays
   const focus = searchParams.get("focus")
+  const deepLinkScrolledRef = useRef(false)
 
   const sectionNav = useMemo(
     () => [
@@ -126,12 +130,31 @@ export default function ReportsHubPage() {
 
   useEffect(() => {
     const hash = window.location.hash.replace("#", "")
-    if (!hash) return
+    if (!hash || deepLinkScrolledRef.current) return
+    deepLinkScrolledRef.current = true
     const timer = window.setTimeout(() => {
       document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "start" })
     }, 120)
     return () => window.clearTimeout(timer)
-  }, [focus, periodDays, loading])
+  }, [])
+
+  useEffect(() => {
+    if (!focus || deepLinkScrolledRef.current) return
+    const focusSection: Record<string, string> = {
+      appointments: "operations",
+      queue: "operations",
+      billing: "finance",
+      clinical: "clinical",
+      devices: "devices",
+    }
+    const target = focusSection[focus]
+    if (!target) return
+    deepLinkScrolledRef.current = true
+    const timer = window.setTimeout(() => {
+      document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" })
+    }, 160)
+    return () => window.clearTimeout(timer)
+  }, [focus])
 
   const focusCopy = useMemo(() => {
     if (!focus) return null
@@ -403,6 +426,25 @@ export default function ReportsHubPage() {
     downloadReportsCsv(csv, `reports-${slug}-${periodDays}d-${new Date().toISOString().slice(0, 10)}.csv`)
   }
 
+  function handleExportPdf() {
+    if (!activeBranch || !summary) return
+    printCurrentPage({
+      title: `${t("reports.title", "Reports Hub")} — ${activeBranch.name}`,
+    })
+  }
+
+  const todayPrintMetrics = useMemo(
+    () => [
+      { label: t("dashboard.todayAppointments", "Today's Appointments"), value: String(stats.today_appointments) },
+      { label: t("dashboard.awaitingCheckin", "Awaiting check-in"), value: String(stats.appointments_awaiting_checkin) },
+      { label: t("dashboard.queueWaiting", "In queue"), value: String(stats.queue_waiting) },
+      { label: t("dashboard.collectedToday", "Collected Today"), value: `₱${stats.today_collected.toLocaleString()}` },
+      { label: t("dashboard.openInvoices", "Open Invoices"), value: String(stats.open_invoices) },
+      { label: t("dashboard.overdueInvoices", "Overdue"), value: String(stats.overdue_invoices) },
+    ],
+    [stats, t]
+  )
+
   const trendsTitle = metricPeriod("reports.sectionTrends", "{days}-day trends")
   const appointmentsChartTitle = metricPeriod(
     "reports.chartAppointments",
@@ -455,6 +497,16 @@ export default function ReportsHubPage() {
             size="sm"
             className="gap-2"
             disabled={!summary || loading}
+            onClick={handleExportPdf}
+          >
+            <Printer className="h-4 w-4" />
+            {t("reports.exportPdf", "Export PDF")}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            disabled={!summary || loading}
             onClick={handleExportCsv}
           >
             <Download className="h-4 w-4" />
@@ -483,6 +535,20 @@ export default function ReportsHubPage() {
       retryLabel={t("common.retry", "Retry")}
       panelClassName="space-y-10"
     >
+      {activeBranch && summary ? (
+        <ReportsHubPrintDocument
+          branchName={activeBranch.name}
+          periodDays={periodDays}
+          title={t("reports.title", "Reports Hub")}
+          subtitle={t(
+            "reports.printSubtitle",
+            "Branch operations summary for the selected reporting window."
+          )}
+          summary={summary}
+          todayMetrics={todayPrintMetrics}
+        />
+      ) : null}
+
       {!activeBranch ? (
         <p className="text-sm text-neutral-500">
           {t("dashboard.selectBranch", "Select a branch to view stats")}
