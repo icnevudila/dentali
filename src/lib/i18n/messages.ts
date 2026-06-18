@@ -47,6 +47,7 @@ export const messagesEnPh: MessageTree = {
     back: "Back",
     next: "Next",
     dismiss: "Dismiss",
+    dismissForever: "Don't show again",
     add: "Add",
     remove: "Remove",
     change: "Change",
@@ -761,6 +762,9 @@ export const messagesEnPh: MessageTree = {
     avgWait: "Avg wait",
     callNext: "Call next",
     newWalkInShort: "New patient",
+    daySummaryToggle: "Today's queue summary",
+    daySummaryTogglePast: "Queue summary for this day",
+    metricsToggle: "Queue metrics",
     checkIn: "Check in",
     liveBoard: "Live board",
     history: "History",
@@ -848,6 +852,7 @@ export const messagesEnPh: MessageTree = {
   },
   workflow: {
     automationSettings: "Automation settings",
+    automationAttention: "Automation needs attention",
   },
   waitlist: {
     title: "Waitlist",
@@ -1249,6 +1254,7 @@ export const messagesTr: MessageTree = {
     back: "Geri",
     next: "İleri",
     dismiss: "Kapat",
+    dismissForever: "Bir daha gösterme",
     add: "Ekle",
     remove: "Kaldır",
     change: "Değiştir",
@@ -1952,6 +1958,9 @@ export const messagesTr: MessageTree = {
     avgWait: "Ort. bekleme",
     callNext: "Sonrakini çağır",
     newWalkInShort: "Yeni hasta",
+    daySummaryToggle: "Bugünün kuyruk özeti",
+    daySummaryTogglePast: "Bu günün kuyruk özeti",
+    metricsToggle: "Kuyruk metrikleri",
     checkIn: "Giriş yap",
     liveBoard: "Canlı pano",
     history: "Geçmiş",
@@ -2039,6 +2048,7 @@ export const messagesTr: MessageTree = {
   },
   workflow: {
     automationSettings: "Otomasyon ayarları",
+    automationAttention: "Otomasyonda dikkat gerekli",
   },
   waitlist: {
     title: "Bekleme Listesi",
@@ -2808,6 +2818,9 @@ export const messagesFil: MessageTree = {
     avgWait: "Avg wait",
     callNext: "Tawagin ang susunod",
     newWalkInShort: "Bagong pasyente",
+    daySummaryToggle: "Buod ng queue ngayon",
+    daySummaryTogglePast: "Buod ng queue para sa araw na ito",
+    metricsToggle: "Mga metric ng queue",
     checkIn: "Mag-check in",
     liveBoard: "Live board",
     history: "History",
@@ -2838,6 +2851,7 @@ export const messagesFil: MessageTree = {
   },
   workflow: {
     automationSettings: "Mga setting ng automation",
+    automationAttention: "Kailangan ng pansin ang automation",
   },
   waitlist: {
     title: "Waitlist",

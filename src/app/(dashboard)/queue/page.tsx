@@ -43,6 +43,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, Megaphone, Plus, ShieldCheck, Users, MapPin, Clock, UserCheck } from "lucide-react"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
+import { OpsStatusRow } from "@/components/layout/OpsStatusRow"
+import { StickyActionBar } from "@/components/layout/StickyActionBar"
+import { CollapsibleBelowFold } from "@/components/layout/CollapsibleBelowFold"
 import { notify } from "@/lib/ui/notify"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
@@ -67,7 +70,6 @@ import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { ClinicDayBar } from "@/components/layout/ClinicDayBar"
 import { useClinicDay } from "@/hooks/use-clinic-day"
 import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
-import { WorkflowStatusBanner } from "@/components/layout/WorkflowStatusBanner"
 
 type Tab = "board" | "history"
 
@@ -860,8 +862,7 @@ function QueuePageContent() {
   return (
     <PermissionGate permission={PERMISSIONS.QUEUE_MANAGE}>
       <DirectionalTransition className="mx-auto w-full max-w-7xl">
-        <ContentPanel padding="lg" className="flex flex-col gap-6">
-          <div className="order-1 space-y-6">
+        <ContentPanel padding="lg" className="flex flex-col gap-4">
           <SectionEyebrow icon={Users} hideOnMobile>
             {t("queue.eyebrow", "Front desk")} · {t("queue.title", "Queue & Patient Flow")}
           </SectionEyebrow>
@@ -875,25 +876,25 @@ function QueuePageContent() {
             )}
             actions={
               isToday ? (
-                <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
-                  <WorkflowSettingsLink className="col-span-2 w-full sm:col-span-1 sm:w-auto" />
+                <div className="hidden w-full grid-cols-2 gap-2 md:grid md:w-auto lg:flex lg:flex-wrap lg:items-center">
+                  <WorkflowSettingsLink className="col-span-2 w-full lg:col-span-1 lg:w-auto" />
                   <Button
                     variant="outline"
-                    className="w-full gap-1.5 sm:w-auto"
+                    className="w-full gap-1.5 lg:w-auto"
                     disabled={callingNext}
                     onClick={handleCallNext}
                   >
                     <Megaphone className="h-4 w-4 shrink-0" />
                     <span className="truncate">{t("queue.callNext", "Call next")}</span>
                   </Button>
-                  <Button variant="outline" className="w-full gap-1.5 sm:w-auto" asChild>
+                  <Button variant="outline" className="w-full gap-1.5 lg:w-auto" asChild>
                     <Link href="/patients/new?returnTo=queue">
                       <Plus className="h-4 w-4 shrink-0" />
                       <span className="truncate">{t("queue.newWalkInShort", "New patient")}</span>
                     </Link>
                   </Button>
                   <Button
-                    className="col-span-2 w-full gap-2 shadow-sm sm:col-span-1 sm:w-auto"
+                    className="col-span-2 w-full gap-2 shadow-sm lg:col-span-1 lg:w-auto"
                     onClick={openCheckInModal}
                   >
                     <UserCheck className="h-4 w-4 shrink-0" />
@@ -917,77 +918,121 @@ function QueuePageContent() {
             }
           />
 
-          <WorkflowStatusBanner
-            title={t("queue.workflowBannerTitle", "Automation affecting queue flow")}
-            description={t(
-              "queue.workflowBannerDescription",
-              "Check-in gates, linked appointment updates, and served follow-up can be different per branch."
-            )}
-            items={[
-              {
-                key: "consent_gate_checkin",
-                label: t("queue.workflowConsentGate", "Consent gate"),
-              },
-              {
-                key: "auto_checkin_updates_appointment",
-                label: t("queue.workflowAppointmentSync", "Appointment sync"),
-              },
-              {
-                key: "auto_served_completes_appointment",
-                label: t("queue.workflowServed", "Served completes appointment"),
-              },
-            ]}
+          <OpsStatusRow
+            workflowItems={
+              isToday
+                ? [
+                    {
+                      key: "consent_gate_checkin",
+                      label: t("queue.workflowConsentGate", "Consent gate"),
+                    },
+                    {
+                      key: "auto_checkin_updates_appointment",
+                      label: t("queue.workflowAppointmentSync", "Appointment sync"),
+                    },
+                    {
+                      key: "auto_served_completes_appointment",
+                      label: t("queue.workflowServed", "Served completes appointment"),
+                    },
+                  ]
+                : []
+            }
+            extra={
+              activeBranch ? (
+                <>
+                  <Badge variant="info" className="gap-1 font-normal">
+                    <MapPin className="h-3 w-3" aria-hidden />
+                    {activeBranch.name}
+                  </Badge>
+                  {pendingAppointmentCheckIns.length > 0 && tab === "board" && isToday ? (
+                    <Badge variant="warning" className="font-normal">
+                      {pendingAppointmentCheckIns.length}{" "}
+                      {t("queue.apptCheckIn", "appointments to check in")}
+                    </Badge>
+                  ) : null}
+                </>
+              ) : null
+            }
           />
 
-          <QueueDaySummary
-            stats={dayStats}
-            isToday={isToday}
-            formattedDay={formattedDay}
-            prevDayServed={prevDayServed}
-            arrivalsPending={isToday ? pendingAppointmentCheckIns.length : 0}
-            activeKey={summaryKeyFromFilter(boardFilter)}
-            onItemClick={handleSummaryClick}
-          />
-          </div>
+          {isToday ? (
+            <StickyActionBar className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  className="w-full gap-1.5"
+                  disabled={callingNext}
+                  onClick={handleCallNext}
+                >
+                  <Megaphone className="h-4 w-4 shrink-0" />
+                  {t("queue.callNext", "Call next")}
+                </Button>
+                <Button className="w-full gap-1.5 shadow-sm" onClick={openCheckInModal}>
+                  <UserCheck className="h-4 w-4 shrink-0" />
+                  {t("queue.patientArrival", "Patient arrival")}
+                </Button>
+                <Button variant="outline" className="col-span-2 w-full gap-1.5" asChild>
+                  <Link href="/patients/new?returnTo=queue">
+                    <Plus className="h-4 w-4 shrink-0" />
+                    {t("queue.newWalkInShort", "New patient")}
+                  </Link>
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2 md:hidden">
+                <Button
+                  variant={tab === "board" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleTabChange("board")}
+                >
+                  {isToday ? t("queue.liveBoard", "Live board") : t("queue.dayBoard", "Day board")}
+                </Button>
+                <Button
+                  variant={tab === "history" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleTabChange("history")}
+                >
+                  {t("queue.history", "History")}
+                </Button>
+              </div>
+            </StickyActionBar>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={tab === "board" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleTabChange("board")}
+              >
+                {isToday ? t("queue.liveBoard", "Live board") : t("queue.dayBoard", "Day board")}
+              </Button>
+              <Button
+                variant={tab === "history" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleTabChange("history")}
+              >
+                {t("queue.history", "History")}
+              </Button>
+            </div>
+          )}
 
-          <div className="order-2 md:order-3">
-          {activeBranch ? (
-            <div className="flex flex-wrap items-center gap-2 animate-fade-rise">
-              <Badge variant="info" className="gap-1 font-normal">
-                <MapPin className="h-3 w-3" aria-hidden />
-                {activeBranch.name}
-              </Badge>
-              {pendingAppointmentCheckIns.length > 0 && tab === "board" && isToday ? (
-                <Badge variant="warning" className="font-normal">
-                  {pendingAppointmentCheckIns.length} {t("queue.apptCheckIn", "appointments to check in")}
-                </Badge>
-              ) : null}
+          {isToday ? (
+            <div className="hidden flex-wrap gap-2 md:flex">
+              <Button
+                variant={tab === "board" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleTabChange("board")}
+              >
+                {t("queue.liveBoard", "Live board")}
+              </Button>
+              <Button
+                variant={tab === "history" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleTabChange("history")}
+              >
+                {t("queue.history", "History")}
+              </Button>
             </div>
           ) : null}
-          </div>
 
-          <div className="order-3 md:order-5 flex flex-wrap gap-2">
-            <Button variant={tab === "board" ? "default" : "outline"} size="sm" onClick={() => handleTabChange("board")}>
-              {isToday ? t("queue.liveBoard", "Live board") : t("queue.dayBoard", "Day board")}
-            </Button>
-            <Button variant={tab === "history" ? "default" : "outline"} size="sm" onClick={() => handleTabChange("history")}>
-              {t("queue.history", "History")}
-            </Button>
-          </div>
-
-          <div className="order-6 md:order-2">
-          {tab === "board" && isToday ? (
-            <CollapsibleGuide summary={t("queue.flowHowItWorks", "How queue check-in works")}>
-              <QueueWorkflowGuide />
-            </CollapsibleGuide>
-          ) : null}
-          </div>
-
-          <div className="order-5 md:order-4">
-          <MetricStrip items={metricItems} snapOnMobile desktopCols={4} />
-          </div>
-
-          <div className="order-4 md:order-6 space-y-4">
           {error ? (
             <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 animate-fade-rise">
               <p className="text-sm text-red-700">{error}</p>
@@ -1087,26 +1132,8 @@ function QueuePageContent() {
                 }}
               />
             ) : null}
-            <ReportDrillLink
-              title={t("queue.reportsQueueTitle", "Queue trends and wait analytics")}
-              description={t(
-                "queue.reportsQueueDescription",
-                "Arrival speed, wait duration, and chair movement live in Reports — keep this screen for live flow only."
-              )}
-              href="/reports#operations"
-              linkLabel={t("queue.openQueueReports", "Open queue reports")}
-            />
-            <ReportDrillLink
-              title={t("queue.reportsDevicesTitle", "Kiosk, TV display, and portal links")}
-              description={t(
-                "queue.reportsDevicesDescription",
-                "Generate public links and monitor waiting-room screens from Reports."
-              )}
-              href="/reports#devices"
-              linkLabel={t("queue.openDeviceReports", "Manage patient-facing screens")}
-            />
-        </div>
-      ) : boardDisplayEntries.length === 0 ? (
+          </div>
+        ) : boardDisplayEntries.length === 0 ? (
           <p className="text-center py-12 text-neutral-500">
             {isToday
               ? t("queue.noHistoryToday", "No completed queue entries today.")
@@ -1154,6 +1181,59 @@ function QueuePageContent() {
             </CardContent>
           </Card>
         )}
+
+          <CollapsibleBelowFold
+            summary={
+              isToday
+                ? t("queue.daySummaryToggle", "Today's queue summary")
+                : t("queue.daySummaryTogglePast", "Queue summary for this day")
+            }
+          >
+            <QueueDaySummary
+              stats={dayStats}
+              isToday={isToday}
+              formattedDay={formattedDay}
+              prevDayServed={prevDayServed}
+              arrivalsPending={isToday ? pendingAppointmentCheckIns.length : 0}
+              activeKey={summaryKeyFromFilter(boardFilter)}
+              onItemClick={handleSummaryClick}
+            />
+          </CollapsibleBelowFold>
+
+          {(tab === "board" && isToday) || tab === "history" || !isToday ? (
+            <CollapsibleBelowFold summary={t("queue.metricsToggle", "Queue metrics")}>
+              <MetricStrip items={metricItems} snapOnMobile desktopCols={4} />
+            </CollapsibleBelowFold>
+          ) : null}
+
+          {tab === "board" && isToday ? (
+            <CollapsibleGuide
+              dismissKey="queue-flow-guide"
+              summary={t("queue.flowHowItWorks", "How queue check-in works")}
+            >
+              <QueueWorkflowGuide />
+            </CollapsibleGuide>
+          ) : null}
+
+          <div className="space-y-3 border-t border-neutral-100 pt-4">
+            <ReportDrillLink
+              title={t("queue.reportsQueueTitle", "Queue trends and wait analytics")}
+              description={t(
+                "queue.reportsQueueDescription",
+                "Arrival speed, wait duration, and chair movement live in Reports — keep this screen for live flow only."
+              )}
+              href="/reports#operations"
+              linkLabel={t("queue.openQueueReports", "Open queue reports")}
+            />
+            <ReportDrillLink
+              title={t("queue.reportsDevicesTitle", "Kiosk, TV display, and portal links")}
+              description={t(
+                "queue.reportsDevicesDescription",
+                "Generate public links and monitor waiting-room screens from Reports."
+              )}
+              href="/reports#devices"
+              linkLabel={t("queue.openDeviceReports", "Manage patient-facing screens")}
+            />
           </div>
 
           <OpenEncounterCheckInDialog

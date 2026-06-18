@@ -15,12 +15,13 @@ type ModulePageShellProps = {
   description?: ReactNode
   actions?: ReactNode
   badges?: ReactNode
-  /** Detailed day/module summary grid — shown above the slim metric strip */
+  /** Detailed day/module summary grid — above metrics by default */
   summary?: ReactNode
   metrics?: MetricItem[]
   metricsClassName?: string
   error?: string | null
   onRetry?: () => void
+  /** @deprecated PageErrorNotifier uses toast only; kept for call-site compat */
   retryLabel?: string
   children: ReactNode
   /** Wrap main content in ContentPanel (default true for list pages) */
@@ -28,6 +29,14 @@ type ModulePageShellProps = {
   panelClassName?: string
   className?: string
   maxWidth?: string
+  /** Shorter title; hide description on small screens */
+  compactHeader?: boolean
+  /** Hide module eyebrow on mobile */
+  hideEyebrowOnMobile?: boolean
+  /** Render summary + metrics after main content (board/list first) */
+  summaryBelowContent?: boolean
+  /** Extra blocks after summary/metrics (reports links, guides) */
+  belowContent?: ReactNode
 }
 
 export function ModulePageShell({
@@ -42,17 +51,33 @@ export function ModulePageShell({
   metricsClassName,
   error,
   onRetry,
-  retryLabel = "Retry",
+  retryLabel: _retryLabel,
   children,
   panel = true,
   panelClassName,
   className,
   maxWidth = "max-w-7xl",
+  compactHeader = false,
+  hideEyebrowOnMobile = false,
+  summaryBelowContent = false,
+  belowContent,
 }: ModulePageShellProps) {
   const content = panel ? (
     <ContentPanel className={panelClassName}>{children}</ContentPanel>
   ) : (
     children
+  )
+
+  const summaryBlock = summary ? <div>{summary}</div> : null
+  const metricsBlock =
+    metrics && metrics.length > 0 ? (
+      <MetricStrip items={metrics} className={metricsClassName} />
+    ) : null
+  const secondaryChrome = (
+    <>
+      {summaryBlock}
+      {metricsBlock}
+    </>
   )
 
   return (
@@ -61,21 +86,28 @@ export function ModulePageShell({
       data-print-content="true"
     >
       <div className="min-w-0 space-y-6">
-        <SectionEyebrow icon={icon}>{eyebrow}</SectionEyebrow>
+        <SectionEyebrow icon={icon} hideOnMobile={hideEyebrowOnMobile}>
+          {eyebrow}
+        </SectionEyebrow>
 
-        <PageHeader title={title} description={description} actions={actions} />
+        <PageHeader
+          title={title}
+          description={description}
+          actions={actions}
+          compact={compactHeader}
+        />
 
         {badges}
 
-        {summary}
-
-        {metrics && metrics.length > 0 ? (
-          <MetricStrip items={metrics} className={metricsClassName} />
-        ) : null}
+        {!summaryBelowContent ? secondaryChrome : null}
 
         <PageErrorNotifier error={error} onRetry={onRetry} />
 
         {content}
+
+        {summaryBelowContent ? secondaryChrome : null}
+
+        {belowContent}
       </div>
     </DirectionalTransition>
   )
