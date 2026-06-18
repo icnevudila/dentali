@@ -2,7 +2,8 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Plus, Lock, Undo2, Receipt } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { AlertTriangle, CalendarDays, Plus, Lock, Receipt } from "lucide-react"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Button } from "@/components/ui/button"
@@ -39,6 +40,7 @@ import { toStoredBulletText } from "@/lib/text/bullet-text"
 
 export default function OrthoRecordPage() {
   const { id: patientId } = useRouteParams<{ id: string }>()
+  const router = useRouter()
   const { user } = useAuth()
   const { activeBranch } = useBranch()
   const { hasPermission } = usePermission()
@@ -66,6 +68,7 @@ export default function OrthoRecordPage() {
   const [paymentAmount, setPaymentAmount] = React.useState("")
   const [adjNotes, setAdjNotes] = React.useState("")
   const [linkedInvoiceId, setLinkedInvoiceId] = React.useState<string | null>(null)
+  const [bookNextAfterSave, setBookNextAfterSave] = React.useState(false)
 
   const resetAdjustmentForm = React.useCallback(() => {
     setAdjDate("")
@@ -74,6 +77,7 @@ export default function OrthoRecordPage() {
     setNextVisitDate("")
     setPaymentAmount("")
     setAdjNotes("")
+    setBookNextAfterSave(false)
   }, [])
 
   const load = React.useCallback(async () => {
@@ -103,7 +107,9 @@ export default function OrthoRecordPage() {
     getPatient(patientId).then(({ data }) => {
       if (data) setPatientName(`${data.first_name} ${data.last_name}`)
     })
-    load()
+    queueMicrotask(() => {
+      void load()
+    })
   }, [patientId, load])
 
   const handleCreateCase = async (e: React.FormEvent) => {
@@ -152,7 +158,10 @@ export default function OrthoRecordPage() {
     else {
       setShowAddRow(false)
       resetAdjustmentForm()
-      load()
+      await load()
+      if (bookNextAfterSave && nextVisitDate) {
+        router.push(buildAppointmentHref(nextVisitDate))
+      }
     }
   }
 
@@ -178,7 +187,17 @@ export default function OrthoRecordPage() {
   }
 
   const handleCloseCase = async () => {
-    if (!orthoCase || !(await notify.confirm("Close this orthodontic case?"))) return
+    if (!orthoCase) return
+    const warnings = [
+      balance && balance.balance > 0 ? `Open balance: ₱${balance.balance.toLocaleString("en-PH")}` : null,
+      latestAdjustment?.next_visit_date ? `Next visit still planned: ${latestAdjustment.next_visit_date}` : null,
+      linkedInvoiceId ? null : "No linked ortho invoice",
+    ].filter(Boolean)
+    const prompt =
+      warnings.length > 0
+        ? `Close this orthodontic case with warnings?\n\n${warnings.map((warning) => `- ${warning}`).join("\n")}\n\nThis is allowed, but staff should document the reason.`
+        : "Close this orthodontic case?"
+    if (!(await notify.confirm(prompt))) return
     setSaving(true)
     const { error: err } = await closeOrthoCase(orthoCase.id)
     setSaving(false)
@@ -230,6 +249,25 @@ export default function OrthoRecordPage() {
       ]
     : undefined
 
+  const latestAdjustment = adjustments[0] ?? null
+  const nextVisit = adjustments.find((adjustment) => adjustment.next_visit_date)?.next_visit_date ?? null
+  const buildAppointmentHref = (date: string) => {
+    const params = new URLSearchParams({
+      patient: patientId,
+      patientName: patientName || "Selected Patient",
+      date,
+      source: "ortho",
+    })
+    return `/appointments?${params.toString()}`
+  }
+  const closeWarnings = orthoCase
+    ? [
+        balance && balance.balance > 0 ? `${balance.balance.toLocaleString("en-PH")} balance` : null,
+        latestAdjustment?.next_visit_date ? "next visit planned" : null,
+        linkedInvoiceId ? null : "invoice not linked",
+      ].filter(Boolean)
+    : []
+
   return (
     <PermissionGate permission={PERMISSIONS.DENTAL_CHART_READ}>
       <PatientPageShell
@@ -258,6 +296,59 @@ export default function OrthoRecordPage() {
           </Card>
         ) : (
           <>
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <CardTitle className="text-base">Case dashboard</CardTitle>
+                    <CardDescription>
+                      {orthoCase.appliance_type ?? "Orthodontic case"} · started {orthoCase.start_date ?? "not set"}
+                    </CardDescription>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {nextVisit ? (
+                      <Button size="sm" variant="outline" className="gap-2" asChild>
+                        <Link href={buildAppointmentHref(nextVisit)}>
+                          <CalendarDays className="h-4 w-4" /> Book next visit
+                        </Link>
+                      </Button>
+                    ) : null}
+                    {linkedInvoiceId ? (
+                      <Button size="sm" variant="outline" className="gap-2" asChild>
+                        <Link href={`/billing/${linkedInvoiceId}`}>
+                          <Receipt className="h-4 w-4" /> Open invoice
+                        </Link>
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-xl border border-neutral-200 bg-white px-3 py-2">
+                  <p className="text-xs text-neutral-500">Last visit</p>
+                  <p className="font-semibold">{latestAdjustment?.adjustment_date ?? "No visits yet"}</p>
+                </div>
+                <div className="rounded-xl border border-neutral-200 bg-white px-3 py-2">
+                  <p className="text-xs text-neutral-500">Next visit</p>
+                  <p className="font-semibold">{nextVisit ?? "Not scheduled"}</p>
+                </div>
+                <div className="rounded-xl border border-neutral-200 bg-white px-3 py-2">
+                  <p className="text-xs text-neutral-500">Invoice</p>
+                  <p className="font-semibold">{linkedInvoiceId ? "Linked" : "Not linked"}</p>
+                </div>
+                <div className="rounded-xl border border-neutral-200 bg-white px-3 py-2">
+                  <p className="text-xs text-neutral-500">Close readiness</p>
+                  <p className="font-semibold">{closeWarnings.length > 0 ? `${closeWarnings.length} warning(s)` : "Ready"}</p>
+                </div>
+                {closeWarnings.length > 0 ? (
+                  <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 sm:col-span-2 lg:col-span-4">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{closeWarnings.join(" · ")} before closing, unless intentionally overridden.</span>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+
             <div className="grid gap-4 sm:grid-cols-4">
               <Card>
                 <CardContent className="pt-4">
@@ -456,6 +547,15 @@ export default function OrthoRecordPage() {
                   <label className="text-xs font-medium">Notes</label>
                   <BulletTextarea value={adjNotes} onChange={setAdjNotes} rows={2} placeholder="Optional visit notes" />
                 </div>
+                <label className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={bookNextAfterSave}
+                    onChange={(e) => setBookNextAfterSave(e.target.checked)}
+                    disabled={!nextVisitDate || saving}
+                  />
+                  Open appointment booking after saving this visit
+                </label>
                 <div className="sm:col-span-2 flex gap-2">
                   <Button type="submit" disabled={saving}>
                     {saving ? "Saving…" : "Save entry"}
