@@ -215,9 +215,9 @@ function AppointmentsPageContent() {
     })
   }, [weekAppointments, bookingSourceFilter, statusFilter])
 
-  const loadWeek = React.useCallback(() => {
+  const loadWeek = React.useCallback((options?: { silent?: boolean }) => {
     if (!activeBranch) return
-    setLoading(true)
+    if (!options?.silent) setLoading(true)
     const start = toDateKey(addDays(weekStart, -15))
     const end = toDateKey(addDays(weekStart, 30))
     void Promise.all([
@@ -283,7 +283,7 @@ function AppointmentsPageContent() {
     })
   }, [appointmentParam, activeBranch])
 
-  useOperationalRefresh(["appointments", "queue_entries"], loadWeek)
+  useOperationalRefresh(["appointments", "queue_entries"], () => loadWeek({ silent: true }))
 
   React.useEffect(() => {
     if (!activeBranch) return
