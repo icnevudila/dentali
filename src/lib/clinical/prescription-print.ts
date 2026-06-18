@@ -457,6 +457,10 @@ export function buildPrescriptionPrintHtml(params: {
       z-index: 0;
     }
     @media print {
+      @page {
+        size: letter;
+        margin: 0.35in 0.4in;
+      }
       .no-print { display: none !important; }
       body { padding: 0; background: #fff; }
       .page {
@@ -464,9 +468,85 @@ export function buildPrescriptionPrintHtml(params: {
         max-width: none;
         border-radius: 0;
         box-shadow: none;
+        break-inside: avoid;
+        page-break-inside: avoid;
       }
       .sheet {
-        min-height: auto;
+        min-height: 0;
+        padding: 0;
+        overflow: visible;
+      }
+      .banner-shell {
+        margin: 0 0 12px;
+      }
+      .banner-image {
+        max-height: 128px;
+      }
+      .banner-fallback {
+        padding: 14px 0 12px;
+      }
+      .banner-fallback h1 {
+        font-size: 26px;
+      }
+      .banner-fallback p {
+        font-size: 11px;
+        margin-top: 4px;
+      }
+      .top-meta {
+        margin-bottom: 10px;
+      }
+      .line-row {
+        margin-bottom: 6px;
+      }
+      .diagnosis-card {
+        margin: 10px 0;
+        padding: 8px 10px;
+      }
+      .alert-box {
+        margin-bottom: 10px;
+        padding: 8px 10px;
+      }
+      .rx-zone {
+        min-height: 0;
+        grid-template-columns: 64px 1fr;
+        gap: 10px;
+      }
+      .rx-mark {
+        font-size: 62px;
+        padding-top: 2px;
+      }
+      .rx-line {
+        margin-bottom: 10px;
+      }
+      .rx-line-body {
+        padding-bottom: 6px;
+      }
+      .instructions {
+        margin-top: 6px;
+        padding: 10px 12px;
+      }
+      .signature-area {
+        margin-top: 18px;
+        page-break-inside: avoid;
+      }
+      .signature-name {
+        font-size: 14px;
+      }
+      .footer-note {
+        position: static;
+        margin: 10px 0 6px;
+        font-size: 9px;
+      }
+      .footer-strip-image,
+      .footer-strip-fallback {
+        position: static;
+        display: block;
+        width: 100%;
+        max-height: 64px;
+        margin-top: 0;
+      }
+      .footer-strip-fallback {
+        height: 44px;
       }
     }
   </style>
