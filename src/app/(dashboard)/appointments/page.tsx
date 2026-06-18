@@ -674,8 +674,9 @@ function AppointmentsPageContent() {
               aria-label={t("common.close", "Close")}
               onClick={() => setShowBook(false)}
             />
-          <Card className="relative z-[221] max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border-primary-200/60 shadow-2xl sm:rounded-2xl">
-            <CardHeader>
+          <Card className="relative z-[221] flex max-h-[min(92vh,100dvh)] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border-primary-200/60 pb-safe shadow-2xl sm:max-h-[92dvh] sm:rounded-2xl">
+            <CardHeader className="shrink-0 border-b border-neutral-100 px-4 pb-4 pt-3 sm:px-6 sm:pt-6">
+              <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-200 sm:hidden" />
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <CardTitle className="text-base">{t("appointments.newAppointment", "New Appointment")}</CardTitle>
@@ -691,7 +692,7 @@ function AppointmentsPageContent() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 overflow-y-auto px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-6">
               <form onSubmit={handleBook} className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2 space-y-2">
                   <label className="text-xs font-medium">{t("appointments.searchPatient", "Search patient")}</label>
@@ -904,9 +905,10 @@ function AppointmentsPageContent() {
                     </label>
                   </div>
                 ) : null}
-                <div className="sm:col-span-2 flex flex-wrap gap-2">
+                <div className="sticky bottom-0 -mx-4 mt-2 flex flex-col gap-2 border-t border-neutral-100 bg-white px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:static sm:mx-0 sm:flex-row sm:flex-wrap sm:border-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-2">
                   <Button
                     type="submit"
+                    className="w-full sm:w-auto"
                     disabled={
                       booking ||
                       !selectedPatientId ||
@@ -920,7 +922,7 @@ function AppointmentsPageContent() {
                       ? t("appointments.booking", "Booking…")
                       : t("appointments.confirmBooking", "Confirm Booking")}
                   </Button>
-                  <Button type="button" variant="outline" onClick={() => setShowBook(false)}>
+                  <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setShowBook(false)}>
                     {t("common.cancel", "Cancel")}
                   </Button>
                 </div>
