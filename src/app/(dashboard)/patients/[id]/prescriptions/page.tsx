@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import {
   Plus,
   Printer,
@@ -41,6 +40,7 @@ import {
   type PrescriptionRecord,
 } from "@/lib/clinical/prescription-service"
 import { buildPrescriptionPrintHtml, printPrescription } from "@/lib/clinical/prescription-print"
+import { fetchOrganizationPreferences } from "@/lib/settings/org-preferences-service"
 import { notify } from "@/lib/ui/notify"
 
 function formatPatientGender(gender: string | null | undefined): string | null {
@@ -103,17 +103,23 @@ export default function PrescriptionsPage() {
       }
     })
     getLatestMedicalHistory(patientId).then(({ data }) => setMedicalHistory(data))
-    loadHistory()
+    queueMicrotask(() => {
+      void loadHistory()
+    })
   }, [patientId, loadHistory])
 
   React.useEffect(() => {
     if (!viewRxId) {
-      setViewRx(null)
-      setViewLoading(false)
+      queueMicrotask(() => {
+        setViewRx(null)
+        setViewLoading(false)
+      })
       return
     }
     let cancelled = false
-    setViewLoading(true)
+    queueMicrotask(() => {
+      if (!cancelled) setViewLoading(true)
+    })
     getPrescription(viewRxId).then(({ data, error: rxErr }) => {
       if (cancelled) return
       if (rxErr) setError(rxErr)
@@ -197,7 +203,11 @@ export default function PrescriptionsPage() {
   const handlePrint = async (rx: PrescriptionRecord) => {
     const full = rx.items ? rx : (await getPrescription(rx.id)).data
     if (!full?.items?.length) return
-    const [org, staff] = await Promise.all([fetchOrganization(), fetchStaffProfile()])
+    const [org, staff, prefs] = await Promise.all([
+      fetchOrganization(),
+      fetchStaffProfile(),
+      fetchOrganizationPreferences(),
+    ])
     const age = patientDob
       ? String(new Date().getFullYear() - new Date(patientDob).getFullYear())
       : null
@@ -214,6 +224,7 @@ export default function PrescriptionsPage() {
       prescriberLicenseNumber: staff?.prc_license_number,
       allergies: medicalHistory?.allergies ?? [],
       medications: medicalHistory?.medications ?? [],
+      branding: prefs.data?.prescription_branding,
     })
     printPrescription(html)
   }

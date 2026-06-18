@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -17,12 +18,49 @@ import {
   fetchOrganizationPreferences,
   updateOrganizationPreferences,
 } from "@/lib/settings/org-preferences-service"
+import {
+  DEFAULT_PRESCRIPTION_BRANDING,
+  type PrescriptionBrandingSettings,
+} from "@/lib/branding/prescription-branding"
+import { readBrandingImageFile } from "@/lib/branding/branding-image"
 import { saveBranchRegionalOverrides } from "@/lib/org/branch-context-service"
 import Link from "next/link"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
-import { Building, MapPin } from "lucide-react"
+import { Building, ImageIcon, MapPin, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+
+type BrandingImageField = keyof Pick<
+  PrescriptionBrandingSettings,
+  "headerImageDataUrl" | "watermarkImageDataUrl" | "footerImageDataUrl" | "signatureImageDataUrl"
+>
+
+const BRANDING_IMAGE_FIELDS: Array<{
+  key: BrandingImageField
+  title: string
+  hint: string
+}> = [
+  {
+    key: "headerImageDataUrl",
+    title: "Top banner image",
+    hint: "Wide clinic header used at the top of the printed prescription.",
+  },
+  {
+    key: "watermarkImageDataUrl",
+    title: "Center watermark",
+    hint: "Large faded logo behind the Rx body area.",
+  },
+  {
+    key: "footerImageDataUrl",
+    title: "Bottom strip image",
+    hint: "Optional footer band or clinic strip above the bottom edge.",
+  },
+  {
+    key: "signatureImageDataUrl",
+    title: "Doctor signature image",
+    hint: "Printed above the prescriber name block.",
+  },
+]
 
 export default function OrganizationSettingsPage() {
   const { activeBranch } = useBranch()
@@ -45,6 +83,9 @@ export default function OrganizationSettingsPage() {
   const [planTier, setPlanTier] = useState<string>("standard")
   const [branchPricingEnabled, setBranchPricingEnabled] = useState(false)
   const [customProcedureShowPrice, setCustomProcedureShowPrice] = useState(false)
+  const [prescriptionBranding, setPrescriptionBranding] = useState<PrescriptionBrandingSettings>(
+    DEFAULT_PRESCRIPTION_BRANDING
+  )
 
   useEffect(() => {
     Promise.all([fetchOrganization(), fetchAllOrgBranches()]).then(([org, branches]) => {
@@ -65,6 +106,7 @@ export default function OrganizationSettingsPage() {
       if (!data) return
       setBranchPricingEnabled(data.branch_procedure_pricing_enabled)
       setCustomProcedureShowPrice(data.custom_procedure_show_price)
+      setPrescriptionBranding(data.prescription_branding)
     })
   }, [])
 
@@ -105,9 +147,13 @@ export default function OrganizationSettingsPage() {
         setError(regionalError)
         return
       }
+    }
+
+    if (canManage) {
       const { error: prefError } = await updateOrganizationPreferences({
         branch_procedure_pricing_enabled: branchPricingEnabled,
         custom_procedure_show_price: customProcedureShowPrice,
+        prescription_branding: prescriptionBranding,
       })
       if (prefError) {
         setSaving(false)
@@ -124,6 +170,24 @@ export default function OrganizationSettingsPage() {
       entityId: orgId,
     })
     setSaved(true)
+  }
+
+  const updatePrescriptionBranding = <K extends keyof PrescriptionBrandingSettings>(
+    key: K,
+    value: PrescriptionBrandingSettings[K]
+  ) => {
+    setPrescriptionBranding((current) => ({ ...current, [key]: value }))
+  }
+
+  const handleBrandingImageSelect = async (key: BrandingImageField, file: File | null) => {
+    if (!file) return
+    setError(null)
+    const { dataUrl, error: imageError } = await readBrandingImageFile(file)
+    if (imageError || !dataUrl) {
+      setError(imageError ?? "Could not process image")
+      return
+    }
+    updatePrescriptionBranding(key, dataUrl)
   }
 
   if (loading) {
@@ -243,6 +307,128 @@ export default function OrganizationSettingsPage() {
                   <strong>Show price field for custom / free-text procedures</strong>
                   <span className="block text-neutral-500 text-xs mt-0.5">
                     When off, custom plan items have no price until invoicing.
+                  </span>
+                </span>
+              </label>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {canManage ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Prescription print branding</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid gap-4 xl:grid-cols-2">
+                {BRANDING_IMAGE_FIELDS.map((field) => {
+                  const value = prescriptionBranding[field.key]
+                  return (
+                    <div key={field.key} className="rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-neutral-900">{field.title}</p>
+                          <p className="mt-1 text-xs leading-relaxed text-neutral-500">{field.hint}</p>
+                        </div>
+                        <ImageIcon className="mt-0.5 h-4 w-4 text-neutral-400" aria-hidden />
+                      </div>
+                      <div className="mt-3 overflow-hidden rounded-2xl border border-dashed border-neutral-300 bg-white">
+                        {value ? (
+                          <Image
+                            src={value}
+                            alt={field.title}
+                            width={960}
+                            height={360}
+                            unoptimized
+                            className="h-36 w-full object-contain bg-[linear-gradient(135deg,#f8fafc,#eefbf8)]"
+                          />
+                        ) : (
+                          <div className="flex h-36 items-center justify-center px-4 text-center text-xs text-neutral-400">
+                            Upload PNG or JPG. The image will be stored in your organization preferences.
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <label className="inline-flex cursor-pointer items-center rounded-md border border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50">
+                          Choose image
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/jpg,image/webp"
+                            className="hidden"
+                            onChange={(e) => void handleBrandingImageSelect(field.key, e.target.files?.[0] ?? null)}
+                          />
+                        </label>
+                        {value ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => updatePrescriptionBranding(field.key, null)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Remove
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Doctor subtitle</label>
+                  <Input
+                    value={prescriptionBranding.doctorTitle ?? ""}
+                    onChange={(e) => updatePrescriptionBranding("doctorTitle", e.target.value || null)}
+                    placeholder="General Dentistry"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Footer note</label>
+                  <Input
+                    value={prescriptionBranding.footerNote ?? ""}
+                    onChange={(e) => updatePrescriptionBranding("footerNote", e.target.value || null)}
+                    placeholder="Printed footer note"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">License label</label>
+                  <Input
+                    value={prescriptionBranding.licenseLabel ?? ""}
+                    onChange={(e) => updatePrescriptionBranding("licenseLabel", e.target.value || null)}
+                    placeholder="PRC Lic. No."
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">PTR label</label>
+                  <Input
+                    value={prescriptionBranding.ptrLabel ?? ""}
+                    onChange={(e) => updatePrescriptionBranding("ptrLabel", e.target.value || null)}
+                    placeholder="PTR No."
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">PTR number</label>
+                  <Input
+                    value={prescriptionBranding.ptrNumber ?? ""}
+                    onChange={(e) => updatePrescriptionBranding("ptrNumber", e.target.value || null)}
+                    placeholder="052386"
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-neutral-200 bg-neutral-50/70 px-4 py-3">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={prescriptionBranding.showWatermark}
+                  onChange={(e) => updatePrescriptionBranding("showWatermark", e.target.checked)}
+                />
+                <span>
+                  <strong>Show center watermark</strong>
+                  <span className="block text-neutral-500 text-xs mt-0.5">
+                    Keeps the faded logo visible behind prescription content when a watermark image is uploaded.
                   </span>
                 </span>
               </label>
