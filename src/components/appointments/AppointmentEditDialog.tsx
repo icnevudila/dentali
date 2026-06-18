@@ -44,7 +44,6 @@ export function AppointmentEditDialog({
   onFreedSlot?: (freedAt: string) => void
 }) {
   const { t } = useLocale()
-  const [mounted, setMounted] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
   const [providerId, setProviderId] = React.useState("")
   const [purpose, setPurpose] = React.useState("")
@@ -68,10 +67,6 @@ export function AppointmentEditDialog({
     ],
     []
   )
-
-  React.useEffect(() => {
-    setMounted(true)
-  }, [])
 
   React.useEffect(() => {
     if (!open) return
@@ -168,7 +163,7 @@ export function AppointmentEditDialog({
     notify.success(t("appointments.slotsConfigured", "Working hours configured for this dentist."))
   }
 
-  if (!open || !mounted || !appointment) return null
+  if (!open || !appointment || typeof document === "undefined") return null
 
   const selectedSlot = slots.find((slot) => slot.time === time)
   const canPickTime =
@@ -232,17 +227,23 @@ export function AppointmentEditDialog({
 
   const modal = (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4"
-      onClick={() => onOpenChange(false)}
+      className="fixed inset-0 z-[250] flex items-end justify-center p-0 sm:items-center sm:p-4"
+      role="presentation"
     >
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
+        aria-label={t("common.close", "Close")}
+        onClick={() => onOpenChange(false)}
+      />
       <div
-        className="w-full max-w-lg rounded-xl bg-white shadow-xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col"
+        className="relative z-[251] flex max-h-[min(92vh,100dvh)] w-full max-w-lg flex-col overflow-hidden rounded-t-[28px] border border-neutral-200 bg-white shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[90vh] sm:rounded-2xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-appointment-title"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-neutral-100 px-6 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-100 px-5 py-4 sm:px-6">
           <div>
             <h2 id="edit-appointment-title" className="text-lg font-semibold text-neutral-900">
               {t("appointments.editAppointment", "Edit / Reschedule Appointment")}

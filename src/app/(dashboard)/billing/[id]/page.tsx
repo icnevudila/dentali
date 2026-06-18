@@ -116,7 +116,7 @@ export default function InvoiceDetailPage() {
       notify.error(updateErr)
       setError(updateErr)
     } else {
-      notify.success("Line item updated")
+      notify.success(t("billing.lineItemUpdated", "Line item updated"))
       setEditingLineId(null)
       await load()
     }
@@ -226,7 +226,7 @@ export default function InvoiceDetailPage() {
       setError(err)
       return
     }
-    notify.success("Payment intent created")
+    notify.success(t("billing.paymentIntentCreated", "Payment intent created"))
     if (data) {
       setPendingIntents((prev) => [data, ...prev])
       setGatewayDryRun(dryRun === true)
@@ -243,7 +243,7 @@ export default function InvoiceDetailPage() {
       setError(err)
       return
     }
-    notify.success("Payment intent completed")
+    notify.success(t("billing.paymentIntentCompleted", "Payment intent completed"))
     if (data && invoice) {
       setInvoice({ ...invoice, paid_amount: data.paid_amount, status: data.status })
       const newBalance = invoice.total_amount - data.paid_amount
@@ -284,7 +284,7 @@ export default function InvoiceDetailPage() {
 
   const handleVoid = async () => {
     if (!voidReason.trim()) return
-    if (!(await notify.confirm("Void this invoice? This cannot be undone."))) return
+    if (!(await notify.confirm(t("billing.voidInvoiceConfirm", "Void this invoice? This cannot be undone.")))) return
     setVoiding(true)
     setError(null)
     const { data, error: err } = await voidInvoice(invoiceId, voidReason.trim())
@@ -294,7 +294,7 @@ export default function InvoiceDetailPage() {
       setError(err)
       return
     }
-    notify.success("Invoice voided")
+    notify.success(t("billing.invoiceVoided", "Invoice voided"))
 
     if (data && invoice) {
       setInvoice({ ...invoice, status: data.status })
@@ -881,7 +881,15 @@ export default function InvoiceDetailPage() {
                         size="icon"
                         className="h-7 w-7 text-red-500 hover:text-red-700"
                         onClick={async () => {
-                          if (!(await notify.confirm("Are you sure you want to delete this payment record? The invoice paid amount and status will be recalculated."))) return
+                          if (
+                            !(await notify.confirm(
+                              t(
+                                "billing.deletePaymentConfirm",
+                                "Are you sure you want to delete this payment record? The invoice paid amount and status will be recalculated."
+                              )
+                            ))
+                          )
+                            return
                           setError(null)
                           const { error: delErr } = await deleteInvoicePayment(p.id)
                           if (delErr) {

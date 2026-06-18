@@ -875,25 +875,31 @@ function QueuePageContent() {
             )}
             actions={
               isToday ? (
-              <>
-                <WorkflowSettingsLink />
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  disabled={callingNext}
-                  onClick={handleCallNext}
-                >
-                  <Megaphone className="h-4 w-4" /> {t("queue.callNext", "Call next")}
-                </Button>
-                <Button variant="outline" className="gap-2" asChild>
-                  <Link href="/patients/new?returnTo=queue">
-                    <Plus className="h-4 w-4" /> {t("queue.newWalkInPatient", "New walk-in patient")}
-                  </Link>
-                </Button>
-                <Button className="gap-2 shadow-sm" onClick={openCheckInModal}>
-                  <UserCheck className="h-4 w-4" /> {t("queue.patientArrival", "Patient arrival")}
-                </Button>
-              </>
+                <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
+                  <WorkflowSettingsLink className="col-span-2 w-full sm:col-span-1 sm:w-auto" />
+                  <Button
+                    variant="outline"
+                    className="w-full gap-1.5 sm:w-auto"
+                    disabled={callingNext}
+                    onClick={handleCallNext}
+                  >
+                    <Megaphone className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{t("queue.callNext", "Call next")}</span>
+                  </Button>
+                  <Button variant="outline" className="w-full gap-1.5 sm:w-auto" asChild>
+                    <Link href="/patients/new?returnTo=queue">
+                      <Plus className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{t("queue.newWalkInShort", "New patient")}</span>
+                    </Link>
+                  </Button>
+                  <Button
+                    className="col-span-2 w-full gap-2 shadow-sm sm:col-span-1 sm:w-auto"
+                    onClick={openCheckInModal}
+                  >
+                    <UserCheck className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{t("queue.patientArrival", "Patient arrival")}</span>
+                  </Button>
+                </div>
               ) : (
                 <WorkflowSettingsLink />
               )

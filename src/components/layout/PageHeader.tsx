@@ -20,7 +20,12 @@ export function PageHeader({
   compact = false,
 }: PageHeaderProps) {
   return (
-    <div className={cn("flex flex-wrap items-start justify-between gap-4", className)}>
+    <div
+      className={cn(
+        "flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-4",
+        className
+      )}
+    >
       <div className="min-w-0 space-y-1">
         {eyebrow ? (
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary-600/90">{eyebrow}</p>
@@ -37,7 +42,11 @@ export function PageHeader({
           <div className={cn("text-sm text-neutral-500", compact && "hidden sm:block")}>{description}</div>
         ) : null}
       </div>
-      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2 print:hidden">{actions}</div> : null}
+      {actions ? (
+        <div className="flex w-full min-w-0 flex-wrap items-stretch gap-2 sm:w-auto sm:items-center print:hidden [&_a]:max-w-full [&_button]:max-w-full">
+          {actions}
+        </div>
+      ) : null}
     </div>
   )
 }

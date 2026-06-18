@@ -31,7 +31,6 @@ export function ManualInvoiceDrawer({
   const { activeBranch } = useBranch()
   const { user } = useAuth()
   const { t } = useLocale()
-  const [mounted, setMounted] = React.useState(false)
 
   const [patientSearch, setPatientSearch] = React.useState("")
   const [selectedPatientId, setSelectedPatientId] = React.useState("")
@@ -44,10 +43,6 @@ export function ManualInvoiceDrawer({
   const [series, setSeries] = React.useState("INV")
   const [creating, setCreating] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
-
-  React.useEffect(() => {
-    setMounted(true)
-  }, [])
 
   React.useEffect(() => {
     if (!open) return
@@ -137,21 +132,21 @@ export function ManualInvoiceDrawer({
     }
   }
 
-  if (!mounted || !open) return null
+  if (!open || typeof document === "undefined") return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[200] flex justify-end">
+    <div className="fixed inset-0 z-[250] flex justify-end" role="presentation">
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-[1px]"
-        aria-label="Close form"
+        className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
+        aria-label={t("common.close", "Close")}
         onClick={close}
       />
       <aside
         role="dialog"
         aria-modal="true"
         aria-labelledby="manual-invoice-title"
-        className="relative z-[210] flex h-full w-full max-w-md flex-col border-l border-neutral-200 bg-white p-6 shadow-2xl animate-slide-left"
+        className="relative z-[251] flex h-full w-full max-w-md flex-col border-l border-neutral-200 bg-white p-6 shadow-2xl animate-slide-left"
       >
         <div className="mb-6 flex items-center justify-between border-b pb-4">
           <h2 id="manual-invoice-title" className="text-lg font-bold text-neutral-950">

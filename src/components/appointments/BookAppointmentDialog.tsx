@@ -132,17 +132,17 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
   }
 
   const dialog = open ? (
-    <div className="fixed inset-0 z-[200] flex items-end justify-center p-0 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-[250] flex items-end justify-center p-0 sm:items-center sm:p-4" role="presentation">
       <button
         type="button"
-        className="absolute inset-0 bg-black/40"
+        className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
         aria-label={t("common.close", "Close")}
         onClick={() => setOpen(false)}
       />
       <div
         role="dialog"
         aria-modal="true"
-        className="relative z-[201] flex max-h-[min(92vh,100dvh)] w-full max-w-lg flex-col overflow-hidden rounded-t-[30px] border border-neutral-200 bg-white shadow-xl animate-fade-rise sm:max-h-[90vh] sm:rounded-2xl"
+        className="relative z-[251] flex max-h-[min(92vh,100dvh)] w-full max-w-lg flex-col overflow-hidden rounded-t-[30px] border border-neutral-200 bg-white shadow-xl animate-fade-rise sm:max-h-[90vh] sm:rounded-2xl"
       >
         <div className="shrink-0 border-b border-neutral-200 bg-neutral-50 px-5 pb-4 pt-3 sm:px-6 sm:pt-5">
           <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-300 sm:hidden" />
