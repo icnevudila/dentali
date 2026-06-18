@@ -1,6 +1,7 @@
 import type { PrescriptionItem, PrescriptionRecord } from "@/lib/clinical/prescription-service"
 import {
   DEFAULT_PRESCRIPTION_BRANDING,
+  resolvePrescriptionBranding,
   type PrescriptionBrandingSettings,
 } from "@/lib/branding/prescription-branding"
 import { formatBulletLines } from "@/lib/text/bullet-text"
@@ -59,7 +60,7 @@ export function buildPrescriptionPrintHtml(params: {
     branding: rawBranding,
   } = params
 
-  const branding = rawBranding ?? DEFAULT_PRESCRIPTION_BRANDING
+  const branding = resolvePrescriptionBranding(rawBranding)
   const instructionLines = prescription.general_instructions
     ? formatBulletLines(prescription.general_instructions)
     : []
@@ -569,6 +570,14 @@ export function buildPrescriptionPrintHtml(params: {
 </html>`
 }
 
+function absolutizeHtmlAssetUrls(html: string): string {
+  if (typeof window === "undefined") return html
+  const origin = window.location.origin
+  return html
+    .replace(/src="\/([^"]+)"/g, `src="${origin}/$1"`)
+    .replace(/src='\/([^']+)'/g, `src='${origin}/$1'`)
+}
+
 export function printPrescription(html: string): void {
-  openPrintableHtml(html, { autoPrint: true })
+  openPrintableHtml(absolutizeHtmlAssetUrls(html), { autoPrint: true })
 }
