@@ -73,6 +73,20 @@ export type KioskIntakePayload = {
   intake_profile?: Record<string, unknown>
 }
 
+function isPublicIntakeSchemaError(message: string): boolean {
+  const lower = message.toLowerCase()
+  return (
+    lower.includes("intake_profile") ||
+    lower.includes("submit_kiosk_intake") ||
+    lower.includes("schema cache") ||
+    lower.includes("could not find the function") ||
+    lower.includes("pgrst202")
+  )
+}
+
+const PUBLIC_INTAKE_SQL_HINT =
+  "Portal/kiosk intake SQL is not fully applied. Run supabase/scripts/APPLY_PUBLIC_INTAKE_PROFILE_HARDENING.sql in Supabase SQL Editor, then retry."
+
 export async function submitKioskIntake(
   sessionId: string,
   payload: KioskIntakePayload
@@ -83,7 +97,13 @@ export async function submitKioskIntake(
     p_payload: payload,
   })
 
-  if (error) return { data: null, error: error.message }
+  if (error) {
+    const message = error.message ?? ""
+    return {
+      data: null,
+      error: isPublicIntakeSchemaError(message) ? `${PUBLIC_INTAKE_SQL_HINT} (${message})` : message,
+    }
+  }
   const result = data as { intake_id: string; status: string }
   if (!result?.intake_id) return { data: null, error: "Invalid response from kiosk intake" }
   return { data: { intake_id: result.intake_id, status: result.status }, error: null }
