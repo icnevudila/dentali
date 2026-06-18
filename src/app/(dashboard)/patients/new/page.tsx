@@ -98,6 +98,7 @@ function NewPatientPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const returnTo = searchParams.get("returnTo")
+  const willReturnToQueue = returnTo === "queue"
   const { user } = useAuth()
   const { activeBranch } = useBranch()
   const { t } = useLocale()
@@ -311,7 +312,7 @@ function NewPatientPageContent() {
       clearDraftForReview()
     }
     setIsSubmitting(false)
-    if (returnTo === "queue") {
+    if (willReturnToQueue) {
       const params = new URLSearchParams({
         walkinPatient: created.id,
         walkinName: `${data.firstName} ${data.lastName}`.trim(),
@@ -347,7 +348,11 @@ function NewPatientPageContent() {
         icon={Users}
         eyebrow={`${t("patients.eyebrow", "Clinical")} · ${t("patients.intake", "Intake")}`}
         title={t("patients.registerTitle", "Register New Patient")}
-        description={`Step ${step + 1} of ${intakeSteps.length} — ${intakeSteps[step]}`}
+        description={
+          willReturnToQueue
+            ? `Step ${step + 1} of ${intakeSteps.length} — ${intakeSteps[step]} · returns to Queue check-in`
+            : `Step ${step + 1} of ${intakeSteps.length} — ${intakeSteps[step]}`
+        }
         maxWidth="max-w-4xl"
         panel={false}
         error={submitError}
@@ -372,7 +377,9 @@ function NewPatientPageContent() {
 
         {kioskDraftIntakeId && (
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-            Reviewing kiosk intake submission — complete and register to finalize.
+            {willReturnToQueue
+              ? "Reviewing intake submission — complete registration, then Queue opens with this patient selected for check-in."
+              : "Reviewing intake submission — complete and register to finalize."}
           </div>
         )}
 
@@ -720,7 +727,11 @@ function NewPatientPageContent() {
                   className="gap-2"
                 >
                   <UserPlus className="h-4 w-4" />
-                  {isSubmitting ? "Registering..." : "Register Patient"}
+                  {isSubmitting
+                    ? "Registering..."
+                    : willReturnToQueue
+                      ? "Register + open queue"
+                      : "Register Patient"}
                 </Button>
               )}
             </div>

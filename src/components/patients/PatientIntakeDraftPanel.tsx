@@ -90,18 +90,23 @@ export function PatientIntakeDraftPanel({
   }, [branchId, onCountsChange])
 
   React.useEffect(() => {
-    load()
+    const id = window.setTimeout(() => {
+      void load()
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [load])
 
   useOperationalRefresh(["patient_intakes"], load)
 
   React.useEffect(() => {
-    setExpanded(false)
+    const id = window.setTimeout(() => setExpanded(false), 0)
+    return () => window.clearTimeout(id)
   }, [sourceFilter])
 
   React.useEffect(() => {
     if (controlledSourceFilter !== undefined) {
-      setInternalSourceFilter(controlledSourceFilter)
+      const id = window.setTimeout(() => setInternalSourceFilter(controlledSourceFilter), 0)
+      return () => window.clearTimeout(id)
     }
   }, [controlledSourceFilter])
 
@@ -142,9 +147,9 @@ export function PatientIntakeDraftPanel({
     return options
   }, [counts, t])
 
-  const handleReview = (draft: KioskIntakeDraft) => {
+  const handleReview = (draft: KioskIntakeDraft, options?: { returnToQueue?: boolean }) => {
     storeDraftForReview(draft)
-    router.push("/patients/new?from=kiosk-draft")
+    router.push(`/patients/new?from=kiosk-draft${options?.returnToQueue ? "&returnTo=queue" : ""}`)
   }
 
   const handleDownload = async (draft: KioskIntakeDraft) => {
@@ -295,7 +300,7 @@ export function PatientIntakeDraftPanel({
                   {t("patients.intakeSubmitted", "Submitted")} {submitted}
                 </p>
               </div>
-              <div className="flex shrink-0 gap-1.5 self-end sm:self-center">
+              <div className="flex shrink-0 flex-wrap justify-end gap-1.5 self-end sm:self-center">
                 <Button
                   size="sm"
                   variant="ghost"
@@ -308,6 +313,9 @@ export function PatientIntakeDraftPanel({
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => handleReview(draft)}>
                   {t("patients.intakeReview", "Review & register")}
+                </Button>
+                <Button size="sm" onClick={() => handleReview(draft, { returnToQueue: true })}>
+                  {t("patients.intakeRegisterQueue", "Register + queue")}
                 </Button>
               </div>
             </div>

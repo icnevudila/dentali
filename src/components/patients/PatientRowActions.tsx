@@ -93,6 +93,10 @@ export function PatientRowActions({ patient, className, listContext = "registry"
   const phoneDigits = patient.phone?.replace(/\D/g, "") ?? ""
   const fullName = `${patient.first_name} ${patient.last_name}`.trim()
   const appointmentHref = `/appointments?patient=${patient.id}&patientName=${encodeURIComponent(fullName)}`
+  const queueArrivalHref = `/queue?${new URLSearchParams({
+    walkinPatient: patient.id,
+    ...(fullName ? { walkinName: fullName } : {}),
+  }).toString()}`
 
   const menu =
     open && mounted ? (
@@ -180,8 +184,8 @@ export function PatientRowActions({ patient, className, listContext = "registry"
             </a>
           ) : null}
           {listContext === "registry" ? (
-            <MenuLink href={`/queue`} icon={ExternalLink} onNavigate={() => setOpen(false)}>
-              {t("patients.actionQueue", "Go to queue")}
+            <MenuLink href={queueArrivalHref} icon={ExternalLink} onNavigate={() => setOpen(false)}>
+              {t("patients.actionQueue", "Send to queue check-in")}
             </MenuLink>
           ) : null}
         </div>
