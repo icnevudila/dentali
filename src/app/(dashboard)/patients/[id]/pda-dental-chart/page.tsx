@@ -16,8 +16,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { PdaIntakeForm } from "@/components/pda/PdaIntakeForm"
-import { PdaDentalChartDocument } from "@/components/odontogram/PdaDentalChartDocument"
-import { printElementById, waitForImagesInElement } from "@/lib/utils/print"
 import { NAV_BACK_TRANSITION } from "@/lib/navigation/view-transition"
 import { buildPdaIntakePrefill } from "@/lib/pda/pda-intake-prefill"
 import {
@@ -31,7 +29,6 @@ import {
   fetchPatientPdaIntake,
   upsertPatientPdaIntake,
 } from "@/lib/pda/pda-intake-service"
-import { fetchStaffProfile } from "@/lib/auth/auth-service"
 import { notify } from "@/lib/ui/notify"
 
 function collectPrefillKeys(prefill: PdaIntakeResponses): Set<string> {
@@ -61,7 +58,6 @@ export default function PdaDentalChartPage() {
   const [status, setStatus] = React.useState<PdaIntakeStatus>("draft")
   const [findings, setFindings] = React.useState<ToothFinding[]>([])
   const [treatmentRows, setTreatmentRows] = React.useState<TreatmentTimelineEntry[]>([])
-  const [dentistName, setDentistName] = React.useState<string | null>(null)
   const [prefillKeys, setPrefillKeys] = React.useState<Set<string>>(new Set())
   const [loading, setLoading] = React.useState(true)
   const [saving, setSaving] = React.useState(false)
@@ -75,12 +71,11 @@ export default function PdaDentalChartPage() {
     async function load() {
       setLoading(true)
       setError(null)
-      const [patientRes, medicalRes, chartRes, treatmentRes, staff, recordRes] = await Promise.all([
+      const [patientRes, medicalRes, chartRes, treatmentRes, recordRes] = await Promise.all([
         getPatient(patientId),
         getLatestMedicalHistory(patientId),
         getPatientOdontogram(patientId, activeBranch!.id),
         fetchPatientTreatmentTimeline(patientId, activeBranch!.id),
-        fetchStaffProfile(),
         fetchPatientPdaIntake(patientId, activeBranch!.id),
       ])
       if (cancelled) return
@@ -97,7 +92,6 @@ export default function PdaDentalChartPage() {
       setStatus(recordRes.data?.status ?? "draft")
       setFindings(chartRes.data?.findings ?? [])
       setTreatmentRows(treatmentRes.data ?? [])
-      setDentistName(staff?.full_name ?? null)
       if (recordRes.error) setError(recordRes.error)
       setLoading(false)
       setDirty(false)
@@ -165,19 +159,10 @@ export default function PdaDentalChartPage() {
     notify.success("Patient link copied to clipboard")
   }
 
-  const handlePrint = async () => {
-    const el = document.getElementById("pda-intake-print")
-    if (!el) return
-    await waitForImagesInElement(el)
-    printElementById("pda-intake-print", {
-      title: "PDA Dental Chart",
-      extraCss: `
-        @page { size: letter; margin: 0; }
-        body { padding: 0 !important; margin: 0 !important; background: #fff !important; }
-        #print-content { padding: 0; }
-        .pda-print-root { padding: 0 !important; background: #fff !important; gap: 0 !important; }
-      `,
-    })
+  const handlePrint = () => {
+    if (!activeBranch?.id) return
+    const url = `/patients/${patientId}/pda-dental-chart/print?branch=${encodeURIComponent(activeBranch.id)}`
+    window.open(url, "_blank", "noopener,noreferrer")
   }
 
   if (loading) return <PageLoadingSkeleton variant="detail" className="max-w-4xl px-4 py-8" />
@@ -212,7 +197,7 @@ export default function PdaDentalChartPage() {
               <Link2 className="h-4 w-4" />
               Patient link
             </Button>
-            <Button variant="outline" size="sm" onClick={() => void handlePrint()} className="gap-2">
+            <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
               <Printer className="h-4 w-4" />
               Print / PDF
             </Button>
@@ -246,17 +231,6 @@ export default function PdaDentalChartPage() {
             treatmentRows={treatmentRows}
           />
         </div>
-      </div>
-
-      <div aria-hidden className="pointer-events-none fixed top-0 -left-[10000px] overflow-hidden opacity-0">
-        <PdaDentalChartDocument
-          patient={null}
-          responses={responses}
-          findings={findings}
-          treatmentRows={treatmentRows}
-          dentistName={dentistName}
-          printRootId="pda-intake-print"
-        />
       </div>
     </PermissionGate>
   )

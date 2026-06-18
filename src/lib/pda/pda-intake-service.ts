@@ -22,11 +22,18 @@ function isMissingRpc(message: string): boolean {
 }
 
 function isMissingTable(message: string): boolean {
-  return message.includes("does not exist") || message.includes("42P01")
+  return (
+    message.includes("does not exist") ||
+    message.includes("42P01") ||
+    (message.includes("patient_pda_intake_records") && message.includes("schema cache"))
+  )
 }
 
+const MIGRATION_REQUIRED_MSG =
+  "PDA tables are not in Supabase yet. Open SQL Editor and run supabase/scripts/APPLY_PDA_INTAKE.sql, then run: NOTIFY pgrst, 'reload schema';"
+
 const SCHEMA_RELOAD_HINT =
-  "PDA tables exist but API functions are not loaded yet. In Supabase Dashboard → Project Settings → API, click Reload schema."
+  "PDA tables exist but API is not refreshed. Supabase → Project Settings → API → Reload schema."
 
 async function fetchPatientPdaIntakeFromTable(
   patientId: string,
@@ -42,7 +49,7 @@ async function fetchPatientPdaIntakeFromTable(
 
   if (error) {
     if (isMissingTable(error.message)) {
-      return { data: null, error: "PDA intake is not available yet. Run the database migration." }
+      return { data: null, error: MIGRATION_REQUIRED_MSG }
     }
     return { data: null, error: error.message }
   }
@@ -80,7 +87,7 @@ async function upsertPatientPdaIntakeViaTable(params: {
 
   if (error) {
     if (isMissingTable(error.message)) {
-      return { data: null, error: "PDA intake is not available yet. Run the database migration." }
+      return { data: null, error: MIGRATION_REQUIRED_MSG }
     }
     return { data: null, error: error.message }
   }

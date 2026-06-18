@@ -1,0 +1,355 @@
+/* Native PDA dental chart — letter-size print form (no PNG overlay) */
+
+.pda-native-root {
+  --pda-blue: #1e4f8a;
+  --pda-line: #1a1a1a;
+  --pda-muted: #4b5563;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 7.5pt;
+  line-height: 1.25;
+  color: #111;
+  background: #e5e7eb;
+  padding: 16px;
+}
+
+.pda-native-sheet {
+  width: 8.5in;
+  min-height: 11in;
+  margin: 0 auto 16px;
+  padding: 0.28in 0.32in 0.3in;
+  background: #fff;
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.12);
+  box-sizing: border-box;
+  page-break-after: always;
+}
+
+.pda-native-sheet:last-child {
+  page-break-after: auto;
+}
+
+.pda-native-header {
+  display: grid;
+  grid-template-columns: 0.85in 1fr 0.75in;
+  gap: 8px;
+  align-items: start;
+  margin-bottom: 6px;
+}
+
+.pda-native-logo {
+  width: 0.8in;
+  height: 0.8in;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 6pt;
+  font-weight: 700;
+  text-align: center;
+  color: var(--pda-blue);
+  line-height: 1.1;
+}
+
+.pda-native-title-block {
+  text-align: center;
+}
+
+.pda-native-org {
+  font-size: 11pt;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+.pda-native-pill {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 14px;
+  border: 2px solid var(--pda-blue);
+  border-radius: 999px;
+  color: var(--pda-blue);
+  font-weight: 700;
+  font-size: 8.5pt;
+  letter-spacing: 0.04em;
+}
+
+.pda-native-photo-box {
+  width: 0.72in;
+  height: 0.85in;
+  border: 1px solid var(--pda-line);
+  margin-left: auto;
+}
+
+.pda-native-section-title {
+  font-size: 7.5pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin: 6px 0 3px;
+  letter-spacing: 0.03em;
+}
+
+.pda-native-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-bottom: 2px;
+  align-items: flex-end;
+}
+
+.pda-native-field {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  min-width: 0;
+}
+
+.pda-native-field-label {
+  white-space: nowrap;
+  font-size: 7pt;
+}
+
+.pda-native-field-value {
+  border-bottom: 1px solid var(--pda-line);
+  min-width: 0.55in;
+  padding: 0 2px 1px;
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pda-native-field-grow .pda-native-field-value {
+  flex: 1;
+  min-width: 1.2in;
+}
+
+.pda-native-yn-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: start;
+  margin: 1px 0;
+  font-size: 7pt;
+}
+
+.pda-native-yn-mark {
+  width: 0.35in;
+  text-align: center;
+  font-weight: 700;
+}
+
+.pda-native-allergy-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px 8px;
+  margin: 3px 0 3px 12px;
+  font-size: 6.8pt;
+}
+
+.pda-native-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pda-native-check-box {
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--pda-line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.pda-native-condition-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px 6px;
+  margin-top: 3px;
+  font-size: 6.5pt;
+}
+
+.pda-native-consent-title {
+  text-align: center;
+  margin: 0 0 8px;
+}
+
+.pda-native-consent-section {
+  margin-bottom: 6px;
+}
+
+.pda-native-consent-section h3 {
+  font-size: 7pt;
+  font-weight: 700;
+  margin: 0 0 2px;
+}
+
+.pda-native-consent-section p {
+  margin: 0 0 2px;
+  font-size: 6.8pt;
+  text-align: justify;
+}
+
+.pda-native-initial-line {
+  font-size: 6.8pt;
+  margin-top: 1px;
+}
+
+.pda-native-signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.8in;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 7pt;
+}
+
+.pda-native-sign-line {
+  border-bottom: 1px solid var(--pda-line);
+  height: 14px;
+}
+
+.pda-native-chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: flex-end;
+  margin-bottom: 4px;
+  font-size: 7pt;
+}
+
+.pda-native-chart-grid {
+  border: 1.5px solid var(--pda-line);
+  margin: 4px 0;
+}
+
+.pda-native-chart-quadrant-labels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  text-align: center;
+  font-weight: 700;
+  font-size: 7pt;
+  border-bottom: 1px solid var(--pda-line);
+}
+
+.pda-native-tooth-row {
+  display: grid;
+  grid-template-columns: 0.35in repeat(16, 1fr);
+  border-bottom: 1px solid #94a3b8;
+  min-height: 14px;
+  align-items: center;
+}
+
+.pda-native-tooth-row.cols-10 {
+  grid-template-columns: 0.35in repeat(10, 1fr);
+}
+
+.pda-native-tooth-row:last-child {
+  border-bottom: none;
+}
+
+.pda-native-tooth-row-label {
+  font-size: 5.5pt;
+  font-weight: 700;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  text-align: center;
+  padding: 2px 0;
+  border-right: 1px solid #94a3b8;
+}
+
+.pda-native-tooth-num {
+  text-align: center;
+  font-size: 6pt;
+  font-weight: 700;
+  border-right: 1px solid #e2e8f0;
+  padding: 1px 0;
+}
+
+.pda-native-tooth-code {
+  text-align: center;
+  font-size: 5.5pt;
+  font-weight: 700;
+  color: #b91c1c;
+  border-right: 1px solid #e2e8f0;
+  min-height: 11px;
+}
+
+.pda-native-legend {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px 8px;
+  margin-top: 4px;
+  font-size: 6pt;
+}
+
+.pda-native-legend h4 {
+  margin: 0 0 2px;
+  font-size: 6.5pt;
+}
+
+.pda-native-legend ul {
+  margin: 0;
+  padding-left: 10px;
+}
+
+.pda-native-treatment-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 6.5pt;
+  margin-top: 6px;
+}
+
+.pda-native-treatment-table th,
+.pda-native-treatment-table td {
+  border: 1px solid #38bdf8;
+  padding: 2px 3px;
+  vertical-align: top;
+}
+
+.pda-native-treatment-table th {
+  background: #f0f9ff;
+  font-weight: 700;
+  text-align: center;
+}
+
+.pda-native-treatment-table .col-date { width: 9%; }
+.pda-native-treatment-table .col-tooth { width: 7%; }
+.pda-native-treatment-table .col-proc { width: 28%; }
+.pda-native-treatment-table .col-dentist { width: 12%; }
+.pda-native-treatment-table .col-money { width: 10%; }
+
+@media print {
+  @page {
+    size: letter;
+    margin: 0;
+  }
+
+  .pda-native-root {
+    background: #fff;
+    padding: 0;
+  }
+
+  .pda-native-sheet {
+    width: 100%;
+    min-height: auto;
+    margin: 0;
+    padding: 0.2in 0.25in;
+    box-shadow: none;
+    page-break-after: always;
+  }
+
+  .pda-native-sheet:last-child {
+    page-break-after: auto;
+  }
+}
+
+@media screen {
+  .pda-print-route {
+    min-height: 100vh;
+    background: #e5e7eb;
+  }
+}
