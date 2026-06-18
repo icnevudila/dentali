@@ -258,7 +258,7 @@ function DentistPageContent() {
     syncUrl(debouncedQuery, 1, filter, nextProviderId)
   }
 
-  const loadPatients = React.useCallback(async () => {
+  const loadPatients = React.useCallback(async (options?: { silent?: boolean }) => {
     if (!activeBranch) {
       setLoading(false)
       setPatients([])
@@ -269,8 +269,10 @@ function DentistPageContent() {
       return
     }
 
-    setLoading(true)
-    setError(null)
+    if (!options?.silent) {
+      setLoading(true)
+      setError(null)
+    }
 
     const [listResult, queueResult, dayResult] = await Promise.all([
       searchDentistQueuePatients(activeBranch.id, {
@@ -329,16 +331,16 @@ function DentistPageContent() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "queue_entries", filter: `branch_id=eq.${activeBranch.id}` },
-        () => loadPatients()
+        () => void loadPatients({ silent: true })
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "appointments", filter: `branch_id=eq.${activeBranch.id}` },
-        () => loadPatients()
+        () => void loadPatients({ silent: true })
       )
       .subscribe()
 
-    const interval = setInterval(() => loadPatients(), 60_000)
+    const interval = setInterval(() => void loadPatients({ silent: true }), 60_000)
     return () => {
       clearInterval(interval)
       supabase.removeChannel(channel)
