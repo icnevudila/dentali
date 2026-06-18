@@ -401,10 +401,10 @@ function DailyCloseoutContent() {
                 .replace("{prev}", formatDayLabel(previousDay))}
             />
 
-            <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/60 px-4 py-3 text-sm text-neutral-600">
-              <p className="font-medium text-neutral-800">
+            <details className="rounded-xl border border-neutral-200/80 bg-neutral-50/60 px-4 py-3 text-sm text-neutral-600">
+              <summary className="cursor-pointer list-none font-medium text-neutral-800">
                 {t("closeout.howItWorksTitle", "How this report works")}
-              </p>
+              </summary>
               <ul className="mt-2 list-disc space-y-1 pl-5">
                 <li>
                   {t(
@@ -434,7 +434,7 @@ function DailyCloseoutContent() {
                   {t("closeout.draftOnFile", "Draft snapshot on file — not locked")}
                 </Badge>
               ) : null}
-            </div>
+            </details>
 
             <MetricStrip items={metrics} className="lg:grid-cols-3" />
             <p className="text-sm text-neutral-500">
