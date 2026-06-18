@@ -45,8 +45,8 @@ const STATUS_LABELS: Record<PdaIntakeStatus, string> = {
 export default function PdaDentalChartPage() {
   const { id: patientId } = useRouteParams<{ id: string }>()
   const { activeBranch } = useBranch()
+  const activeBranchId = activeBranch?.id ?? null
   const [responses, setResponses] = React.useState<PdaIntakeResponses>(emptyPdaIntakeResponses())
-  const [recordId, setRecordId] = React.useState<string | null>(null)
   const [status, setStatus] = React.useState<PdaIntakeStatus>("draft")
   const [findings, setFindings] = React.useState<ToothFinding[]>([])
   const [treatmentRows, setTreatmentRows] = React.useState<TreatmentTimelineEntry[]>([])
@@ -59,7 +59,7 @@ export default function PdaDentalChartPage() {
   const [linkCopied, setLinkCopied] = React.useState(false)
 
   React.useEffect(() => {
-    if (!patientId || !activeBranch?.id) return
+    if (!patientId || !activeBranchId) return
     let cancelled = false
 
     async function load() {
@@ -68,10 +68,10 @@ export default function PdaDentalChartPage() {
       const [patientRes, medicalRes, chartRes, treatmentRes, recordRes, branchVisitRes] = await Promise.all([
         getPatient(patientId),
         getLatestMedicalHistory(patientId),
-        getPatientOdontogram(patientId, activeBranch!.id),
-        fetchPatientTreatmentTimeline(patientId, activeBranch!.id),
-        fetchPatientPdaIntake(patientId, activeBranch!.id),
-        getPatientBranchVisit(patientId, activeBranch!.id),
+        getPatientOdontogram(patientId, activeBranchId),
+        fetchPatientTreatmentTimeline(patientId, activeBranchId),
+        fetchPatientPdaIntake(patientId, activeBranchId),
+        getPatientBranchVisit(patientId, activeBranchId),
       ])
       if (cancelled) return
 
@@ -84,7 +84,6 @@ export default function PdaDentalChartPage() {
 
       const saved = recordRes.data?.responses ?? emptyPdaIntakeResponses()
       setResponses(mergePdaIntakeResponses(saved, prefill))
-      setRecordId(recordRes.data?.id ?? null)
       setStatus(recordRes.data?.status ?? "draft")
       setFindings(chartRes.data?.findings ?? [])
       setTreatmentRows(treatmentRes.data ?? [])
@@ -97,7 +96,7 @@ export default function PdaDentalChartPage() {
     return () => {
       cancelled = true
     }
-  }, [patientId, activeBranch?.id])
+  }, [patientId, activeBranchId])
 
   const handleChange = (next: PdaIntakeResponses) => {
     setResponses(next)
@@ -121,7 +120,6 @@ export default function PdaDentalChartPage() {
       return
     }
     if (data) {
-      setRecordId(data.id)
       setStatus(data.status)
     }
     setDirty(false)
@@ -142,7 +140,6 @@ export default function PdaDentalChartPage() {
       notify.error(saveErr ?? "Could not save form")
       return
     }
-    setRecordId(saved.id)
     setDirty(false)
     const { token, error: linkErr } = await createPdaIntakeSigningToken({ recordId: saved.id })
     if (linkErr || !token) {
