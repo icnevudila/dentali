@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { PermissionGate } from "@/components/auth/PermissionGate"
@@ -23,6 +24,7 @@ import { notify } from "@/lib/ui/notify"
 import { PageErrorNotifier } from "@/components/ui/PageErrorNotifier"
 import {
   fetchPreparedAppointmentSlots,
+  isPastManilaSlot,
   manilaScheduledAtIso,
   pickDefaultSlotTime,
 } from "@/lib/appointments/appointment-slots"
@@ -68,6 +70,17 @@ import { resolveBookingSource } from "@/lib/appointments/booking-source"
 import type { BookingSource } from "@/lib/appointments/booking-source"
 import { WorkflowStatusBanner } from "@/components/layout/WorkflowStatusBanner"
 
+const APPOINTMENT_PURPOSE_PRESETS = [
+  "General Checkup",
+  "Dental Cleaning",
+  "Tooth Filling",
+  "Root Canal",
+  "Tooth Extraction",
+  "Orthodontic Consultation",
+] as const
+
+type AppointmentPurposePreset = (typeof APPOINTMENT_PURPOSE_PRESETS)[number] | "Other"
+
 export default function AppointmentsPage() {
   return (
     <React.Suspense fallback={<PageLoadingSkeleton variant="list" />}>
@@ -109,9 +122,11 @@ function AppointmentsPageContent() {
   const [patients, setPatients] = React.useState<Awaited<ReturnType<typeof searchPatients>>["data"]>([])
   const [selectedPatientId, setSelectedPatientId] = React.useState("")
   const [date, setDate] = React.useState("")
-  const [time, setTime] = React.useState("09:00")
-  const [purpose, setPurpose] = React.useState("")
+  const [time, setTime] = React.useState("")
+  const [purposePreset, setPurposePreset] = React.useState<AppointmentPurposePreset>("General Checkup")
+  const [purposeOther, setPurposeOther] = React.useState("")
   const [booking, setBooking] = React.useState(false)
+  const [portalReady, setPortalReady] = React.useState(false)
   const [updatingId, setUpdatingId] = React.useState<string | null>(null)
   const [reschedulingId, setReschedulingId] = React.useState<string | null>(null)
   const [remindingId, setRemindingId] = React.useState<string | null>(null)
@@ -128,6 +143,41 @@ function AppointmentsPageContent() {
   const [todayQueueEntries, setTodayQueueEntries] = React.useState<QueueEntry[]>([])
 
   const today = toDateKey(new Date())
+
+  const resolvedPurpose =
+    purposePreset === "Other" ? purposeOther.trim() : purposePreset
+
+  React.useEffect(() => {
+    setPortalReady(true)
+  }, [])
+
+  React.useEffect(() => {
+    if (!showBook) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [showBook])
+
+  const resetBookForm = React.useCallback(() => {
+    setPurposePreset("General Checkup")
+    setPurposeOther("")
+    setTime("")
+    setForceBillingOverride(false)
+    setBookingBillingGate(null)
+  }, [])
+
+  const openBookModal = React.useCallback(() => {
+    setShowBook(true)
+    setDate(selectedDate)
+    resetBookForm()
+  }, [resetBookForm, selectedDate])
+
+  const closeBookModal = React.useCallback(() => {
+    setShowBook(false)
+    resetBookForm()
+  }, [resetBookForm])
 
   const setBookingSourceFilter = React.useCallback(
     (source: BookingSource | null) => {
@@ -196,6 +246,9 @@ function AppointmentsPageContent() {
       setPatients([])
       setShowBook(true)
       setDate(bookingDate)
+      setPurposePreset("General Checkup")
+      setPurposeOther("")
+      setTime("")
     }, 0)
     return () => window.clearTimeout(id)
   }, [dateParam, patientNameParam, patientParam, selectedDate])
@@ -309,7 +362,28 @@ function AppointmentsPageContent() {
 
   const handleBook = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user || !activeBranch || !selectedPatientId || !date) return
+    if (!user || !activeBranch || !date) return
+    if (!selectedPatientId) {
+      notify.error(t("appointments.selectPatientFirst", "Select a patient before booking."))
+      return
+    }
+    if (!time) {
+      notify.error(t("appointments.selectValidSlot", "Pick an available time slot."))
+      return
+    }
+    const slot = slots.find((s) => s.time === time)
+    if (!slot?.available || isPastManilaSlot(date, time)) {
+      notify.error(t("appointments.selectValidSlot", "Pick an available time slot."))
+      return
+    }
+    if (!resolvedPurpose) {
+      notify.error(t("appointments.purposeRequired", "Enter a purpose for this visit."))
+      return
+    }
+    if (bookingBillingGate?.has_billing_gap && !forceBillingOverride) {
+      notify.error(t("billing.gateBlocked", "Resolve billing before booking or use override."))
+      return
+    }
     setBooking(true)
     setError(null)
     const org = await fetchOrganization()
@@ -323,7 +397,7 @@ function AppointmentsPageContent() {
       branchId: activeBranch.id,
       patientId: selectedPatientId,
       scheduledAt: manilaScheduledAtIso(date, time),
-      purpose,
+      purpose: resolvedPurpose,
       userId: user.id,
       providerId: selectedProviderId || undefined,
       forceBillingOverride,
@@ -334,9 +408,9 @@ function AppointmentsPageContent() {
       setError(err)
     } else {
       notify.success(t("appointments.bookingSuccess", "Appointment created successfully"))
-      setShowBook(false)
+      closeBookModal()
       setSelectedPatientId("")
-      setPurpose("")
+      setPatientQuery("")
       setSelectedDate(date)
       void loadWeek()
     }
@@ -509,11 +583,8 @@ function AppointmentsPageContent() {
               <Button
                 className="gap-2"
                 onClick={() => {
-                  const next = !showBook
-                  setShowBook(next)
-                  if (next) {
-                    setDate(selectedDate)
-                  }
+                  if (showBook) closeBookModal()
+                  else openBookModal()
                 }}
               >
                 <Plus className="h-4 w-4" />
@@ -666,13 +737,14 @@ function AppointmentsPageContent() {
           </div>
         ) : null}
 
-        {showBook && (
+        {portalReady && showBook
+          ? createPortal(
           <div className="fixed inset-0 z-[220] flex items-end justify-center bg-neutral-950/45 p-0 sm:items-center sm:p-4">
             <button
               type="button"
               className="absolute inset-0 cursor-default"
               aria-label={t("common.close", "Close")}
-              onClick={() => setShowBook(false)}
+              onClick={closeBookModal}
             />
           <Card className="relative z-[221] flex max-h-[min(92vh,100dvh)] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border-primary-200/60 pb-safe shadow-2xl sm:max-h-[92dvh] sm:rounded-2xl">
             <CardHeader className="shrink-0 border-b border-neutral-100 px-4 pb-4 pt-3 sm:px-6 sm:pt-6">
@@ -687,7 +759,7 @@ function AppointmentsPageContent() {
                     )}
                   </p>
                 </div>
-                <Button type="button" variant="ghost" size="sm" onClick={() => setShowBook(false)}>
+                <Button type="button" variant="ghost" size="sm" onClick={closeBookModal}>
                   {t("common.close", "Close")}
                 </Button>
               </div>
@@ -720,7 +792,11 @@ function AppointmentsPageContent() {
                         value={patientQuery}
                         onChange={(e) => setPatientQuery(e.target.value)}
                         placeholder={t("appointments.searchPatientPlaceholder", "Name or phone…")}
+                        required
                       />
+                      <p className="text-[11px] text-neutral-500">
+                        {t("appointments.searchPatientHint", "Type at least 2 characters, then pick a patient from the list.")}
+                      </p>
                       {patients.length > 0 && (
                         <ul className="border rounded-md divide-y max-h-32 overflow-y-auto text-sm mt-1">
                           {patients.map((p) => (
@@ -847,39 +923,30 @@ function AppointmentsPageContent() {
                 <div className="sm:col-span-2 space-y-1.5">
                   <label className="text-xs font-medium">Purpose</label>
                   <select
-                    value={purpose && ["General Checkup", "Dental Cleaning", "Tooth Filling", "Root Canal", "Tooth Extraction", "Orthodontic Consultation"].includes(purpose) ? purpose : (purpose ? "Other" : "General Checkup")}
+                    value={purposePreset}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === "Other") {
-                        setPurpose("");
-                      } else {
-                        setPurpose(val);
-                      }
+                      const val = e.target.value as AppointmentPurposePreset
+                      setPurposePreset(val)
+                      if (val !== "Other") setPurposeOther("")
                     }}
                     className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
-                    <option value="General Checkup">General Checkup</option>
-                    <option value="Dental Cleaning">Dental Cleaning</option>
-                    <option value="Tooth Filling">Tooth Filling</option>
-                    <option value="Root Canal">Root Canal</option>
-                    <option value="Tooth Extraction">Tooth Extraction</option>
-                    <option value="Orthodontic Consultation">Orthodontic Consultation</option>
+                    {APPOINTMENT_PURPOSE_PRESETS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
                     <option value="Other">Other</option>
                   </select>
-                  {purpose !== "General Checkup" &&
-                    purpose !== "Dental Cleaning" &&
-                    purpose !== "Tooth Filling" &&
-                    purpose !== "Root Canal" &&
-                    purpose !== "Tooth Extraction" &&
-                    purpose !== "Orthodontic Consultation" && (
-                      <Input
-                        required
-                        placeholder="Please specify purpose"
-                        value={purpose}
-                        onChange={(e) => setPurpose(e.target.value)}
-                        className="mt-1"
-                      />
-                    )}
+                  {purposePreset === "Other" ? (
+                    <Input
+                      required
+                      placeholder="Please specify purpose"
+                      value={purposeOther}
+                      onChange={(e) => setPurposeOther(e.target.value)}
+                      className="mt-1"
+                    />
+                  ) : null}
                 </div>
                 {bookingBillingGate?.has_billing_gap ? (
                   <div className="sm:col-span-2 space-y-2">
@@ -914,6 +981,7 @@ function AppointmentsPageContent() {
                       !selectedPatientId ||
                       !date ||
                       !time ||
+                      !resolvedPurpose ||
                       slots.length === 0 ||
                       (bookingBillingGate?.has_billing_gap && !forceBillingOverride)
                     }
@@ -922,15 +990,17 @@ function AppointmentsPageContent() {
                       ? t("appointments.booking", "Booking…")
                       : t("appointments.confirmBooking", "Confirm Booking")}
                   </Button>
-                  <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setShowBook(false)}>
+                  <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={closeBookModal}>
                     {t("common.cancel", "Cancel")}
                   </Button>
                 </div>
               </form>
             </CardContent>
           </Card>
-          </div>
-        )}
+          </div>,
+          document.body
+        )
+          : null}
 
         {loading ? (
           <PageLoadingSkeleton variant="block" />
