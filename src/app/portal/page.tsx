@@ -12,6 +12,12 @@ import { PORTAL_VISIT_REASONS, type PortalVisitReasonId } from "@/lib/portal/vis
 import { PortalStatusPanel } from "@/components/portal/PortalStatusPanel"
 import { readPortalSignReturn } from "@/lib/portal/portal-sign-return"
 import { PublicChannelBrand } from "@/components/brand/public-channel-brand"
+import { PublicPatientIntakeFields } from "@/components/patients/PublicPatientIntakeFields"
+import {
+  emptyPublicIntakeFormState,
+  publicIntakeToKioskPayload,
+  type PublicIntakeFormState,
+} from "@/lib/patients/public-intake-form"
 import { notify } from "@/lib/ui/notify"
 import { 
   Calendar as CalendarIcon, 
@@ -25,10 +31,6 @@ import {
   UserPlus, 
   ArrowLeft,
   Phone,
-  Mail,
-  CalendarDays,
-  MapPin,
-  ShieldAlert,
   HeartHandshake,
   ListOrdered,
 } from "lucide-react"
@@ -84,17 +86,7 @@ function PortalPageContent() {
   const [customReason, setCustomReason] = React.useState("")
 
   // New Patient Registration Form State
-  const [newFirstName, setNewFirstName] = React.useState("")
-  const [newLastName, setNewLastName] = React.useState("")
-  const [newPhone, setNewPhone] = React.useState("")
-  const [newEmail, setNewEmail] = React.useState("")
-  const [newDob, setNewDob] = React.useState("")
-  const [newGender, setNewGender] = React.useState("other")
-  const [newAddress, setNewAddress] = React.useState("")
-  const [newCity, setNewCity] = React.useState("")
-  const [newEmergencyName, setNewEmergencyName] = React.useState("")
-  const [newEmergencyPhone, setNewEmergencyPhone] = React.useState("")
-  const [newMedicalAlerts, setNewMedicalAlerts] = React.useState("")
+  const [intakeForm, setIntakeForm] = React.useState<PublicIntakeFormState>(emptyPublicIntakeFormState)
 
   // Data
   const [providers, setProviders] = React.useState<{ id: string; name: string }[]>([])
@@ -233,7 +225,7 @@ function PortalPageContent() {
 
   const handleNewPatientSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newFirstName || !newLastName || !newPhone) {
+    if (!intakeForm.firstName.trim() || !intakeForm.lastName.trim() || !intakeForm.phone.trim()) {
       portalError("First name, last name, and phone number are required.")
       return
     }
@@ -241,19 +233,7 @@ function PortalPageContent() {
     setSubmitting(true)
     setErrorMsg("")
 
-    const { error } = await submitKioskIntake(sessionId, {
-      first_name: newFirstName,
-      last_name: newLastName,
-      phone: newPhone,
-      email: newEmail || undefined,
-      date_of_birth: newDob || undefined,
-      gender: newGender,
-      address_line1: newAddress || undefined,
-      city: newCity || undefined,
-      emergency_contact_name: newEmergencyName || undefined,
-      emergency_contact_phone: newEmergencyPhone || undefined,
-      medical_alerts: newMedicalAlerts || undefined
-    })
+    const { error } = await submitKioskIntake(sessionId, publicIntakeToKioskPayload(intakeForm))
 
     setSubmitting(false)
 
@@ -627,150 +607,7 @@ function PortalPageContent() {
             </div>
 
             <form onSubmit={handleNewPatientSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">First Name</label>
-                  <Input
-                    type="text"
-                    placeholder="First name"
-                    value={newFirstName}
-                    onChange={(e) => setNewFirstName(e.target.value)}
-                    className="h-12 rounded-xl border-2 border-transparent bg-white/80 px-4 shadow-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Last Name</label>
-                  <Input
-                    type="text"
-                    placeholder="Last name"
-                    value={newLastName}
-                    onChange={(e) => setNewLastName(e.target.value)}
-                    className="h-12 rounded-xl border-2 border-transparent bg-white/80 px-4 shadow-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Phone Number</label>
-                <div className="relative">
-                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-                  <Input
-                    type="tel"
-                    placeholder="Phone number"
-                    value={newPhone}
-                    onChange={(e) => setNewPhone(e.target.value)}
-                    className="h-12 rounded-xl border-2 border-transparent bg-white/80 pl-10 pr-4 shadow-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-                  <Input
-                    type="email"
-                    placeholder="email@example.com"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    className="h-12 rounded-xl border-2 border-transparent bg-white/80 pl-10 pr-4 shadow-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Date of Birth</label>
-                  <div className="relative">
-                    <CalendarDays className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-                    <Input
-                      type="date"
-                      value={newDob}
-                      onChange={(e) => setNewDob(e.target.value)}
-                      className="h-12 rounded-xl border-2 border-transparent bg-white/80 pl-10 pr-4 shadow-sm text-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 text-neutral-700 outline-none"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Gender</label>
-                  <select
-                    value={newGender}
-                    onChange={(e) => setNewGender(e.target.value)}
-                    className="h-12 w-full rounded-xl border-2 border-transparent bg-white/80 px-3 shadow-sm text-sm outline-none focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 text-neutral-700"
-                  >
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other / Prefer not to say</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Address</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-                    <Input
-                      type="text"
-                      placeholder="Street, Block"
-                      value={newAddress}
-                      onChange={(e) => setNewAddress(e.target.value)}
-                      className="h-12 rounded-xl border-2 border-transparent bg-white/80 pl-10 pr-4 shadow-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">City</label>
-                  <Input
-                    type="text"
-                    placeholder="City"
-                    value={newCity}
-                    onChange={(e) => setNewCity(e.target.value)}
-                    className="h-12 rounded-xl border-2 border-transparent bg-white/80 px-4 shadow-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="border-t border-neutral-100 pt-4 mt-2">
-                <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Emergency Contact Info</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Contact Name</label>
-                    <Input
-                      type="text"
-                      placeholder="Contact Name"
-                      value={newEmergencyName}
-                      onChange={(e) => setNewEmergencyName(e.target.value)}
-                      className="h-12 rounded-xl border-2 border-transparent bg-white/80 px-4 shadow-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500">Phone Number</label>
-                    <Input
-                      type="tel"
-                      placeholder="Phone Number"
-                      value={newEmergencyPhone}
-                      onChange={(e) => setNewEmergencyPhone(e.target.value)}
-                      className="h-12 rounded-xl border-2 border-transparent bg-white/80 px-4 shadow-sm focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 placeholder:text-neutral-300 outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-1.5 border-t border-neutral-100 pt-4">
-                <label className="pl-1 text-xs font-bold uppercase tracking-wider text-neutral-500 flex items-center gap-1">
-                  <ShieldAlert className="h-3.5 w-3.5 text-amber-500" /> Medical History / Allergies
-                </label>
-                <textarea
-                  placeholder="Any chronic diseases, medications, or allergies..."
-                  value={newMedicalAlerts}
-                  onChange={(e) => setNewMedicalAlerts(e.target.value)}
-                  className="w-full min-h-[80px] rounded-xl border-2 border-transparent bg-white/80 p-3 text-sm shadow-sm outline-none focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 text-neutral-700"
-                />
-              </div>
+              <PublicPatientIntakeFields value={intakeForm} onChange={setIntakeForm} />
 
               <Button
                 type="submit"

@@ -104,10 +104,15 @@
   }
 
   /* Hide sidebar, topbar, floating buttons, etc. */
-  aside, nav, header, footer, 
+  aside, nav, header:not(.pda-native-header):not(.pda-print-toolbar), footer, 
   [data-sidebar], 
   [role="navigation"],
   .no-print {
+    display: none !important;
+  }
+
+  body.pda-print-mode [data-sonner-toaster],
+  body.pda-print-mode .fixed.inset-x-0.bottom-0 {
     display: none !important;
   }
 

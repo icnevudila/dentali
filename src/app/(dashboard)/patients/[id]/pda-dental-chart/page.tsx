@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { ArrowLeft, CheckCircle2, Link2, Printer, Save } from "lucide-react"
+import { ArrowLeft, CheckCircle2, Copy, ExternalLink, Link2, Printer, Save } from "lucide-react"
 import { useRouteParams } from "@/hooks/use-route-params"
 import { useBranch } from "@/hooks/use-branch"
 import { getPatient } from "@/lib/patients/patient-service"
@@ -17,7 +17,8 @@ import { Badge } from "@/components/ui/badge"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { PdaIntakeForm } from "@/components/pda/PdaIntakeForm"
 import { NAV_BACK_TRANSITION } from "@/lib/navigation/view-transition"
-import { buildPdaIntakePrefill } from "@/lib/pda/pda-intake-prefill"
+import { buildPdaIntakePrefill, listPdaPrefillKeys } from "@/lib/pda/pda-intake-prefill"
+import { getPatientBranchVisit } from "@/lib/patients/patient-service"
 import {
   emptyPdaIntakeResponses,
   mergePdaIntakeResponses,
@@ -32,16 +33,7 @@ import {
 import { notify } from "@/lib/ui/notify"
 
 function collectPrefillKeys(prefill: PdaIntakeResponses): Set<string> {
-  const keys = new Set<string>()
-  const walk = (obj: Record<string, unknown>, prefix: string) => {
-    for (const [k, v] of Object.entries(obj)) {
-      const path = prefix ? `${prefix}.${k}` : k
-      if (typeof v === "string" && v.trim()) keys.add(path)
-      else if (v && typeof v === "object" && !Array.isArray(v)) walk(v as Record<string, unknown>, path)
-    }
-  }
-  walk(prefill as unknown as Record<string, unknown>, "")
-  return keys
+  return listPdaPrefillKeys(prefill)
 }
 
 const STATUS_LABELS: Record<PdaIntakeStatus, string> = {
@@ -63,6 +55,8 @@ export default function PdaDentalChartPage() {
   const [saving, setSaving] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [dirty, setDirty] = React.useState(false)
+  const [patientLinkUrl, setPatientLinkUrl] = React.useState<string | null>(null)
+  const [linkCopied, setLinkCopied] = React.useState(false)
 
   React.useEffect(() => {
     if (!patientId || !activeBranch?.id) return
@@ -71,18 +65,20 @@ export default function PdaDentalChartPage() {
     async function load() {
       setLoading(true)
       setError(null)
-      const [patientRes, medicalRes, chartRes, treatmentRes, recordRes] = await Promise.all([
+      const [patientRes, medicalRes, chartRes, treatmentRes, recordRes, branchVisitRes] = await Promise.all([
         getPatient(patientId),
         getLatestMedicalHistory(patientId),
         getPatientOdontogram(patientId, activeBranch!.id),
         fetchPatientTreatmentTimeline(patientId, activeBranch!.id),
         fetchPatientPdaIntake(patientId, activeBranch!.id),
+        getPatientBranchVisit(patientId, activeBranch!.id),
       ])
       if (cancelled) return
 
       const prefill = buildPdaIntakePrefill({
         patient: patientRes.data,
         medicalHistory: medicalRes.data,
+        lastClinicVisit: branchVisitRes.lastVisitAt,
       })
       setPrefillKeys(collectPrefillKeys(prefill))
 
@@ -154,14 +150,25 @@ export default function PdaDentalChartPage() {
       return
     }
     const url = `${window.location.origin}/pda/${token}`
+    setPatientLinkUrl(url)
     await navigator.clipboard.writeText(url)
     setStatus("patient_pending")
+    setLinkCopied(true)
     notify.success("Patient link copied to clipboard")
+    window.setTimeout(() => setLinkCopied(false), 2000)
+  }
+
+  const copyPatientLink = async () => {
+    if (!patientLinkUrl) return
+    await navigator.clipboard.writeText(patientLinkUrl)
+    setLinkCopied(true)
+    notify.success("Link copied!")
+    window.setTimeout(() => setLinkCopied(false), 2000)
   }
 
   const handlePrint = () => {
     if (!activeBranch?.id) return
-    const url = `/patients/${patientId}/pda-dental-chart/print?branch=${encodeURIComponent(activeBranch.id)}`
+    const url = `/patients/${patientId}/pda-chart/print?branch=${encodeURIComponent(activeBranch.id)}`
     window.open(url, "_blank", "noopener,noreferrer")
   }
 
@@ -176,46 +183,83 @@ export default function PdaDentalChartPage() {
   return (
     <PermissionGate permission={PERMISSIONS.DENTAL_CHART_READ}>
       <div className="mx-auto max-w-4xl space-y-4 px-4 py-6">
-        <div className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <Button variant="ghost" size="sm" asChild className="-ml-3 text-neutral-500 hover:text-neutral-900">
-              <Link href={`/patients/${patientId}/chart`} transitionTypes={NAV_BACK_TRANSITION}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to dental chart
-              </Link>
-            </Button>
-            <h1 className="mt-2 text-xl font-bold text-neutral-950">PDA Dental Chart</h1>
+        <div className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <Button variant="ghost" size="sm" asChild className="-ml-3 text-neutral-500 hover:text-neutral-900">
+                <Link href={`/patients/${patientId}/chart`} transitionTypes={NAV_BACK_TRANSITION}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to dental chart
+                </Link>
+              </Button>
+              <h1 className="mt-2 text-xl font-bold text-neutral-950">PDA Dental Chart</h1>
             <p className="mt-1 text-sm text-neutral-500">
-              Digital patient record form with auto-fill from clinic data. Chart and treatment rows sync on print.
+              Digital patient record form with auto-fill from clinic data. Chart and treatment rows sync on print.{" "}
+              <Link href={`/patients/${patientId}/edit`} className="font-medium text-primary-600 hover:underline">
+                Complete missing fields in patient profile
+              </Link>
+              .
             </p>
-            <Badge variant="outline" className="mt-2">
-              {STATUS_LABELS[status]}
-            </Badge>
+              <Badge variant="outline" className="mt-2">
+                {STATUS_LABELS[status]}
+              </Badge>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => void sendPatientLink()} disabled={saving} className="gap-2">
+                <Link2 className="h-4 w-4" />
+                Patient link
+              </Button>
+              <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
+                <Printer className="h-4 w-4" />
+                Print / PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={saving || !dirty}
+                onClick={() => void save("draft")}
+                className="gap-2"
+              >
+                <Save className="h-4 w-4" />
+                {saving ? "Saving…" : "Save draft"}
+              </Button>
+              <Button size="sm" disabled={saving} onClick={() => void save("completed")} className="gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                Mark complete
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => void sendPatientLink()} className="gap-2">
-              <Link2 className="h-4 w-4" />
-              Patient link
-            </Button>
-            <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
-              <Printer className="h-4 w-4" />
-              Print / PDF
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={saving || !dirty}
-              onClick={() => void save("draft")}
-              className="gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {saving ? "Saving…" : "Save draft"}
-            </Button>
-            <Button size="sm" disabled={saving} onClick={() => void save("completed")} className="gap-2">
-              <CheckCircle2 className="h-4 w-4" />
-              Mark complete
-            </Button>
-          </div>
+          {patientLinkUrl ? (
+            <div className="flex w-full flex-col gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Patient signing link</p>
+              <div className="flex items-center gap-2">
+                <a
+                  href={patientLinkUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="min-w-0 flex-1 truncate font-mono text-xs text-primary-600 underline-offset-2 hover:underline"
+                >
+                  {patientLinkUrl}
+                </a>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 shrink-0 gap-1 px-2 text-xs"
+                  onClick={() => void copyPatientLink()}
+                >
+                  <Copy className="h-3 w-3" />
+                  {linkCopied ? "Copied!" : "Copy"}
+                </Button>
+                <Button type="button" variant="ghost" size="sm" className="h-7 shrink-0 px-2" asChild>
+                  <a href={patientLinkUrl} target="_blank" rel="noopener noreferrer" aria-label="Open patient link">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              </div>
+              <p className="text-xs text-neutral-500">Send this link to the patient to fill the form on their phone.</p>
+            </div>
+          ) : null}
         </div>
 
         {error ? (

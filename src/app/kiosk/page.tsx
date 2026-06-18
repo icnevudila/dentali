@@ -19,6 +19,12 @@ import { readKioskSignReturn } from "@/lib/kiosk/kiosk-sign-return"
 import { PublicChannelBrand } from "@/components/brand/public-channel-brand"
 import { CheckCircle2, AlertCircle, Loader2, Users, MapPin } from "lucide-react"
 import { updateKioskMood, getKioskQueueStats } from "@/lib/kiosk/kiosk-service"
+import {
+  emptyPublicIntakeFormState,
+  publicIntakeToKioskPayload,
+  type PublicIntakeFormState,
+} from "@/lib/patients/public-intake-form"
+import { PublicPatientIntakeFields } from "@/components/patients/PublicPatientIntakeFields"
 
 type Step = "loading" | "welcome" | "form" | "consents" | "mood" | "success" | "error" | "intakeForm" | "intakeSuccess" | "pending_approval"
 
@@ -38,11 +44,10 @@ function KioskContent() {
   const [errorMsg, setErrorMsg] = React.useState("")
   const [phone, setPhone] = React.useState("")
   const [lastName, setLastName] = React.useState("")
-  const [firstName, setFirstName] = React.useState("")
-  const [email, setEmail] = React.useState("")
   const [queueCode, setQueueCode] = React.useState("")
   const [entryId, setEntryId] = React.useState("")
   const [intakeId, setIntakeId] = React.useState("")
+  const [intakeForm, setIntakeForm] = React.useState<PublicIntakeFormState>(emptyPublicIntakeFormState)
   const [submitting, setSubmitting] = React.useState(false)
   const [isScreensaver, setIsScreensaver] = React.useState(false)
   const [liveQueue, setLiveQueue] = React.useState<{ serving: string[]; waitCount: number } | null>(null)
@@ -52,13 +57,12 @@ function KioskContent() {
     setStep("welcome")
     setPhone("")
     setLastName("")
-    setFirstName("")
-    setEmail("")
     setErrorMsg("")
     setQueueCode("")
     setEntryId("")
     setIntakeId("")
     setConsentSnapshot(null)
+    setIntakeForm(emptyPublicIntakeFormState())
   }, [])
 
   React.useEffect(() => {
@@ -108,7 +112,7 @@ function KioskContent() {
     if (step !== "form" && step !== "intakeForm" && step !== "consents") return
     const id = setTimeout(resetToWelcome, FORM_IDLE_MS)
     return () => clearTimeout(id)
-  }, [step, phone, lastName, firstName, email, resetToWelcome])
+  }, [step, phone, lastName, intakeForm, resetToWelcome])
 
   // Idle timer for screensaver
   React.useEffect(() => {
@@ -305,12 +309,10 @@ function KioskContent() {
     e.preventDefault()
     setSubmitting(true)
     setErrorMsg("")
-    const { data, error } = await submitKioskIntake(sessionId, {
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
-      phone: phone.trim() || undefined,
-      email: email.trim() || undefined,
-    })
+    const { data, error } = await submitKioskIntake(
+      sessionId,
+      publicIntakeToKioskPayload(intakeForm)
+    )
     setSubmitting(false)
     if (error) {
       setErrorMsg(error)
@@ -505,57 +507,7 @@ function KioskContent() {
               </p>
             </div>
             <form onSubmit={handleIntakeSubmit} className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 ml-1">{t("kiosk.firstName", "First name")}</label>
-                  <input
-                    required
-                    placeholder="Maria"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    autoComplete="given-name"
-                    autoFocus
-                    className="w-full h-14 rounded-2xl border-2 border-transparent bg-white/80 px-5 py-3 text-lg text-neutral-900 shadow-sm placeholder:text-neutral-300 outline-none transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 hover:bg-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 ml-1">{t("kiosk.lastName", "Last name")}</label>
-                  <input
-                    required
-                    placeholder="Santos"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    autoComplete="family-name"
-                    className="w-full h-14 rounded-2xl border-2 border-transparent bg-white/80 px-5 py-3 text-lg text-neutral-900 shadow-sm placeholder:text-neutral-300 outline-none transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 hover:bg-white"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 ml-1">
-                  {t("kiosk.mobileNumber", "Mobile number")}
-                </label>
-                <input
-                  type="tel"
-                  inputMode="tel"
-                  placeholder="e.g. +1 XXX XXX XXXX"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  autoComplete="tel"
-                  className="w-full h-14 rounded-2xl border-2 border-transparent bg-white/80 px-5 py-3 text-lg text-neutral-900 shadow-sm placeholder:text-neutral-300 outline-none transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 hover:bg-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 ml-1">{t("kiosk.email", "Email")}</label>
-                <input
-                  type="email"
-                  inputMode="email"
-                  placeholder="maria@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                  className="w-full h-14 rounded-2xl border-2 border-transparent bg-white/80 px-5 py-3 text-lg text-neutral-900 shadow-sm placeholder:text-neutral-300 outline-none transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-500/10 hover:bg-white"
-                />
-              </div>
+              <PublicPatientIntakeFields value={intakeForm} onChange={setIntakeForm} />
               {errorMsg ? (
                 <div className="rounded-2xl bg-red-50/80 border border-red-100 p-4 text-center text-sm font-semibold text-red-600 animate-in fade-in slide-in-from-top-2">
                   {errorMsg}

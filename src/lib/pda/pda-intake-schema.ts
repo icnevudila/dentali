@@ -64,6 +64,9 @@ export interface PdaMedicalSection {
   allergyOther: string
   medications: string
   notes: string
+  bleedingTime: string
+  bloodType: string
+  bloodPressure: string
 }
 
 export interface PdaIntakeResponses {
@@ -162,6 +165,9 @@ export function emptyPdaIntakeResponses(): PdaIntakeResponses {
       allergyOther: "",
       medications: "",
       notes: "",
+      bleedingTime: "",
+      bloodType: "",
+      bloodPressure: "",
     },
   }
 }

@@ -167,8 +167,11 @@ export function buildPrescriptionPrintHtml(params: {
     .banner-image {
       display: block;
       width: 100%;
+      height: auto;
       max-height: 190px;
-      object-fit: cover;
+      object-fit: contain;
+      object-position: top center;
+      background: #fff;
     }
     .banner-fallback {
       padding: 26px 34px 20px;
@@ -431,8 +434,10 @@ export function buildPrescriptionPrintHtml(params: {
       right: 0;
       bottom: 0;
       width: 100%;
+      height: auto;
       max-height: 116px;
-      object-fit: cover;
+      object-fit: contain;
+      object-position: bottom center;
     }
     .footer-strip-fallback {
       position: absolute;

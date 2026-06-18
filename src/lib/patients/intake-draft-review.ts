@@ -1,4 +1,8 @@
 import { createClient } from "@/lib/supabase/client"
+import {
+  parsePatientIntakeProfile,
+  type PatientIntakeProfile,
+} from "@/lib/patients/patient-intake-profile"
 import type { PatientFormValues } from "@/lib/validations/patient"
 
 export interface KioskIntakeDraft {
@@ -74,16 +78,25 @@ export function storeDraftForReview(draft: KioskIntakeDraft): void {
     JSON.stringify({
       intakeId: draft.id,
       values: payloadToFormValues(draft.payload),
+      intakeProfile: parsePatientIntakeProfile(draft.payload.intake_profile),
     })
   )
 }
 
-export function loadDraftForReview(): { intakeId: string; values: Partial<PatientFormValues> } | null {
+export function loadDraftForReview(): {
+  intakeId: string
+  values: Partial<PatientFormValues>
+  intakeProfile?: PatientIntakeProfile
+} | null {
   if (typeof window === "undefined") return null
   const raw = sessionStorage.getItem(DRAFT_REVIEW_KEY)
   if (!raw) return null
   try {
-    return JSON.parse(raw) as { intakeId: string; values: Partial<PatientFormValues> }
+    return JSON.parse(raw) as {
+      intakeId: string
+      values: Partial<PatientFormValues>
+      intakeProfile?: PatientIntakeProfile
+    }
   } catch {
     return null
   }

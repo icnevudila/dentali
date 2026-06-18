@@ -248,6 +248,15 @@ export function PdaIntakeForm({
             <Field label="Office number">
               <Input value={value.medical.physicianPhone} onChange={(e) => patchMedical({ physicianPhone: e.target.value })} />
             </Field>
+            <Field label="Bleeding time">
+              <Input value={value.medical.bleedingTime} onChange={(e) => patchMedical({ bleedingTime: e.target.value })} />
+            </Field>
+            <Field label="Blood type">
+              <Input value={value.medical.bloodType} onChange={(e) => patchMedical({ bloodType: e.target.value })} />
+            </Field>
+            <Field label="Blood pressure">
+              <Input value={value.medical.bloodPressure} onChange={(e) => patchMedical({ bloodPressure: e.target.value })} />
+            </Field>
           </div>
           <div className="space-y-3">
             {PDA_MEDICAL_QUESTION_LABELS.map((q) => (

@@ -70,6 +70,7 @@ export type KioskIntakePayload = {
   emergency_contact_name?: string
   emergency_contact_phone?: string
   medical_alerts?: string
+  intake_profile?: Record<string, unknown>
 }
 
 export async function submitKioskIntake(

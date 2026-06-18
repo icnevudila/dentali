@@ -19,9 +19,12 @@ import {
   getPatient,
   patientToFormValues,
   updatePatient,
+  updatePatientIntakeProfile,
 } from "@/lib/patients/patient-service"
 import { MergePatientPanel } from "@/components/patients/MergePatientPanel"
 import { PatientInsurancePanel } from "@/components/patients/PatientInsurancePanel"
+import { PatientIntakeProfilePanel } from "@/components/patients/PatientIntakeProfilePanel"
+import { emptyPatientIntakeProfile, type PatientIntakeProfile } from "@/lib/patients/patient-intake-profile"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { logAuditEvent } from "@/lib/audit/audit-service"
 import { useAuth } from "@/hooks/use-auth"
@@ -39,6 +42,7 @@ export default function EditPatientPage() {
   const [submitError, setSubmitError] = React.useState<string | null>(null)
   const [isSaving, setIsSaving] = React.useState(false)
   const [patientName, setPatientName] = React.useState("")
+  const [intakeProfile, setIntakeProfile] = React.useState<PatientIntakeProfile>(emptyPatientIntakeProfile())
 
   const form = useForm<PatientFormValues>({
     resolver: zodResolver(patientSchema),
@@ -51,6 +55,7 @@ export default function EditPatientPage() {
         setLoadError(error ?? "Patient not found")
       } else {
         form.reset(patientToFormValues(data))
+        setIntakeProfile(data.intake_profile ?? emptyPatientIntakeProfile())
         setPatientName(`${data.first_name} ${data.last_name}`)
       }
       setLoading(false)
@@ -66,6 +71,14 @@ export default function EditPatientPage() {
     if (error) {
       toast.error(error)
       setSubmitError(error)
+      setIsSaving(false)
+      return
+    }
+
+    const { error: intakeError } = await updatePatientIntakeProfile(patientId, intakeProfile, user.id)
+    if (intakeError) {
+      toast.error(intakeError)
+      setSubmitError(intakeError)
       setIsSaving(false)
       return
     }
@@ -169,8 +182,18 @@ export default function EditPatientPage() {
                 <label className="text-sm font-medium text-neutral-900">City</label>
                 <Input {...form.register("city")} />
               </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-neutral-900">Emergency contact name</label>
+                <Input {...form.register("emergencyContactName")} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-neutral-900">Emergency contact phone</label>
+                <Input {...form.register("emergencyContactPhone")} />
+              </div>
             </CardContent>
           </Card>
+
+          <PatientIntakeProfilePanel value={intakeProfile} onChange={setIntakeProfile} />
 
           <PatientInsurancePanel patientId={patientId} />
 

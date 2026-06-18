@@ -22,7 +22,7 @@ import {
   DEFAULT_PRESCRIPTION_BRANDING,
   type PrescriptionBrandingSettings,
 } from "@/lib/branding/prescription-branding"
-import { readBrandingImageFile } from "@/lib/branding/branding-image"
+import { readBrandingImageFile, splitPrescriptionPadImage } from "@/lib/branding/branding-image"
 import { saveBranchRegionalOverrides } from "@/lib/org/branch-context-service"
 import Link from "next/link"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
@@ -190,6 +190,23 @@ export default function OrganizationSettingsPage() {
     updatePrescriptionBranding(key, dataUrl)
   }
 
+  const handleFullPadSelect = async (file: File | null) => {
+    if (!file) return
+    setError(null)
+    const { data, error: splitError } = await splitPrescriptionPadImage(file)
+    if (splitError || !data) {
+      setError(splitError ?? "Could not split prescription pad")
+      return
+    }
+    setPrescriptionBranding((current) => ({
+      ...current,
+      headerImageDataUrl: data.headerDataUrl,
+      footerImageDataUrl: data.footerDataUrl,
+      watermarkImageDataUrl: data.watermarkDataUrl ?? current.watermarkImageDataUrl,
+      showWatermark: data.watermarkDataUrl ? true : current.showWatermark,
+    }))
+  }
+
   if (loading) {
     return <PageLoadingSkeleton variant="form" className="max-w-none px-0 py-0" />
   }
@@ -320,6 +337,23 @@ export default function OrganizationSettingsPage() {
               <CardTitle className="text-base">Prescription print branding</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
+              <div className="rounded-2xl border border-primary-200 bg-primary-50/60 p-4">
+                <p className="text-sm font-semibold text-neutral-900">Full prescription pad scan</p>
+                <p className="mt-1 text-xs leading-relaxed text-neutral-600">
+                  Upload a photo of your blank prescription pad. We crop the top banner and bottom strip only, then
+                  keep the middle Rx body from the digital template.
+                </p>
+                <label className="mt-3 inline-flex cursor-pointer items-center rounded-md border border-primary-300 bg-white px-3 py-2 text-xs font-medium text-primary-800 hover:bg-primary-50">
+                  Upload full pad and auto-split
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    className="hidden"
+                    onChange={(e) => void handleFullPadSelect(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+              </div>
+
               <div className="grid gap-4 xl:grid-cols-2">
                 {BRANDING_IMAGE_FIELDS.map((field) => {
                   const value = prescriptionBranding[field.key]

@@ -123,8 +123,8 @@ export function PdaNativeChartDocument({
   const p = responses?.patient
   const d = responses?.dental
   const m = responses?.medical
-  const name = formatPdaName(responses, patient)
   const dob = p?.dateOfBirth ?? patient?.date_of_birth ?? ""
+  const name = formatPdaName(responses, patient)
   const age = getPdaAge(dob)
   const gender = p?.sex || pdaGenderLabel(patient?.gender)
   const dateLabel = formatPdaDate(printedDate.toISOString())
@@ -157,24 +157,22 @@ export function PdaNativeChartDocument({
   return (
     <div id={printRootId} className="pda-native-root">
       {/* Page 1 — Patient information record */}
-      <section className="pda-native-sheet" aria-label="PDA page 1">
-        <header className="pda-native-header">
+      <section className="pda-native-sheet pda-native-sheet--intake" aria-label="PDA page 1">
+        <div className="pda-native-header" role="banner">
           <div className="pda-native-logo">PDA</div>
           <div className="pda-native-title-block">
             <h1 className="pda-native-org">PHILIPPINE DENTAL ASSOCIATION</h1>
             <div className="pda-native-pill">DENTAL CHART</div>
           </div>
           <div className="pda-native-photo-box" aria-hidden />
-        </header>
+        </div>
 
         <h2 className="pda-native-section-title">Patient Information Record</h2>
-        <div className="pda-native-row">
-          <Field label="Name:" value={name} grow />
-        </div>
-        <div className="pda-native-row">
-          <Field label="Last" value={p?.lastName ?? patient?.last_name ?? ""} width="1.4in" />
-          <Field label="First" value={p?.firstName ?? patient?.first_name ?? ""} width="1.4in" />
-          <Field label="Middle" value={p?.middleName ?? ""} width="1.2in" />
+        <div className="pda-native-row pda-native-row--name">
+          <Field label="Name:" value="" width="0.45in" />
+          <Field label="Last" value={p?.lastName ?? patient?.last_name ?? ""} width="1.35in" />
+          <Field label="First" value={p?.firstName ?? patient?.first_name ?? ""} width="1.35in" />
+          <Field label="Middle" value={p?.middleName ?? ""} width="1.1in" />
         </div>
         <div className="pda-native-row">
           <Field label="Birthdate(mm/dd/yy)" value={formatPdaDate(dob)} width="0.9in" />
@@ -195,7 +193,11 @@ export function PdaNativeChartDocument({
         </div>
         <div className="pda-native-row">
           <Field label="Cel/Mobile No." value={p?.mobile ?? patient?.phone ?? ""} width="1in" />
-          <Field label="Email Add" value={p?.email ?? patient?.email ?? ""} width="1.6in" />
+          <Field label="Email Add" value={p?.email ?? patient?.email ?? ""} width="1.5in" />
+        </div>
+        <div className="pda-native-row">
+          <Field label="Dental Insurance" value="" width="1.2in" />
+          <Field label="Effective Date" value="" width="0.9in" />
         </div>
         <div className="pda-native-row">
           <Field label="For minors: Parent/Guardian&apos;s Name" value={p?.guardianName ?? ""} grow />
@@ -224,11 +226,17 @@ export function PdaNativeChartDocument({
           <Field label="Office Number:" value={m?.physicianPhone ?? ""} width="1in" />
         </div>
 
+        <div className="pda-native-yn-header">
+          <span />
+          <span>Yes</span>
+          <span>No</span>
+        </div>
+
         {PDA_MEDICAL_HISTORY_QUESTIONS.map((item) => {
           if (item.num === 8) {
             return (
               <div key={item.num}>
-                <p style={{ margin: "2px 0", fontSize: "7pt" }}>
+                <p className="pda-native-allergy-intro">
                   8. {item.text}
                 </p>
                 <div className="pda-native-allergy-grid">
@@ -248,14 +256,35 @@ export function PdaNativeChartDocument({
           }
           if (item.womenOnly) {
             return (
-              <div key={item.num} style={{ margin: "2px 0", fontSize: "7pt" }}>
-                10. {item.text}{" "}
+              <div key={item.num} className="pda-native-women-row">
+                <span>10. {item.text}</span>
                 {PDA_WOMEN_OPTIONS.map((opt) => (
-                  <span key={opt} className="pda-native-check" style={{ marginRight: 8 }}>
+                  <span key={opt} className="pda-native-check">
                     <Check checked={false} />
                     {opt}
                   </span>
                 ))}
+              </div>
+            )
+          }
+          if (item.num === 9) {
+            return (
+              <div key={item.num} className="pda-native-row pda-native-row--tight">
+                <Field label="9. Bleeding Time" value={m?.bleedingTime ?? ""} width="1.2in" />
+              </div>
+            )
+          }
+          if (item.num === 11) {
+            return (
+              <div key={item.num} className="pda-native-row pda-native-row--tight">
+                <Field label="11. Blood Type" value={m?.bloodType ?? ""} width="1.2in" />
+              </div>
+            )
+          }
+          if (item.num === 12) {
+            return (
+              <div key={item.num} className="pda-native-row pda-native-row--tight">
+                <Field label="12. Blood Pressure" value={m?.bloodPressure ?? ""} width="1.2in" />
               </div>
             )
           }
@@ -275,6 +304,11 @@ export function PdaNativeChartDocument({
                 : item.num === 4
                   ? "hospitalized_detail"
                   : null
+          if (item.num === 6 || item.num === 7) {
+            return (
+              <YesNoRow key={item.num} text={`${item.num}. ${item.text}`} yes={false} no={false} />
+            )
+          }
           return (
             <div key={item.num}>
               <YesNoRow
@@ -299,7 +333,7 @@ export function PdaNativeChartDocument({
           )
         })}
 
-        <p style={{ margin: "4px 0 2px", fontSize: "7pt", fontWeight: 700 }}>
+        <p className="pda-native-q13-title">
           13. Do you have or have you ever had any of the following? Check which apply
         </p>
         <div className="pda-native-condition-grid">
@@ -323,8 +357,8 @@ export function PdaNativeChartDocument({
           })}
         </div>
 
-        <div style={{ marginTop: 8, textAlign: "right" }}>
-          <Field label="Signature" value="" width="2.2in" />
+        <div className="pda-native-signature-row">
+          <Field label="Signature" value="" width="2.4in" />
         </div>
       </section>
 

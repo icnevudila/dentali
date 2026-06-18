@@ -3,6 +3,11 @@ import type { PatientFormValues } from "@/lib/validations/patient"
 import { getShowcaseSnapshot } from "@/lib/showcase/intercept"
 import { seedDefaultConsentsForPatient } from "@/lib/patients/consent-service"
 import {
+  parsePatientIntakeProfile,
+  serializePatientIntakeProfile,
+  type PatientIntakeProfile,
+} from "@/lib/patients/patient-intake-profile"
+import {
   DEFAULT_PATIENT_LIST_FILTERS,
   resolveVisitRange,
   type PatientListFilters,
@@ -31,7 +36,8 @@ export type PatientSearchOptions = {
 }
 
 export interface PatientWithContacts extends PatientRecord {
-  emergency_contact?: { name: string; phone: string | null } | null
+  emergency_contact?: { name: string; phone: string | null; relationship?: string | null } | null
+  intake_profile?: PatientIntakeProfile
 }
 
 function isMissingSearchPatientsRpc(message: string): boolean {
@@ -278,16 +284,19 @@ export async function getPatient(
 
   const { data: contacts } = await supabase
     .from("patient_contacts")
-    .select("name, phone")
+    .select("name, phone, relationship")
     .eq("patient_id", patientId)
     .eq("contact_type", "emergency")
     .limit(1)
     .maybeSingle()
 
+  const row = patient as PatientRecord & { intake_profile?: unknown }
+
   return {
     data: {
-      ...(patient as PatientRecord),
+      ...(row as PatientRecord),
       emergency_contact: contacts ?? null,
+      intake_profile: parsePatientIntakeProfile(row.intake_profile),
     },
     error: null,
   }
@@ -392,6 +401,51 @@ export async function updatePatient(
   }
 
   return { error: null }
+}
+
+export async function updatePatientIntakeProfile(
+  patientId: string,
+  profile: PatientIntakeProfile,
+  userId: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from("patients")
+    .update({
+      intake_profile: serializePatientIntakeProfile(profile),
+      updated_by: userId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", patientId)
+
+  if (error) {
+    const message = error.message ?? ""
+    if (message.includes("intake_profile")) {
+      return {
+        error:
+          "Patient intake profile column is missing. Run supabase/scripts/APPLY_PATIENT_INTAKE_PROFILE.sql, then NOTIFY pgrst, 'reload schema';",
+      }
+    }
+    return { error: message }
+  }
+
+  return { error: null }
+}
+
+export async function getPatientBranchVisit(
+  patientId: string,
+  branchId: string
+): Promise<{ lastVisitAt: string | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("patient_branch_links")
+    .select("last_visit_at")
+    .eq("patient_id", patientId)
+    .eq("branch_id", branchId)
+    .maybeSingle()
+
+  if (error) return { lastVisitAt: null, error: error.message }
+  return { lastVisitAt: data?.last_visit_at ?? null, error: null }
 }
 
 export function patientToFormValues(patient: PatientWithContacts): PatientFormValues {

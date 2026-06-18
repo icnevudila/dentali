@@ -6,7 +6,12 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
 import { useSearchParams } from "next/navigation"
 import { patientSchema, type PatientFormValues } from "@/lib/validations/patient"
-import { finalizePatientIntake, detectDuplicatePatients, type DuplicateCandidate } from "@/lib/patients/patient-service"
+import { finalizePatientIntake, detectDuplicatePatients, updatePatientIntakeProfile, type DuplicateCandidate } from "@/lib/patients/patient-service"
+import {
+  emptyPatientIntakeProfile,
+  serializePatientIntakeProfile,
+  type PatientIntakeProfile,
+} from "@/lib/patients/patient-intake-profile"
 import {
   clearIntakeDraft,
   formatDraftSavedAt,
@@ -45,6 +50,7 @@ import { uploadPatientProfilePhoto } from "@/lib/patients/patient-documents-serv
 import Link from "next/link"
 import { Suspense } from "react"
 import { toast } from "sonner"
+import { PatientIntakeProfilePanel } from "@/components/patients/PatientIntakeProfilePanel"
 
 const STEP_FIELDS: (keyof PatientFormValues)[][] = [
   ["firstName", "lastName", "dateOfBirth", "gender"],
@@ -109,6 +115,7 @@ function NewPatientPageContent() {
   const [photoPreview, setPhotoPreview] = React.useState<string | null>(null)
   const [insurance, setInsurance] = React.useState<IntakeInsuranceDraft>(DEFAULT_INSURANCE)
   const [insuranceError, setInsuranceError] = React.useState<string | null>(null)
+  const [intakeProfile, setIntakeProfile] = React.useState<PatientIntakeProfile>(emptyPatientIntakeProfile())
   const photoInputRef = React.useRef<HTMLInputElement>(null)
 
   const form = useForm<PatientFormValues>({
@@ -139,6 +146,9 @@ function NewPatientPageContent() {
     const review = loadDraftForReview()
     if (!review) return
     form.reset({ ...form.getValues(), ...review.values })
+    if (review.intakeProfile) {
+      setIntakeProfile(review.intakeProfile)
+    }
     setKioskDraftIntakeId(review.intakeId)
     setPendingDraft(null)
   }, [searchParams, form])
@@ -284,6 +294,13 @@ function NewPatientPageContent() {
       })
       if (insuranceErr) {
         toast.error(`Patient registered but insurance save failed: ${insuranceErr}`)
+      }
+    }
+
+    if (Object.keys(serializePatientIntakeProfile(intakeProfile)).length > 0) {
+      const { error: profileErr } = await updatePatientIntakeProfile(created.id, intakeProfile, user.id)
+      if (profileErr) {
+        toast.error(`Patient registered but intake profile save failed: ${profileErr}`)
       }
     }
 
@@ -616,6 +633,8 @@ function NewPatientPageContent() {
               </div>
             </CardContent>
           </Card>
+
+          <PatientIntakeProfilePanel value={intakeProfile} onChange={setIntakeProfile} />
 
           <Card>
             <CardHeader>

@@ -124,6 +124,133 @@
   min-width: 1.2in;
 }
 
+.pda-native-sheet--intake {
+  font-size: 6.5pt;
+  line-height: 1.2;
+  padding: 0.22in 0.28in 0.24in;
+}
+
+.pda-native-sheet--intake .pda-native-section-title {
+  margin: 4px 0 2px;
+  font-size: 6.8pt;
+}
+
+.pda-native-sheet--intake .pda-native-header {
+  margin-bottom: 4px;
+}
+
+.pda-native-sheet--intake .pda-native-org {
+  font-size: 10pt;
+}
+
+.pda-native-sheet--intake .pda-native-pill {
+  font-size: 7.5pt;
+  margin-top: 2px;
+  padding: 1px 12px;
+}
+
+.pda-native-row--name {
+  margin-bottom: 3px;
+}
+
+.pda-native-row--tight {
+  margin-bottom: 1px;
+}
+
+.pda-native-yn-header {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  margin: 3px 0 1px;
+  font-size: 6.5pt;
+  font-weight: 700;
+  text-align: center;
+}
+
+.pda-native-yn-header span:first-child {
+  text-align: left;
+}
+
+.pda-native-women-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+  margin: 1px 0;
+  font-size: 6.5pt;
+}
+
+.pda-native-q13-title {
+  margin: 3px 0 1px;
+  font-size: 6.5pt;
+  font-weight: 700;
+}
+
+.pda-native-signature-row {
+  margin-top: 6px;
+  text-align: right;
+}
+
+.pda-native-allergy-intro {
+  margin: 1px 0;
+  font-size: 6.5pt;
+}
+
+.pda-print-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.pda-print-toolbar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pda-print-toolbar-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+body.pda-print-mode {
+  overflow: auto;
+  background: #e5e7eb;
+}
+
+/* Hide app chrome on screen when print preview is open */
+@media screen {
+  body.pda-print-mode aside,
+  body.pda-print-mode nav,
+  body.pda-print-mode [data-sidebar],
+  body.pda-print-mode header:not(.pda-print-toolbar):not(.pda-native-header),
+  body.pda-print-mode [role="navigation"] {
+    display: none !important;
+  }
+
+  body.pda-print-mode .flex.min-h-screen {
+    display: block !important;
+    min-height: 0 !important;
+  }
+
+  body.pda-print-mode main {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+}
+
 .pda-native-yn-row {
   display: grid;
   grid-template-columns: 1fr auto auto;
