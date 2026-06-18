@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { AlertTriangle, X } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -40,20 +41,27 @@ export function OpenEncounterCheckInDialog({
     }
   }, [open, loading, onClose])
 
-  if (!open || !prompt) return null
+  if (!open || !prompt || typeof document === "undefined") return null
 
   const noteCount = prompt.encounter.notes.length
   const planCount = prompt.encounter.plans.length
 
-  return (
+  const modal = (
     <div
-      className="fixed inset-0 z-[200] flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
-      onClick={() => {
-        if (!loading) onClose()
-      }}
+      className="fixed inset-0 z-[250] flex items-end justify-center p-0 sm:items-center sm:p-4"
+      role="presentation"
     >
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
+        aria-label={t("common.close", "Close")}
+        disabled={loading}
+        onClick={() => {
+          if (!loading) onClose()
+        }}
+      />
       <Card
-        className="flex max-h-[min(92vh,100dvh)] w-full max-w-md flex-col overflow-hidden rounded-t-[30px] border-amber-200 bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[90vh] sm:rounded-2xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
+        className="relative z-[251] flex max-h-[min(92vh,100dvh)] w-full max-w-md flex-col overflow-hidden rounded-t-[30px] border border-amber-200 bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[min(90vh,720px)] sm:rounded-2xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -130,4 +138,6 @@ export function OpenEncounterCheckInDialog({
       </Card>
     </div>
   )
+
+  return createPortal(modal, document.body)
 }

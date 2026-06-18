@@ -343,7 +343,9 @@ export default function InvoiceDetailPage() {
     },
   ]
 
-  const sourceLabel = invoice.treatment_plan_id ? "Treatment plan" : "Manual / system"
+  const sourceLabel = invoice.treatment_plan_id
+    ? t("billing.sourceTreatmentPlan", "Treatment plan")
+    : t("billing.sourceManual", "Manual / system")
   const sourceHref = invoice.treatment_plan_id
     ? `/patients/${invoice.patient_id}/treatment-plan?plan=${invoice.treatment_plan_id}`
     : `/patients/${invoice.patient_id}`
@@ -414,18 +416,30 @@ export default function InvoiceDetailPage() {
           <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
             <div className="grid gap-2 sm:grid-cols-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Source</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                  {t("billing.source", "Source")}
+                </p>
                 <Link href={sourceHref} className="font-medium text-primary-700 hover:underline">
                   {sourceLabel}
                 </Link>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Items</p>
-                <p className="font-medium">{lineItems.length} line item(s)</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                  {t("billing.itemsLabel", "Items")}
+                </p>
+                <p className="font-medium">
+                  {t("billing.lineItemCount", "{count} line item(s)").replace("{count}", String(lineItems.length))}
+                </p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Closeout</p>
-                <p className="font-medium">{invoiceOpen ? "Open balance" : "Ready / settled"}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                  {t("billing.closeout", "Closeout")}
+                </p>
+                <p className="font-medium">
+                  {invoiceOpen
+                    ? t("billing.closeoutOpen", "Open balance")
+                    : t("billing.closeoutSettled", "Ready / settled")}
+                </p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -444,7 +458,9 @@ export default function InvoiceDetailPage() {
                 </Button>
               ) : null}
               <Button size="sm" variant="outline" asChild>
-                <Link href={`/patients/${invoice.patient_id}`}>Patient profile</Link>
+                <Link href={`/patients/${invoice.patient_id}`}>
+                  {t("billing.patientProfile", "Patient profile")}
+                </Link>
               </Button>
             </div>
           </div>

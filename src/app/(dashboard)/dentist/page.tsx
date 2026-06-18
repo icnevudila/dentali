@@ -637,7 +637,13 @@ function DentistPageContent() {
                           {entry.patient_name ?? entry.display_code}
                         </span>
                         <span className="mt-0.5 block text-xs text-neutral-500">
-                          {entry.display_code} · {entry.completed_at ? new Date(entry.completed_at).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" }) : "served"}
+                          {entry.display_code} ·{" "}
+                          {entry.completed_at
+                            ? new Date(entry.completed_at).toLocaleTimeString("en-PH", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : t("dentist.servedShort", "served")}
                         </span>
                       </Link>
                     ))}

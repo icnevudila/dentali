@@ -98,6 +98,37 @@ export function publicChannelSafeError(
   return error
 }
 
+function isTechnicalQueueCodeError(message: string): boolean {
+  const lower = message.toLowerCase()
+  return (
+    lower.includes("_next_queue_display_code") ||
+    lower.includes("queue_display_code") ||
+    (lower.includes("function") && lower.includes("is not unique"))
+  )
+}
+
+/** Hide raw Postgres errors from kiosk/portal patients. */
+export function kioskCheckInSafeError(
+  error: string | null | undefined,
+  fallback: string
+): string {
+  if (!error) return fallback
+  if (isTechnicalQueueCodeError(error)) {
+    return fallback
+  }
+  const trimmed = error.trim()
+  if (
+    trimmed.startsWith("We could not find") ||
+    trimmed.startsWith("Please see the front desk") ||
+    trimmed.startsWith("You are already checked in") ||
+    trimmed.startsWith("Phone and last name") ||
+    trimmed.startsWith("Kiosk session expired")
+  ) {
+    return trimmed
+  }
+  return fallback
+}
+
 export async function submitKioskIntake(
   sessionId: string,
   payload: KioskIntakePayload

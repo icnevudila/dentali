@@ -144,44 +144,48 @@ export function ClinicalVisitJourneyPanel({
       )}
     >
       {showCelebration ? (
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-emerald-200/90 bg-emerald-50/80 px-4 py-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-            <PartyPopper className="h-5 w-5" aria-hidden />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-emerald-900">
-              {t("journey.pathComplete", "Visit path complete")}
-            </p>
-            <p className="text-sm text-emerald-800/90">
-              {t(
-                "journey.pathCompleteHint",
-                "Intake, clinical work, and billing milestones are all on file for this patient."
-              )}
-            </p>
+        <div className="mb-4 flex flex-col gap-3 rounded-xl border border-emerald-200/90 bg-emerald-50/80 px-4 py-3 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+              <PartyPopper className="h-5 w-5" aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-emerald-900">
+                {t("journey.pathComplete", "Visit path complete")}
+              </p>
+              <p className="mt-0.5 text-sm leading-snug text-emerald-800/90">
+                {t(
+                  "journey.pathCompleteHint",
+                  "Intake, clinical work, and billing milestones are all on file for this patient."
+                )}
+              </p>
+            </div>
           </div>
-          <Badge variant="success" className="shrink-0">
-            {t("journey.completeBadge", "Complete")}
-          </Badge>
-          {finishAction ? (
-            <Button
-              size="sm"
-              className="shrink-0 gap-1.5"
-              onClick={finishAction.onClick}
-              disabled={finishAction.disabled || finishAction.loading}
-            >
-              {finishAction.loading ? (
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              ) : null}
-              {finishAction.label}
-            </Button>
-          ) : completionAction ? (
-            <Button size="sm" className="shrink-0 gap-1.5" asChild>
-              <Link href={completionAction.href}>
-                {completionAction.label}
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Link>
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+            <Badge variant="success" className="shrink-0">
+              {t("journey.completeBadge", "Complete")}
+            </Badge>
+            {finishAction ? (
+              <Button
+                size="sm"
+                className="w-full shrink-0 gap-1.5 sm:w-auto"
+                onClick={finishAction.onClick}
+                disabled={finishAction.disabled || finishAction.loading}
+              >
+                {finishAction.loading ? (
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                ) : null}
+                {finishAction.label}
+              </Button>
+            ) : completionAction ? (
+              <Button size="sm" className="w-full shrink-0 gap-1.5 sm:w-auto" asChild>
+                <Link href={completionAction.href}>
+                  {completionAction.label}
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

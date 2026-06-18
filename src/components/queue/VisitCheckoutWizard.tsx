@@ -95,11 +95,17 @@ export function VisitCheckoutWizard({
 
   const modal = (
     <div
-      className="fixed inset-0 z-[200] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
-      onClick={() => onOpenChange(false)}
+      className="fixed inset-0 z-[250] flex items-end justify-center p-0 sm:items-center sm:p-4"
+      role="presentation"
     >
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
+        aria-label={t("common.close", "Close")}
+        onClick={() => onOpenChange(false)}
+      />
       <div
-        className="flex max-h-[min(92vh,100dvh)] w-full max-w-md flex-col overflow-hidden rounded-t-[30px] bg-white shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[90vh] sm:rounded-2xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
+        className="relative z-[251] flex max-h-[min(92vh,100dvh)] w-full max-w-md flex-col overflow-hidden rounded-t-[30px] border border-neutral-200 bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[min(90vh,720px)] sm:rounded-2xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

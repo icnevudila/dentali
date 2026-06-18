@@ -90,7 +90,7 @@ export default function LabCasesPage() {
     if (error) {
       toast.error(error)
     } else {
-      toast.success("Lab case marked as received!")
+      toast.success(t("labcases.markedReceived", "Lab case marked as received!"))
       loadCases()
     }
   }
@@ -134,27 +134,29 @@ export default function LabCasesPage() {
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="text-xs font-medium text-neutral-500">Pending</p>
+              <p className="text-xs font-medium text-neutral-500">{t("labcases.pending", "Pending")}</p>
               <p className="text-2xl font-bold text-neutral-900">{loading ? "—" : caseStats.pending}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="text-xs font-medium text-neutral-500">Received</p>
+              <p className="text-xs font-medium text-neutral-500">{t("labcases.received", "Received")}</p>
               <p className="text-2xl font-bold text-emerald-700">{loading ? "—" : caseStats.received}</p>
             </CardContent>
           </Card>
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-sm text-neutral-500 animate-pulse">Loading cases...</div>
+          <div className="py-12 text-center text-sm text-neutral-500 animate-pulse">
+            {t("labcases.loading", "Loading cases...")}
+          </div>
         ) : cases.length === 0 ? (
           <Card>
             <CardContent className="pt-6 text-center py-16 text-neutral-500">
               <FlaskConical className="h-10 w-10 mx-auto mb-3 text-neutral-300" />
-              <p className="font-medium text-neutral-800">No active lab cases</p>
+              <p className="font-medium text-neutral-800">{t("labcases.emptyTitle", "No active lab cases")}</p>
               <p className="mt-1 text-sm text-neutral-500">
-                When you send an impression to an external lab, track it here.
+                {t("labcases.emptyHint", "When you send an impression to an external lab, track it here.")}
               </p>
             </CardContent>
           </Card>
@@ -193,50 +195,50 @@ export default function LabCasesPage() {
                       </Badge>
                     ) : c.status === "pending" ? (
                       <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-200">
-                        <Clock className="w-3 h-3 mr-1" /> Pending
+                        <Clock className="w-3 h-3 mr-1" /> {t("labcases.pending", "Pending")}
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="text-emerald-700 bg-emerald-50 border-emerald-200">
-                        <CheckCircle2 className="w-3 h-3 mr-1" /> Received
+                        <CheckCircle2 className="w-3 h-3 mr-1" /> {t("labcases.received", "Received")}
                       </Badge>
                     )}
                   </div>
                   
                   <div className="grid grid-cols-2 gap-2 text-xs bg-neutral-50 rounded-md p-2 border">
                     <div>
-                      <p className="text-neutral-400 font-medium">Lab</p>
+                      <p className="text-neutral-400 font-medium">{t("labcases.lab", "Lab")}</p>
                       <p className="text-neutral-700 truncate">{c.lab_name}</p>
                     </div>
                     <div>
-                      <p className="text-neutral-400 font-medium">Cost</p>
+                      <p className="text-neutral-400 font-medium">{t("labcases.cost", "Cost")}</p>
                       <p className="text-neutral-700">{formatCurrency(locale, c.cost)}</p>
                     </div>
                     <div>
-                      <p className="text-neutral-400 font-medium">Sent</p>
+                      <p className="text-neutral-400 font-medium">{t("labcases.sent", "Sent")}</p>
                       <p className="text-neutral-700">{c.sent_date}</p>
                     </div>
                     <div>
-                      <p className="text-neutral-400 font-medium">Expected</p>
-                      <p className="text-neutral-700">{c.expected_date || "TBD"}</p>
+                      <p className="text-neutral-400 font-medium">{t("labcases.expected", "Expected")}</p>
+                      <p className="text-neutral-700">{c.expected_date || t("labcases.tbd", "TBD")}</p>
                     </div>
                   </div>
 
                   {c.notes && (
                     <p className="text-xs text-neutral-500 bg-white p-2 rounded border border-dashed">
-                      <span className="font-medium text-neutral-700">Notes: </span>{c.notes}
+                      <span className="font-medium text-neutral-700">{t("labcases.notes", "Notes")}: </span>{c.notes}
                     </p>
                   )}
 
                   {c.status === "pending" && (
                     <div className="flex justify-end gap-2 pt-2 border-t mt-2">
                       <Button variant="outline" size="sm" className="h-8" asChild>
-                        <Link href={`/patients/${c.patient_id}`}>Patient</Link>
+                        <Link href={`/patients/${c.patient_id}`}>{t("labcases.patient", "Patient")}</Link>
                       </Button>
                       <Button variant="ghost" size="sm" className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleCancel(c.id)}>
-                        <XCircle className="w-3.5 h-3.5 mr-1" /> Cancel
+                        <XCircle className="w-3.5 h-3.5 mr-1" /> {t("labcases.cancel", "Cancel")}
                       </Button>
                       <Button variant="secondary" size="sm" className="h-8" onClick={() => handleMarkReceived(c.id)}>
-                        Mark Received
+                        {t("labcases.markReceived", "Mark Received")}
                       </Button>
                     </div>
                   )}
