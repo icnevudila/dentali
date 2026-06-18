@@ -53,14 +53,14 @@ export function OpenEncounterCheckInDialog({
       }}
     >
       <Card
-        className="flex max-h-[min(92vh,100dvh)] w-full max-w-md flex-col overflow-hidden rounded-t-3xl border-amber-200 bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[90vh] sm:rounded-xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
+        className="flex max-h-[min(92vh,100dvh)] w-full max-w-md flex-col overflow-hidden rounded-t-[30px] border-amber-200 bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[90vh] sm:rounded-2xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="open-encounter-title"
       >
-        <CardHeader className="shrink-0 border-b pb-2 pt-3">
-          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-200 sm:hidden" />
+        <CardHeader className="shrink-0 border-b border-neutral-200 bg-neutral-50 pb-2 pt-3 sm:px-6 sm:pt-5">
+          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-300 sm:hidden" />
           <CardTitle
             id="open-encounter-title"
             className="flex items-center justify-between gap-2 text-base"
@@ -74,7 +74,7 @@ export function OpenEncounterCheckInDialog({
             </Button>
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 space-y-4 overflow-y-auto pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <CardContent className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:px-6 sm:pt-5">
           <p className="text-sm text-neutral-700">
             {patientName
               ? t(

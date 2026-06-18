@@ -106,7 +106,7 @@ export function TypedConfirmDialog({
     >
       <Card
         className={cn(
-          "flex max-h-[min(92vh,100dvh)] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[92vh] sm:rounded-xl sm:slide-in-from-bottom-0 sm:zoom-in-95",
+          "flex max-h-[min(92vh,100dvh)] w-full max-w-md flex-col overflow-hidden rounded-t-[30px] bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[92vh] sm:rounded-2xl sm:slide-in-from-bottom-0 sm:zoom-in-95",
           borderTone
         )}
         onClick={(e) => e.stopPropagation()}
@@ -114,7 +114,7 @@ export function TypedConfirmDialog({
         aria-modal="true"
         aria-labelledby="typed-confirm-title"
       >
-        <CardHeader className="shrink-0 border-b px-5 pb-3 pt-3 sm:px-6 sm:pt-6">
+        <CardHeader className="shrink-0 border-b border-neutral-200 bg-neutral-50 px-5 pb-3 pt-3 sm:px-6 sm:pt-5">
           <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-300 sm:hidden" aria-hidden />
           <CardTitle id="typed-confirm-title" className="flex items-center justify-between gap-2 text-base">
             <span className={cn("flex items-center gap-2", titleTone)}>
@@ -132,7 +132,7 @@ export function TypedConfirmDialog({
             </Button>
           </CardTitle>
         </CardHeader>
-        <CardContent className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 sm:px-6">
+        <CardContent className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 sm:px-6 sm:pt-5">
           <p className="text-sm leading-6 text-neutral-700">{description}</p>
           <form className="space-y-3" onSubmit={(e) => void handleSubmit(e)}>
             <div>

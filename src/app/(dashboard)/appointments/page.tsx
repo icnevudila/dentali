@@ -147,7 +147,10 @@ function AppointmentsPageContent() {
     purposePreset === "Other" ? purposeOther.trim() : purposePreset
 
   React.useEffect(() => {
-    setPortalReady(true)
+    const id = window.setTimeout(() => {
+      setPortalReady(true)
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [])
 
   React.useEffect(() => {
@@ -787,11 +790,11 @@ function AppointmentsPageContent() {
               <div
                 role="dialog"
                 aria-modal="true"
-                className="relative z-[201] flex max-h-[min(92vh,100dvh)] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-neutral-200 bg-white shadow-xl animate-fade-rise sm:max-h-[90vh] sm:rounded-xl"
+                className="relative z-[201] flex max-h-[min(92vh,100dvh)] w-full max-w-2xl flex-col overflow-hidden rounded-t-[30px] border border-neutral-200 bg-white shadow-xl animate-fade-rise sm:max-h-[90vh] sm:rounded-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="shrink-0 border-b border-neutral-100 px-4 pb-4 pt-3 sm:px-6 sm:pt-4">
-                  <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-200 sm:hidden" />
+                <div className="shrink-0 border-b border-neutral-200 bg-neutral-50 px-5 pb-4 pt-3 sm:px-6 sm:pt-5">
+                  <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-300 sm:hidden" />
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h2 className="text-base font-semibold">
@@ -804,13 +807,13 @@ function AppointmentsPageContent() {
                         )}
                       </p>
                     </div>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={closeBookModal}>
+                    <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={closeBookModal}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
                 <form onSubmit={handleBook} className="flex flex-1 flex-col overflow-hidden">
-                  <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+                  <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] sm:px-6 sm:py-5">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="sm:col-span-2 space-y-2">
                         <label className="text-xs font-medium">{t("appointments.searchPatient", "Search patient")}</label>
@@ -1015,11 +1018,11 @@ function AppointmentsPageContent() {
                       ) : null}
                     </div>
                   </div>
-                  <div className="shrink-0 border-t border-neutral-100 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
+                  <div className="shrink-0 border-t border-neutral-200 bg-white p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:px-6">
                     <div className="flex flex-col gap-2 sm:flex-row">
                       <Button
                         type="submit"
-                        className="w-full sm:w-auto"
+                        className="h-11 w-full sm:w-auto"
                         disabled={
                           booking ||
                           !selectedPatientId ||
@@ -1034,7 +1037,7 @@ function AppointmentsPageContent() {
                           ? t("appointments.booking", "Booking…")
                           : t("appointments.confirmBooking", "Confirm Booking")}
                       </Button>
-                      <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={closeBookModal}>
+                      <Button type="button" variant="outline" className="h-11 w-full sm:w-auto" onClick={closeBookModal}>
                         {t("common.cancel", "Cancel")}
                       </Button>
                     </div>

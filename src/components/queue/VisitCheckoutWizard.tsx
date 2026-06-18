@@ -99,14 +99,14 @@ export function VisitCheckoutWizard({
       onClick={() => onOpenChange(false)}
     >
       <div
-        className="flex max-h-[min(92vh,100dvh)] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-white shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[90vh] sm:rounded-xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
+        className="flex max-h-[min(92vh,100dvh)] w-full max-w-md flex-col overflow-hidden rounded-t-[30px] bg-white shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[90vh] sm:rounded-2xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="visit-checkout-title"
       >
-        <div className="shrink-0 border-b border-neutral-100 px-4 pb-4 pt-3 sm:px-6 sm:pt-4">
-          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-200 sm:hidden" />
+        <div className="shrink-0 border-b border-neutral-200 bg-neutral-50 px-5 pb-4 pt-3 sm:px-6 sm:pt-5">
+          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-300 sm:hidden" />
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 id="visit-checkout-title" className="text-lg font-semibold text-neutral-900">
@@ -127,7 +127,7 @@ export function VisitCheckoutWizard({
           </div>
         </div>
 
-        <div className="shrink-0 flex items-center gap-1 px-4 pt-4 sm:px-6">
+        <div className="shrink-0 flex items-center gap-1 px-5 pt-4 sm:px-6">
           {visibleSteps.map((s, i) => {
             const Icon = s.icon
             const active = step === s.id
@@ -162,7 +162,7 @@ export function VisitCheckoutWizard({
           })}
         </div>
 
-        <div className="min-h-[140px] flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-6">
+        <div className="min-h-[140px] flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
           <div className="rounded-lg border border-amber-200/80 bg-amber-50/70 px-3 py-2 text-xs leading-5 text-amber-900">
             <div className="flex gap-2">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
@@ -278,7 +278,7 @@ export function VisitCheckoutWizard({
           ) : null}
         </div>
 
-        <div className="shrink-0 flex items-center justify-between gap-2 border-t border-neutral-100 bg-white px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
+        <div className="shrink-0 flex items-center justify-between gap-2 border-t border-neutral-200 bg-white px-5 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:px-6">
           <Button
             type="button"
             variant="ghost"

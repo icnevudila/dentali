@@ -79,17 +79,17 @@ export function WaitlistAddDialog({
       <div
         role="dialog"
         aria-modal="true"
-        className="relative z-[201] flex max-h-[min(92vh,100dvh)] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-neutral-200 bg-white shadow-xl animate-fade-rise sm:max-h-[90vh] sm:rounded-xl"
+        className="relative z-[201] flex max-h-[min(92vh,100dvh)] w-full max-w-lg flex-col overflow-hidden rounded-t-[30px] border border-neutral-200 bg-white shadow-xl animate-fade-rise sm:max-h-[90vh] sm:rounded-2xl"
       >
-        <div className="shrink-0 border-b border-neutral-100 px-4 pb-4 pt-3 sm:pt-4">
-          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-200 sm:hidden" />
+        <div className="shrink-0 border-b border-neutral-200 bg-neutral-50 px-5 pb-4 pt-3 sm:px-6 sm:pt-5">
+          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-300 sm:hidden" />
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-base font-semibold">{t("waitlist.addFormTitle", "Add patient to waitlist")}</h2>
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-9 w-9"
               onClick={() => onOpenChange(false)}
             >
               <X className="h-4 w-4" />
@@ -97,7 +97,7 @@ export function WaitlistAddDialog({
           </div>
         </div>
         <form onSubmit={onSubmit} className="flex flex-1 flex-col overflow-hidden">
-          <div className="grid flex-1 gap-4 overflow-y-auto p-4 pb-6 sm:grid-cols-2">
+          <div className="grid flex-1 gap-4 overflow-y-auto overscroll-contain px-4 py-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] sm:grid-cols-2 sm:px-6 sm:py-5">
             <div className="sm:col-span-2 space-y-2">
               <label className="text-xs font-medium">{t("appointments.searchPatient", "Search patient")}</label>
               <Input
@@ -155,9 +155,9 @@ export function WaitlistAddDialog({
               />
             </div>
           </div>
-          <div className="shrink-0 border-t border-neutral-100 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <div className="shrink-0 border-t border-neutral-200 bg-white p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:px-6">
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button className="w-full sm:w-auto" type="submit" disabled={saving || !selectedPatientId}>
+              <Button className="h-11 w-full sm:w-auto" type="submit" disabled={saving || !selectedPatientId}>
                 {saving ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -167,7 +167,7 @@ export function WaitlistAddDialog({
                   t("waitlist.addPatient", "Add to waitlist")
                 )}
               </Button>
-              <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button className="h-11 w-full sm:w-auto" type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 {t("common.cancel", "Cancel")}
               </Button>
             </div>

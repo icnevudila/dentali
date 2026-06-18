@@ -87,13 +87,14 @@ export function WalkInCheckInDialog({
       }}
     >
       <div
-        className="flex max-h-[min(92vh,100dvh)] w-full max-w-lg flex-col rounded-t-2xl bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[92vh] sm:rounded-xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
+        className="flex max-h-[min(92vh,100dvh)] w-full max-w-lg flex-col overflow-hidden rounded-t-[30px] bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[92vh] sm:rounded-2xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="walk-in-check-in-title"
       >
-        <div className="shrink-0 border-b border-neutral-100 px-5 py-4 sm:px-6">
+        <div className="shrink-0 border-b border-neutral-200 bg-neutral-50 px-5 pb-4 pt-3 sm:px-6 sm:pt-5">
+          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-300 sm:hidden" />
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -135,7 +136,7 @@ export function WalkInCheckInDialog({
         </div>
 
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 sm:px-6">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:px-6 sm:py-5">
           <div className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="walk-in-patient-search" className="text-sm font-medium text-neutral-800">
