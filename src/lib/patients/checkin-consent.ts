@@ -1,15 +1,12 @@
 import type { PatientConsent } from "@/lib/patients/consent-service"
 import type { ConsentCatalogItem } from "@/lib/patients/consent-service"
 
-/** Must match `public._pending_intake_consent_count` in Supabase. */
-export const CHECKIN_REQUIRED_CONSENT_SLUGS = ["general-treatment", "dpa-consent"] as const
+/** Must match active slugs from `public._intake_consent_slugs` in Supabase. */
+export const CHECKIN_REQUIRED_CONSENT_SLUGS = ["general-treatment"] as const
 
 export type CheckInRequiredConsentSlug = (typeof CHECKIN_REQUIRED_CONSENT_SLUGS)[number]
 
-const CHECKIN_CONSENT_PRIORITY: CheckInRequiredConsentSlug[] = [
-  "general-treatment",
-  "dpa-consent",
-]
+const CHECKIN_CONSENT_PRIORITY: CheckInRequiredConsentSlug[] = ["general-treatment"]
 
 export type ConsentDisplayStatus = "not_started" | "pending" | "signed" | "voided"
 
