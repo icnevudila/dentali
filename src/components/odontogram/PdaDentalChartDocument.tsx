@@ -5,6 +5,7 @@ import type { PatientRecord } from "@/lib/patients/patient-service"
 import type { MedicalHistoryRecord } from "@/lib/patients/medical-history-service"
 import type { TreatmentTimelineEntry } from "@/lib/clinical/treatment-plan-service"
 import type { ToothFinding } from "@/lib/types/dental"
+import type { PdaIntakeResponses } from "@/lib/pda/pda-intake-schema"
 
 const PDA_PAGE_IMAGES = [
   "/forms/pda-dental-chart/page-1.png",
@@ -119,33 +120,48 @@ function peso(value: number | null | undefined): string {
 export function PdaDentalChartDocument({
   patient,
   medicalHistory,
+  responses,
   findings = [],
   treatmentRows = [],
   dentistName,
   printedDate = new Date(),
+  printRootId = "pda-intake-print",
 }: {
   patient: PatientRecord | null
   medicalHistory?: MedicalHistoryRecord | null
+  responses?: PdaIntakeResponses | null
   findings?: ToothFinding[]
   treatmentRows?: TreatmentTimelineEntry[]
   dentistName?: string | null
   printedDate?: Date
+  printRootId?: string
 }) {
-  const name = fullName(patient)
-  const firstName = patient?.first_name ?? ""
-  const lastName = patient?.last_name ?? ""
+  const p = responses?.patient
+  const m = responses?.medical
+  const name = p
+    ? `${p.lastName}, ${p.firstName}`.trim()
+    : fullName(patient)
+  const firstName = p?.firstName ?? patient?.first_name ?? ""
+  const lastName = p?.lastName ?? patient?.last_name ?? ""
   const dateLabel = printedDate.toLocaleDateString("en-PH", {
     month: "2-digit",
     day: "2-digit",
     year: "numeric",
   })
-  const age = getAge(patient?.date_of_birth)
-  const gender = genderLabel(patient?.gender)
+  const age = getAge(p?.dateOfBirth ?? patient?.date_of_birth)
+  const gender = p?.sex || genderLabel(patient?.gender)
+  const address = p?.address ?? patient?.address ?? ""
+  const phone = p?.mobile ?? patient?.phone ?? ""
+  const email = p?.email ?? patient?.email ?? ""
+  const medications = m?.medications ?? medicalHistory?.medications?.join(", ") ?? ""
+  const medNotes = m?.notes ?? medicalHistory?.notes ?? ""
+  const allergyYes = (key: keyof NonNullable<typeof m>["allergies"]) => m?.allergies[key] === "yes"
+  const questionYes = (key: keyof NonNullable<typeof m>["questions"]) => m?.questions[key] === "yes"
   const activeFindings = findings.filter((finding) => finding.status === "active")
   const rows = treatmentRows.slice(0, 28)
 
   return (
-    <div id="pda-dental-chart-print" className="pda-print-root">
+    <div id={printRootId} className="pda-print-root">
       {PDA_PAGE_IMAGES.map((src, index) => (
         <section className="pda-page" key={src} aria-label={`PDA Dental Chart page ${index + 1}`}>
           <Image
@@ -170,7 +186,7 @@ export function PdaDentalChartDocument({
                 {firstName}
               </span>
               <span className="pda-field" style={{ left: "18.8%", top: "21.45%", width: "28%" }}>
-                {formatDate(patient?.date_of_birth)}
+                {formatDate(p?.dateOfBirth ?? patient?.date_of_birth)}
               </span>
               <span className="pda-field" style={{ left: "50.2%", top: "21.45%", width: "8%" }}>
                 {age}
@@ -179,62 +195,62 @@ export function PdaDentalChartDocument({
                 {gender}
               </span>
               <span className="pda-field" style={{ left: "14.5%", top: "24.4%", width: "46%" }}>
-                {patient?.address ?? ""}
+                {address}
               </span>
               <span className="pda-field" style={{ left: "77.6%", top: "28.4%", width: "18%" }}>
-                {patient?.phone ?? ""}
+                {phone}
               </span>
               <span className="pda-field" style={{ left: "78%", top: "31.15%", width: "18%" }}>
-                {patient?.email ?? ""}
+                {email}
               </span>
               <span className="pda-field" style={{ left: "62.5%", top: "60.9%", width: "26%" }}>
-                {medicalHistory?.medications?.join(", ") ?? ""}
+                {medications}
               </span>
               <span className="pda-field" style={{ left: "30%", top: "62.35%", width: "32%" }}>
-                {medicalHistory?.notes ?? ""}
+                {medNotes}
               </span>
-              {textIncludes(medicalHistory?.allergies, ["lidocaine", "local anesthetic", "anesthetic"]) ? (
+              {allergyYes("lidocaine") || textIncludes(medicalHistory?.allergies, ["lidocaine", "local anesthetic", "anesthetic"]) ? (
                 <span className="pda-check" style={{ left: "5.3%", top: "67.35%" }}>x</span>
               ) : null}
-              {textIncludes(medicalHistory?.allergies, ["penicillin", "antibiotic"]) ? (
+              {allergyYes("penicillin") || textIncludes(medicalHistory?.allergies, ["penicillin", "antibiotic"]) ? (
                 <span className="pda-check" style={{ left: "25.3%", top: "67.35%" }}>x</span>
               ) : null}
-              {textIncludes(medicalHistory?.allergies, ["sulfa"]) ? (
+              {allergyYes("sulfa") || textIncludes(medicalHistory?.allergies, ["sulfa"]) ? (
                 <span className="pda-check" style={{ left: "5.3%", top: "68.75%" }}>x</span>
               ) : null}
-              {textIncludes(medicalHistory?.allergies, ["aspirin"]) ? (
+              {allergyYes("aspirin") || textIncludes(medicalHistory?.allergies, ["aspirin"]) ? (
                 <span className="pda-check" style={{ left: "25.3%", top: "68.75%" }}>x</span>
               ) : null}
-              {textIncludes(medicalHistory?.allergies, ["latex"]) ? (
+              {allergyYes("latex") || textIncludes(medicalHistory?.allergies, ["latex"]) ? (
                 <span className="pda-check" style={{ left: "43.3%", top: "68.75%" }}>x</span>
               ) : null}
-              {medicalHistory?.allergies?.length ? (
+              {m?.allergyOther || medicalHistory?.allergies?.length ? (
                 <span className="pda-field pda-small" style={{ left: "70.6%", top: "67.9%", width: "20%" }}>
-                  {medicalHistory.allergies.join(", ")}
+                  {[m?.allergyOther, ...(medicalHistory?.allergies ?? [])].filter(Boolean).join(", ")}
                 </span>
               ) : null}
-              {textIncludes(medicalHistory?.conditions, ["high blood", "hypertension"]) ? (
+              {questionYes("hypertension") || textIncludes(medicalHistory?.conditions, ["high blood", "hypertension"]) ? (
                 <span className="pda-check" style={{ left: "5.4%", top: "77.5%" }}>x</span>
               ) : null}
-              {textIncludes(medicalHistory?.conditions, ["low blood", "hypotension"]) ? (
+              {questionYes("hypotension") || textIncludes(medicalHistory?.conditions, ["low blood", "hypotension"]) ? (
                 <span className="pda-check" style={{ left: "5.4%", top: "79%" }}>x</span>
               ) : null}
-              {textIncludes(medicalHistory?.conditions, ["epilepsy", "convulsion"]) ? (
+              {questionYes("epilepsy") || textIncludes(medicalHistory?.conditions, ["epilepsy", "convulsion"]) ? (
                 <span className="pda-check" style={{ left: "5.4%", top: "80.35%" }}>x</span>
               ) : null}
-              {textIncludes(medicalHistory?.conditions, ["heart"]) ? (
+              {questionYes("heart_disease") || textIncludes(medicalHistory?.conditions, ["heart"]) ? (
                 <span className="pda-check" style={{ left: "37.5%", top: "77.5%" }}>x</span>
               ) : null}
-              {textIncludes(medicalHistory?.conditions, ["hepatitis", "liver"]) ? (
+              {questionYes("hepatitis") || textIncludes(medicalHistory?.conditions, ["hepatitis", "liver"]) ? (
                 <span className="pda-check" style={{ left: "37.5%", top: "80.35%" }}>x</span>
               ) : null}
-              {textIncludes(medicalHistory?.conditions, ["diabetes"]) ? (
+              {questionYes("diabetes") || textIncludes(medicalHistory?.conditions, ["diabetes"]) ? (
                 <span className="pda-check" style={{ left: "37.5%", top: "92.8%" }}>x</span>
               ) : null}
-              {textIncludes(medicalHistory?.conditions, ["cancer", "tumor"]) ? (
+              {questionYes("cancer") || textIncludes(medicalHistory?.conditions, ["cancer", "tumor"]) ? (
                 <span className="pda-check" style={{ left: "69.2%", top: "77.5%" }}>x</span>
               ) : null}
-              {textIncludes(medicalHistory?.conditions, ["asthma"]) ? (
+              {questionYes("asthma") || textIncludes(medicalHistory?.conditions, ["asthma"]) ? (
                 <span className="pda-check" style={{ left: "69.2%", top: "83.1%" }}>x</span>
               ) : null}
             </>
