@@ -116,7 +116,7 @@ function DailyCloseoutContent() {
           hint: t("reports.metricCompletedOpen", "View completed visits"),
           icon: CheckCircle2,
           variant: data.appointmentsCompleted > 0 ? "success" : "default",
-          href: "/appointments",
+          href: "/appointments?status=completed",
         },
         {
           label: t("closeout.noShow", "No-shows"),
@@ -124,7 +124,7 @@ function DailyCloseoutContent() {
           hint: t("reports.metricNoShowOpen", "Review appointments"),
           icon: XCircle,
           variant: data.noShow > 0 ? "warning" : "default",
-          href: "/appointments",
+          href: "/appointments?status=no_show",
         },
         {
           label: t("closeout.pendingConsents", "Pending consents"),
@@ -140,7 +140,7 @@ function DailyCloseoutContent() {
           hint: t("closeout.hmoPendingHint", "Open HMO claims"),
           icon: PackageX,
           variant: data.hmoPending > 0 ? "warning" : "default",
-          href: "/billing/hmo",
+          href: "/billing/hmo?status=pending",
         },
       ]
     : []
