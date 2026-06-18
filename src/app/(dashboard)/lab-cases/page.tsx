@@ -122,13 +122,13 @@ export default function LabCasesPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Card className={caseStats.overdue > 0 ? "border-red-200 bg-red-50/40" : ""}>
             <CardContent className="pt-4">
-              <p className="text-xs font-medium text-neutral-500">Overdue</p>
+              <p className="text-xs font-medium text-neutral-500">{t("labcases.overdue", "Overdue")}</p>
               <p className="text-2xl font-bold text-red-700">{loading ? "—" : caseStats.overdue}</p>
             </CardContent>
           </Card>
           <Card className={caseStats.dueToday > 0 ? "border-amber-200 bg-amber-50/40" : ""}>
             <CardContent className="pt-4">
-              <p className="text-xs font-medium text-neutral-500">Due today</p>
+              <p className="text-xs font-medium text-neutral-500">{t("labcases.dueToday", "Due today")}</p>
               <p className="text-2xl font-bold text-amber-700">{loading ? "—" : caseStats.dueToday}</p>
             </CardContent>
           </Card>
@@ -185,11 +185,11 @@ export default function LabCasesPage() {
                     </div>
                     {urgency === "overdue" ? (
                       <Badge variant="outline" className="text-red-700 bg-red-50 border-red-200">
-                        <Clock className="w-3 h-3 mr-1" /> Overdue
+                        <Clock className="w-3 h-3 mr-1" /> {t("labcases.overdue", "Overdue")}
                       </Badge>
                     ) : urgency === "due_today" ? (
                       <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-200">
-                        <Clock className="w-3 h-3 mr-1" /> Due today
+                        <Clock className="w-3 h-3 mr-1" /> {t("labcases.dueToday", "Due today")}
                       </Badge>
                     ) : c.status === "pending" ? (
                       <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-200">

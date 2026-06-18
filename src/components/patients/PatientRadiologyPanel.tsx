@@ -16,12 +16,12 @@ import {
   Eye,
   EyeOff,
   FileText,
+  Images,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { notify } from "@/lib/ui/notify"
-import { Badge } from "@/components/ui/badge"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
@@ -96,7 +96,9 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
   }, [patientId])
 
   React.useEffect(() => {
-    load()
+    queueMicrotask(() => {
+      void load()
+    })
   }, [load])
 
   const processFile = async (file: File) => {
@@ -188,6 +190,10 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
     setPanOffset({ x: 0, y: 0 })
   }
 
+  const imageCount = images.filter((image) => image.file_type.startsWith("image/")).length
+  const pdfCount = images.filter((image) => image.file_type === "application/pdf").length
+  const latestImage = images[0] ?? null
+
   const handleMouseDown = (e: React.MouseEvent) => {
     if (zoom <= 1) return
     setIsDragging(true)
@@ -237,6 +243,29 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
           </PermissionGate>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 px-3 py-2">
+              <p className="text-xs font-medium text-neutral-500">{t("patients.radiologyImageCount", "Images")}</p>
+              <p className="mt-1 text-2xl font-bold text-neutral-950">{loading ? "—" : imageCount}</p>
+            </div>
+            <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 px-3 py-2">
+              <p className="text-xs font-medium text-neutral-500">{t("patients.radiologyPdfCount", "PDF files")}</p>
+              <p className="mt-1 text-2xl font-bold text-neutral-950">{loading ? "—" : pdfCount}</p>
+            </div>
+            <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 px-3 py-2">
+              <p className="text-xs font-medium text-neutral-500">{t("patients.radiologyLatest", "Latest")}</p>
+              <p className="mt-1 truncate text-sm font-semibold text-neutral-950">
+                {latestImage
+                  ? new Date(latestImage.created_at).toLocaleDateString(dateLocale, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })
+                  : t("patients.radiologyNoLatest", "No imaging yet")}
+              </p>
+            </div>
+          </div>
+
           <PermissionGate permission={PERMISSIONS.PATIENTS_WRITE}>
             <div
               className={`rounded-lg border-2 border-dashed px-4 py-8 text-center transition-colors cursor-pointer ${
@@ -258,7 +287,10 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
                   {t("patients.radiologyDropHint", "Drag X-ray files here or click to browse")}
                 </p>
                 <p className="text-xs text-neutral-500">
-                  Supports JPG, PNG, WEBP, PDF up to {formatFileSize(MAX_PATIENT_DOCUMENT_BYTES)}
+                  {t("patients.radiologySupportedFiles", "Supports JPG, PNG, WEBP, PDF up to {max}").replace(
+                    "{max}",
+                    formatFileSize(MAX_PATIENT_DOCUMENT_BYTES)
+                  )}
                 </p>
               </div>
             </div>
@@ -284,7 +316,10 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
                 {t("patients.radiologyEmpty", "No radiology images uploaded yet.")}
               </p>
               <p className="text-xs text-neutral-400 mt-1">
-                Upload panoramic or periapical X-rays to build the patient's imaging record.
+                {t(
+                  "patients.radiologyEmptyHint",
+                  "Upload panoramic or periapical X-rays to build the patient's imaging record."
+                )}
               </p>
             </div>
           ) : (
@@ -309,9 +344,13 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
                       {isPdf ? (
                         <div className="flex flex-col items-center gap-2 text-neutral-400">
                           <FileText className="h-12 w-12" />
-                          <span className="text-xs font-semibold uppercase">PDF Document</span>
+                          <span className="text-xs font-semibold uppercase">
+                            {t("patients.pdfDocument", "PDF document")}
+                          </span>
                         </div>
                       ) : img.url ? (
+                        // Private signed clinical images need native controls and exact source rendering.
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={img.url}
                           alt={img.file_name}
@@ -392,7 +431,10 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
           {/* Header */}
           <header className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-neutral-900">
             <div className="min-w-0">
-              <h3 className="font-bold text-lg truncate">{selectedImage.notes || selectedImage.file_name}</h3>
+              <div className="flex items-center gap-2">
+                <Images className="h-4 w-4 shrink-0 text-primary-300" aria-hidden />
+                <h3 className="font-bold text-lg truncate">{selectedImage.notes || selectedImage.file_name}</h3>
+              </div>
               <p className="text-xs text-neutral-400 mt-0.5">
                 {t("patients.imagingDate", "Imaged on")}: {new Date(selectedImage.created_at).toLocaleString(dateLocale)}
                 {selectedImage.uploader_name ? ` · ${t("patients.uploadedBy", "By")}: ${selectedImage.uploader_name}` : ""}
@@ -422,9 +464,10 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
                 variant="ghost"
                 size="sm"
                 className="text-neutral-400 hover:text-white hover:bg-neutral-800 text-lg font-bold px-3"
+                aria-label={t("common.close", "Close")}
                 onClick={() => setSelectedImage(null)}
               >
-                ✕
+                ×
               </Button>
             </div>
           </header>
@@ -448,6 +491,8 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
                     transform: `translate(${panOffset.x}px, ${panOffset.y}px) rotate(${rotation}deg) scale(${zoom})`,
                   }}
                 >
+                  {/* Private signed clinical images need pan/zoom/filter transforms without Next image rewriting. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={selectedImage.url}
                     alt={selectedImage.file_name}

@@ -16,6 +16,7 @@ import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useRouteParams } from "@/hooks/use-route-params"
 import { useAuth } from "@/hooks/use-auth"
 import { useBranch } from "@/hooks/use-branch"
+import { useLocale } from "@/hooks/use-locale"
 import { usePermission } from "@/hooks/use-permission"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { getPatient } from "@/lib/patients/patient-service"
@@ -43,6 +44,7 @@ export default function OrthoRecordPage() {
   const router = useRouter()
   const { user } = useAuth()
   const { activeBranch } = useBranch()
+  const { t } = useLocale()
   const { hasPermission } = usePermission()
   const canWrite = hasPermission(PERMISSIONS.DENTAL_CHART_WRITE)
 
@@ -300,7 +302,7 @@ export default function OrthoRecordPage() {
               <CardHeader className="pb-3">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>
-                    <CardTitle className="text-base">Case dashboard</CardTitle>
+                    <CardTitle className="text-base">{t("ortho.caseDashboard", "Case dashboard")}</CardTitle>
                     <CardDescription>
                       {orthoCase.appliance_type ?? "Orthodontic case"} · started {orthoCase.start_date ?? "not set"}
                     </CardDescription>
@@ -337,8 +339,12 @@ export default function OrthoRecordPage() {
                   <p className="font-semibold">{linkedInvoiceId ? "Linked" : "Not linked"}</p>
                 </div>
                 <div className="rounded-xl border border-neutral-200 bg-white px-3 py-2">
-                  <p className="text-xs text-neutral-500">Close readiness</p>
-                  <p className="font-semibold">{closeWarnings.length > 0 ? `${closeWarnings.length} warning(s)` : "Ready"}</p>
+                  <p className="text-xs text-neutral-500">{t("ortho.closeReadiness", "Close readiness")}</p>
+                  <p className="font-semibold">
+                    {closeWarnings.length > 0
+                      ? t("ortho.closeWarnings", "{count} warning(s)").replace("{count}", String(closeWarnings.length))
+                      : t("ortho.ready", "Ready")}
+                  </p>
                 </div>
                 {closeWarnings.length > 0 ? (
                   <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 sm:col-span-2 lg:col-span-4">
@@ -554,7 +560,7 @@ export default function OrthoRecordPage() {
                     onChange={(e) => setBookNextAfterSave(e.target.checked)}
                     disabled={!nextVisitDate || saving}
                   />
-                  Open appointment booking after saving this visit
+                  {t("ortho.openBookingAfterSave", "Open appointment booking after saving this visit")}
                 </label>
                 <div className="sm:col-span-2 flex gap-2">
                   <Button type="submit" disabled={saving}>

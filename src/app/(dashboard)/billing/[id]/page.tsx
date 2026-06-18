@@ -438,7 +438,9 @@ export default function InvoiceDetailPage() {
                   disabled={reminderSending}
                 >
                   <MessageCircle className="h-4 w-4" />
-                  {reminderSending ? "Logging..." : "WhatsApp reminder"}
+                  {reminderSending
+                    ? t("billing.paymentReminderLogging", "Logging...")
+                    : t("billing.whatsAppReminder", "WhatsApp reminder")}
                 </Button>
               ) : null}
               <Button size="sm" variant="outline" asChild>
