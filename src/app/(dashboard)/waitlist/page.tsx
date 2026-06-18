@@ -36,6 +36,8 @@ import { WaitlistOpsSummary } from "@/components/waitlist/WaitlistOpsSummary"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { notify } from "@/lib/ui/notify"
 import { WorkflowStatusBanner } from "@/components/layout/WorkflowStatusBanner"
+import { logManualWhatsAppNotification } from "@/lib/notifications/notification-service"
+import { buildWhatsAppSendUrl } from "@/lib/notifications/whatsapp"
 
 type TabFilter = "active" | "history"
 
@@ -171,6 +173,37 @@ export default function WaitlistPage() {
     } else {
       notify.success(t("waitlist.cancelled", "Waitlist entry cancelled"))
       load()
+    }
+  }
+
+  const handleWhatsAppContact = async (entry: WaitlistEntry) => {
+    if (!activeBranch || !entry.patient_phone) return
+    const preference = entry.preferred_date
+      ? `${entry.preferred_date}${entry.preferred_time_start ? ` ${entry.preferred_time_start.slice(0, 5)}` : ""}`
+      : t("waitlist.anyAvailableSlot", "any available slot")
+    const body = t(
+      "waitlist.whatsAppSlotBody",
+      "Hello {patient}, this is {clinic}. We are following up on your waitlist request for {preference}. Please reply if you are still interested."
+    )
+      .replace("{patient}", entry.patient_name ?? "patient")
+      .replace("{clinic}", activeBranch.name)
+      .replace("{preference}", preference)
+
+    const { error: logError } = await logManualWhatsAppNotification({
+      phone: entry.patient_phone,
+      body,
+      branchId: activeBranch.id,
+      templateKey: "waitlist_slot",
+      patientId: entry.patient_id,
+    })
+    if (logError) {
+      notify.error(logError)
+      return
+    }
+
+    const win = window.open(buildWhatsAppSendUrl(entry.patient_phone, body), "_blank", "noopener,noreferrer")
+    if (!win) {
+      notify.error(t("settings.notificationsPopupBlocked", "WhatsApp popup was blocked by the browser."))
     }
   }
 
@@ -365,6 +398,7 @@ export default function WaitlistPage() {
                   setContactOutcome("reached")
                   setContactNote("")
                 }}
+                onWhatsAppContact={handleWhatsAppContact}
                 onBook={(entry) => setBookEntry(entry)}
                 onCancel={handleCancel}
               />

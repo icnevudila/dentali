@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Calendar, Phone, Trash2 } from "lucide-react"
+import { Calendar, MessageCircle, Phone, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { RecordRow, patientInitials } from "@/components/layout/RecordRow"
@@ -36,6 +36,7 @@ export function WaitlistEntryList({
   slotAlertLabel,
   canWrite = true,
   onContact,
+  onWhatsAppContact,
   onBook,
   onCancel,
 }: {
@@ -45,6 +46,7 @@ export function WaitlistEntryList({
   slotAlertLabel: string
   canWrite?: boolean
   onContact: (entry: WaitlistEntry) => void
+  onWhatsAppContact?: (entry: WaitlistEntry) => void
   onBook: (entry: WaitlistEntry) => void
   onCancel: (entryId: string) => void
 }) {
@@ -111,6 +113,18 @@ export function WaitlistEntryList({
                     <Phone className="h-3.5 w-3.5" />
                     Contact
                   </Button>
+                  {onWhatsAppContact && entry.patient_phone ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                      disabled={actionLoading === entry.id}
+                      onClick={() => onWhatsAppContact(entry)}
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      WhatsApp
+                    </Button>
+                  ) : null}
                   <Button
                     size="sm"
                     className="gap-1"
