@@ -366,6 +366,14 @@ function DentistPageContent() {
 
   const counts = countDentistBoardEntries(queueEntries)
   const dayStats = React.useMemo(() => computeQueueDayStats(dayQueueEntries), [dayQueueEntries])
+  const completedTodayEntries = React.useMemo(
+    () =>
+      filterDentistBoardByProvider(
+        dayQueueEntries.filter((entry) => entry.status === "served"),
+        providerId
+      ).slice(0, 6),
+    [dayQueueEntries, providerId]
+  )
 
   const metricItems = [
     {
@@ -599,6 +607,43 @@ function DentistPageContent() {
                 context="daily"
                 queueByPatientId={queueByPatientId}
               />
+
+              {hasActiveBranch && completedTodayEntries.length > 0 && filter !== "served" ? (
+                <ContentPanel className="border-emerald-200/70 bg-emerald-50/35">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <SectionEyebrow icon={UserCheck}>
+                        {t("dentist.completedTodayTitle", "Completed today")}
+                      </SectionEyebrow>
+                      <p className="mt-1 text-sm text-emerald-900/80">
+                        {t(
+                          "dentist.completedTodayHint",
+                          "Served patients are kept out of the active queue. Open the filter for full history."
+                        )}
+                      </p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => handleFilterAndScroll("served")}>
+                      {t("dentist.viewCompletedToday", "View all completed")}
+                    </Button>
+                  </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {completedTodayEntries.map((entry) => (
+                      <Link
+                        key={entry.id}
+                        href={`/patients/${entry.patient_id}`}
+                        className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm transition hover:-translate-y-0.5 hover:shadow-sm"
+                      >
+                        <span className="block font-semibold text-neutral-950">
+                          {entry.patient_name ?? entry.display_code}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-neutral-500">
+                          {entry.display_code} · {entry.completed_at ? new Date(entry.completed_at).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" }) : "served"}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </ContentPanel>
+              ) : null}
 
               {hasActiveBranch && filter === "all" ? (
                 <ReportDrillLink
