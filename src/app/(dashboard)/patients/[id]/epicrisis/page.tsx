@@ -4,15 +4,16 @@ import * as React from "react"
 import { useRouteParams } from "@/hooks/use-route-params"
 import { useBranch } from "@/hooks/use-branch"
 import { useAuth } from "@/hooks/use-auth"
-import { getPatient, type PatientWithContacts } from "@/lib/patients/patient-service"
-import { getLatestMedicalHistory, type MedicalHistoryRecord } from "@/lib/patients/medical-history-service"
-import { fetchPatientTimeline, type TimelineEvent } from "@/lib/clinical/clinical-notes-service"
-import { fetchInvoices, getPatientBalance, type InvoiceRecord } from "@/lib/billing/invoice-service"
-import { fetchPatientConsents, type PatientConsent } from "@/lib/patients/consent-service"
-import { fetchPatientTreatmentTimeline, type TreatmentTimelineEntry } from "@/lib/clinical/treatment-plan-service"
-import { fetchPatientPrescriptions, type PrescriptionRecord } from "@/lib/clinical/prescription-service"
-import { fetchPatientQueueHistory, type PatientQueueVisit } from "@/lib/queue/queue-service"
-import { fetchPatientLabCases, type PatientWithLabCase } from "@/lib/clinical/lab-service"
+import { getPatient } from "@/lib/patients/patient-service"
+import { getLatestMedicalHistory } from "@/lib/patients/medical-history-service"
+import { fetchPatientTimeline } from "@/lib/clinical/clinical-notes-service"
+import { fetchInvoices, getPatientBalance } from "@/lib/billing/invoice-service"
+import { fetchPatientConsents } from "@/lib/patients/consent-service"
+import { fetchPatientTreatmentTimeline } from "@/lib/clinical/treatment-plan-service"
+import { fetchPatientPrescriptions } from "@/lib/clinical/prescription-service"
+import { fetchPatientQueueHistory } from "@/lib/queue/queue-service"
+import { fetchPatientLabCases } from "@/lib/clinical/lab-service"
+import { fetchOrthoAdjustments, fetchOrthoBalance, fetchOrthoCase } from "@/lib/clinical/ortho-service"
 import { buildEpicrisisPrintHtml, printEpicrisis, type EpicrisisData } from "@/lib/clinical/epicrisis-print"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -20,7 +21,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Printer, FileText, CheckCircle2 } from "lucide-react"
-import { fetchOrganization } from "@/lib/auth/auth-service"
+import { fetchOrganization, fetchStaffProfile } from "@/lib/auth/auth-service"
 
 function SectionPreview({
   title,
@@ -67,6 +68,7 @@ export default function EpicrisisPage() {
         consentsRes,
         balanceRes,
         org,
+        staff,
       ] = await Promise.all([
         getPatient(patientId),
         getLatestMedicalHistory(patientId),
@@ -74,16 +76,26 @@ export default function EpicrisisPage() {
         fetchPatientConsents(patientId),
         getPatientBalance(patientId),
         fetchOrganization(),
+        fetchStaffProfile(),
       ])
 
       const branchId = activeBranch?.id
-      const [queueRes, labRes, treatmentRes, rxRes, invoicesRes] = await Promise.all([
+      const [queueRes, labRes, treatmentRes, rxRes, invoicesRes, orthoCaseRes] = await Promise.all([
         fetchPatientQueueHistory(patientId),
         fetchPatientLabCases(patientId),
         fetchPatientTreatmentTimeline(patientId, branchId),
         branchId ? fetchPatientPrescriptions(patientId, branchId) : Promise.resolve({ data: [], error: null }),
         branchId ? fetchInvoices(branchId) : Promise.resolve({ data: [], error: null }),
+        branchId ? fetchOrthoCase(patientId, branchId) : Promise.resolve({ data: null, error: null }),
       ])
+
+      const orthoCase = orthoCaseRes.data ?? null
+      const [orthoAdjustmentsRes, orthoBalanceRes] = orthoCase
+        ? await Promise.all([fetchOrthoAdjustments(orthoCase.id), fetchOrthoBalance(orthoCase.id)])
+        : [
+            { data: [], error: null },
+            { data: null, error: null },
+          ]
 
       if (cancelled) return
 
@@ -103,6 +115,9 @@ export default function EpicrisisPage() {
         labCases: labRes.data ?? [],
         consents: consentsRes.data ?? [],
         treatmentItems: treatmentRes.data ?? [],
+        orthoCase,
+        orthoAdjustments: orthoAdjustmentsRes.data ?? [],
+        orthoBalance: orthoBalanceRes.data,
         prescriptions: rxRes.data ?? [],
         invoices,
         balance: balanceRes.data,
@@ -111,6 +126,8 @@ export default function EpicrisisPage() {
         clinicPhone: org?.contact_number,
         branchName: activeBranch?.name,
         generatedBy: user?.email ?? null,
+        attendingDentist: staff?.full_name ?? null,
+        licenseNumber: staff?.prc_license_number ?? null,
       })
       setLoading(false)
     }
@@ -151,9 +168,8 @@ export default function EpicrisisPage() {
                   Comprehensive epicrisis report
                 </CardTitle>
                 <CardDescription className="mt-1 max-w-xl">
-                  Ten-section discharge document: demographics, medical history, consents, visits,
-                  clinical notes, treatment procedures, lab work, prescriptions, and billing — ready
-                  to print or save as PDF.
+                  Discharge document: demographics, medical history, consents, visits, treatment,
+                  ortho, prescriptions, lab work, and billing — ready to print or save as PDF.
                 </CardDescription>
               </div>
               <Button className="gap-1.5 shrink-0" onClick={handlePrint}>
@@ -165,6 +181,9 @@ export default function EpicrisisPage() {
                 <Badge variant="outline">{data.timeline.length} timeline events</Badge>
                 <Badge variant="outline">{data.queueVisits.length} queue visits</Badge>
                 <Badge variant="outline">{data.treatmentItems.length} procedures</Badge>
+                {data.orthoCase ? (
+                  <Badge variant="outline">{data.orthoAdjustments.length} ortho visits</Badge>
+                ) : null}
                 <Badge variant="outline">{data.prescriptions.length} prescriptions</Badge>
                 <Badge variant="outline">{data.invoices.length} invoices</Badge>
                 {data.balance && data.balance.open_balance > 0 ? (
@@ -255,7 +274,19 @@ export default function EpicrisisPage() {
               </p>
             </SectionPreview>
 
-            <SectionPreview title="9. Billing" count={data.invoices.length}>
+            <SectionPreview title="8. Orthodontics" count={data.orthoCase ? data.orthoAdjustments.length : 0}>
+              {data.orthoCase ? (
+                <p>
+                  {data.orthoCase.appliance_type ?? "Ortho case"} · ₱
+                  {Number(data.orthoCase.contract_amount).toLocaleString()} contract · ₱
+                  {Number(data.orthoBalance?.balance ?? 0).toLocaleString()} balance
+                </p>
+              ) : (
+                <p>No active ortho case for this branch.</p>
+              )}
+            </SectionPreview>
+
+            <SectionPreview title="10. Billing" count={data.invoices.length}>
               <p>
                 Total billed ₱{(data.balance?.total_billed ?? 0).toLocaleString()} · Paid ₱
                 {(data.balance?.total_paid ?? 0).toLocaleString()} · Outstanding ₱

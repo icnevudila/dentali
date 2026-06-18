@@ -7,6 +7,7 @@ import type { PatientQueueVisit } from "@/lib/queue/queue-service"
 import type { MedicalHistoryRecord } from "@/lib/patients/medical-history-service"
 import type { PatientWithContacts } from "@/lib/patients/patient-service"
 import type { PatientConsent } from "@/lib/patients/consent-service"
+import type { OrthoAdjustment, OrthoBalance, OrthoCase } from "@/lib/clinical/ortho-service"
 import { openPrintableHtml } from "@/lib/utils/print"
 
 function escapeHtml(value: string): string {
@@ -52,6 +53,9 @@ export type EpicrisisData = {
   labCases: PatientWithLabCase[]
   consents: PatientConsent[]
   treatmentItems: TreatmentTimelineEntry[]
+  orthoCase: OrthoCase | null
+  orthoAdjustments: OrthoAdjustment[]
+  orthoBalance: OrthoBalance | null
   prescriptions: PrescriptionRecord[]
   invoices: InvoiceRecord[]
   balance: { open_balance: number; total_billed: number; total_paid: number } | null
@@ -60,6 +64,8 @@ export type EpicrisisData = {
   clinicPhone?: string | null
   branchName?: string | null
   generatedBy?: string | null
+  attendingDentist?: string | null
+  licenseNumber?: string | null
 }
 
 export function buildEpicrisisPrintHtml(data: EpicrisisData): string {
@@ -71,6 +77,9 @@ export function buildEpicrisisPrintHtml(data: EpicrisisData): string {
     labCases,
     consents,
     treatmentItems,
+    orthoCase,
+    orthoAdjustments,
+    orthoBalance,
     prescriptions,
     invoices,
     balance,
@@ -79,6 +88,8 @@ export function buildEpicrisisPrintHtml(data: EpicrisisData): string {
     clinicPhone,
     branchName,
     generatedBy,
+    attendingDentist,
+    licenseNumber,
   } = data
 
   const age = patient.date_of_birth
@@ -122,6 +133,20 @@ export function buildEpicrisisPrintHtml(data: EpicrisisData): string {
       <td>${item.tooth_number ? escapeHtml(item.tooth_number) : "—"}</td>
       <td>${escapeHtml(item.item_status)}</td>
       <td class="num">₱${Number(item.estimated_price).toLocaleString()}</td>
+    </tr>`
+    )
+    .join("")
+
+  const orthoRows = orthoAdjustments
+    .map(
+      (item) => `
+    <tr>
+      <td>${fmtDate(item.adjustment_date)}</td>
+      <td>${escapeHtml(item.procedure)}</td>
+      <td>${item.next_procedure ? escapeHtml(item.next_procedure) : "—"}</td>
+      <td>${item.next_visit_date ? fmtDate(item.next_visit_date) : "—"}</td>
+      <td class="num">₱${Number(item.payment_amount).toLocaleString()}</td>
+      <td>${item.notes ? escapeHtml(item.notes) : "—"}</td>
     </tr>`
     )
     .join("")
@@ -315,7 +340,26 @@ export function buildEpicrisisPrintHtml(data: EpicrisisData): string {
   </div>
 
   <div class="section">
-    <div class="section-title">8. Prescriptions issued</div>
+    <div class="section-title">8. Orthodontic record</div>
+    ${
+      orthoCase
+        ? `<div class="summary-strip">
+      <div class="summary-pill"><strong>Appliance</strong><span>${escapeHtml(orthoCase.appliance_type ?? "—")}</span></div>
+      <div class="summary-pill"><strong>Started</strong><span>${fmtDate(orthoCase.start_date)}</span></div>
+      <div class="summary-pill"><strong>Contract</strong><span>₱${Number(orthoCase.contract_amount).toLocaleString()}</span></div>
+      <div class="summary-pill${orthoBalance && orthoBalance.balance > 0 ? " warn" : ""}"><strong>Balance</strong><span>₱${Number(orthoBalance?.balance ?? 0).toLocaleString()}</span></div>
+    </div>
+    ${orthoCase.notes ? `<p class="notes"><strong>Case notes:</strong> ${escapeHtml(orthoCase.notes)}</p>` : ""}
+    <table>
+      <thead><tr><th>Date</th><th>Procedure</th><th>Next procedure</th><th>Next visit</th><th class="num">Payment</th><th>Notes</th></tr></thead>
+      <tbody>${tableRows(orthoRows, 6, "No orthodontic adjustments logged.")}</tbody>
+    </table>`
+        : `<p class="empty">No active orthodontic case for this branch.</p>`
+    }
+  </div>
+
+  <div class="section">
+    <div class="section-title">9. Prescriptions issued</div>
     <table>
       <thead><tr><th>Date</th><th>Diagnosis</th><th>Medications</th><th>Status</th><th>Prescriber</th></tr></thead>
       <tbody>${tableRows(rxRows, 5, "No prescriptions on file.")}</tbody>
@@ -323,7 +367,7 @@ export function buildEpicrisisPrintHtml(data: EpicrisisData): string {
   </div>
 
   <div class="section">
-    <div class="section-title">9. Financial summary &amp; invoices</div>
+    <div class="section-title">10. Financial summary &amp; invoices</div>
     <div class="summary-strip">
       <div class="summary-pill"><strong>Total billed</strong><span>₱${totalBilled.toLocaleString()}</span></div>
       <div class="summary-pill"><strong>Total paid</strong><span>₱${totalPaid.toLocaleString()}</span></div>
@@ -336,8 +380,8 @@ export function buildEpicrisisPrintHtml(data: EpicrisisData): string {
   </div>
 
   <div class="section">
-    <div class="section-title">10. Discharge statement</div>
-    <p class="notes">This epicrisis summarizes the patient's dental care at ${escapeHtml(clinicName)} from first registration through the report date. It consolidates demographics, medical alerts, consents, visits, planned and completed procedures, prescriptions, laboratory work, and billing. For continuity of care, attach relevant imaging and signed consent scans from the patient chart.</p>
+    <div class="section-title">11. Discharge statement</div>
+    <p class="notes">This epicrisis summarizes the patient's dental care at ${escapeHtml(clinicName)} from first registration through the report date. It consolidates demographics, medical alerts, consents, visits, planned and completed procedures, orthodontic care, prescriptions, laboratory work, and billing. For continuity of care, attach relevant imaging and signed consent scans from the patient chart.</p>
   </div>
 
   <div class="footer">
@@ -346,7 +390,7 @@ export function buildEpicrisisPrintHtml(data: EpicrisisData): string {
       <p>Valid for referral, insurance, and discharge handover when signed by the attending dentist.</p>
     </div>
     <div>
-      <div class="sig">Attending dentist signature &amp; license no.</div>
+      <div class="sig">${attendingDentist ? escapeHtml(attendingDentist) : "Attending dentist"}${licenseNumber ? `<br/>PRC Lic. No. ${escapeHtml(licenseNumber)}` : "<br/>Signature &amp; license no."}</div>
       <div class="sig" style="margin-top:24px;">Date</div>
     </div>
   </div>
