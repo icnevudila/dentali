@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { useLocale } from "@/hooks/use-locale"
 import { useBranch } from "@/hooks/use-branch"
 import { fetchActiveLabCases, updateLabCaseStatus, type PatientWithLabCase } from "@/lib/clinical/lab-service"
@@ -15,6 +16,15 @@ import { Badge } from "@/components/ui/badge"
 import { NewLabCaseDialog } from "@/components/clinical/lab/NewLabCaseDialog"
 import { formatCurrency } from "@/lib/i18n/translate"
 import { toast } from "sonner"
+
+const TODAY_KEY = new Date().toISOString().slice(0, 10)
+
+function labCaseUrgency(c: PatientWithLabCase) {
+  if (c.status === "received") return "received"
+  if (c.expected_date && c.expected_date < TODAY_KEY) return "overdue"
+  if (c.expected_date && c.expected_date <= TODAY_KEY) return "due_today"
+  return "pending"
+}
 
 export default function LabCasesPage() {
   const { t, locale } = useLocale()
@@ -54,6 +64,27 @@ export default function LabCasesPage() {
     return () => window.clearTimeout(id)
   }, [loadCases])
 
+  const caseStats = React.useMemo(() => {
+    const pending = cases.filter((c) => c.status === "pending")
+    return {
+      pending: pending.length,
+      overdue: pending.filter((c) => labCaseUrgency(c) === "overdue").length,
+      dueToday: pending.filter((c) => labCaseUrgency(c) === "due_today").length,
+      received: cases.filter((c) => c.status === "received").length,
+    }
+  }, [cases])
+
+  const sortedCases = React.useMemo(
+    () =>
+      [...cases].sort((a, b) => {
+        const rank = { overdue: 0, due_today: 1, pending: 2, received: 3 } as Record<string, number>
+        const urgencyDiff = rank[labCaseUrgency(a)] - rank[labCaseUrgency(b)]
+        if (urgencyDiff !== 0) return urgencyDiff
+        return (a.expected_date ?? "9999-12-31").localeCompare(b.expected_date ?? "9999-12-31")
+      }),
+    [cases]
+  )
+
   const handleMarkReceived = async (id: string) => {
     const { error } = await updateLabCaseStatus(id, "received")
     if (error) {
@@ -88,6 +119,33 @@ export default function LabCasesPage() {
           }
         />
 
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className={caseStats.overdue > 0 ? "border-red-200 bg-red-50/40" : ""}>
+            <CardContent className="pt-4">
+              <p className="text-xs font-medium text-neutral-500">Overdue</p>
+              <p className="text-2xl font-bold text-red-700">{loading ? "—" : caseStats.overdue}</p>
+            </CardContent>
+          </Card>
+          <Card className={caseStats.dueToday > 0 ? "border-amber-200 bg-amber-50/40" : ""}>
+            <CardContent className="pt-4">
+              <p className="text-xs font-medium text-neutral-500">Due today</p>
+              <p className="text-2xl font-bold text-amber-700">{loading ? "—" : caseStats.dueToday}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-xs font-medium text-neutral-500">Pending</p>
+              <p className="text-2xl font-bold text-neutral-900">{loading ? "—" : caseStats.pending}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-xs font-medium text-neutral-500">Received</p>
+              <p className="text-2xl font-bold text-emerald-700">{loading ? "—" : caseStats.received}</p>
+            </CardContent>
+          </Card>
+        </div>
+
         {loading ? (
           <div className="py-12 text-center text-sm text-neutral-500 animate-pulse">Loading cases...</div>
         ) : cases.length === 0 ? (
@@ -102,17 +160,38 @@ export default function LabCasesPage() {
           </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {cases.map((c) => (
-              <Card key={c.id} className={c.status === "received" ? "border-emerald-200 bg-emerald-50/30" : ""}>
+            {sortedCases.map((c) => {
+              const urgency = labCaseUrgency(c)
+              return (
+              <Card
+                key={c.id}
+                className={
+                  urgency === "overdue"
+                    ? "border-red-200 bg-red-50/30"
+                    : urgency === "due_today"
+                      ? "border-amber-200 bg-amber-50/30"
+                      : c.status === "received"
+                        ? "border-emerald-200 bg-emerald-50/30"
+                        : ""
+                }
+              >
                 <CardContent className="p-4 space-y-3">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="font-semibold text-neutral-900">
+                      <Link href={`/patients/${c.patient_id}`} className="font-semibold text-neutral-900 hover:text-primary-700 hover:underline">
                         {c.patients?.first_name} {c.patients?.last_name}
-                      </p>
+                      </Link>
                       <p className="text-xs text-neutral-500">{c.case_type}</p>
                     </div>
-                    {c.status === "pending" ? (
+                    {urgency === "overdue" ? (
+                      <Badge variant="outline" className="text-red-700 bg-red-50 border-red-200">
+                        <Clock className="w-3 h-3 mr-1" /> Overdue
+                      </Badge>
+                    ) : urgency === "due_today" ? (
+                      <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-200">
+                        <Clock className="w-3 h-3 mr-1" /> Due today
+                      </Badge>
+                    ) : c.status === "pending" ? (
                       <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-200">
                         <Clock className="w-3 h-3 mr-1" /> Pending
                       </Badge>
@@ -150,6 +229,9 @@ export default function LabCasesPage() {
 
                   {c.status === "pending" && (
                     <div className="flex justify-end gap-2 pt-2 border-t mt-2">
+                      <Button variant="outline" size="sm" className="h-8" asChild>
+                        <Link href={`/patients/${c.patient_id}`}>Patient</Link>
+                      </Button>
                       <Button variant="ghost" size="sm" className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleCancel(c.id)}>
                         <XCircle className="w-3.5 h-3.5 mr-1" /> Cancel
                       </Button>
@@ -160,7 +242,7 @@ export default function LabCasesPage() {
                   )}
                 </CardContent>
               </Card>
-            ))}
+            )})}
           </div>
         )}
 
