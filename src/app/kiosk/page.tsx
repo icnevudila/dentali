@@ -1,13 +1,11 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 import { createKioskSession, submitKioskCheckin, submitKioskIntake } from "@/lib/kiosk/kiosk-service"
 import { useLocale } from "@/hooks/use-locale"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { KioskStepIndicator, kioskStepFromFlow } from "@/components/kiosk/KioskStepIndicator"
 import { KioskConsentStep } from "@/components/kiosk/KioskConsentStep"
 import {
@@ -30,6 +28,10 @@ type Step = "loading" | "welcome" | "form" | "consents" | "mood" | "success" | "
 
 const AUTO_RESET_MS = 8_000
 const FORM_IDLE_MS = 120_000
+
+type WindowWithWebkitAudio = Window & {
+  webkitAudioContext?: typeof AudioContext
+}
 
 function KioskContent() {
   const searchParams = useSearchParams()
@@ -67,9 +69,11 @@ function KioskContent() {
 
   React.useEffect(() => {
     if (!token) {
-      setStep("error")
-      setErrorMsg(t("kiosk.invalidLink", "Invalid kiosk link. Please ask the front desk for assistance."))
-      return
+      const id = window.setTimeout(() => {
+        setStep("error")
+        setErrorMsg(t("kiosk.invalidLink", "Invalid kiosk link. Please ask the front desk for assistance."))
+      }, 0)
+      return () => window.clearTimeout(id)
     }
 
     createKioskSession(token).then(async ({ data, error }) => {
@@ -116,10 +120,7 @@ function KioskContent() {
 
   // Idle timer for screensaver
   React.useEffect(() => {
-    if (step !== "welcome") {
-      setIsScreensaver(false)
-      return
-    }
+    if (step !== "welcome") return
     const id = setTimeout(() => setIsScreensaver(true), 120_000) // 2 mins idle
     return () => clearTimeout(id)
   }, [step])
@@ -151,9 +152,9 @@ function KioskContent() {
 
   const playSuccessSound = (speechText?: string) => {
     try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext
-      if (AudioContext) {
-        const ctx = new AudioContext()
+      const AudioContextCtor = window.AudioContext || (window as WindowWithWebkitAudio).webkitAudioContext
+      if (AudioContextCtor) {
+        const ctx = new AudioContextCtor()
         const osc = ctx.createOscillator()
         const gainNode = ctx.createGain()
 
@@ -182,16 +183,16 @@ function KioskContent() {
           window.speechSynthesis.speak(utterance)
         }, 300)
       }
-    } catch (e) {
+    } catch {
       // Ignore audio errors
     }
   }
 
   const playPendingSound = React.useCallback((speechText: string) => {
     try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext
-      if (AudioContext) {
-        const ctx = new AudioContext()
+      const AudioContextCtor = window.AudioContext || (window as WindowWithWebkitAudio).webkitAudioContext
+      if (AudioContextCtor) {
+        const ctx = new AudioContextCtor()
         const osc = ctx.createOscillator()
         const gainNode = ctx.createGain()
 
@@ -328,7 +329,7 @@ function KioskContent() {
   const showSteps = step !== "loading" && step !== "error"
   const flowStep = kioskStepFromFlow(step)
 
-  if (isScreensaver) {
+  if (step === "welcome" && isScreensaver) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-teal-950 text-white cursor-pointer transition-opacity duration-1000 animate-in fade-in">
         <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">

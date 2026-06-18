@@ -35,6 +35,10 @@ import {
   ListOrdered,
 } from "lucide-react"
 
+type WindowWithWebkitAudio = Window & {
+  webkitAudioContext?: typeof AudioContext
+}
+
 type Step =
   | "loading" 
   | "welcome" 
@@ -99,9 +103,11 @@ function PortalPageContent() {
 
   React.useEffect(() => {
     if (!token) {
-      portalError("Portal connection token is missing.")
-      setStep("error")
-      return
+      const id = window.setTimeout(() => {
+        portalError("Portal connection token is missing.")
+        setStep("error")
+      }, 0)
+      return () => window.clearTimeout(id)
     }
 
     createKioskSession(token).then(async ({ data, error }) => {
@@ -188,9 +194,9 @@ function PortalPageContent() {
 
   const playPendingSound = (speechText: string) => {
     try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext
-      if (AudioContext) {
-        const ctx = new AudioContext()
+      const AudioContextCtor = window.AudioContext || (window as WindowWithWebkitAudio).webkitAudioContext
+      if (AudioContextCtor) {
+        const ctx = new AudioContextCtor()
         const osc = ctx.createOscillator()
         const gainNode = ctx.createGain()
 
@@ -218,7 +224,7 @@ function PortalPageContent() {
           window.speechSynthesis.speak(utterance)
         }, 400)
       }
-    } catch (e) {
+    } catch {
       // Ignore
     }
   }
