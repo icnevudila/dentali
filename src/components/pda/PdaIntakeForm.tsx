@@ -12,6 +12,10 @@ import {
 } from "@/lib/pda/pda-intake-schema"
 import type { ToothFinding } from "@/lib/types/dental"
 import type { TreatmentTimelineEntry } from "@/lib/clinical/treatment-plan-service"
+import {
+  formatToothFindingLine,
+  formatTreatmentTimelineLine,
+} from "@/lib/odontogram/clinical-display"
 
 type SectionId = "patient" | "dental" | "medical" | "chart"
 
@@ -322,9 +326,8 @@ export function PdaIntakeForm({
             ) : (
               <ul className="mt-2 space-y-1 text-sm">
                 {activeFindings.map((f) => (
-                  <li key={`${f.tooth_number}-${f.condition}`}>
-                    Tooth {f.tooth_number}: {f.condition}
-                    {f.restoration_type ? ` (${f.restoration_type})` : ""}
+                  <li key={`${f.tooth_number}-${f.condition}-${f.restoration_type ?? ""}`}>
+                    {formatToothFindingLine(f)}
                   </li>
                 ))}
               </ul>
@@ -336,12 +339,13 @@ export function PdaIntakeForm({
               <p className="mt-1 text-sm text-neutral-500">No treatment timeline entries.</p>
             ) : (
               <ul className="mt-2 space-y-1 text-sm">
-                {treatmentRows.slice(0, 10).map((row) => (
-                  <li key={row.item_id}>
-                    {row.tooth_number ? `Tooth ${row.tooth_number}: ` : ""}
-                    {row.description}
-                  </li>
-                ))}
+                {treatmentRows
+                  .map((row) => ({ row, line: formatTreatmentTimelineLine(row) }))
+                  .filter(({ line }) => line.length > 0)
+                  .slice(0, 10)
+                  .map(({ row, line }) => (
+                    <li key={row.item_id}>{line}</li>
+                  ))}
               </ul>
             )}
           </div>

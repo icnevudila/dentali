@@ -556,3 +556,96 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* PDA dental chart print layout (must be global — copied into print blob window) */
+.pda-print-root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  background: #f8fafc;
+  padding: 16px;
+}
+
+.pda-page {
+  position: relative;
+  width: min(100%, 8.32in);
+  aspect-ratio: 599 / 792;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12);
+}
+
+.pda-page-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  user-select: none;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.pda-field {
+  position: absolute;
+  z-index: 1;
+  min-height: 14px;
+  overflow: hidden;
+  white-space: nowrap;
+  color: #111827;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 9px;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.pda-check {
+  position: absolute;
+  z-index: 1;
+  color: #111827;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.pda-tooth-code {
+  position: absolute;
+  z-index: 1;
+  min-width: 18px;
+  transform: translateX(-50%);
+  color: #111827;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+}
+
+.pda-small {
+  font-size: 8px;
+  text-transform: none;
+}
+
+@media print {
+  .pda-print-root {
+    display: block;
+    padding: 0;
+    background: #fff;
+  }
+
+  .pda-page {
+    width: 8.32in;
+    height: 11in;
+    aspect-ratio: auto;
+    box-shadow: none;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .pda-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+}

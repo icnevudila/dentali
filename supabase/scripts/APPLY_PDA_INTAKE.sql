@@ -424,3 +424,6 @@ end;
 $$;
 
 grant execute on function public.submit_pda_intake_via_token(text, jsonb) to anon, authenticated;
+
+-- Reload PostgREST schema cache so RPCs are available immediately
+notify pgrst, 'reload schema';

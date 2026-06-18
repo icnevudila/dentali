@@ -424,3 +424,5 @@ end;
 $$;
 
 grant execute on function public.submit_pda_intake_via_token(text, jsonb) to anon, authenticated;
+
+notify pgrst, 'reload schema';

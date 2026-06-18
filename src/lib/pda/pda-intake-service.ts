@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client"
+import { fetchOrganization } from "@/lib/auth/auth-service"
 import type { PdaIntakeResponses, PdaIntakeStatus } from "@/lib/pda/pda-intake-schema"
 import { parsePdaIntakeResponses } from "@/lib/pda/pda-intake-schema"
 
@@ -18,6 +19,80 @@ function isMissingRpc(message: string): boolean {
     message.includes("PGRST202") ||
     message.includes("schema cache")
   )
+}
+
+function isMissingTable(message: string): boolean {
+  return message.includes("does not exist") || message.includes("42P01")
+}
+
+const SCHEMA_RELOAD_HINT =
+  "PDA tables exist but API functions are not loaded yet. In Supabase Dashboard → Project Settings → API, click Reload schema."
+
+async function fetchPatientPdaIntakeFromTable(
+  patientId: string,
+  branchId: string
+): Promise<{ data: PdaIntakeRecord | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("patient_pda_intake_records")
+    .select("id, status, responses, version, completed_at, patient_submitted_at, updated_at")
+    .eq("patient_id", patientId)
+    .eq("branch_id", branchId)
+    .maybeSingle()
+
+  if (error) {
+    if (isMissingTable(error.message)) {
+      return { data: null, error: "PDA intake is not available yet. Run the database migration." }
+    }
+    return { data: null, error: error.message }
+  }
+  if (!data) return { data: null, error: null }
+  return { data: mapRecord(data as Record<string, unknown>), error: null }
+}
+
+async function upsertPatientPdaIntakeViaTable(params: {
+  patientId: string
+  branchId: string
+  responses: PdaIntakeResponses
+  status?: PdaIntakeStatus
+}): Promise<{ data: { id: string; version: number; status: PdaIntakeStatus } | null; error: string | null }> {
+  const org = await fetchOrganization()
+  if (!org) return { data: null, error: "Organization not found." }
+
+  const supabase = createClient()
+  const status = params.status ?? "draft"
+  const now = new Date().toISOString()
+  const row = {
+    organization_id: org.id,
+    branch_id: params.branchId,
+    patient_id: params.patientId,
+    responses: params.responses,
+    status,
+    updated_at: now,
+    ...(status === "completed" ? { completed_at: now } : {}),
+  }
+
+  const { data, error } = await supabase
+    .from("patient_pda_intake_records")
+    .upsert(row, { onConflict: "patient_id,branch_id" })
+    .select("id, version, status")
+    .single()
+
+  if (error) {
+    if (isMissingTable(error.message)) {
+      return { data: null, error: "PDA intake is not available yet. Run the database migration." }
+    }
+    return { data: null, error: error.message }
+  }
+
+  return {
+    data: {
+      id: String(data.id),
+      version: Number(data.version ?? 1),
+      status: (data.status as PdaIntakeStatus) ?? status,
+    },
+    error: null,
+  }
 }
 
 function mapRecord(raw: Record<string, unknown> | null): PdaIntakeRecord | null {
@@ -44,7 +119,9 @@ export async function fetchPatientPdaIntake(
   })
   if (error) {
     if (isMissingRpc(error.message)) {
-      return { data: null, error: "PDA intake is not available yet. Run the database migration." }
+      const fallback = await fetchPatientPdaIntakeFromTable(patientId, branchId)
+      if (!fallback.error) return fallback
+      return { data: null, error: fallback.error ?? SCHEMA_RELOAD_HINT }
     }
     return { data: null, error: error.message }
   }
@@ -65,7 +142,14 @@ export async function upsertPatientPdaIntake(params: {
     p_responses: params.responses,
     p_status: params.status ?? "draft",
   })
-  if (error) return { data: null, error: error.message }
+  if (error) {
+    if (isMissingRpc(error.message)) {
+      const fallback = await upsertPatientPdaIntakeViaTable(params)
+      if (!fallback.error) return fallback
+      return { data: null, error: fallback.error ?? SCHEMA_RELOAD_HINT }
+    }
+    return { data: null, error: error.message }
+  }
   const row = data as { id?: string; version?: number; status?: PdaIntakeStatus }
   return {
     data: {
@@ -88,7 +172,12 @@ export async function createPdaIntakeSigningToken(params: {
     p_channel: params.channel ?? "link",
     p_ttl_hours: params.ttlHours ?? 72,
   })
-  if (error) return { token: null, expiresAt: null, error: error.message }
+  if (error) {
+    if (isMissingRpc(error.message)) {
+      return { token: null, expiresAt: null, error: SCHEMA_RELOAD_HINT }
+    }
+    return { token: null, expiresAt: null, error: error.message }
+  }
   const row = data as { token?: string; expires_at?: string }
   return {
     token: row.token ?? null,

@@ -1,11 +1,15 @@
 "use client"
 
-import Image from "next/image"
-import type { PatientRecord } from "@/lib/patients/patient-service"
 import type { MedicalHistoryRecord } from "@/lib/patients/medical-history-service"
+import type { PatientRecord } from "@/lib/patients/patient-service"
 import type { TreatmentTimelineEntry } from "@/lib/clinical/treatment-plan-service"
 import type { ToothFinding } from "@/lib/types/dental"
 import type { PdaIntakeResponses } from "@/lib/pda/pda-intake-schema"
+import { getSiteUrl } from "@/lib/site-url"
+import {
+  formatTreatmentDescriptionPlain,
+  printableTreatmentRows,
+} from "@/lib/odontogram/clinical-display"
 
 const PDA_PAGE_IMAGES = [
   "/forms/pda-dental-chart/page-1.png",
@@ -117,6 +121,11 @@ function peso(value: number | null | undefined): string {
   return value.toLocaleString("en-PH", { maximumFractionDigits: 0 })
 }
 
+function pdaAssetUrl(path: string): string {
+  if (typeof window !== "undefined") return `${window.location.origin}${path}`
+  return `${getSiteUrl()}${path}`
+}
+
 export function PdaDentalChartDocument({
   patient,
   medicalHistory,
@@ -158,21 +167,14 @@ export function PdaDentalChartDocument({
   const allergyYes = (key: keyof NonNullable<typeof m>["allergies"]) => m?.allergies[key] === "yes"
   const questionYes = (key: keyof NonNullable<typeof m>["questions"]) => m?.questions[key] === "yes"
   const activeFindings = findings.filter((finding) => finding.status === "active")
-  const rows = treatmentRows.slice(0, 28)
+  const rows = printableTreatmentRows(treatmentRows).slice(0, 28)
 
   return (
     <div id={printRootId} className="pda-print-root">
       {PDA_PAGE_IMAGES.map((src, index) => (
         <section className="pda-page" key={src} aria-label={`PDA Dental Chart page ${index + 1}`}>
-          <Image
-            src={src}
-            alt=""
-            fill
-            sizes="8.32in"
-            priority={index === 0}
-            unoptimized
-            className="pda-page-image"
-          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={pdaAssetUrl(src)} alt="" className="pda-page-image" />
 
           {index === 0 ? (
             <>
@@ -314,7 +316,7 @@ export function PdaDentalChartDocument({
                       {row.tooth_number ?? ""}
                     </span>
                     <span className="pda-field pda-small" style={{ left: "19.8%", top: `${top}%`, width: "26%" }}>
-                      {row.description}
+                      {formatTreatmentDescriptionPlain(row.description, row.tooth_number)}
                     </span>
                     <span className="pda-field pda-small" style={{ left: "48.4%", top: `${top}%`, width: "9%" }}>
                       {dentistName ?? ""}
@@ -329,97 +331,6 @@ export function PdaDentalChartDocument({
           ) : null}
         </section>
       ))}
-
-      <style jsx>{`
-        .pda-print-root {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 16px;
-          background: #f8fafc;
-          padding: 16px;
-        }
-
-        .pda-page {
-          position: relative;
-          width: min(100%, 8.32in);
-          aspect-ratio: 599 / 792;
-          overflow: hidden;
-          background: #fff;
-          box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12);
-        }
-
-        .pda-page-image {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: fill;
-          user-select: none;
-        }
-
-        .pda-field {
-          position: absolute;
-          z-index: 1;
-          min-height: 14px;
-          overflow: hidden;
-          white-space: nowrap;
-          color: #111827;
-          font-family: Arial, Helvetica, sans-serif;
-          font-size: clamp(8px, 1.4vw, 11px);
-          line-height: 1;
-          text-transform: uppercase;
-        }
-
-        .pda-check {
-          position: absolute;
-          z-index: 1;
-          color: #111827;
-          font-family: Arial, Helvetica, sans-serif;
-          font-size: clamp(8px, 1.45vw, 12px);
-          font-weight: 700;
-          line-height: 1;
-        }
-
-        .pda-tooth-code {
-          position: absolute;
-          z-index: 1;
-          min-width: 18px;
-          transform: translateX(-50%);
-          color: #111827;
-          font-family: Arial, Helvetica, sans-serif;
-          font-size: clamp(7px, 1.15vw, 9px);
-          font-weight: 700;
-          line-height: 1;
-          text-align: center;
-        }
-
-        .pda-small {
-          font-size: clamp(7px, 1.15vw, 9px);
-          text-transform: none;
-        }
-
-        @media print {
-          .pda-print-root {
-            display: block;
-            padding: 0;
-            background: #fff;
-          }
-
-          .pda-page {
-            width: 8.32in;
-            height: 11in;
-            box-shadow: none;
-            break-after: page;
-            page-break-after: always;
-          }
-
-          .pda-page:last-child {
-            break-after: auto;
-            page-break-after: auto;
-          }
-        }
-      `}</style>
     </div>
   )
 }

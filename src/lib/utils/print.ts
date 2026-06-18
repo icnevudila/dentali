@@ -56,6 +56,33 @@ export function openPrintableHtml(
 }
 
 /**
+ * Waits for all images inside a node to finish loading (or fail) before printing.
+ */
+export async function waitForImagesInElement(node: HTMLElement): Promise<void> {
+  const imgs = Array.from(node.querySelectorAll("img"))
+  await Promise.all(
+    imgs.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.complete) {
+            resolve()
+            return
+          }
+          img.onload = () => resolve()
+          img.onerror = () => resolve()
+        })
+    )
+  )
+}
+
+function absolutizeAssetUrls(html: string): string {
+  const origin = window.location.origin
+  return html
+    .replace(/src="\/([^"]+)"/g, `src="${origin}/$1"`)
+    .replace(/src='\/([^']+)'/g, `src='${origin}/$1'`)
+}
+
+/**
  * Captures a DOM element by ID, wraps it in a clean print page,
  * and opens it in a new tab. This is the go-to replacement for `window.print()`.
  */
@@ -150,12 +177,22 @@ export function printDomNode(node: HTMLElement, options: PrintOptions = {}): voi
     <button class="outline" onclick="window.close()">✕ Close</button>
   </div>
   <div id="print-content">
-    ${node.innerHTML}
+    ${absolutizeAssetUrls(node.innerHTML)}
   </div>
   ${autoPrint ? `<script>
     window.addEventListener('load', function() {
-      // Small delay to let fonts/images load
-      setTimeout(function() { window.print(); }, 400);
+      var imgs = document.querySelectorAll('img');
+      var pending = 0;
+      imgs.forEach(function(img) {
+        if (!img.complete) {
+          pending++;
+          img.onload = img.onerror = function() {
+            pending--;
+            if (pending === 0) setTimeout(function() { window.print(); }, 200);
+          };
+        }
+      });
+      if (pending === 0) setTimeout(function() { window.print(); }, 400);
     });
   </script>` : ''}
 </body>
