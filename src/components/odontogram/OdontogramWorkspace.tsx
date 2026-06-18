@@ -1,13 +1,13 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { AnatomicOdontogramChart } from "./AnatomicOdontogramChart"
 import { OdontogramQuickBar } from "./OdontogramQuickBar"
 import { ToothFinding } from "@/lib/types/dental"
 import { isPrimaryToothNumber } from "@/lib/odontogram/svg-assets"
 import { Button } from "@/components/ui/button"
 import { ToothDetailDrawer } from "./ToothDetailDrawer"
-import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
 import { MousePointerClick, ShieldAlert } from "lucide-react"
 
@@ -45,6 +45,10 @@ export function OdontogramWorkspace({
     onSelectedToothChange?.(selectedTooth)
   }, [selectedTooth, onSelectedToothChange])
 
+  const closeToothPanel = React.useCallback(() => {
+    setSelectedTooth(null)
+  }, [])
+
   React.useEffect(() => {
     if (!selectedTooth || readOnly || typeof window === "undefined") return
     if (window.innerWidth >= 1280) return
@@ -52,10 +56,16 @@ export function OdontogramWorkspace({
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
 
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeToothPanel()
+    }
+    window.addEventListener("keydown", onKey)
+
     return () => {
       document.body.style.overflow = previousOverflow
+      window.removeEventListener("keydown", onKey)
     }
-  }, [selectedTooth, readOnly])
+  }, [selectedTooth, readOnly, closeToothPanel])
 
   const handleToothClick = (number: number) => {
     if (readOnly) return
@@ -81,6 +91,49 @@ export function OdontogramWorkspace({
       }),
     [findings, showPrimary]
   )
+
+  const [portalReady, setPortalReady] = React.useState(false)
+  React.useEffect(() => {
+    setPortalReady(true)
+  }, [])
+
+  const toothDetailPanel =
+    selectedTooth && !readOnly ? (
+      <ToothDetailDrawer
+        selectedTooth={selectedTooth}
+        currentFinding={selectedFinding}
+        onClose={closeToothPanel}
+        onSaveFinding={onSaveFinding}
+        presentation="sheet"
+        data-testid="tooth-drawer"
+      />
+    ) : null
+
+  const mobileToothSheet =
+    portalReady &&
+    selectedTooth &&
+    !readOnly &&
+    typeof document !== "undefined"
+      ? createPortal(
+          <div className="fixed inset-0 z-[var(--z-modal)] flex flex-col justify-end xl:hidden">
+            <button
+              type="button"
+              className="absolute inset-0 bg-neutral-950/50"
+              aria-label="Close tooth detail"
+              onClick={closeToothPanel}
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Tooth ${selectedTooth} details`}
+              className="relative z-[calc(var(--z-modal)+1)] flex max-h-[min(88dvh,100%)] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl animate-in slide-in-from-bottom duration-200"
+            >
+              {toothDetailPanel}
+            </div>
+          </div>,
+          document.body
+        )
+      : null
 
   return (
     <div className="space-y-4" data-testid="odontogram-workspace">
@@ -147,34 +200,16 @@ export function OdontogramWorkspace({
           </div>
         </div>
 
-        <div className={cn(
-          "w-full shrink-0 xl:w-[380px] print:hidden",
-          selectedTooth && !readOnly
-            ? "fixed inset-0 z-50 flex items-end justify-center xl:relative xl:inset-auto xl:z-0 xl:flex xl:items-start xl:justify-start"
-            : "hidden xl:block"
-        )}>
+        <aside className="hidden w-full shrink-0 xl:block xl:w-[380px] print:hidden">
           {selectedTooth && !readOnly ? (
-            <>
-              <button
-                type="button"
-                className="absolute inset-0 bg-black/40 backdrop-blur-sm xl:hidden"
-                aria-label="Close tooth detail"
-                onClick={() => setSelectedTooth(null)}
-              />
-              <div className="relative z-[1] w-full xl:max-w-none">
-                <div className="max-h-[88dvh] overflow-hidden rounded-t-[1.75rem] xl:max-h-none xl:rounded-none">
-                  <ToothDetailDrawer
-                    selectedTooth={selectedTooth}
-                    currentFinding={selectedFinding}
-                    onClose={() => setSelectedTooth(null)}
-                    onSaveFinding={(f) => {
-                      onSaveFinding(f)
-                    }}
-                    data-testid="tooth-drawer"
-                  />
-                </div>
-              </div>
-            </>
+            <ToothDetailDrawer
+              selectedTooth={selectedTooth}
+              currentFinding={selectedFinding}
+              onClose={closeToothPanel}
+              onSaveFinding={onSaveFinding}
+              presentation="sidebar"
+              data-testid="tooth-drawer"
+            />
           ) : (
             <Card className="flex min-h-[420px] xl:min-h-[560px] flex-col border-neutral-200 shadow-sm bg-neutral-50/50 justify-center items-center text-center p-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-50 text-primary-600 mb-4 ring-8 ring-primary-50/50 animate-pulse">
@@ -194,8 +229,10 @@ export function OdontogramWorkspace({
               </p>
             </Card>
           )}
-        </div>
+        </aside>
       </div>
+
+      {mobileToothSheet}
     </div>
   )
 }

@@ -20,6 +20,7 @@ interface ToothDetailDrawerProps {
   currentFinding?: ToothFinding
   onClose: () => void
   onSaveFinding: (finding: Partial<ToothFinding>) => void
+  presentation?: "sidebar" | "sheet"
   "data-testid"?: string
 }
 
@@ -30,6 +31,7 @@ export function ToothDetailDrawer({
   currentFinding,
   onClose,
   onSaveFinding,
+  presentation = "sidebar",
   "data-testid": testId = "tooth-drawer",
 }: ToothDetailDrawerProps) {
   const [draft, setDraft] = React.useState<Partial<ToothFinding>>({})
@@ -131,10 +133,17 @@ export function ToothDetailDrawer({
     saveDraft(updated)
   }
 
+  const isSheet = presentation === "sheet"
+
   return (
     <Card
       data-testid={testId}
-      className="flex h-full max-h-full flex-col overflow-hidden border-neutral-200 shadow-lg xl:sticky xl:top-4"
+      className={cn(
+        "flex min-h-0 flex-col overflow-hidden",
+        isSheet
+          ? "h-full max-h-[inherit] rounded-none border-0 shadow-none"
+          : "border-neutral-200 shadow-lg xl:sticky xl:top-4 xl:max-h-[calc(100dvh-2rem)]"
+      )}
     >
       <CardHeader className="shrink-0 border-b border-neutral-200 bg-neutral-50 px-5 pb-4 pt-3 sm:px-6 sm:pt-6">
         <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-300 xl:hidden" aria-hidden />
