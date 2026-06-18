@@ -41,6 +41,7 @@ export default function StaffDetailPage() {
   const [roleId, setRoleId] = useState("")
   const [phoneNumber, setPhoneNumber] = useState("")
   const [specialization, setSpecialization] = useState("")
+  const [prcLicenseNumber, setPrcLicenseNumber] = useState("")
   const [profileSaving, setProfileSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -57,6 +58,7 @@ export default function StaffDetailPage() {
     setError(staffResult.error)
     setPhoneNumber(staffResult.data?.phone_number ?? "")
     setSpecialization(staffResult.data?.specialization ?? "")
+    setPrcLicenseNumber(staffResult.data?.prc_license_number ?? "")
     setBranches(branchList)
     setRoles(roleList)
     if (roleList.length > 0 && !roleId) setRoleId(roleList[0].id)
@@ -76,6 +78,7 @@ export default function StaffDetailPage() {
       profileId,
       phoneNumber,
       specialization,
+      prcLicenseNumber,
     })
     if (err) {
       toast.error(err)
@@ -221,6 +224,21 @@ export default function StaffDetailPage() {
                   onChange={(e) => setSpecialization(e.target.value)}
                   placeholder="General dentistry"
                 />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <label htmlFor="staff-prc" className="text-xs font-medium text-neutral-600">
+                  PRC license number
+                </label>
+                <Input
+                  id="staff-prc"
+                  value={prcLicenseNumber}
+                  onChange={(e) => setPrcLicenseNumber(e.target.value)}
+                  placeholder="e.g. PRC 1234567"
+                  autoComplete="off"
+                />
+                <p className="text-[11px] text-neutral-500">
+                  Used on doctor-signed prescriptions, medical certificates, abstracts, and discharge outputs.
+                </p>
               </div>
             </div>
             <Button onClick={() => void handleSaveProfile()} disabled={profileSaving}>

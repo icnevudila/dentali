@@ -52,11 +52,10 @@ import {
   parseDateKey,
   appointmentDateKey,
 } from "@/lib/appointments/week-calendar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Calendar, Plus, UserCheck, MapPin, Globe } from "lucide-react"
+import { Calendar, Plus, UserCheck, MapPin, Globe, X } from "lucide-react"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
@@ -580,15 +579,9 @@ function AppointmentsPageContent() {
             actions={
             <>
               <WorkflowSettingsLink />
-              <Button
-                className="gap-2"
-                onClick={() => {
-                  if (showBook) closeBookModal()
-                  else openBookModal()
-                }}
-              >
+              <Button className="gap-2" onClick={openBookModal}>
                 <Plus className="h-4 w-4" />
-                {showBook ? t("common.cancel", "Cancel") : t("appointments.book", "Book")}
+                {t("appointments.book", "Book")}
               </Button>
             </>
           }
@@ -737,271 +730,6 @@ function AppointmentsPageContent() {
           </div>
         ) : null}
 
-        {portalReady && showBook
-          ? createPortal(
-          <div className="fixed inset-0 z-[220] flex items-end justify-center bg-neutral-950/45 p-0 sm:items-center sm:p-4">
-            <button
-              type="button"
-              className="absolute inset-0 cursor-default"
-              aria-label={t("common.close", "Close")}
-              onClick={closeBookModal}
-            />
-          <Card className="relative z-[221] flex max-h-[min(92vh,100dvh)] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border-primary-200/60 pb-safe shadow-2xl sm:max-h-[92dvh] sm:rounded-2xl">
-            <CardHeader className="shrink-0 border-b border-neutral-100 px-4 pb-4 pt-3 sm:px-6 sm:pt-6">
-              <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-200 sm:hidden" />
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <CardTitle className="text-base">{t("appointments.newAppointment", "New Appointment")}</CardTitle>
-                  <p className="mt-1 text-xs text-neutral-500">
-                    {t(
-                      "appointments.bookModalHint",
-                      "Booking schedules a future arrival. Use Queue > Patient arrival if the patient is already in clinic."
-                    )}
-                  </p>
-                </div>
-                <Button type="button" variant="ghost" size="sm" onClick={closeBookModal}>
-                  {t("common.close", "Close")}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-6">
-              <form onSubmit={handleBook} className="grid gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2 space-y-2">
-                  <label className="text-xs font-medium">{t("appointments.searchPatient", "Search patient")}</label>
-                  {selectedPatientId ? (
-                    <div className="flex items-center justify-between p-2 border rounded-md bg-primary-50 border-primary-200">
-                      <span className="text-sm font-medium text-primary-900">
-                        {patientQuery || "Selected Patient"}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-2 text-xs text-primary-700 hover:bg-primary-100"
-                        onClick={() => {
-                          setSelectedPatientId("")
-                          setPatientQuery("")
-                        }}
-                      >
-                        Change
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <Input
-                        value={patientQuery}
-                        onChange={(e) => setPatientQuery(e.target.value)}
-                        placeholder={t("appointments.searchPatientPlaceholder", "Name or phone…")}
-                        required
-                      />
-                      <p className="text-[11px] text-neutral-500">
-                        {t("appointments.searchPatientHint", "Type at least 2 characters, then pick a patient from the list.")}
-                      </p>
-                      {patients.length > 0 && (
-                        <ul className="border rounded-md divide-y max-h-32 overflow-y-auto text-sm mt-1">
-                          {patients.map((p) => (
-                            <li key={p.id}>
-                              <button
-                                type="button"
-                                className="w-full text-left px-3 py-2 hover:bg-neutral-50"
-                                onClick={() => {
-                                  setSelectedPatientId(p.id)
-                                  setPatientQuery(`${p.first_name} ${p.last_name} — ${p.phone || ""}`)
-                                  setPatients([])
-                                }}
-                              >
-                                <span className="font-medium">{p.first_name} {p.last_name}</span>
-                                {p.phone && <span className="text-neutral-500 ml-1">— {p.phone}</span>}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">Dentist</label>
-                  <select
-                    value={selectedProviderId}
-                    onChange={(e) => setSelectedProviderId(e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm"
-                    required
-                  >
-                    {providers.length === 0 ? (
-                      <option value="">No dentists for this branch</option>
-                    ) : (
-                      providers.map((p) => (
-                        <option key={p.profile_id} value={p.profile_id}>
-                          {p.full_name ?? p.email ?? "Dentist"}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                  {providers.length === 0 && (
-                    <div className="mt-1 space-y-1">
-                      <p className="text-[11px] text-amber-700 font-medium">
-                        No doctors assigned to this branch yet.
-                      </p>
-                      <Button type="button" variant="outline" className="text-[10px] h-7 px-2" asChild>
-                        <Link href="/settings/staff">
-                          Assign dentist in staff settings
-                        </Link>
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">Date</label>
-                  <Input
-                    type="date"
-                    required
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                  />
-                </div>
-                <div className="sm:col-span-2 space-y-2">
-                  <label className="text-xs font-medium">Available slots</label>
-                  {slotsLoading ? (
-                    <p className="text-xs text-neutral-500">Loading slots…</p>
-                  ) : !date || !selectedProviderId ? (
-                    <p className="text-xs text-neutral-500">Select dentist and date.</p>
-                  ) : slots.length === 0 ? (
-                    <div className="space-y-2">
-                      <p className="text-xs text-amber-700">No slots — dentist may be closed this day or has no active clinic hours.</p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="text-xs h-8 gap-1.5 border-amber-300 hover:bg-amber-50"
-                        onClick={async () => {
-                          setSlotsLoading(true)
-                          setError(null)
-                          try {
-                            const supabase = (await import("@/lib/supabase/client")).createClient()
-                            // Triggers branch clinic hour provisioning & ensures provider defaults are set
-                            const { error: err } = await supabase.rpc("ensure_provider_availability_defaults", {
-                              p_branch_id: activeBranch!.id,
-                              p_provider_id: selectedProviderId
-                            })
-                            if (err) throw err
-                            
-                            // Re-fetch slots
-                            const { data: newSlots } = await fetchPreparedAppointmentSlots({
-                              branchId: activeBranch!.id,
-                              providerId: selectedProviderId,
-                              date,
-                            })
-                            setSlots(newSlots)
-                            setTime((prev) => pickDefaultSlotTime(newSlots, prev, undefined, date))
-                            notify.success(t("appointments.slotsConfigured", "Working hours configured."))
-                          } catch (err: unknown) {
-                            notify.error(
-                              err instanceof Error ? err.message : "Failed to configure slots"
-                            )
-                          } finally {
-                            setSlotsLoading(false)
-                          }
-                        }}
-                      >
-                        ⚙️ Configure Working Hours & Slots Automatically
-                      </Button>
-                    </div>
-                  ) : (
-                    <AppointmentSlotButtons
-                      slots={slots}
-                      selectedTime={time}
-                      onSelect={setTime}
-                      date={date}
-                      loading={slotsLoading}
-                      emptyMessage={t(
-                        "appointments.noSlotsBook",
-                        "No open slots — configure working hours or pick another day."
-                      )}
-                    />
-                  )}
-                </div>
-                <div className="sm:col-span-2 space-y-1.5">
-                  <label className="text-xs font-medium">Purpose</label>
-                  <select
-                    value={purposePreset}
-                    onChange={(e) => {
-                      const val = e.target.value as AppointmentPurposePreset
-                      setPurposePreset(val)
-                      if (val !== "Other") setPurposeOther("")
-                    }}
-                    className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    {APPOINTMENT_PURPOSE_PRESETS.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                    <option value="Other">Other</option>
-                  </select>
-                  {purposePreset === "Other" ? (
-                    <Input
-                      required
-                      placeholder="Please specify purpose"
-                      value={purposeOther}
-                      onChange={(e) => setPurposeOther(e.target.value)}
-                      className="mt-1"
-                    />
-                  ) : null}
-                </div>
-                {bookingBillingGate?.has_billing_gap ? (
-                  <div className="sm:col-span-2 space-y-2">
-                    <PatientBillingGateBanner
-                      gate={bookingBillingGate}
-                      patientId={selectedPatientId}
-                      branchId={activeBranch?.id}
-                      onBackfill={() => {
-                        getPatientBillingGate(selectedPatientId).then(({ data }) => setBookingBillingGate(data))
-                      }}
-                    />
-                    <label className="flex items-start gap-2 text-xs text-amber-900">
-                      <input
-                        type="checkbox"
-                        checked={forceBillingOverride}
-                        onChange={(e) => setForceBillingOverride(e.target.checked)}
-                        className="mt-0.5"
-                      />
-                      {t(
-                        "billing.gateOverrideBook",
-                        "Override billing block for this booking (logged in audit)"
-                      )}
-                    </label>
-                  </div>
-                ) : null}
-                <div className="sticky bottom-0 -mx-4 mt-2 flex flex-col gap-2 border-t border-neutral-100 bg-white px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:static sm:mx-0 sm:flex-row sm:flex-wrap sm:border-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-2">
-                  <Button
-                    type="submit"
-                    className="w-full sm:w-auto"
-                    disabled={
-                      booking ||
-                      !selectedPatientId ||
-                      !date ||
-                      !time ||
-                      !resolvedPurpose ||
-                      slots.length === 0 ||
-                      (bookingBillingGate?.has_billing_gap && !forceBillingOverride)
-                    }
-                  >
-                    {booking
-                      ? t("appointments.booking", "Booking…")
-                      : t("appointments.confirmBooking", "Confirm Booking")}
-                  </Button>
-                  <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={closeBookModal}>
-                    {t("common.cancel", "Cancel")}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-          </div>,
-          document.body
-        )
-          : null}
-
         {loading ? (
           <PageLoadingSkeleton variant="block" />
         ) : (
@@ -1047,6 +775,276 @@ function AppointmentsPageContent() {
         )}
         </ContentPanel>
       </DirectionalTransition>
+      {portalReady && showBook
+        ? createPortal(
+            <div className="fixed inset-0 z-[200] flex items-end justify-center p-0 sm:items-center sm:p-4">
+              <button
+                type="button"
+                className="absolute inset-0 bg-black/40"
+                aria-label={t("common.close", "Close")}
+                onClick={closeBookModal}
+              />
+              <div
+                role="dialog"
+                aria-modal="true"
+                className="relative z-[201] flex max-h-[min(92vh,100dvh)] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-neutral-200 bg-white shadow-xl animate-fade-rise sm:max-h-[90vh] sm:rounded-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="shrink-0 border-b border-neutral-100 px-4 pb-4 pt-3 sm:px-6 sm:pt-4">
+                  <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-200 sm:hidden" />
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-base font-semibold">
+                        {t("appointments.newAppointment", "New Appointment")}
+                      </h2>
+                      <p className="mt-1 text-xs text-neutral-500">
+                        {t(
+                          "appointments.bookModalHint",
+                          "Booking schedules a future arrival. Use Queue > Patient arrival if the patient is already in clinic."
+                        )}
+                      </p>
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={closeBookModal}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <form onSubmit={handleBook} className="flex flex-1 flex-col overflow-hidden">
+                  <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="sm:col-span-2 space-y-2">
+                        <label className="text-xs font-medium">{t("appointments.searchPatient", "Search patient")}</label>
+                        {selectedPatientId ? (
+                          <div className="flex items-center justify-between rounded-md border border-primary-200 bg-primary-50 p-2">
+                            <span className="text-sm font-medium text-primary-900">
+                              {patientQuery || "Selected Patient"}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs text-primary-700 hover:bg-primary-100"
+                              onClick={() => {
+                                setSelectedPatientId("")
+                                setPatientQuery("")
+                              }}
+                            >
+                              Change
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <Input
+                              value={patientQuery}
+                              onChange={(e) => setPatientQuery(e.target.value)}
+                              placeholder={t("appointments.searchPatientPlaceholder", "Name or phone…")}
+                              required
+                            />
+                            <p className="text-[11px] text-neutral-500">
+                              {t(
+                                "appointments.searchPatientHint",
+                                "Type at least 2 characters, then pick a patient from the list."
+                              )}
+                            </p>
+                            {patients.length > 0 ? (
+                              <ul className="mt-1 max-h-32 divide-y overflow-y-auto rounded-md border text-sm">
+                                {patients.map((p) => (
+                                  <li key={p.id}>
+                                    <button
+                                      type="button"
+                                      className="w-full px-3 py-2 text-left hover:bg-neutral-50"
+                                      onClick={() => {
+                                        setSelectedPatientId(p.id)
+                                        setPatientQuery(`${p.first_name} ${p.last_name} — ${p.phone || ""}`)
+                                        setPatients([])
+                                      }}
+                                    >
+                                      <span className="font-medium">
+                                        {p.first_name} {p.last_name}
+                                      </span>
+                                      {p.phone ? <span className="ml-1 text-neutral-500">— {p.phone}</span> : null}
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : null}
+                          </>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium">Dentist</label>
+                        <select
+                          value={selectedProviderId}
+                          onChange={(e) => setSelectedProviderId(e.target.value)}
+                          className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm"
+                          required
+                        >
+                          {providers.length === 0 ? (
+                            <option value="">No dentists for this branch</option>
+                          ) : (
+                            providers.map((p) => (
+                              <option key={p.profile_id} value={p.profile_id}>
+                                {p.full_name ?? p.email ?? "Dentist"}
+                              </option>
+                            ))
+                          )}
+                        </select>
+                        {providers.length === 0 ? (
+                          <div className="mt-1 space-y-1">
+                            <p className="text-[11px] font-medium text-amber-700">
+                              No doctors assigned to this branch yet.
+                            </p>
+                            <Button type="button" variant="outline" className="h-7 px-2 text-[10px]" asChild>
+                              <Link href="/settings/staff">Assign dentist in staff settings</Link>
+                            </Button>
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium">Date</label>
+                        <Input type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
+                      </div>
+                      <div className="sm:col-span-2 space-y-2">
+                        <label className="text-xs font-medium">Available slots</label>
+                        {slotsLoading ? (
+                          <p className="text-xs text-neutral-500">Loading slots…</p>
+                        ) : !date || !selectedProviderId ? (
+                          <p className="text-xs text-neutral-500">Select dentist and date.</p>
+                        ) : slots.length === 0 ? (
+                          <div className="space-y-2">
+                            <p className="text-xs text-amber-700">
+                              No slots — dentist may be closed this day or has no active clinic hours.
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-8 gap-1.5 border-amber-300 text-xs hover:bg-amber-50"
+                              onClick={async () => {
+                                setSlotsLoading(true)
+                                setError(null)
+                                try {
+                                  const supabase = (await import("@/lib/supabase/client")).createClient()
+                                  const { error: err } = await supabase.rpc("ensure_provider_availability_defaults", {
+                                    p_branch_id: activeBranch!.id,
+                                    p_provider_id: selectedProviderId,
+                                  })
+                                  if (err) throw err
+                                  const { data: newSlots } = await fetchPreparedAppointmentSlots({
+                                    branchId: activeBranch!.id,
+                                    providerId: selectedProviderId,
+                                    date,
+                                  })
+                                  setSlots(newSlots)
+                                  setTime((prev) => pickDefaultSlotTime(newSlots, prev, undefined, date))
+                                  notify.success(t("appointments.slotsConfigured", "Working hours configured."))
+                                } catch (err: unknown) {
+                                  notify.error(err instanceof Error ? err.message : "Failed to configure slots")
+                                } finally {
+                                  setSlotsLoading(false)
+                                }
+                              }}
+                            >
+                              ⚙️ Configure Working Hours & Slots Automatically
+                            </Button>
+                          </div>
+                        ) : (
+                          <AppointmentSlotButtons
+                            slots={slots}
+                            selectedTime={time}
+                            onSelect={setTime}
+                            date={date}
+                            loading={slotsLoading}
+                            emptyMessage={t(
+                              "appointments.noSlotsBook",
+                              "No open slots — configure working hours or pick another day."
+                            )}
+                          />
+                        )}
+                      </div>
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <label className="text-xs font-medium">Purpose</label>
+                        <select
+                          value={purposePreset}
+                          onChange={(e) => {
+                            const val = e.target.value as AppointmentPurposePreset
+                            setPurposePreset(val)
+                            if (val !== "Other") setPurposeOther("")
+                          }}
+                          className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        >
+                          {APPOINTMENT_PURPOSE_PRESETS.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                          <option value="Other">Other</option>
+                        </select>
+                        {purposePreset === "Other" ? (
+                          <Input
+                            required
+                            placeholder="Please specify purpose"
+                            value={purposeOther}
+                            onChange={(e) => setPurposeOther(e.target.value)}
+                            className="mt-1"
+                          />
+                        ) : null}
+                      </div>
+                      {bookingBillingGate?.has_billing_gap ? (
+                        <div className="sm:col-span-2 space-y-2">
+                          <PatientBillingGateBanner
+                            gate={bookingBillingGate}
+                            patientId={selectedPatientId}
+                            branchId={activeBranch?.id}
+                            onBackfill={() => {
+                              getPatientBillingGate(selectedPatientId).then(({ data }) => setBookingBillingGate(data))
+                            }}
+                          />
+                          <label className="flex items-start gap-2 text-xs text-amber-900">
+                            <input
+                              type="checkbox"
+                              checked={forceBillingOverride}
+                              onChange={(e) => setForceBillingOverride(e.target.checked)}
+                              className="mt-0.5"
+                            />
+                            {t(
+                              "billing.gateOverrideBook",
+                              "Override billing block for this booking (logged in audit)"
+                            )}
+                          </label>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="shrink-0 border-t border-neutral-100 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Button
+                        type="submit"
+                        className="w-full sm:w-auto"
+                        disabled={
+                          booking ||
+                          !selectedPatientId ||
+                          !date ||
+                          !time ||
+                          !resolvedPurpose ||
+                          slots.length === 0 ||
+                          (bookingBillingGate?.has_billing_gap && !forceBillingOverride)
+                        }
+                      >
+                        {booking
+                          ? t("appointments.booking", "Booking…")
+                          : t("appointments.confirmBooking", "Confirm Booking")}
+                      </Button>
+                      <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={closeBookModal}>
+                        {t("common.cancel", "Cancel")}
+                      </Button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </PermissionGate>
   )
 }

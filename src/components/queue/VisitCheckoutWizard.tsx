@@ -47,15 +47,9 @@ export function VisitCheckoutWizard({
   encounterId,
 }: VisitCheckoutWizardProps) {
   const { t } = useLocale()
-  const [mounted, setMounted] = React.useState(false)
   const [step, setStep] = React.useState(1)
   const [closingEncounter, setClosingEncounter] = React.useState(false)
   const [encounterClosed, setEncounterClosed] = React.useState(false)
-
-  React.useEffect(() => {
-    const id = window.setTimeout(() => setMounted(true), 0)
-    return () => window.clearTimeout(id)
-  }, [])
 
   React.useEffect(() => {
     if (!open) return
@@ -88,7 +82,7 @@ export function VisitCheckoutWizard({
     onOpenChange(false)
   }
 
-  if (!open || !mounted) return null
+  if (!open || typeof document === "undefined") return null
 
   const noteHref = `/patients/${patientId}/notes${encounterId ? `?encounter=${encounterId}` : ""}`
   const billingHref = billingGate?.primary_open_invoice_id
@@ -101,36 +95,39 @@ export function VisitCheckoutWizard({
 
   const modal = (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-[200] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
       onClick={() => onOpenChange(false)}
     >
       <div
-        className="w-full max-w-md rounded-xl bg-white shadow-xl animate-in fade-in zoom-in-95 duration-200"
+        className="flex max-h-[min(92vh,100dvh)] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-white shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[90vh] sm:rounded-xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="visit-checkout-title"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-neutral-100 px-6 py-4">
-          <div>
-            <h2 id="visit-checkout-title" className="text-lg font-semibold text-neutral-900">
-              {t("queue.checkoutTitle", "Visit checkout")}
-            </h2>
-            <p className="text-sm text-neutral-500 mt-0.5">
-              {patientName} — {t("queue.visitComplete", "visit marked complete")}
-            </p>
+        <div className="shrink-0 border-b border-neutral-100 px-4 pb-4 pt-3 sm:px-6 sm:pt-4">
+          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-200 sm:hidden" />
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 id="visit-checkout-title" className="text-lg font-semibold text-neutral-900">
+                {t("queue.checkoutTitle", "Visit checkout")}
+              </h2>
+              <p className="mt-0.5 text-sm text-neutral-500">
+                {patientName} - {t("queue.visitComplete", "visit marked complete")}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100"
+              aria-label={t("common.close", "Close")}
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100"
-            aria-label={t("common.close", "Close")}
-          >
-            <X className="h-4 w-4" />
-          </button>
         </div>
 
-        <div className="flex items-center gap-1 px-6 pt-4">
+        <div className="shrink-0 flex items-center gap-1 px-4 pt-4 sm:px-6">
           {visibleSteps.map((s, i) => {
             const Icon = s.icon
             const active = step === s.id
@@ -165,7 +162,7 @@ export function VisitCheckoutWizard({
           })}
         </div>
 
-        <div className="px-6 py-5 space-y-4 min-h-[140px]">
+        <div className="min-h-[140px] flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-6">
           <div className="rounded-lg border border-amber-200/80 bg-amber-50/70 px-3 py-2 text-xs leading-5 text-amber-900">
             <div className="flex gap-2">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
@@ -281,7 +278,7 @@ export function VisitCheckoutWizard({
           ) : null}
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-neutral-100 px-6 py-4">
+        <div className="shrink-0 flex items-center justify-between gap-2 border-t border-neutral-100 bg-white px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
           <Button
             type="button"
             variant="ghost"

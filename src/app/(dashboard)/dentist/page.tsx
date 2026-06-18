@@ -389,6 +389,15 @@ function DentistPageContent() {
       active: filter === "waiting" || filter === "queue_waiting",
       onClick: () => handleFilterAndScroll("waiting"),
     },
+    {
+      label: t("dentist.metricServedToday", "Served today"),
+      value: loading && hasActiveBranch ? "-" : dayStats.served,
+      hint: t("dentist.metricServedTodayHint", "Completed visits today"),
+      icon: UserCheck,
+      variant: dayStats.served > 0 ? ("success" as const) : undefined,
+      active: filter === "served",
+      onClick: () => handleFilterAndScroll("served"),
+    },
   ]
 
   return (
@@ -534,7 +543,7 @@ function DentistPageContent() {
             </div>
           ) : null}
 
-          <MetricStrip items={metricItems} className="lg:grid-cols-3" />
+          <MetricStrip items={metricItems} className="lg:grid-cols-4" />
 
           <div
             ref={queueListRef}

@@ -36,6 +36,7 @@ export function DentistFilterBar({
     { value: "in_chair", label: t("dentist.filterInChair", "In chair") },
     { value: "now_serving", label: t("dentist.filterServing", "Called") },
     { value: "waiting", label: t("dentist.filterWaiting", "Waiting") },
+    { value: "served", label: t("dentist.filterServed", "Completed today") },
   ]
 
   const showProviderFilter = providers.length > 0 && onProviderChange

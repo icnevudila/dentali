@@ -24,7 +24,7 @@ import { useRouteParams } from "@/hooks/use-route-params"
 import { useAuth } from "@/hooks/use-auth"
 import { useBranch } from "@/hooks/use-branch"
 import { usePermission } from "@/hooks/use-permission"
-import { fetchOrganization } from "@/lib/auth/auth-service"
+import { fetchOrganization, fetchStaffProfile } from "@/lib/auth/auth-service"
 import { getPatient } from "@/lib/patients/patient-service"
 import { getLatestMedicalHistory } from "@/lib/patients/medical-history-service"
 import { MedicalAlertBanner } from "@/components/patients/MedicalAlertBanner"
@@ -197,7 +197,7 @@ export default function PrescriptionsPage() {
   const handlePrint = async (rx: PrescriptionRecord) => {
     const full = rx.items ? rx : (await getPrescription(rx.id)).data
     if (!full?.items?.length) return
-    const org = await fetchOrganization()
+    const [org, staff] = await Promise.all([fetchOrganization(), fetchStaffProfile()])
     const age = patientDob
       ? String(new Date().getFullYear() - new Date(patientDob).getFullYear())
       : null
@@ -211,6 +211,7 @@ export default function PrescriptionsPage() {
       clinicAddress: org?.address,
       clinicPhone: org?.contact_number,
       branchName: activeBranch?.name,
+      prescriberLicenseNumber: staff?.prc_license_number,
       allergies: medicalHistory?.allergies ?? [],
       medications: medicalHistory?.medications ?? [],
     })

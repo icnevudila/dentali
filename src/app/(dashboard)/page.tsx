@@ -19,7 +19,6 @@ import { AttentionPanel } from "@/components/dashboard/AttentionPanel"
 import { DailyCloseoutCard } from "@/components/dashboard/DailyCloseoutCard"
 import { DashboardOpsSummary } from "@/components/dashboard/DashboardOpsSummary"
 import { DashboardExtendedReports } from "@/components/dashboard/DashboardExtendedReports"
-import { OwnerMorningDashboard } from "@/components/dashboard/OwnerMorningDashboard"
 import { AutomationInbox } from "@/components/dashboard/AutomationInbox"
 import { useReportsSummary } from "@/hooks/use-reports-summary"
 import {
@@ -92,14 +91,6 @@ export default function DashboardPage() {
         ) : null}
 
         {activeBranch ? (
-          <OwnerMorningDashboard
-            stats={stats}
-            reportsSummary={reportsSummary}
-            loading={loading || reportsLoading}
-          />
-        ) : null}
-
-        {activeBranch ? (
           <div className="flex flex-wrap items-center gap-2 animate-fade-rise">
             <Badge variant="info" className="gap-1 font-normal">
               <MapPin className="h-3 w-3" aria-hidden />
@@ -138,7 +129,7 @@ export default function DashboardPage() {
         ) : null}
 
         {activeBranch ? (
-          <div className="grid w-full min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(260px,300px)] xl:items-start">
+          <div className="grid w-full min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] xl:items-start">
             <div className="min-w-0 space-y-6">
               <SectionEyebrow icon={BarChart3}>
                 {t("dashboard.sectionInsights", "Branch trends")}
@@ -173,8 +164,14 @@ export default function DashboardPage() {
                   ).replace("{days}", chartPeriodLabel),
                 }}
               />
+              <DashboardExtendedReports
+                branchId={activeBranch.id}
+                periodDays={chartPeriodDays}
+                reportsSummary={reportsSummary}
+                summaryLoading={reportsLoading}
+              />
             </div>
-            <div className="min-w-0 space-y-4 xl:sticky xl:top-6">
+            <div className="min-w-0 space-y-4">
             <AutomationInbox
               stats={stats}
               reportsSummary={reportsSummary}
@@ -215,15 +212,6 @@ export default function DashboardPage() {
             <DailyCloseoutCard stats={stats} interactive />
             </div>
           </div>
-        ) : null}
-
-        {activeBranch ? (
-          <DashboardExtendedReports
-            branchId={activeBranch.id}
-            periodDays={chartPeriodDays}
-            reportsSummary={reportsSummary}
-            summaryLoading={reportsLoading}
-          />
         ) : null}
 
       </ContentPanel>

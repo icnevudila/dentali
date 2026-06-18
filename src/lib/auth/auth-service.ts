@@ -177,7 +177,7 @@ export async function completeOnboarding(params: {
     return { error: bootstrap.error ?? "Setup failed" }
   }
 
-  let org = await fetchOrganization()
+  const org = await fetchOrganization()
   if (!org) return { error: "Organization not found. Contact support." }
 
   await updateOrganization(org.id, {
@@ -246,6 +246,7 @@ export async function fetchStaffProfile(): Promise<{
   full_name: string | null
   email: string | null
   role_name: string | null
+  prc_license_number: string | null
 } | null> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -259,7 +260,7 @@ export async function fetchStaffProfile(): Promise<{
 
   const { data: staff } = await supabase
     .from("staff_profiles")
-    .select("is_active")
+    .select("is_active, prc_license_number")
     .eq("profile_id", user.id)
     .maybeSingle()
 
@@ -279,6 +280,7 @@ export async function fetchStaffProfile(): Promise<{
     full_name: profile?.full_name ?? null,
     email: profile?.email ?? user.email ?? null,
     role_name: roleName ?? null,
+    prc_license_number: staff?.prc_license_number?.trim() || null,
   }
 }
 

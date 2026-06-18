@@ -53,16 +53,17 @@ export function OpenEncounterCheckInDialog({
       }}
     >
       <Card
-        className="w-full max-w-md border-amber-200 bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:rounded-xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
+        className="flex max-h-[min(92vh,100dvh)] w-full max-w-md flex-col overflow-hidden rounded-t-3xl border-amber-200 bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-h-[90vh] sm:rounded-xl sm:slide-in-from-bottom-0 sm:zoom-in-95"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="open-encounter-title"
       >
-        <CardHeader className="pb-2 border-b">
+        <CardHeader className="shrink-0 border-b pb-2 pt-3">
+          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-200 sm:hidden" />
           <CardTitle
             id="open-encounter-title"
-            className="text-base flex items-center justify-between gap-2"
+            className="flex items-center justify-between gap-2 text-base"
           >
             <span className="flex items-center gap-2 text-amber-900">
               <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
@@ -73,7 +74,7 @@ export function OpenEncounterCheckInDialog({
             </Button>
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-4 space-y-4">
+        <CardContent className="flex-1 space-y-4 overflow-y-auto pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <p className="text-sm text-neutral-700">
             {patientName
               ? t(
@@ -91,10 +92,10 @@ export function OpenEncounterCheckInDialog({
                   .replace("{date}", prompt.openedLabel)}
           </p>
           {prompt.isPriorDay ? (
-            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-md px-3 py-2">
+            <p className="rounded-md border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-800">
               {t(
                 "queue.openEncounterPriorDay",
-                "This visit is from a previous day — choose whether to continue it or start fresh."
+                "This visit is from a previous day - choose whether to continue it or start fresh."
               )}
             </p>
           ) : null}

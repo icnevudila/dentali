@@ -29,6 +29,7 @@ export function buildPrescriptionPrintHtml(params: {
   clinicAddress?: string | null
   clinicPhone?: string | null
   branchName?: string | null
+  prescriberLicenseNumber?: string | null
   allergies?: string[]
   medications?: string[]
 }): string {
@@ -42,6 +43,7 @@ export function buildPrescriptionPrintHtml(params: {
     clinicAddress,
     clinicPhone,
     branchName,
+    prescriberLicenseNumber,
     allergies = [],
     medications = [],
   } = params
@@ -119,6 +121,7 @@ export function buildPrescriptionPrintHtml(params: {
       margin-top: 48px; display: flex; justify-content: flex-end;
     }
     .sig-line { width: 240px; border-top: 1px solid var(--primary); padding-top: 8px; text-align: center; font-size: 12px; }
+    .sig-sub { margin-top: 3px; font-size: 10px; color: var(--muted); }
     .footer { margin-top: 40px; font-size: 10px; color: var(--muted); text-align: center; }
     .void-stamp {
       position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-18deg);
@@ -172,7 +175,7 @@ export function buildPrescriptionPrintHtml(params: {
   <div class="signature">
     <div class="sig-line">
       ${escapeHtml(prescription.prescriber_name ?? "Prescribing dentist")}<br/>
-      <span class="muted">License / Signature</span>
+      <span class="sig-sub">${prescriberLicenseNumber ? `PRC Lic. No. ${escapeHtml(prescriberLicenseNumber)}` : "License / Signature"}</span>
     </div>
   </div>
   <div class="footer">This prescription is valid for dispensing at a licensed pharmacy. Keep out of reach of children.</div>

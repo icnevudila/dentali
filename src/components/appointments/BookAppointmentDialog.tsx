@@ -32,7 +32,6 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
   const { activeBranch } = useBranch()
   const { t } = useLocale()
   const [open, setOpen] = React.useState(false)
-  const [mounted, setMounted] = React.useState(false)
   const [date, setDate] = React.useState("")
   const [time, setTime] = React.useState("")
   const [purpose, setPurpose] = React.useState("")
@@ -43,10 +42,6 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
   const [billingGate, setBillingGate] = React.useState<PatientBillingGate | null>(null)
   const [forceBillingOverride, setForceBillingOverride] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
-
-  React.useEffect(() => {
-    setMounted(true)
-  }, [])
 
   React.useEffect(() => {
     if (!open) return
@@ -69,15 +64,16 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
       }
     })
     getPatientBillingGate(patientId).then(({ data }) => setBillingGate(data))
-    setForceBillingOverride(false)
+    const id = window.setTimeout(() => setForceBillingOverride(false), 0)
+    return () => window.clearTimeout(id)
   }, [open, activeBranch, patientId])
 
   React.useEffect(() => {
     if (!open || !activeBranch || !providerId || !date) {
-      setSlots([])
-      return
+      const id = window.setTimeout(() => setSlots([]), 0)
+      return () => window.clearTimeout(id)
     }
-    setSlotsLoading(true)
+    const loadingId = window.setTimeout(() => setSlotsLoading(true), 0)
     void fetchPreparedAppointmentSlots({
       branchId: activeBranch.id,
       providerId,
@@ -88,10 +84,10 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
       if (slotError) notify.error(slotError)
       setTime((prev) => pickDefaultSlotTime(data, prev, undefined, date))
     })
+    return () => window.clearTimeout(loadingId)
   }, [open, activeBranch, providerId, date])
 
-  const billingBlocked =
-    billingGate?.has_billing_gap === true && !forceBillingOverride
+  const billingBlocked = billingGate?.has_billing_gap === true && !forceBillingOverride
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -136,7 +132,7 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
   }
 
   const dialog = open ? (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[200] flex items-end justify-center p-0 sm:items-center sm:p-4">
       <button
         type="button"
         className="absolute inset-0 bg-black/40"
@@ -146,91 +142,98 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
       <div
         role="dialog"
         aria-modal="true"
-        className="relative z-[201] w-full max-w-lg rounded-xl border border-neutral-200 bg-white shadow-xl animate-fade-rise max-h-[90vh] overflow-y-auto"
+        className="relative z-[201] flex max-h-[min(92vh,100dvh)] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-neutral-200 bg-white shadow-xl animate-fade-rise sm:max-h-[90vh] sm:rounded-xl"
       >
-        <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
-          <h2 className="text-base font-semibold">{t("appointments.bookTitle", "Book appointment")}</h2>
-          <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOpen(false)}>
-            <X className="h-4 w-4" />
-          </Button>
+        <div className="shrink-0 border-b border-neutral-100 px-4 pb-4 pt-3 sm:pt-4">
+          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-200 sm:hidden" />
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-base font-semibold">{t("appointments.bookTitle", "Book appointment")}</h2>
+            <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOpen(false)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4 p-4">
-          {billingGate?.has_billing_gap ? (
-            <PatientBillingGateBanner gate={billingGate} patientId={patientId} />
-          ) : null}
-          {billingGate?.has_billing_gap ? (
-            <label className="flex items-start gap-2 text-xs text-amber-900">
-              <input
-                type="checkbox"
-                checked={forceBillingOverride}
-                onChange={(e) => setForceBillingOverride(e.target.checked)}
-                className="mt-0.5"
-              />
-              {t(
-                "billing.gateOverrideBook",
-                "Override billing block for this booking (logged in audit)"
-              )}
-            </label>
-          ) : null}
-          <div className="space-y-1">
-            <label className="text-xs font-medium">{t("appointments.provider", "Provider")}</label>
-            <select
-              value={providerId}
-              onChange={(e) => setProviderId(e.target.value)}
-              className="h-10 w-full rounded-md border border-neutral-300 px-3 text-sm"
-              required
-            >
-              {providers.map((p) => (
-                <option key={p.profile_id} value={p.profile_id}>
-                  {p.full_name ?? p.profile_id}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium">{t("appointments.date", "Date")}</label>
-            <Input type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-medium">{t("appointments.availableSlots", "Available Slots")}</label>
-            {slotsLoading ? (
-              <p className="text-xs text-neutral-500">{t("appointments.loadingSlots", "Loading slots…")}</p>
-            ) : !date || !providerId ? (
-              <p className="text-xs text-neutral-500">{t("appointments.selectDentistAndDate", "Select dentist and date.")}</p>
-            ) : (
-              <AppointmentSlotButtons
-                slots={slots}
-                selectedTime={time}
-                onSelect={setTime}
-                date={date}
-                loading={slotsLoading}
-                emptyMessage={t("appointments.noSlotsBook", "No open slots — pick another day.")}
-              />
-            )}
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium">{t("appointments.purpose", "Purpose")}</label>
-            <Input
-              value={purpose}
-              onChange={(e) => setPurpose(e.target.value)}
-              placeholder={t("appointments.purposePlaceholder", "Consultation, cleaning…")}
-              required
-            />
-          </div>
-          <div className="flex gap-2 pt-1">
-            <Button type="submit" disabled={saving || !time || billingBlocked}>
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t("appointments.booking", "Booking…")}
-                </>
+        <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex-1 space-y-4 overflow-y-auto p-4 pb-6">
+            {billingGate?.has_billing_gap ? (
+              <PatientBillingGateBanner gate={billingGate} patientId={patientId} />
+            ) : null}
+            {billingGate?.has_billing_gap ? (
+              <label className="flex items-start gap-2 text-xs text-amber-900">
+                <input
+                  type="checkbox"
+                  checked={forceBillingOverride}
+                  onChange={(e) => setForceBillingOverride(e.target.checked)}
+                  className="mt-0.5"
+                />
+                {t(
+                  "billing.gateOverrideBook",
+                  "Override billing block for this booking (logged in audit)"
+                )}
+              </label>
+            ) : null}
+            <div className="space-y-1">
+              <label className="text-xs font-medium">{t("appointments.provider", "Provider")}</label>
+              <select
+                value={providerId}
+                onChange={(e) => setProviderId(e.target.value)}
+                className="h-10 w-full rounded-md border border-neutral-300 px-3 text-sm"
+                required
+              >
+                {providers.map((p) => (
+                  <option key={p.profile_id} value={p.profile_id}>
+                    {p.full_name ?? p.profile_id}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium">{t("appointments.date", "Date")}</label>
+              <Input type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium">{t("appointments.availableSlots", "Available Slots")}</label>
+              {slotsLoading ? (
+                <p className="text-xs text-neutral-500">{t("appointments.loadingSlots", "Loading slots...")}</p>
+              ) : !date || !providerId ? (
+                <p className="text-xs text-neutral-500">{t("appointments.selectDentistAndDate", "Select dentist and date.")}</p>
               ) : (
-                t("appointments.confirmBooking", "Confirm booking")
+                <AppointmentSlotButtons
+                  slots={slots}
+                  selectedTime={time}
+                  onSelect={setTime}
+                  date={date}
+                  loading={slotsLoading}
+                  emptyMessage={t("appointments.noSlotsBook", "No open slots - pick another day.")}
+                />
               )}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              {t("common.cancel", "Cancel")}
-            </Button>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium">{t("appointments.purpose", "Purpose")}</label>
+              <Input
+                value={purpose}
+                onChange={(e) => setPurpose(e.target.value)}
+                placeholder={t("appointments.purposePlaceholder", "Consultation, cleaning...")}
+                required
+              />
+            </div>
+          </div>
+          <div className="shrink-0 border-t border-neutral-100 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button className="w-full sm:w-auto" type="submit" disabled={saving || !time || billingBlocked}>
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t("appointments.booking", "Booking...")}
+                  </>
+                ) : (
+                  t("appointments.confirmBooking", "Confirm booking")
+                )}
+              </Button>
+              <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={() => setOpen(false)}>
+                {t("common.cancel", "Cancel")}
+              </Button>
+            </div>
           </div>
         </form>
       </div>
@@ -242,7 +245,7 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
       <Button size="sm" className="gap-2" onClick={() => setOpen(true)}>
         <Calendar className="h-4 w-4" /> {t("appointments.bookNow", "Book now")}
       </Button>
-      {mounted && dialog ? createPortal(dialog, document.body) : null}
+      {typeof document !== "undefined" && dialog ? createPortal(dialog, document.body) : null}
     </>
   )
 }

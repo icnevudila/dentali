@@ -2,6 +2,10 @@
 @import "../styles/tokens.css";
 
 @theme {
+  --font-sans: var(--font-clinic-body), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-clinic-display), "Archivo", var(--font-sans);
+  --font-mono: var(--font-clinic-mono), "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
   --color-primary-50: #f0fdfa;
   --color-primary-100: #ccfbf1;
   --color-primary-200: #99f6e4;
@@ -67,9 +71,23 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
+    font-family: var(--font-clinic-body), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display), "Archivo", var(--font-sans);
+    letter-spacing: -0.035em;
+  }
+
+  h1,
+  h2 {
+    text-wrap: balance;
   }
 }
 

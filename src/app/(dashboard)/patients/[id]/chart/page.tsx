@@ -307,6 +307,7 @@ export default function DentalChartPage() {
           lastUpdated={lastUpdated}
           onOpenHistory={() => setHistoryOpen(true)}
           alertLabel={alertLabel}
+          pdaChartHref={`/patients/${patientId}/pda-dental-chart`}
         />
 
         <ChartHistoryDrawer

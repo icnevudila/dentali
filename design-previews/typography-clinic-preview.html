@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DentQL Typography Direction Preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anek+Latin:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #111827;
+        --muted: #64748b;
+        --soft: #f7faf8;
+        --paper: #ffffff;
+        --line: #dce6e2;
+        --teal: #11b7a7;
+        --teal-dark: #087a72;
+        --blue: #2374d1;
+        --green: #15956a;
+        --orange: #d97706;
+        --red: #c2410c;
+        --shadow: 0 24px 70px rgba(17, 24, 39, 0.08);
+        --heading: "Anek Latin", "IBM Plex Sans", sans-serif;
+        --body: "IBM Plex Sans", sans-serif;
+        --mono: "IBM Plex Mono", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 12% 0%, rgba(17, 183, 167, 0.12), transparent 34rem),
+          linear-gradient(135deg, #f8fbfa 0%, #eef6f2 42%, #f8fafc 100%);
+        color: var(--ink);
+        font-family: var(--body);
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        border-right: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.72);
+        backdrop-filter: blur(18px);
+        padding: 24px 18px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 34px;
+        font: 800 23px/1 var(--heading);
+        letter-spacing: -0.04em;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 12px;
+        background: #e8fbf8;
+        color: var(--teal-dark);
+        font: 700 16px/1 var(--mono);
+      }
+
+      .nav-label {
+        margin: 22px 10px 9px;
+        color: #94a3b8;
+        font: 700 11px/1 var(--heading);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border-radius: 14px;
+        padding: 11px 12px;
+        color: #334155;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .nav-item.active {
+        background: #e9fbf8;
+        color: var(--teal-dark);
+      }
+
+      .nav-code {
+        color: #94a3b8;
+        font: 600 11px/1 var(--mono);
+      }
+
+      main {
+        padding: 22px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      .clinic-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.76);
+        padding: 10px 14px;
+        color: #334155;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .page {
+        max-width: 1260px;
+        margin: 0 auto;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(17, 183, 167, 0.22);
+        border-radius: 34px;
+        background:
+          linear-gradient(115deg, rgba(255, 255, 255, 0.95), rgba(242, 252, 249, 0.92)),
+          repeating-linear-gradient(90deg, transparent 0 38px, rgba(17, 183, 167, 0.045) 38px 39px);
+        box-shadow: var(--shadow);
+        padding: 34px;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+        gap: 24px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--teal-dark);
+        font: 800 12px/1 var(--heading);
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 760px;
+        margin: 14px 0 12px;
+        font: 800 clamp(42px, 6vw, 78px) / 0.9 var(--heading);
+        letter-spacing: -0.065em;
+      }
+
+      .lead {
+        max-width: 690px;
+        margin: 0;
+        color: #475569;
+        font-size: 17px;
+        line-height: 1.65;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 24px;
+      }
+
+      .button {
+        border: 0;
+        border-radius: 15px;
+        padding: 12px 16px;
+        font-family: var(--heading);
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+
+      .button.primary {
+        background: var(--teal);
+        color: white;
+        box-shadow: 0 14px 28px rgba(17, 183, 167, 0.25);
+      }
+
+      .button.secondary {
+        border: 1px solid var(--line);
+        background: white;
+        color: #334155;
+      }
+
+      .shift-card {
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: white;
+        padding: 18px;
+      }
+
+      .shift-card h2 {
+        margin: 0 0 14px;
+        font: 800 24px/1 var(--heading);
+        letter-spacing: -0.04em;
+      }
+
+      .timeline {
+        display: grid;
+        gap: 10px;
+      }
+
+      .timeline-row {
+        display: grid;
+        grid-template-columns: 54px 1fr auto;
+        align-items: center;
+        gap: 12px;
+        border: 1px solid #edf2f0;
+        border-radius: 18px;
+        padding: 12px;
+      }
+
+      .time {
+        color: #0f766e;
+        font: 700 12px/1 var(--mono);
+      }
+
+      .patient {
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      .sub {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .badge {
+        border-radius: 999px;
+        padding: 6px 9px;
+        background: #eff6ff;
+        color: var(--blue);
+        font: 700 11px/1 var(--mono);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      .metric {
+        grid-column: span 3;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.86);
+        padding: 18px;
+      }
+
+      .metric-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .metric-value {
+        margin-top: 10px;
+        font: 700 36px/0.9 var(--mono);
+        letter-spacing: -0.055em;
+      }
+
+      .metric-note {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .worklist {
+        grid-column: span 8;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: white;
+        padding: 18px;
+      }
+
+      .panel-title {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .panel-title h3 {
+        margin: 0;
+        font: 800 26px/1 var(--heading);
+        letter-spacing: -0.04em;
+      }
+
+      .panel-title span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .queue-list {
+        display: grid;
+        gap: 9px;
+      }
+
+      .queue-row {
+        display: grid;
+        grid-template-columns: 74px 1fr 132px 110px;
+        align-items: center;
+        gap: 12px;
+        border: 1px solid #edf2f0;
+        border-radius: 18px;
+        padding: 12px;
+      }
+
+      .queue-code {
+        color: var(--teal-dark);
+        font: 800 19px/1 var(--mono);
+      }
+
+      .status {
+        justify-self: start;
+        border-radius: 999px;
+        padding: 7px 10px;
+        font: 800 11px/1 var(--heading);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .status.waiting {
+        background: #fff7ed;
+        color: var(--orange);
+      }
+
+      .status.chair {
+        background: #ecfdf5;
+        color: var(--green);
+      }
+
+      .status.called {
+        background: #eff6ff;
+        color: var(--blue);
+      }
+
+      .next-step {
+        grid-column: span 4;
+        border: 1px solid rgba(17, 183, 167, 0.22);
+        border-radius: 28px;
+        background: #f0fdfa;
+        padding: 20px;
+      }
+
+      .next-step h3 {
+        margin: 0;
+        font: 800 24px/1 var(--heading);
+        letter-spacing: -0.04em;
+      }
+
+      .next-step p {
+        color: #41615d;
+        line-height: 1.55;
+      }
+
+      .type-sample {
+        margin-top: 18px;
+        border: 1px dashed rgba(8, 122, 114, 0.28);
+        border-radius: 18px;
+        padding: 14px;
+      }
+
+      .type-sample div:nth-child(1) {
+        font: 800 18px/1 var(--heading);
+        letter-spacing: -0.03em;
+      }
+
+      .type-sample div:nth-child(2) {
+        margin-top: 8px;
+        font: 500 14px/1.45 var(--body);
+        color: #475569;
+      }
+
+      .type-sample div:nth-child(3) {
+        margin-top: 10px;
+        font: 700 14px/1 var(--mono);
+        color: var(--teal-dark);
+      }
+
+      @media (max-width: 980px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          display: none;
+        }
+
+        main {
+          padding: 14px;
+        }
+
+        .hero {
+          border-radius: 24px;
+          padding: 22px;
+        }
+
+        .hero-grid,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .metric,
+        .worklist,
+        .next-step {
+          grid-column: span 1;
+        }
+
+        .queue-row {
+          grid-template-columns: 66px 1fr;
+        }
+
+        .queue-row .status,
+        .queue-row .time {
+          justify-self: start;
+        }
+
+        h1 {
+          font-size: 46px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand"><span class="brand-mark">dQ</span> dentQL</div>
+        <div class="nav-label">Overview</div>
+        <div class="nav-item active">Dashboard <span class="nav-code">01</span></div>
+        <div class="nav-item">Reports <span class="nav-code">02</span></div>
+        <div class="nav-label">Clinical</div>
+        <div class="nav-item">Patients <span class="nav-code">PT</span></div>
+        <div class="nav-item">Dentist <span class="nav-code">DR</span></div>
+        <div class="nav-item">Appointments <span class="nav-code">AP</span></div>
+        <div class="nav-label">Front desk</div>
+        <div class="nav-item">Queue <span class="nav-code">Q</span></div>
+        <div class="nav-item">Waitlist <span class="nav-code">W</span></div>
+      </aside>
+
+      <main>
+        <div class="page">
+          <div class="topbar">
+            <div class="clinic-pill">Main Clinic · Manila · Live shift</div>
+            <div class="clinic-pill">Doctor 3</div>
+          </div>
+
+          <section class="hero">
+            <div class="hero-grid">
+              <div>
+                <div class="eyebrow">Clinical command typography</div>
+                <h1>Less SaaS template, more clinic operating desk.</h1>
+                <p class="lead">
+                  Body text stays calm and readable. Headings carry more character. Numbers use a
+                  technical mono rhythm so reports, queue codes, and billing feel operational instead
+                  of generic.
+                </p>
+                <div class="actions">
+                  <button class="button primary">Open Queue</button>
+                  <button class="button secondary">Review Closeout</button>
+                </div>
+              </div>
+
+              <aside class="shift-card">
+                <h2>Today at a glance</h2>
+                <div class="timeline">
+                  <div class="timeline-row">
+                    <div class="time">09:20</div>
+                    <div>
+                      <div class="patient">Maria Santos</div>
+                      <div class="sub">Cleaning · consent complete</div>
+                    </div>
+                    <span class="badge">Q014</span>
+                  </div>
+                  <div class="timeline-row">
+                    <div class="time">09:45</div>
+                    <div>
+                      <div class="patient">Joel Reyes</div>
+                      <div class="sub">Extraction · billing hold</div>
+                    </div>
+                    <span class="badge">Q015</span>
+                  </div>
+                  <div class="timeline-row">
+                    <div class="time">10:10</div>
+                    <div>
+                      <div class="patient">Ana Cruz</div>
+                      <div class="sub">Ortho adjustment · next visit due</div>
+                    </div>
+                    <span class="badge">Q016</span>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section class="grid">
+            <article class="metric">
+              <div class="metric-label">Awaiting check-in</div>
+              <div class="metric-value">08</div>
+              <div class="metric-note">Appointments that should enter Queue before treatment.</div>
+            </article>
+            <article class="metric">
+              <div class="metric-label">In clinic</div>
+              <div class="metric-value">13</div>
+              <div class="metric-note">Waiting, called, or already in chair.</div>
+            </article>
+            <article class="metric">
+              <div class="metric-label">Open balance</div>
+              <div class="metric-value">₱52k</div>
+              <div class="metric-note">Shown with a finance rhythm, not a generic KPI card.</div>
+            </article>
+            <article class="metric">
+              <div class="metric-label">Missing notes</div>
+              <div class="metric-value">06</div>
+              <div class="metric-note">Clinical closeout exceptions stay visible.</div>
+            </article>
+
+            <article class="worklist">
+              <div class="panel-title">
+                <h3>Chair queue</h3>
+                <span>Readable density for real front desk work</span>
+              </div>
+              <div class="queue-list">
+                <div class="queue-row">
+                  <div class="queue-code">Q014</div>
+                  <div>
+                    <div class="patient">Maria Santos</div>
+                    <div class="sub">Cleaning · Dr. Dela Cruz · 12 min waiting</div>
+                  </div>
+                  <span class="status chair">In chair</span>
+                  <div class="time">09:20</div>
+                </div>
+                <div class="queue-row">
+                  <div class="queue-code">Q015</div>
+                  <div>
+                    <div class="patient">Joel Reyes</div>
+                    <div class="sub">Extraction · medical history pending</div>
+                  </div>
+                  <span class="status called">Called</span>
+                  <div class="time">09:45</div>
+                </div>
+                <div class="queue-row">
+                  <div class="queue-code">W003</div>
+                  <div>
+                    <div class="patient">Ana Cruz</div>
+                    <div class="sub">Walk-in · tooth pain · front desk note</div>
+                  </div>
+                  <span class="status waiting">Waiting</span>
+                  <div class="time">10:10</div>
+                </div>
+              </div>
+            </article>
+
+            <aside class="next-step">
+              <h3>Typography rule</h3>
+              <p>
+                Use expressive headings only where the user scans the page. Keep body copy compact.
+                Use mono for queue codes, money, counts, and timestamps.
+              </p>
+              <div class="type-sample">
+                <div>Anek Latin for module headers</div>
+                <div>IBM Plex Sans for calm clinical reading and form labels.</div>
+                <div>IBM Plex Mono for Q014 · ₱13,250 · 09:45</div>
+              </div>
+            </aside>
+          </section>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

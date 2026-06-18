@@ -52,9 +52,9 @@
   --space-10: 8rem;
 
   /* Typography */
-  --font-family-display: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
-  --font-family-body: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
-  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-family-display: var(--font-clinic-display, var(--font-sans, ui-sans-serif, system-ui, sans-serif));
+  --font-family-body: var(--font-clinic-body, var(--font-sans, ui-sans-serif, system-ui, sans-serif));
+  --font-family-mono: var(--font-clinic-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
 
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;

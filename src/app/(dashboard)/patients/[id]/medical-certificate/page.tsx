@@ -81,6 +81,7 @@ export default function MedicalCertificatePage() {
       }
 
       if (staff?.full_name) setAttendingDentist(staff.full_name)
+      if (staff?.prc_license_number) setLicenseNumber(staff.prc_license_number)
 
       setBase({
         patient: patientRes.data,

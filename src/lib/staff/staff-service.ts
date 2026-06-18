@@ -8,6 +8,7 @@ export interface StaffMember {
   role_name: string
   branch_names: string[]
   phone_number: string | null
+  prc_license_number: string | null
   is_owner_or_admin: boolean
 }
 
@@ -69,6 +70,7 @@ export interface StaffMemberDetail {
   is_active: boolean
   phone_number: string | null
   specialization: string | null
+  prc_license_number: string | null
   assignments: StaffAssignment[]
   is_owner_or_admin: boolean
 }
@@ -90,7 +92,7 @@ export async function getStaffMember(
 
   const { data: staff } = await supabase
     .from("staff_profiles")
-    .select("is_active, phone_number, specialization")
+    .select("is_active, phone_number, specialization, prc_license_number")
     .eq("profile_id", profileId)
     .maybeSingle()
 
@@ -126,6 +128,7 @@ export async function getStaffMember(
       is_active: staff?.is_active ?? true,
       phone_number: staff?.phone_number?.trim() || null,
       specialization: staff?.specialization?.trim() || null,
+      prc_license_number: staff?.prc_license_number?.trim() || null,
       assignments,
       is_owner_or_admin: isOwnerOrAdmin,
     },
@@ -137,6 +140,7 @@ export async function updateStaffProfile(params: {
   profileId: string
   phoneNumber?: string | null
   specialization?: string | null
+  prcLicenseNumber?: string | null
 }): Promise<{ error: string | null }> {
   const supabase = createClient()
 
@@ -149,6 +153,7 @@ export async function updateStaffProfile(params: {
   const payload = {
     phone_number: params.phoneNumber?.trim() || null,
     specialization: params.specialization?.trim() || null,
+    prc_license_number: params.prcLicenseNumber?.trim() || null,
     updated_at: new Date().toISOString(),
   }
 
@@ -274,6 +279,7 @@ export async function addStaffMemberDirectly(params: {
   roleId: string
   phoneNumber?: string
   specialization?: string
+  prcLicenseNumber?: string
 }): Promise<{ error: string | null; profileId?: string }> {
   const supabase = createClient()
   const newProfileId = crypto.randomUUID()
@@ -308,7 +314,8 @@ export async function addStaffMemberDirectly(params: {
     profile_id: newProfileId,
     is_active: true,
     phone_number: params.phoneNumber || null,
-    specialization: params.specialization || null
+    specialization: params.specialization || null,
+    prc_license_number: params.prcLicenseNumber || null
   })
   if (staffError) return { error: staffError.message }
 

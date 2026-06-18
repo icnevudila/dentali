@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Archivo, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { CookieConsentBanner } from "@/components/marketing/CookieConsentBanner";
 import { LocaleBootstrap } from "@/components/i18n/LocaleBootstrap";
@@ -9,7 +9,23 @@ import { Toaster } from "sonner";
 import { TOASTER_OPTIONS } from "@/lib/ui/notify";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const bodyFont = IBM_Plex_Sans({
+  subsets: ["latin"],
+  variable: "--font-clinic-body",
+  display: "swap",
+});
+const displayFont = Archivo({
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
+  variable: "--font-clinic-display",
+  display: "swap",
+});
+const monoFont = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-clinic-mono",
+  display: "swap",
+});
 const siteUrl = getSiteUrl();
 
 export const metadata: Metadata = {
@@ -48,7 +64,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning data-theme="light">
-      <body className={inter.className}>
+      <body className={`${bodyFont.variable} ${displayFont.variable} ${monoFont.variable} font-sans`}>
         <LocaleBootstrap />
         <ServiceWorkerRegister />
         <CookieConsentBanner />

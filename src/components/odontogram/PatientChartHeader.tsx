@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Printer, Save, AlertCircle, History, Download } from "lucide-react"
+import { Printer, Save, AlertCircle, History, Download, FileText } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
 
 interface PatientChartHeaderProps {
@@ -11,6 +12,7 @@ interface PatientChartHeaderProps {
   hasUnsavedChanges: boolean
   onSaveChart?: () => void
   onExportPng?: () => void | Promise<void>
+  pdaChartHref?: string
   isSaving: boolean
   isExporting?: boolean
   lastUpdated?: string | null
@@ -23,6 +25,7 @@ export function PatientChartHeader({
   hasUnsavedChanges,
   onSaveChart,
   onExportPng,
+  pdaChartHref,
   isSaving,
   isExporting = false,
   lastUpdated,
@@ -68,6 +71,13 @@ export function PatientChartHeader({
         <Button variant="outline" size="sm" onClick={() => printCurrentPage({ title: `Dental Chart — ${patientName}` })} className="gap-2">
           <Printer className="w-4 h-4" /> Print
         </Button>
+        {pdaChartHref && (
+          <Button variant="outline" size="sm" asChild className="gap-2">
+            <Link href={pdaChartHref}>
+              <FileText className="w-4 h-4" /> PDA form
+            </Link>
+          </Button>
+        )}
         {onExportPng && (
           <Button
             variant="outline"
