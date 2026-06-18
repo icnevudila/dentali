@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Upload, Download, Trash2, FileText, ImageIcon } from "lucide-react"
+import Link from "next/link"
+import { Upload, Download, Trash2, FileText, ImageIcon, ClipboardList, FileCheck2, Pill, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -53,7 +54,9 @@ export function PatientDocumentsPanel({ patientId }: { patientId: string }) {
   }, [patientId])
 
   React.useEffect(() => {
-    load()
+    queueMicrotask(() => {
+      void load()
+    })
   }, [load])
 
   const processFile = async (file: File) => {
@@ -133,6 +136,45 @@ export function PatientDocumentsPanel({ patientId }: { patientId: string }) {
     return item ? t(item.labelKey, item.fallback) : value
   }
 
+  const clinicalOutputs = [
+    {
+      label: t("patients.outputPdaChart", "PDA dental chart"),
+      hint: t("patients.outputPdaChartHint", "PDA-format chart and print view"),
+      href: `/patients/${patientId}/pda-dental-chart`,
+      icon: ClipboardList,
+    },
+    {
+      label: t("patients.outputConsents", "Signed consents"),
+      hint: t("patients.outputConsentsHint", "Consent signing and legal forms"),
+      href: `/patients/${patientId}?tab=consents`,
+      icon: ShieldCheck,
+    },
+    {
+      label: t("patients.outputPrescription", "Prescription"),
+      hint: t("patients.outputPrescriptionHint", "Rx with dentist PRC details"),
+      href: `/patients/${patientId}/prescriptions`,
+      icon: Pill,
+    },
+    {
+      label: t("patients.outputCertificate", "Medical certificate"),
+      hint: t("patients.outputCertificateHint", "Certificate for school/work/HMO"),
+      href: `/patients/${patientId}/medical-certificate`,
+      icon: FileText,
+    },
+    {
+      label: t("patients.outputAbstract", "Medical abstract"),
+      hint: t("patients.outputAbstractHint", "Clinical summary for referral"),
+      href: `/patients/${patientId}/medical-abstract`,
+      icon: FileText,
+    },
+    {
+      label: t("patients.outputEpicrisis", "Epicrisis / discharge"),
+      hint: t("patients.outputEpicrisisHint", "Full visit, ortho, Rx, billing handover"),
+      href: `/patients/${patientId}/epicrisis`,
+      icon: FileCheck2,
+    },
+  ]
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-4">
@@ -163,6 +205,40 @@ export function PatientDocumentsPanel({ patientId }: { patientId: string }) {
         </PermissionGate>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-3">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-neutral-950">
+                {t("patients.clinicalOutputsTitle", "Clinical outputs")}
+              </p>
+              <p className="text-xs text-neutral-500">
+                {t("patients.clinicalOutputsHint", "Open generated forms and print/PDF outputs from the correct patient context.")}
+              </p>
+            </div>
+            <Badge variant="outline" className="w-fit text-xs">
+              {t("patients.outputsContextBadge", "Patient context")}
+            </Badge>
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {clinicalOutputs.map((output) => {
+              const Icon = output.icon
+              return (
+                <Link
+                  key={output.href}
+                  href={output.href}
+                  className="rounded-xl border border-neutral-200 bg-white p-3 text-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-sm"
+                >
+                  <span className="flex items-center gap-2 font-semibold text-neutral-950">
+                    <Icon className="h-4 w-4 text-primary-600" aria-hidden />
+                    {output.label}
+                  </span>
+                  <span className="mt-1 block text-xs leading-5 text-neutral-500">{output.hint}</span>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+
         <PermissionGate permission={PERMISSIONS.PATIENTS_WRITE}>
           <div
             className={`rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors ${
