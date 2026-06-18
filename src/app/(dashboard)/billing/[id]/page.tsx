@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { ArrowLeft, Download, ExternalLink, Printer, Receipt, X, Edit } from "lucide-react"
+import { ArrowLeft, Download, ExternalLink, MessageCircle, Printer, Receipt, X, Edit } from "lucide-react"
 import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
@@ -29,6 +29,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { IntegrationEnvBanner } from "@/components/layout/IntegrationEnvBanner"
+import { logManualWhatsAppNotification } from "@/lib/notifications/notification-service"
+import { buildWhatsAppSendUrl } from "@/lib/notifications/whatsapp"
 
 export default function InvoiceDetailPage() {
   const params = useParams()
@@ -54,6 +56,7 @@ export default function InvoiceDetailPage() {
   const [clinicName, setClinicName] = React.useState("Dental Clinic")
   const [pdfLoading, setPdfLoading] = React.useState(false)
   const [paymentJustSettled, setPaymentJustSettled] = React.useState(false)
+  const [reminderSending, setReminderSending] = React.useState(false)
 
   // Edit line item states
   const [editingLineId, setEditingLineId] = React.useState<string | null>(null)
@@ -249,6 +252,36 @@ export default function InvoiceDetailPage() {
     await load()
   }
 
+  const handlePaymentReminder = async () => {
+    if (!invoice || !activeBranch || !invoice.patient_phone || balance <= 0) return
+    const body = [
+      `Hello ${invoice.patient_name ?? "patient"}, this is ${clinicName}.`,
+      `Your invoice ${invoice.invoice_number ?? invoice.id.slice(0, 8)} has an open balance of ₱${balance.toLocaleString("en-PH")}.`,
+      "Please settle at the clinic or reply here if you need assistance.",
+    ].join(" ")
+    setReminderSending(true)
+    setError(null)
+    const { error: logErr } = await logManualWhatsAppNotification({
+      phone: invoice.patient_phone,
+      body,
+      branchId: activeBranch.id,
+      templateKey: "payment_reminder_manual",
+      patientId: invoice.patient_id,
+    })
+    setReminderSending(false)
+    if (logErr) {
+      notify.error(logErr)
+      setError(logErr)
+      return
+    }
+    const win = window.open(buildWhatsAppSendUrl(invoice.patient_phone, body), "_blank", "noopener,noreferrer")
+    if (!win) {
+      notify.error(t("settings.notificationsPopupBlocked", "WhatsApp popup was blocked by the browser."))
+      return
+    }
+    notify.success(t("billing.paymentReminderLogged", "Payment reminder logged"))
+  }
+
   const handleVoid = async () => {
     if (!voidReason.trim()) return
     if (!(await notify.confirm("Void this invoice? This cannot be undone."))) return
@@ -310,6 +343,12 @@ export default function InvoiceDetailPage() {
     },
   ]
 
+  const sourceLabel = invoice.treatment_plan_id ? "Treatment plan" : "Manual / system"
+  const sourceHref = invoice.treatment_plan_id
+    ? `/patients/${invoice.patient_id}/treatment-plan?plan=${invoice.treatment_plan_id}`
+    : `/patients/${invoice.patient_id}`
+  const invoiceOpen = invoice.status !== "void" && balance > 0
+
   return (
     <PermissionGate permission={PERMISSIONS.BILLING_READ}>
       <div className="space-y-6 pb-10">
@@ -370,6 +409,44 @@ export default function InvoiceDetailPage() {
         </div>
 
         <MetricStrip items={metricItems} />
+
+        <ContentPanel className="border-neutral-200/80 bg-white">
+          <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+            <div className="grid gap-2 sm:grid-cols-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Source</p>
+                <Link href={sourceHref} className="font-medium text-primary-700 hover:underline">
+                  {sourceLabel}
+                </Link>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Items</p>
+                <p className="font-medium">{lineItems.length} line item(s)</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Closeout</p>
+                <p className="font-medium">{invoiceOpen ? "Open balance" : "Ready / settled"}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {invoiceOpen && invoice.patient_phone ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => void handlePaymentReminder()}
+                  disabled={reminderSending}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  {reminderSending ? "Logging..." : "WhatsApp reminder"}
+                </Button>
+              ) : null}
+              <Button size="sm" variant="outline" asChild>
+                <Link href={`/patients/${invoice.patient_id}`}>Patient profile</Link>
+              </Button>
+            </div>
+          </div>
+        </ContentPanel>
 
         {paymentJustSettled && balance <= 0 ? (
           <ContentPanel className="border-emerald-200/80 bg-emerald-50/50">
@@ -788,7 +865,7 @@ export default function InvoiceDetailPage() {
                         onClick={async () => {
                           if (!(await notify.confirm("Are you sure you want to delete this payment record? The invoice paid amount and status will be recalculated."))) return
                           setError(null)
-                          const { error: delErr } = await deleteInvoicePayment(p.id, invoiceId)
+                          const { error: delErr } = await deleteInvoicePayment(p.id)
                           if (delErr) {
                             setError(delErr)
                             notify.error(delErr)

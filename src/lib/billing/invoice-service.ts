@@ -160,6 +160,7 @@ export interface InvoiceDetail extends InvoiceRecord {
   due_date: string | null
   subtotal_amount: number
   discount_amount: number
+  patient_phone?: string | null
 }
 
 export interface InvoicePayment {
@@ -315,13 +316,16 @@ export async function getInvoice(
 
   const { data: inv, error } = await supabase
     .from("invoices")
-    .select("id, invoice_number, total_amount, paid_amount, status, patient_id, created_at, treatment_plan_id, due_date, subtotal_amount, discount_amount, patients(first_name, last_name)")
+    .select("id, invoice_number, total_amount, paid_amount, status, patient_id, created_at, treatment_plan_id, due_date, subtotal_amount, discount_amount, patients(first_name, last_name, phone)")
     .eq("id", invoiceId)
     .maybeSingle()
 
   if (error || !inv) return { data: null, payments: [], lineItems: [], error: error?.message ?? "Not found" }
 
-  const p = inv.patients as { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null
+  const p = inv.patients as
+    | { first_name: string; last_name: string; phone?: string | null }
+    | { first_name: string; last_name: string; phone?: string | null }[]
+    | null
   const patient = Array.isArray(p) ? p[0] : p
 
   const { data: payments } = await supabase
@@ -350,6 +354,7 @@ export async function getInvoice(
       subtotal_amount: Number(inv.subtotal_amount ?? inv.total_amount),
       discount_amount: Number(inv.discount_amount ?? 0),
       patient_name: patient ? `${patient.first_name} ${patient.last_name}` : undefined,
+      patient_phone: patient?.phone ?? null,
     },
     payments: (payments ?? []).map((row) => ({
       id: row.id,
@@ -510,8 +515,7 @@ export async function voidInvoice(
 }
 
 export async function deleteInvoicePayment(
-  paymentId: string,
-  _invoiceId?: string
+  paymentId: string
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
   const { error } = await supabase.rpc("delete_invoice_payment", {
