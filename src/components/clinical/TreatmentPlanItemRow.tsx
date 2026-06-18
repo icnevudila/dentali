@@ -14,13 +14,22 @@ export function TreatmentPlanItemRow({
   item,
   editable,
   saving,
+  phaseOptions,
+  phaseLabel,
   onSave,
   onDelete,
 }: {
   item: TreatmentPlanItem
   editable: boolean
   saving: boolean
-  onSave: (patch: { description: string; estimatedPrice: number; toothNumber: string | null }) => Promise<void>
+  phaseOptions?: readonly { value: string; label: string }[]
+  phaseLabel?: (value: string | null | undefined) => string
+  onSave: (patch: {
+    description: string
+    estimatedPrice: number
+    toothNumber: string | null
+    priority?: string
+  }) => Promise<void>
   onDelete: () => Promise<void>
 }) {
   const { t } = useLocale()
@@ -28,32 +37,39 @@ export function TreatmentPlanItemRow({
   const [description, setDescription] = React.useState(item.description)
   const [price, setPrice] = React.useState(String(item.estimated_price))
   const [tooth, setTooth] = React.useState(item.tooth_number ?? "")
+  const [priority, setPriority] = React.useState(item.priority ?? "phase_1")
 
-  React.useEffect(() => {
+  const beginEditing = () => {
     setDescription(item.description)
     setPrice(String(item.estimated_price))
     setTooth(item.tooth_number ?? "")
-  }, [item])
+    setPriority(item.priority ?? "phase_1")
+    setEditing(true)
+  }
 
   const handleSave = async () => {
     await onSave({
       description: toStoredBulletText(description.trim()),
       estimatedPrice: parseFloat(price) || 0,
       toothNumber: tooth.trim() || null,
+      priority,
     })
     setEditing(false)
   }
+
+  const labelForPriority = phaseLabel ?? ((value) => value?.replace(/_/g, " ") ?? "Phase")
 
   if (!editable) {
     return (
       <li className="py-2 flex justify-between gap-3 text-neutral-700">
         <span className="min-w-0 flex-1">
           <BulletTextList text={item.description} />
-          {item.tooth_number ? (
-            <span className="block text-xs text-neutral-500 mt-0.5">
-              {t("treatmentPlan.toothNumber", "Tooth #")} {item.tooth_number}
-            </span>
-          ) : null}
+          <span className="mt-1 flex flex-wrap gap-1.5 text-xs text-neutral-500">
+            {item.tooth_number ? (
+              <span>{t("treatmentPlan.toothNumber", "Tooth #")} {item.tooth_number}</span>
+            ) : null}
+            <span>{labelForPriority(item.priority)}</span>
+          </span>
         </span>
         <span className="font-medium shrink-0">₱{Number(item.estimated_price).toLocaleString()}</span>
       </li>
@@ -63,14 +79,14 @@ export function TreatmentPlanItemRow({
   if (editing) {
     return (
       <li className="py-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between border-b border-neutral-100">
-        <div className="grid gap-2 flex-1 w-full">
+        <div className="grid w-full flex-1 gap-2">
           <BulletTextarea
             value={description}
             onChange={setDescription}
             rows={3}
             disabled={saving}
           />
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-3">
           <Input
             type="number"
             value={price}
@@ -84,6 +100,18 @@ export function TreatmentPlanItemRow({
             onChange={(e) => setTooth(e.target.value)}
             placeholder={t("treatmentPlan.toothNumber", "Tooth #")}
           />
+          <select
+            value={priority}
+            onChange={(e) => setPriority(e.target.value)}
+            className="h-10 rounded-md border border-neutral-300 bg-white px-3 text-sm"
+            disabled={saving}
+          >
+            {(phaseOptions ?? [{ value: priority, label: labelForPriority(priority) }]).map((phase) => (
+              <option key={phase.value} value={phase.value}>
+                {phase.label}
+              </option>
+            ))}
+          </select>
           </div>
         </div>
         <div className="flex gap-1 shrink-0">
@@ -102,15 +130,16 @@ export function TreatmentPlanItemRow({
     <li className="py-2 flex items-start justify-between gap-3">
       <span className="min-w-0 flex-1">
         <BulletTextList text={item.description} />
-        {item.tooth_number ? (
-          <span className="block text-xs text-neutral-500 mt-0.5">
-            {t("treatmentPlan.toothNumber", "Tooth #")} {item.tooth_number}
-          </span>
-        ) : null}
+        <span className="mt-1 flex flex-wrap gap-1.5 text-xs text-neutral-500">
+          {item.tooth_number ? (
+            <span>{t("treatmentPlan.toothNumber", "Tooth #")} {item.tooth_number}</span>
+          ) : null}
+          <span>{labelForPriority(item.priority)}</span>
+        </span>
       </span>
       <div className="flex items-center gap-2 shrink-0">
         <span className="font-medium">₱{Number(item.estimated_price).toLocaleString()}</span>
-        <Button type="button" size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditing(true)} disabled={saving}>
+        <Button type="button" size="icon" variant="ghost" className="h-8 w-8" onClick={beginEditing} disabled={saving}>
           <Pencil className="h-3.5 w-3.5" />
           <span className="sr-only">{t("treatmentPlan.editItem", "Edit")}</span>
         </Button>

@@ -71,6 +71,29 @@ const PROCEDURE_TEMPLATES = [
   { code: "DENT", name: "Complete Denture (Upper & Lower)" },
 ]
 
+const PLAN_PHASES = [
+  { value: "urgent", label: "Urgent", hint: "Pain, infection, or same-day relief" },
+  { value: "phase_1", label: "Phase 1", hint: "Primary active treatment" },
+  { value: "phase_2", label: "Phase 2", hint: "Restorative or prosthetic follow-up" },
+  { value: "maintenance", label: "Maintenance", hint: "Recall, prevention, and monitoring" },
+] as const
+
+const LEGACY_PHASE_MAP: Record<string, string> = {
+  restorative: "phase_1",
+  cosmetic: "phase_2",
+  ortho: "phase_2",
+}
+
+function normalizePlanPhase(value: string | null | undefined) {
+  if (!value) return "phase_1"
+  return LEGACY_PHASE_MAP[value] ?? value
+}
+
+function getPlanPhaseLabel(value: string | null | undefined) {
+  const normalized = normalizePlanPhase(value)
+  return PLAN_PHASES.find((phase) => phase.value === normalized)?.label ?? "Other"
+}
+
 function TreatmentPlanContent() {
   const { id: patientId } = useRouteParams<{ id: string }>()
   const searchParams = useSearchParams()
@@ -94,6 +117,7 @@ function TreatmentPlanContent() {
   const [customName, setCustomName] = React.useState("")
   const [customCode, setCustomCode] = React.useState("")
   const [itemPrice, setItemPrice] = React.useState("")
+  const [itemPhase, setItemPhase] = React.useState("phase_1")
   const [loading, setLoading] = React.useState(!!planId)
   const [saving, setSaving] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -119,8 +143,8 @@ function TreatmentPlanContent() {
         const { data } = await fetchProcedures(activeBranch?.id)
         setProcedures(data)
       }
-    } catch (e: any) {
-      setError(e.message || "Failed to load default procedures")
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to load default procedures")
     } finally {
       setSeeding(false)
     }
@@ -165,8 +189,13 @@ function TreatmentPlanContent() {
       if (data) setBillingGate(data)
     })
     fetchProcedures(activeBranch?.id).then(({ data }) => setProcedures(data))
-    if (planId) loadPlan(planId)
-    else setLoading(false)
+    if (planId) {
+      queueMicrotask(() => {
+        void loadPlan(planId)
+      })
+    } else {
+      queueMicrotask(() => setLoading(false))
+    }
   }, [patientId, planId, loadPlan, activeBranch?.id])
 
   React.useEffect(() => {
@@ -182,7 +211,7 @@ function TreatmentPlanContent() {
 
   React.useEffect(() => {
     if (!activeBranch?.id || !selectedProc) {
-      setStockWarnings([])
+      queueMicrotask(() => setStockWarnings([]))
       return
     }
     fetchProcedureStockWarnings(activeBranch.id, selectedProc).then(({ data }) => {
@@ -323,6 +352,7 @@ function TreatmentPlanContent() {
       description: toStoredBulletText(descriptionSource),
       estimatedPrice: parsedPrice,
       toothNumber: toothNumber || undefined,
+      priority: itemPhase,
     })
 
     if (err) {
@@ -338,6 +368,7 @@ function TreatmentPlanContent() {
       setCustomCode("")
       setItemPrice("")
       setToothNumber("")
+      setItemPhase("phase_1")
     }
     setSaving(false)
   }
@@ -364,7 +395,7 @@ function TreatmentPlanContent() {
 
   const handleUpdateItem = async (
     itemId: string,
-    patch: { description: string; estimatedPrice: number; toothNumber: string | null }
+    patch: { description: string; estimatedPrice: number; toothNumber: string | null; priority?: string }
   ) => {
     if (!activePlanId) return
     setSaving(true)
@@ -375,6 +406,7 @@ function TreatmentPlanContent() {
       description: patch.description,
       estimatedPrice: patch.estimatedPrice,
       toothNumber: patch.toothNumber,
+      priority: patch.priority,
     })
     if (err) {
       setError(err)
@@ -494,6 +526,52 @@ function TreatmentPlanContent() {
       ]
     : undefined
 
+  const phaseGroups = PLAN_PHASES.map((phase) => {
+    const phaseItems = items.filter((item) => normalizePlanPhase(item.priority) === phase.value)
+    return {
+      ...phase,
+      items: phaseItems,
+      total: phaseItems.reduce((sum, item) => sum + Number(item.estimated_price || 0), 0),
+    }
+  })
+  const otherItems = items.filter(
+    (item) => !PLAN_PHASES.some((phase) => phase.value === normalizePlanPhase(item.priority))
+  )
+  const clinicalChecklist = activePlanId
+    ? [
+        {
+          label: "Medical",
+          value: riskFlags.length > 0 ? `${riskFlags.length} risk` : "Clear",
+          tone: riskFlags.length > 0 ? "warning" : "ok",
+          href: `/patients/${patientId}/medical-history`,
+        },
+        {
+          label: "Chart",
+          value: "Open chart",
+          tone: "neutral",
+          href: `/patients/${patientId}/chart`,
+        },
+        {
+          label: "Billing",
+          value: autoInvoiceId ? "Invoice linked" : billingGate?.has_billing_gap ? "Needs draft" : "Ready",
+          tone: autoInvoiceId ? "ok" : billingGate?.has_billing_gap ? "warning" : "neutral",
+          href: autoInvoiceId ? `/billing/${autoInvoiceId}` : "/billing",
+        },
+        {
+          label: "Visit",
+          value: encounterIdParam ? "Encounter linked" : "No active visit",
+          tone: encounterIdParam ? "ok" : "neutral",
+          href: `/patients/${patientId}/visits`,
+        },
+      ]
+    : []
+
+  const checklistToneClass = (tone: string) => {
+    if (tone === "ok") return "border-emerald-200 bg-emerald-50 text-emerald-900"
+    if (tone === "warning") return "border-amber-200 bg-amber-50 text-amber-950"
+    return "border-neutral-200 bg-white text-neutral-700"
+  }
+
   return (
     <PermissionGate permission={PERMISSIONS.DENTAL_CHART_WRITE}>
       <PatientPageShell
@@ -544,6 +622,42 @@ function TreatmentPlanContent() {
         ) : (
           <>
             <Card>
+              <CardHeader className="pb-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <CardTitle className="text-base">Case cockpit</CardTitle>
+                    <CardDescription>
+                      {activeBranch?.name ?? "Active branch"} · {items.length} procedure(s) · {getPlanPhaseLabel(itemPhase)} ready for next add
+                    </CardDescription>
+                  </div>
+                  {autoInvoiceId ? (
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href={`/billing/${autoInvoiceId}`}>Open invoice</Link>
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href={`/patients/${patientId}/chart`}>Open chart</Link>
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {clinicalChecklist.map((item) => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className={`rounded-xl border px-3 py-2 text-sm transition hover:-translate-y-0.5 hover:shadow-sm ${checklistToneClass(item.tone)}`}
+                  >
+                    <span className="block text-[11px] font-semibold uppercase tracking-wider opacity-70">
+                      {item.label}
+                    </span>
+                    <span className="mt-1 block font-semibold">{item.value}</span>
+                  </Link>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card>
               <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <CardTitle>{planTitle}</CardTitle>
@@ -560,18 +674,60 @@ function TreatmentPlanContent() {
                     </Button>
                   </div>
                 ) : (
-                  <ul className="divide-y text-sm">
-                    {items.map((item) => (
-                      <TreatmentPlanItemRow
-                        key={item.id}
-                        item={item}
-                        editable={planEditable}
-                        saving={saving}
-                        onSave={(patch) => handleUpdateItem(item.id, patch)}
-                        onDelete={() => handleDeleteItem(item.id)}
-                      />
+                  <div className="space-y-3">
+                    {phaseGroups.map((phase) => (
+                      <section key={phase.value} className="rounded-xl border border-neutral-200 bg-white">
+                        <div className="flex flex-col gap-1 border-b border-neutral-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-neutral-900">{phase.label}</p>
+                            <p className="text-xs text-neutral-500">{phase.hint}</p>
+                          </div>
+                          <div className="text-xs font-semibold text-neutral-600">
+                            {phase.items.length} · ₱{phase.total.toLocaleString("en-PH")}
+                          </div>
+                        </div>
+                        {phase.items.length === 0 ? (
+                          <p className="px-3 py-3 text-xs text-neutral-400">No procedure in this phase.</p>
+                        ) : (
+                          <ul className="divide-y px-3 text-sm">
+                            {phase.items.map((item) => (
+                              <TreatmentPlanItemRow
+                                key={item.id}
+                                item={item}
+                                editable={planEditable}
+                                saving={saving}
+                                phaseOptions={PLAN_PHASES}
+                                phaseLabel={getPlanPhaseLabel}
+                                onSave={(patch) => handleUpdateItem(item.id, patch)}
+                                onDelete={() => handleDeleteItem(item.id)}
+                              />
+                            ))}
+                          </ul>
+                        )}
+                      </section>
                     ))}
-                  </ul>
+                    {otherItems.length > 0 ? (
+                      <section className="rounded-xl border border-neutral-200 bg-white">
+                        <div className="border-b border-neutral-100 px-3 py-2">
+                          <p className="text-sm font-semibold text-neutral-900">Other</p>
+                        </div>
+                        <ul className="divide-y px-3 text-sm">
+                          {otherItems.map((item) => (
+                            <TreatmentPlanItemRow
+                              key={item.id}
+                              item={item}
+                              editable={planEditable}
+                              saving={saving}
+                              phaseOptions={PLAN_PHASES}
+                              phaseLabel={getPlanPhaseLabel}
+                              onSave={(patch) => handleUpdateItem(item.id, patch)}
+                              onDelete={() => handleDeleteItem(item.id)}
+                            />
+                          ))}
+                        </ul>
+                      </section>
+                    ) : null}
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -677,7 +833,7 @@ function TreatmentPlanContent() {
                   </select>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                       {t("treatmentPlan.catalogProcedure", "Catalog procedure")}
@@ -704,6 +860,23 @@ function TreatmentPlanContent() {
                         </option>
                       ))}
                       <option value="custom">{t("treatmentPlan.customProcedure", "Custom procedure")}</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      Phase
+                    </label>
+                    <select
+                      value={itemPhase}
+                      onChange={(e) => setItemPhase(e.target.value)}
+                      className="h-10 rounded-md border border-neutral-300 bg-white px-3 text-sm"
+                    >
+                      {PLAN_PHASES.map((phase) => (
+                        <option key={phase.value} value={phase.value}>
+                          {phase.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
