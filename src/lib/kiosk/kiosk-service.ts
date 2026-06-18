@@ -87,6 +87,17 @@ function isPublicIntakeSchemaError(message: string): boolean {
 const PUBLIC_INTAKE_SQL_HINT =
   "Portal/kiosk intake SQL is not fully applied. Run supabase/scripts/APPLY_PUBLIC_INTAKE_PROFILE_HARDENING.sql in Supabase SQL Editor, then retry."
 
+export function publicChannelSafeError(
+  error: string | null | undefined,
+  fallback: string
+): string {
+  if (!error) return fallback
+  if (isPublicIntakeSchemaError(error) || error.includes(PUBLIC_INTAKE_SQL_HINT)) {
+    return fallback
+  }
+  return error
+}
+
 export async function submitKioskIntake(
   sessionId: string,
   payload: KioskIntakePayload

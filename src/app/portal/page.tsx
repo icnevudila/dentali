@@ -2,7 +2,13 @@
 
 import * as React from "react"
 import { useSearchParams } from "next/navigation"
-import { createKioskSession, submitPortalAppointment, verifyPortalPatient, submitKioskIntake } from "@/lib/kiosk/kiosk-service"
+import {
+  createKioskSession,
+  publicChannelSafeError,
+  submitPortalAppointment,
+  verifyPortalPatient,
+  submitKioskIntake,
+} from "@/lib/kiosk/kiosk-service"
 import { fetchBranchProviderAvailability } from "@/lib/appointments/provider-availability-service"
 import { fetchAvailableAppointmentSlots } from "@/lib/appointments/provider-availability-service"
 import { Button } from "@/components/ui/button"
@@ -244,7 +250,12 @@ function PortalPageContent() {
     setSubmitting(false)
 
     if (error) {
-      portalError(error ?? "An error occurred while creating the registration.")
+      portalError(
+        publicChannelSafeError(
+          error,
+          "Registration could not be submitted. Please contact the clinic or try again later."
+        )
+      )
     } else {
       setStep("intakeSuccess")
     }

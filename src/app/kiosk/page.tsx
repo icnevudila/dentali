@@ -3,7 +3,12 @@
 import * as React from "react"
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
-import { createKioskSession, submitKioskCheckin, submitKioskIntake } from "@/lib/kiosk/kiosk-service"
+import {
+  createKioskSession,
+  publicChannelSafeError,
+  submitKioskCheckin,
+  submitKioskIntake,
+} from "@/lib/kiosk/kiosk-service"
 import { useLocale } from "@/hooks/use-locale"
 import { Button } from "@/components/ui/button"
 import { KioskStepIndicator, kioskStepFromFlow } from "@/components/kiosk/KioskStepIndicator"
@@ -316,7 +321,12 @@ function KioskContent() {
     )
     setSubmitting(false)
     if (error) {
-      setErrorMsg(error)
+      setErrorMsg(
+        publicChannelSafeError(
+          error,
+          t("kiosk.registrationFailed", "Registration could not be submitted. Please see the front desk.")
+        )
+      )
       return
     }
     if (data?.intake_id) {
