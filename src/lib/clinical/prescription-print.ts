@@ -1,7 +1,6 @@
 import type { PrescriptionItem, PrescriptionRecord } from "@/lib/clinical/prescription-service"
 import {
   DEFAULT_PRESCRIPTION_BRANDING,
-  resolvePrescriptionBranding,
   type PrescriptionBrandingSettings,
 } from "@/lib/branding/prescription-branding"
 import { formatBulletLines } from "@/lib/text/bullet-text"
@@ -60,7 +59,7 @@ export function buildPrescriptionPrintHtml(params: {
     branding: rawBranding,
   } = params
 
-  const branding = resolvePrescriptionBranding(rawBranding)
+  const branding = rawBranding ?? DEFAULT_PRESCRIPTION_BRANDING
   const instructionLines = prescription.general_instructions
     ? formatBulletLines(prescription.general_instructions)
     : []
@@ -170,9 +169,7 @@ export function buildPrescriptionPrintHtml(params: {
       width: 100%;
       height: auto;
       max-height: 190px;
-      object-fit: contain;
-      object-position: top center;
-      background: #fff;
+      object-fit: cover;
     }
     .banner-fallback {
       padding: 26px 34px 20px;
@@ -437,8 +434,7 @@ export function buildPrescriptionPrintHtml(params: {
       width: 100%;
       height: auto;
       max-height: 116px;
-      object-fit: contain;
-      object-position: bottom center;
+      object-fit: cover;
     }
     .footer-strip-fallback {
       position: absolute;
@@ -570,14 +566,6 @@ export function buildPrescriptionPrintHtml(params: {
 </html>`
 }
 
-function absolutizeHtmlAssetUrls(html: string): string {
-  if (typeof window === "undefined") return html
-  const origin = window.location.origin
-  return html
-    .replace(/src="\/([^"]+)"/g, `src="${origin}/$1"`)
-    .replace(/src='\/([^']+)'/g, `src='${origin}/$1'`)
-}
-
 export function printPrescription(html: string): void {
-  openPrintableHtml(absolutizeHtmlAssetUrls(html), { autoPrint: true })
+  openPrintableHtml(html, { autoPrint: true })
 }

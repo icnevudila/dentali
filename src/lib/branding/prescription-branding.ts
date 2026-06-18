@@ -11,39 +11,17 @@ export interface PrescriptionBrandingSettings {
   showWatermark: boolean
 }
 
-export const PRESCRIPTION_BRANDING_ASSET_PATHS = {
-  header: "/branding/prescription/header.jpg",
-  footer: "/branding/prescription/footer.jpg",
-  watermark: "/branding/prescription/watermark.jpg",
-} as const
-
 export const DEFAULT_PRESCRIPTION_BRANDING: PrescriptionBrandingSettings = {
-  headerImageDataUrl: PRESCRIPTION_BRANDING_ASSET_PATHS.header,
-  watermarkImageDataUrl: PRESCRIPTION_BRANDING_ASSET_PATHS.watermark,
-  footerImageDataUrl: PRESCRIPTION_BRANDING_ASSET_PATHS.footer,
+  headerImageDataUrl: null,
+  watermarkImageDataUrl: null,
+  footerImageDataUrl: null,
   signatureImageDataUrl: null,
-  doctorTitle: "General Dentistry and Orthodontics",
-  licenseLabel: "License No.",
+  doctorTitle: "General Dentistry",
+  licenseLabel: "PRC Lic. No.",
   ptrLabel: "PTR No.",
   ptrNumber: null,
   footerNote: "This prescription is valid for dispensing at a licensed pharmacy. Keep out of reach of children.",
   showWatermark: true,
-}
-
-export function resolvePrescriptionBranding(
-  branding: PrescriptionBrandingSettings | null | undefined
-): PrescriptionBrandingSettings {
-  const base = branding ?? DEFAULT_PRESCRIPTION_BRANDING
-  return {
-    ...DEFAULT_PRESCRIPTION_BRANDING,
-    ...base,
-    headerImageDataUrl:
-      base.headerImageDataUrl ?? DEFAULT_PRESCRIPTION_BRANDING.headerImageDataUrl,
-    watermarkImageDataUrl:
-      base.watermarkImageDataUrl ?? DEFAULT_PRESCRIPTION_BRANDING.watermarkImageDataUrl,
-    footerImageDataUrl:
-      base.footerImageDataUrl ?? DEFAULT_PRESCRIPTION_BRANDING.footerImageDataUrl,
-  }
 }
 
 function stringOrNull(value: unknown): string | null {
@@ -57,7 +35,7 @@ export function normalizePrescriptionBranding(raw: unknown): PrescriptionBrandin
 
   const data = raw as Record<string, unknown>
 
-  return resolvePrescriptionBranding({
+  return {
     headerImageDataUrl: stringOrNull(data.headerImageDataUrl),
     watermarkImageDataUrl: stringOrNull(data.watermarkImageDataUrl),
     footerImageDataUrl: stringOrNull(data.footerImageDataUrl),
@@ -69,5 +47,5 @@ export function normalizePrescriptionBranding(raw: unknown): PrescriptionBrandin
     footerNote: stringOrNull(data.footerNote) ?? DEFAULT_PRESCRIPTION_BRANDING.footerNote,
     showWatermark:
       typeof data.showWatermark === "boolean" ? data.showWatermark : DEFAULT_PRESCRIPTION_BRANDING.showWatermark,
-  })
+  }
 }
