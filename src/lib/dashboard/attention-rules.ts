@@ -93,7 +93,7 @@ export const ATTENTION_RULES: AttentionRuleDef[] = [
     id: "open_encounters_stale",
     statKey: "open_encounters_stale",
     labelKey: "openEncountersStale",
-    href: "/dentist",
+    href: "/reports?focus=clinical#clinical",
     tone: "amber",
     priority: 4,
     permission: PERMISSIONS.APPOINTMENTS_READ,
@@ -295,5 +295,13 @@ export function evaluateAttentionRules(ctx: AttentionRuleContext): AttentionItem
 
   return items
     .sort((a, b) => a.sortPriority - b.sortPriority || b.count - a.count)
-    .map(({ sortPriority: _sortPriority, ...item }) => item)
+    .map((item) => ({
+      id: item.id,
+      label: item.label,
+      count: item.count,
+      href: item.href,
+      tone: item.tone,
+      automationOff: item.automationOff,
+      workflowKey: item.workflowKey,
+    }))
 }

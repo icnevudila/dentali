@@ -150,7 +150,10 @@ function DentistPageContent() {
 
   React.useEffect(() => {
     const id = window.setTimeout(() => {
-      if (providerLocked || urlProvider) {
+      if (providerLocked) {
+        return
+      }
+      if (urlProvider) {
         setProviderId(urlProvider)
         return
       }

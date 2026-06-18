@@ -78,6 +78,15 @@ const APPOINTMENT_PURPOSE_PRESETS = [
   "Orthodontic Consultation",
 ] as const
 
+const APPOINTMENT_STATUS_FILTERS = new Set([
+  "scheduled",
+  "confirmed",
+  "checked_in",
+  "completed",
+  "cancelled",
+  "no_show",
+])
+
 type AppointmentPurposePreset = (typeof APPOINTMENT_PURPOSE_PRESETS)[number] | "Other"
 
 export default function AppointmentsPage() {
@@ -98,6 +107,8 @@ function AppointmentsPageContent() {
   const patientParam = searchParams.get("patient")
   const patientNameParam = searchParams.get("patientName")
   const sourceParam = searchParams.get("source")
+  const statusParam = searchParams.get("status")
+  const statusFilter = statusParam && APPOINTMENT_STATUS_FILTERS.has(statusParam) ? statusParam : null
   const bookingSourceFilter: BookingSource | null =
     sourceParam === "portal" || sourceParam === "kiosk" || sourceParam === "walk_in" || sourceParam === "phone"
       ? sourceParam
@@ -193,9 +204,12 @@ function AppointmentsPageContent() {
   )
 
   const filteredWeekAppointments = React.useMemo(() => {
-    if (!bookingSourceFilter) return weekAppointments
-    return weekAppointments.filter((a) => resolveBookingSource(a) === bookingSourceFilter)
-  }, [weekAppointments, bookingSourceFilter])
+    return weekAppointments.filter((appointment) => {
+      if (bookingSourceFilter && resolveBookingSource(appointment) !== bookingSourceFilter) return false
+      if (statusFilter && appointment.status !== statusFilter) return false
+      return true
+    })
+  }, [weekAppointments, bookingSourceFilter, statusFilter])
 
   const loadWeek = React.useCallback(() => {
     if (!activeBranch) return
@@ -670,6 +684,36 @@ function AppointmentsPageContent() {
                 size="sm"
                 className="mt-2"
                 onClick={() => setBookingSourceFilter(null)}
+              >
+                {t("billing.clearFilter", "Clear filter")}
+              </Button>
+            </div>
+          ) : null}
+
+          {statusFilter ? (
+            <div className="rounded-xl border border-amber-200/80 bg-amber-50/50 px-4 py-3 text-sm text-amber-950 animate-fade-rise">
+              <p className="font-medium">
+                {t("appointments.statusFilterTitle", "Showing {status} appointments").replace(
+                  "{status}",
+                  statusFilter.replace(/_/g, " ")
+                )}
+              </p>
+              <p className="mt-1 text-amber-900/80">
+                {t(
+                  "appointments.statusFilterHint",
+                  "Opened from a dashboard or report KPI. Clear the filter to return to the full schedule."
+                )}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => {
+                  const params = new URLSearchParams(searchParams.toString())
+                  params.delete("status")
+                  const qs = params.toString()
+                  router.replace(qs ? `/appointments?${qs}` : "/appointments", { scroll: false })
+                }}
               >
                 {t("billing.clearFilter", "Clear filter")}
               </Button>
