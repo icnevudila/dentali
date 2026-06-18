@@ -68,11 +68,7 @@ create or replace function public.get_patient_pda_intake(
   p_branch_id uuid
 )
 returns jsonb
-language plpgsql
-stable
-security definer
-set search_path = public
-as $$
+as $pda$
 declare
   v_org uuid := public.current_user_org_id();
   v_row public.patient_pda_intake_records%rowtype;
@@ -105,16 +101,17 @@ begin
     'updated_at', v_row.updated_at
   );
 end;
-$$;
+$pda$
+language plpgsql
+stable
+security definer
+set search_path = public;
 
 grant execute on function public.get_patient_pda_intake(uuid, uuid) to authenticated;
 
 create or replace function public._sync_pda_intake_to_patient(p_record_id uuid)
 returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
+as $pda$
 declare
   v_row public.patient_pda_intake_records%rowtype;
   v_p jsonb;
@@ -216,7 +213,10 @@ begin
       auth.uid();
   end if;
 end;
-$$;
+$pda$
+language plpgsql
+security definer
+set search_path = public;
 
 create or replace function public.upsert_patient_pda_intake(
   p_patient_id uuid,
@@ -225,10 +225,7 @@ create or replace function public.upsert_patient_pda_intake(
   p_status text default 'draft'
 )
 returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
+as $pda$
 declare
   v_org uuid := public.current_user_org_id();
   v_id uuid;
@@ -284,7 +281,10 @@ begin
 
   return jsonb_build_object('id', v_id, 'version', v_version, 'status', v_status);
 end;
-$$;
+$pda$
+language plpgsql
+security definer
+set search_path = public;
 
 grant execute on function public.upsert_patient_pda_intake(uuid, uuid, jsonb, text) to authenticated;
 
@@ -294,10 +294,7 @@ create or replace function public.create_pda_intake_signing_token(
   p_ttl_hours int default 72
 )
 returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
+as $pda$
 declare
   v_row public.patient_pda_intake_records%rowtype;
   v_token text;
@@ -336,17 +333,16 @@ begin
     'expires_at', (now() + make_interval(hours => greatest(p_ttl_hours, 1)))::text
   );
 end;
-$$;
+$pda$
+language plpgsql
+security definer
+set search_path = public;
 
 grant execute on function public.create_pda_intake_signing_token(uuid, text, int) to authenticated;
 
 create or replace function public.get_pda_intake_by_token(p_token text)
 returns jsonb
-language plpgsql
-stable
-security definer
-set search_path = public
-as $$
+as $pda$
 declare
   v_tok record;
   v_patient record;
@@ -379,7 +375,11 @@ begin
     'org_name', coalesce(v_org.name, 'Clinic')
   );
 end;
-$$;
+$pda$
+language plpgsql
+stable
+security definer
+set search_path = public;
 
 grant execute on function public.get_pda_intake_by_token(text) to anon, authenticated;
 
@@ -388,10 +388,7 @@ create or replace function public.submit_pda_intake_via_token(
   p_responses jsonb
 )
 returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
+as $pda$
 declare
   v_tok record;
 begin
@@ -421,7 +418,10 @@ begin
   set used_at = now()
   where id = v_tok.id;
 end;
-$$;
+$pda$
+language plpgsql
+security definer
+set search_path = public;
 
 grant execute on function public.submit_pda_intake_via_token(text, jsonb) to anon, authenticated;
 
