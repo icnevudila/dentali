@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Bell, Check, ChevronLeft, ChevronRight, UserCheck, UserX, X, Calendar, Filter, Plus, List, LayoutGrid } from "lucide-react"
+import { Bell, Check, ChevronLeft, ChevronRight, UserCheck, UserX, X, Calendar, Filter, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import type { AppointmentRecord } from "@/lib/appointments/appointment-service"
@@ -36,6 +36,7 @@ interface AppointmentWeekCalendarProps {
   onCheckIn?: (appointment: AppointmentRecord) => void
   checkingInId?: string | null
   onRemind?: (id: string) => void
+  onWhatsAppRemind?: (appointment: AppointmentRecord) => void
   onEdit?: (appointment: AppointmentRecord) => void
   updatingId?: string | null
   reschedulingId?: string | null
@@ -57,6 +58,7 @@ export function AppointmentWeekCalendar({
   onCheckIn,
   checkingInId,
   onRemind,
+  onWhatsAppRemind,
   onEdit,
   updatingId,
   reschedulingId,
@@ -543,6 +545,17 @@ export function AppointmentWeekCalendar({
                                 <Bell className="h-4 w-4" />
                               </Button>
                             )}
+                            {onWhatsAppRemind && appt.patient_phone ? (
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                                onClick={() => onWhatsAppRemind(appt)}
+                                title="Open WhatsApp reminder"
+                              >
+                                <MessageCircle className="h-4 w-4" />
+                              </Button>
+                            ) : null}
                             {onCheckIn &&
                             (appt.status === "scheduled" || appt.status === "confirmed") ? (
                               <Button
@@ -662,7 +675,7 @@ export function AppointmentWeekCalendar({
           </div>
 
           {selectedAppointments.length === 0 ? (
-            <p className="text-sm text-neutral-500">Select another day or click "Book" above to add an appointment.</p>
+            <p className="text-sm text-neutral-500">Select another day or click &quot;Book&quot; above to add an appointment.</p>
           ) : (
             <ul className="space-y-2">
               {selectedAppointments.map((appt) => {
@@ -738,6 +751,17 @@ export function AppointmentWeekCalendar({
                               <Bell className="h-4 w-4" />
                             </Button>
                           )}
+                          {onWhatsAppRemind && appt.patient_phone ? (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                              onClick={() => onWhatsAppRemind(appt)}
+                              title="Open WhatsApp reminder"
+                            >
+                              <MessageCircle className="h-4 w-4" />
+                            </Button>
+                          ) : null}
                           {onCheckIn &&
                           (appt.status === "scheduled" || appt.status === "confirmed") ? (
                             <Button

@@ -7,7 +7,7 @@ export interface AppointmentRecord {
   status: string
   patient_id: string
   patient_name?: string
+  patient_phone?: string | null
   provider_id?: string | null
   booking_source?: BookingSource | null
 }
-

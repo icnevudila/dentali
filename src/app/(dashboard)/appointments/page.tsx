@@ -32,7 +32,11 @@ import {
   ensureProviderAvailabilityDefaults,
   type AppointmentSlot,
 } from "@/lib/appointments/provider-availability-service"
-import { sendAppointmentReminder } from "@/lib/notifications/notification-service"
+import {
+  logManualWhatsAppNotification,
+  sendAppointmentReminder,
+} from "@/lib/notifications/notification-service"
+import { buildWhatsAppSendUrl } from "@/lib/notifications/whatsapp"
 import { notifyWaitlistOnSlotOpen } from "@/lib/waitlist/waitlist-service"
 import { fetchQueueEntriesForDay, type QueueEntry } from "@/lib/queue/queue-service"
 import { filterPendingCheckInAppointments } from "@/lib/queue/pending-arrivals"
@@ -519,6 +523,47 @@ function AppointmentsPageContent() {
     }
   }
 
+  const handleOpenWhatsAppReminder = async (appointment: AppointmentRecord) => {
+    if (!activeBranch || !appointment.patient_phone) return
+    const scheduled = new Date(appointment.scheduled_at)
+    const appointmentDate = scheduled.toLocaleDateString("en-PH", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "Asia/Manila",
+    })
+    const appointmentTime = scheduled.toLocaleTimeString("en-PH", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Manila",
+    })
+    const body = t(
+      "appointments.whatsAppReminderBody",
+      "Hello {patient}, this is a reminder for your dental appointment at {clinic} on {date} at {time}."
+    )
+      .replace("{patient}", appointment.patient_name ?? "patient")
+      .replace("{clinic}", activeBranch.name)
+      .replace("{date}", appointmentDate)
+      .replace("{time}", appointmentTime)
+
+    const { error: logError } = await logManualWhatsAppNotification({
+      phone: appointment.patient_phone,
+      body,
+      branchId: activeBranch.id,
+      templateKey: "appointment_reminder",
+      patientId: appointment.patient_id,
+    })
+    if (logError) {
+      notify.error(logError)
+      return
+    }
+
+    const win = window.open(buildWhatsAppSendUrl(appointment.patient_phone, body), "_blank", "noopener,noreferrer")
+    if (!win) {
+      notify.error(t("settings.notificationsPopupBlocked", "WhatsApp popup was blocked by the browser."))
+    }
+  }
+
   const todayAwaitingCheckinCount = React.useMemo(() => {
     const todayAppts = weekAppointments.filter(
       (a) => appointmentDateKey(a.scheduled_at) === today
@@ -790,6 +835,7 @@ function AppointmentsPageContent() {
             onStatusChange={handleStatus}
             onReschedule={canWriteAppts ? handleReschedule : undefined}
             onRemind={canWriteAppts ? handleSendReminder : undefined}
+            onWhatsAppRemind={canWriteAppts ? handleOpenWhatsAppReminder : undefined}
             onEdit={canWriteAppts ? openEditDialog : undefined}
             updatingId={updatingId}
             reschedulingId={reschedulingId}
