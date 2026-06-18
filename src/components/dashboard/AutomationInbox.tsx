@@ -123,16 +123,15 @@ export function AutomationInbox({
       </div>
 
       <ul className="space-y-2">
-        {items.map((item) => {
+        {actionable.map((item) => {
           const Icon = item.icon
-          const dimmed = !loading && item.count === 0 && item.id !== "recall"
           return (
             <li key={item.id}>
               <Link
                 href={item.href}
                 className={cn(
                   "flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors hover:bg-neutral-50",
-                  dimmed ? "border-neutral-100 opacity-60" : "border-neutral-200",
+                  "border-neutral-200",
                   item.tone === "warning" && item.count > 0 && "border-amber-200 bg-amber-50/40"
                 )}
               >
