@@ -2,7 +2,7 @@
 export function AuthClinicIllustration() {
   return (
     <div className="relative mt-8 w-full max-w-[300px] xl:max-w-[320px]" aria-hidden>
-      <div className="rounded-2xl border border-white/15 bg-white/10 p-2.5 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+      <div className="rounded-2xl border border-neutral-200/80 bg-white p-2.5 shadow-[0_20px_40px_-16px_rgba(15,23,42,0.12)]">
         <div className="overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-black/5">
           <div className="flex items-center gap-1.5 border-b border-neutral-100 bg-neutral-50 px-3 py-2">
             <span className="h-2 w-2 rounded-full bg-[#ff5f57]" />
@@ -37,7 +37,7 @@ export function AuthClinicIllustration() {
         </div>
       </div>
 
-      <div className="absolute -bottom-3 -right-2 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/30 bg-white shadow-lg">
+      <div className="absolute -bottom-3 -right-2 flex h-11 w-11 items-center justify-center rounded-2xl border border-neutral-200 bg-white shadow-md ring-1 ring-black/5">
         <svg viewBox="0 0 24 24" className="h-6 w-6 text-primary-600" fill="currentColor" aria-hidden>
           <path d="M12 2C9.5 2 7.6 3.8 7.1 6.2 5.4 6.6 4 8.2 4 10.2 4 12.7 6 14.7 8.5 14.7c.3 0 .6 0 .9-.1.6 1.5 2 2.6 3.6 2.6s3-1.1 3.6-2.6c.3.1.6.1.9.1 2.5 0 4.5-2 4.5-4.5 0-2-1.4-3.6-3.1-4-.5-2.4-2.4-4.2-4.9-4.2z" />
         </svg>
