@@ -2,6 +2,7 @@ import { Sidebar, MobileNavProvider } from "@/components/layout/Sidebar"
 import { Topbar } from "@/components/layout/Topbar"
 import { BranchBootstrap } from "@/components/layout/BranchBootstrap"
 import { OperationalRealtimeProvider } from "@/components/operational/OperationalRealtimeProvider"
+import { TurkishDomTranslator } from "@/components/i18n/TurkishDomTranslator"
 
 export default function DashboardLayout({
   children,
@@ -12,6 +13,7 @@ export default function DashboardLayout({
     <BranchBootstrap>
       <OperationalRealtimeProvider>
         <MobileNavProvider>
+          <TurkishDomTranslator />
           <div className="flex min-h-screen w-full bg-neutral-50">
             <Sidebar />
             <div className="flex flex-1 flex-col min-w-0">
