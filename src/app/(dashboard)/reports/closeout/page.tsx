@@ -2,7 +2,22 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Download, Printer, RefreshCw, Save, Wallet, CheckCircle2, XCircle, FileWarning, Receipt, PackageX, Lock, Unlock } from "lucide-react"
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  Download,
+  FileWarning,
+  Lock,
+  PackageX,
+  Printer,
+  Receipt,
+  RefreshCw,
+  Save,
+  Unlock,
+  Wallet,
+  XCircle,
+} from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { MetricStrip } from "@/components/layout/MetricStrip"
@@ -46,6 +61,16 @@ function deltaLabel(current: number, previous: number) {
   if (diff === 0) return "—"
   const sign = diff > 0 ? "+" : ""
   return `${sign}${diff.toLocaleString()}`
+}
+
+type ReadinessItem = {
+  key: string
+  label: string
+  value: string
+  action: string
+  href: string
+  ok: boolean
+  tone: "warning" | "danger"
 }
 
 function DailyCloseoutContent() {
@@ -142,6 +167,14 @@ function DailyCloseoutContent() {
           variant: data.hmoPending > 0 ? "warning" : "default",
           href: "/billing/hmo?status=pending",
         },
+        {
+          label: t("closeout.lowStock", "Low stock"),
+          value: loading ? "â€”" : data.lowStock,
+          hint: t("closeout.lowStockHint", "Review reorder list"),
+          icon: PackageX,
+          variant: data.lowStock > 0 ? "warning" : "default",
+          href: "/inventory?filter=low-stock",
+        },
       ]
     : []
 
@@ -162,6 +195,7 @@ function DailyCloseoutContent() {
           value: data.pendingConsents,
         },
         { label: t("closeout.hmoPending", "HMO pending").slice(0, 11), value: data.hmoPending },
+        { label: t("closeout.lowStock", "Low stock").slice(0, 11), value: data.lowStock },
       ]
     : []
 
@@ -202,6 +236,62 @@ function DailyCloseoutContent() {
 
   const snapshotSavedForDay = Boolean(todaySnapshot)
   const dayFinalized = todaySnapshot?.finalized === true
+
+  const readinessItems: ReadinessItem[] = useMemo(() => {
+    if (!data) return []
+    return [
+      {
+        key: "open-billing",
+        label: t("closeout.readyOpenBilling", "Open billing"),
+        value: `â‚±${data.openBalance.toLocaleString()} Â· ${data.openInvoiceCount} ${t(
+          "closeout.readyInvoices",
+          "invoice(s)"
+        )}`,
+        action: t("closeout.readyOpenBillingAction", "Review invoices"),
+        href: "/billing?focus=open",
+        ok: data.openBalance <= 0 && data.openInvoiceCount === 0,
+        tone: "danger",
+      },
+      {
+        key: "consents",
+        label: t("closeout.readyPendingConsents", "Pending consents"),
+        value: String(data.pendingConsents),
+        action: t("closeout.readyPendingConsentsAction", "Collect signatures"),
+        href: "/patients?attention=consents",
+        ok: data.pendingConsents === 0,
+        tone: "warning",
+      },
+      {
+        key: "hmo",
+        label: t("closeout.readyHmo", "HMO drafts"),
+        value: String(data.hmoPending),
+        action: t("closeout.readyHmoAction", "Open claims"),
+        href: "/billing/hmo?status=pending",
+        ok: data.hmoPending === 0,
+        tone: "warning",
+      },
+      {
+        key: "stock",
+        label: t("closeout.readyLowStock", "Low stock"),
+        value: String(data.lowStock),
+        action: t("closeout.readyLowStockAction", "Review stock"),
+        href: "/inventory?filter=low-stock",
+        ok: data.lowStock === 0,
+        tone: "warning",
+      },
+      {
+        key: "no-show",
+        label: t("closeout.readyNoShows", "No-shows"),
+        value: String(data.noShow),
+        action: t("closeout.readyNoShowsAction", "Review schedule"),
+        href: "/appointments?status=no_show",
+        ok: data.noShow === 0,
+        tone: "warning",
+      },
+    ]
+  }, [data, t])
+
+  const readinessBlockers = readinessItems.filter((item) => !item.ok)
 
   const handleSaveSnapshot = async () => {
     if (!isToday) return
@@ -437,6 +527,81 @@ function DailyCloseoutContent() {
             </details>
 
             <MetricStrip items={metrics} className="lg:grid-cols-3" />
+            {data ? (
+              <div
+                className={cn(
+                  "rounded-xl border bg-white p-4 shadow-sm",
+                  readinessBlockers.length > 0 ? "border-amber-200" : "border-emerald-200"
+                )}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-neutral-900">
+                      {t("closeout.readinessTitle", "Closeout readiness")}
+                    </h3>
+                    <p className="mt-1 text-xs text-neutral-500">
+                      {t(
+                        "closeout.readinessHint",
+                        "Quickly clear operational exceptions before finalizing the day."
+                      )}
+                    </p>
+                  </div>
+                  <Badge
+                    variant={readinessBlockers.length > 0 ? "warning" : "success"}
+                    className="shrink-0"
+                  >
+                    {readinessBlockers.length > 0
+                      ? t("closeout.readinessBlockers", "{count} to review").replace(
+                          "{count}",
+                          String(readinessBlockers.length)
+                        )
+                      : t("closeout.readinessReady", "Ready")}
+                  </Badge>
+                </div>
+
+                <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+                  {readinessItems.map((item) => (
+                    <Link
+                      key={item.key}
+                      href={item.href}
+                      className={cn(
+                        "group flex min-h-[72px] items-center gap-3 rounded-lg border px-3 py-2 text-sm transition hover:-translate-y-0.5 hover:shadow-sm",
+                        item.ok
+                          ? "border-emerald-100 bg-emerald-50/50 text-emerald-900"
+                          : item.tone === "danger"
+                            ? "border-red-200 bg-red-50/60 text-red-950"
+                            : "border-amber-200 bg-amber-50/60 text-amber-950"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                          item.ok ? "bg-emerald-100" : "bg-white"
+                        )}
+                      >
+                        {item.ok ? (
+                          <CheckCircle2 className="h-4 w-4 text-emerald-700" />
+                        ) : (
+                          <AlertTriangle
+                            className={cn(
+                              "h-4 w-4",
+                              item.tone === "danger" ? "text-red-600" : "text-amber-600"
+                            )}
+                          />
+                        )}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{item.label}</span>
+                        <span className="block truncate text-xs opacity-75">{item.value}</span>
+                      </span>
+                      <span className="text-xs font-medium opacity-70 group-hover:opacity-100">
+                        {item.ok ? t("closeout.readyOk", "OK") : item.action}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <p className="text-sm text-neutral-500">
               {isToday
                 ? dayFinalized
