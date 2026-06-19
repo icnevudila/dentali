@@ -74,7 +74,7 @@ Clinics that use digital charting, SMS reminders, and clear queue displays reduc
     readTime: "6 min read",
     publishedAt: "June 8, 2026",
     author: "Dr. Marco Reyes, DMD",
-    coverImage: cover("photo-1629909613654-28e737c08b71"),
+    coverImage: cover("photo-1752842936210-dd34c42ff484"),
     coverImageAlt: "Dental instruments prepared for endodontic treatment",
     content: `
 # 7 Signs You May Need a Root Canal
@@ -170,7 +170,7 @@ Clinics using 3D scans and treatment-plan software can show projected outcomes b
     readTime: "5 min read",
     publishedAt: "June 3, 2026",
     author: "Dr. Elena Santos, DMD",
-    coverImage: cover("photo-1606265758919-84c3466c9d17"),
+    coverImage: cover("photo-1654373535457-383a0a4d00f9"),
     coverImageAlt: "Bright healthy smile after dental care",
     content: `
 # Is Teeth Whitening Safe?

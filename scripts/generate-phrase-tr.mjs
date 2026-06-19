@@ -107,6 +107,11 @@ for (const [key, tr] of Object.entries(overrides)) {
   if (tr) phrase[key] = tr
 }
 
+const batchPath = path.join(process.cwd(), "scripts/phrase-tr-batch.json")
+if (fs.existsSync(batchPath)) {
+  Object.assign(phrase, JSON.parse(fs.readFileSync(batchPath, "utf8")))
+}
+
 const apiPath = path.join(process.cwd(), "scripts/en-to-tr-api.json")
 const api = fs.existsSync(apiPath) ? JSON.parse(fs.readFileSync(apiPath, "utf8")) : {}
 

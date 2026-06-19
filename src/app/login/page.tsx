@@ -12,9 +12,12 @@ import {
   logSessionEvent,
 } from "@/lib/auth/auth-service"
 import { resolvePostLoginPath } from "@/lib/navigation/post-login-route"
-import { PublicChannelBrand } from "@/components/brand/public-channel-brand"
-import { AuthMarketingPanel } from "@/components/auth/auth-marketing-panel"
-import { LocaleSwitcher } from "@/components/i18n/LocaleSwitcher"
+import { AuthPageShell } from "@/components/auth/auth-page-shell"
+import {
+  AuthField,
+  authFormCardClassName,
+  authPrimaryButtonClassName,
+} from "@/components/auth/auth-field"
 import { useLocale } from "@/hooks/use-locale"
 
 export default function LoginPage() {
@@ -96,111 +99,79 @@ export default function LoginPage() {
 
   if (checkingSession) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-neutral-100">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-screen bg-white">
-      <AuthMarketingPanel variant="login" />
-
-      <div className="relative flex min-h-screen flex-1 flex-col overflow-hidden">
-        <div className="landing-hero-bg pointer-events-none absolute inset-0 opacity-30" />
-
-        <header className="relative z-10 mx-auto flex w-full max-w-xl items-center justify-end px-6 py-5 lg:max-w-lg">
-          <LocaleSwitcher />
-        </header>
-
-        <div className="relative z-10 flex flex-1 items-center justify-center px-4 pb-10">
-          <div className="w-full max-w-[440px] space-y-8 rounded-3xl border border-neutral-100 bg-white p-8 shadow-xl shadow-neutral-200/50">
-            <div className="space-y-3 text-center">
-              <PublicChannelBrand variant="auth" href="/welcome" className="mb-1 lg:hidden" />
-              <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900">
-                {t("login.signIn", "Sign in")}
-              </h1>
-              <p className="text-sm font-medium text-neutral-500">
-                {t("login.subtitle", "Sign in to the clinical operating system")}
-              </p>
-            </div>
-
-            <form onSubmit={handleLogin} className="space-y-5">
-              {error ? (
-                <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-center text-xs font-semibold text-red-600">
-                  {error}
-                </div>
-              ) : null}
-              <div className="space-y-1.5">
-                <label htmlFor="login-email" className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                  {t("login.email", "Email")}
-                </label>
-                <input
-                  id="login-email"
-                  type="email"
-                  placeholder="doctor@clinic.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none placeholder-neutral-400 transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="login-password" className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                  {t("login.password", "Password")}
-                </label>
-                <input
-                  id="login-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-xl bg-primary-600 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-500/20 transition duration-200 hover:bg-primary-700 active:scale-[0.98] disabled:opacity-50"
-              >
-                {loading ? t("login.signingIn", "Signing in…") : t("login.signIn", "Sign in")}
-              </button>
-            </form>
-
-            <div className="space-y-3 pt-2 text-center text-sm">
-              <p className="text-neutral-500">
-                {t("login.newToProduct", "New to dentali.?")}{" "}
-                <Link href="/signup" className="font-bold text-primary-600 transition hover:text-primary-700">
-                  {t("login.createAccount", "Create clinic account")}
-                </Link>
-              </p>
-              <div className="flex justify-center gap-4 border-t border-neutral-100 pt-4 text-xs font-semibold text-neutral-500">
-                <Link href="/quote" className="transition hover:text-primary-600">
-                  {t("login.requestQuote", "Request a quote")}
-                </Link>
-                <span>·</span>
-                <Link href="/welcome" className="transition hover:text-primary-600">
-                  {t("login.learnMore", "Learn more")}
-                </Link>
-              </div>
-            </div>
-          </div>
+    <AuthPageShell variant="login">
+      <div className={authFormCardClassName()}>
+        <div className="space-y-2 text-center sm:space-y-2.5">
+          <h1 className="font-[family-name:var(--font-clinic-display)] text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">
+            {t("login.signIn", "Sign in")}
+          </h1>
+          <p className="text-sm leading-relaxed text-neutral-500">
+            {t("login.subtitle", "Sign in to the clinical operating system")}
+          </p>
         </div>
 
-        <footer className="relative z-10 border-t border-neutral-100 py-5 text-center text-xs font-semibold text-neutral-500">
-          <div className="mx-auto flex max-w-xl justify-center gap-6">
-            <Link href="/pricing" className="transition hover:text-primary-600">
-              {t("marketing.navPricing", "Pricing")}
+        <form onSubmit={handleLogin} className="space-y-4">
+          {error ? (
+            <div
+              role="alert"
+              className="rounded-xl border border-red-100 bg-red-50 px-3 py-2.5 text-center text-xs font-medium text-red-600"
+            >
+              {error}
+            </div>
+          ) : null}
+
+          <AuthField
+            id="login-email"
+            label={t("login.email", "Email")}
+            type="email"
+            placeholder="doctor@clinic.com"
+            value={email}
+            onChange={setEmail}
+            required
+            autoComplete="email"
+          />
+          <AuthField
+            id="login-password"
+            label={t("login.password", "Password")}
+            type="password"
+            value={password}
+            onChange={setPassword}
+            required
+            autoComplete="current-password"
+          />
+
+          <button type="submit" disabled={loading} className={authPrimaryButtonClassName()}>
+            {loading ? t("login.signingIn", "Signing in…") : t("login.signIn", "Sign in")}
+          </button>
+        </form>
+
+        <div className="space-y-3 border-t border-neutral-100 pt-1 text-center text-sm">
+          <p className="text-neutral-500">
+            {t("login.newToProduct", "New to dentali.?")}{" "}
+            <Link href="/signup" className="font-semibold text-primary-600 transition hover:text-primary-700">
+              {t("login.createAccount", "Create clinic account")}
             </Link>
+          </p>
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs font-medium text-neutral-500">
             <Link href="/quote" className="transition hover:text-primary-600">
-              {t("marketing.navQuote", "Get a quote")}
+              {t("login.requestQuote", "Request a quote")}
             </Link>
+            <span className="hidden text-neutral-300 sm:inline" aria-hidden>
+              ·
+            </span>
             <Link href="/welcome" className="transition hover:text-primary-600">
-              {t("marketing.navHome", "Home")}
+              {t("login.learnMore", "Learn more")}
             </Link>
           </div>
-        </footer>
+        </div>
       </div>
-    </div>
+    </AuthPageShell>
   )
 }

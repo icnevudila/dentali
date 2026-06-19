@@ -75,6 +75,8 @@ export const codeMessagesTrOverrides: MessageTree = {
     rejectClaim: "Reddet",
     resetToDraft: "Taslağa al",
     submitClaim: "Gönder",
+    checkInOverride: "Faturalama geçersiz kılmayla check-in yap",
+    caseRateCode: "Vaka tarifesi kodu",
   },
   patient: {
     balanceCleared: "Bakiye kapatıldı",
@@ -86,5 +88,15 @@ export const codeMessagesTrOverrides: MessageTree = {
     noActiveVisit: "Aktif ziyaret yok",
     openVisitsLog: "Ziyaret günlüğünü aç",
     viewAllVisits: "Ziyaret geçmişini görüntüle",
+  },
+  settings: {
+    channelTestWhatsApp: "WhatsApp bağlantısını test et",
+  },
+  pricingTiers: {
+    starterF4: "Kiosk check-in bağlantısı",
+  },
+  landing: {
+    workflowDescription:
+      "Klinik ekibinizin günlük kullandığı modülleri gezin — vitrin seed yapılandırıldığında canlı veriyle.",
   },
 }

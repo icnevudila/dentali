@@ -32,8 +32,9 @@
     "odontogram:generate-svgs": "node scripts/generate-odontogram-svgs.mjs",
     "i18n:fetch-tr": "node scripts/fetch-tr-api.mjs",
     "i18n:phrase-tr": "node scripts/generate-phrase-tr.mjs",
-    "i18n:build-tr": "node scripts/generate-phrase-tr.mjs && tsx scripts/build-tr-ui-strings.mjs",
-    "i18n:sync": "tsx scripts/sync-code-messages.mjs",
+    "i18n:build-tr": "node scripts/generate-phrase-tr.mjs && npx tsx scripts/build-tr-ui-strings.mjs",
+    "i18n:sync": "npx tsx scripts/sync-code-messages.mjs",
+    "i18n:apply-batch": "node scripts/apply-phrase-tr-batch.mjs",
     "i18n:full": "node scripts/fetch-tr-api.mjs && npm run i18n:build-tr && npm run i18n:sync",
     "i18n:audit-tr": "tsx scripts/audit-i18n-tr.mjs",
     "i18n:audit-quality": "tsx scripts/audit-tr-quality.mjs"

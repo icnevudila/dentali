@@ -293,6 +293,19 @@
   .landing-preview-vignette {
     box-shadow: inset 0 0 24px rgb(15 23 42 / 0.04);
   }
+
+  .auth-input:-webkit-autofill,
+  .auth-input:-webkit-autofill:hover,
+  .auth-input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px rgb(250 250 250) inset;
+    -webkit-text-fill-color: rgb(23 23 23);
+    caret-color: rgb(23 23 23);
+    transition: background-color 99999s ease-out 0s;
+  }
+
+  .auth-input:focus:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px white inset;
+  }
 }
 
 /* View transition timing (React <ViewTransition> recipes) */

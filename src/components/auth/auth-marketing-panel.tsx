@@ -1,8 +1,9 @@
 "use client"
 
 import { Building2, CalendarDays, Check, Tv } from "lucide-react"
-import { PublicChannelBrand } from "@/components/brand/public-channel-brand"
+import { DentQLLogo } from "@/components/brand/dentql-logo"
 import { useLocale } from "@/hooks/use-locale"
+import "@/components/landing/landing.css"
 
 const BULLETS = {
   en: [
@@ -17,6 +18,19 @@ const BULLETS = {
   ],
 } as const
 
+const CHIPS = {
+  en: [
+    { icon: Building2, label: "Multi-branch" },
+    { icon: CalendarDays, label: "Scheduling" },
+    { icon: Tv, label: "Queue TV" },
+  ],
+  tr: [
+    { icon: Building2, label: "Çok şubeli" },
+    { icon: CalendarDays, label: "Randevu" },
+    { icon: Tv, label: "Sıra TV" },
+  ],
+} as const
+
 type AuthMarketingPanelProps = {
   variant: "login" | "signup"
 }
@@ -24,6 +38,7 @@ type AuthMarketingPanelProps = {
 export function AuthMarketingPanel({ variant }: AuthMarketingPanelProps) {
   const { locale } = useLocale()
   const bullets = locale === "tr" ? BULLETS.tr : BULLETS.en
+  const chips = locale === "tr" ? CHIPS.tr : CHIPS.en
 
   const title =
     variant === "signup"
@@ -46,7 +61,7 @@ export function AuthMarketingPanel({ variant }: AuthMarketingPanelProps) {
       <div className="landing-hero-orb landing-hero-orb-b pointer-events-none absolute opacity-30" />
 
       <div className="relative z-10">
-        <PublicChannelBrand variant="auth-header" href="/welcome" />
+        <DentQLLogo invert size="sm" href="/welcome" />
       </div>
 
       <div className="relative z-10 max-w-md space-y-8">
@@ -66,19 +81,16 @@ export function AuthMarketingPanel({ variant }: AuthMarketingPanelProps) {
           ))}
         </ul>
 
-        <div className="flex flex-wrap gap-3 pt-2">
-          <div className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold backdrop-blur-sm">
-            <Building2 className="h-4 w-4 text-emerald-200" />
-            Multi-branch
-          </div>
-          <div className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold backdrop-blur-sm">
-            <CalendarDays className="h-4 w-4 text-emerald-200" />
-            Scheduling
-          </div>
-          <div className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold backdrop-blur-sm">
-            <Tv className="h-4 w-4 text-emerald-200" />
-            Queue TV
-          </div>
+        <div className="flex flex-wrap gap-2.5 pt-2">
+          {chips.map(({ icon: Icon, label }) => (
+            <div
+              key={label}
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold backdrop-blur-sm"
+            >
+              <Icon className="h-3.5 w-3.5 text-emerald-200" />
+              {label}
+            </div>
+          ))}
         </div>
       </div>
 
