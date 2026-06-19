@@ -78,6 +78,15 @@ export const codeMessagesTrOverrides: MessageTree = {
     checkInOverride: "Faturalama geçersiz kılmayla check-in yap",
     caseRateCode: "Vaka tarifesi kodu",
   },
+  patients: {
+    actionDentalChart: "Diş chartı",
+    recordTablePlan: "Tedavi planı",
+    sourceKiosk: "Kiosk tableti",
+    sourcePortalShort: "hasta portalı",
+  },
+  consent: {
+    notStarted: "Başlamadı",
+  },
   patient: {
     balanceCleared: "Bakiye kapatıldı",
   },
@@ -91,11 +100,18 @@ export const codeMessagesTrOverrides: MessageTree = {
   },
   settings: {
     channelTestWhatsApp: "WhatsApp bağlantısını test et",
+    metricPlan: "Abonelik planı",
+    notificationsTest: "Test gönder",
+    orgDefault: "Kurum varsayılanı",
   },
   pricingTiers: {
     starterF4: "Kiosk check-in bağlantısı",
   },
   landing: {
+    deviceTabletKiosk: "Tablet kiosku",
+    kioskCheckIn: "Kiosk girişi",
+    stageKiosk: "Kiosk girişi",
+    wfKioskTitle: "Kiosk girişi",
     workflowDescription:
       "Klinik ekibinizin günlük kullandığı modülleri gezin — vitrin seed yapılandırıldığında canlı veriyle.",
   },

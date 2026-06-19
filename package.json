@@ -36,8 +36,8 @@
     "i18n:sync": "npx tsx scripts/sync-code-messages.mjs",
     "i18n:apply-batch": "node scripts/apply-phrase-tr-batch.mjs",
     "i18n:full": "node scripts/fetch-tr-api.mjs && npm run i18n:build-tr && npm run i18n:sync",
-    "i18n:audit-tr": "tsx scripts/audit-i18n-tr.mjs",
-    "i18n:audit-quality": "tsx scripts/audit-tr-quality.mjs"
+    "i18n:audit-tr": "npx tsx scripts/audit-i18n-tr.mjs",
+    "i18n:audit-quality": "npx tsx scripts/audit-tr-quality.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
