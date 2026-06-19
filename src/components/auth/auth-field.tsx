@@ -150,9 +150,9 @@ export function AuthMarketingLinks() {
 
 export function authFormCardClassName() {
   return cn(
-    "auth-form-card mx-auto w-full max-w-[400px] space-y-7 rounded-2xl border border-neutral-200/90 bg-white p-6 shadow-[0_8px_32px_-12px_rgba(15,23,42,0.12)]",
+    "auth-form-card mx-auto w-full max-w-[400px] space-y-7 rounded-2xl border border-neutral-200/90 border-t-[3px] border-t-primary-500 bg-white p-6 shadow-[0_8px_32px_-12px_rgba(15,23,42,0.12)]",
     "max-lg:ring-1 max-lg:ring-primary-100/80",
-    "sm:rounded-3xl sm:p-8 sm:shadow-[0_12px_40px_-16px_rgba(15,23,42,0.1)]",
+    "sm:rounded-3xl sm:p-8 sm:shadow-[0_16px_48px_-16px_rgba(15,23,42,0.14)]",
     "landing-hero-enter"
   )
 }

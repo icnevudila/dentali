@@ -163,17 +163,6 @@ export default function LoginPage() {
               {t("login.createAccount", "Create clinic account")}
             </Link>
           </p>
-          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs font-medium text-neutral-500">
-            <Link href="/quote" className="transition hover:text-primary-600">
-              {t("login.requestQuote", "Request a quote")}
-            </Link>
-            <span className="hidden text-neutral-300 sm:inline" aria-hidden>
-              ·
-            </span>
-            <Link href="/welcome" className="transition hover:text-primary-600">
-              {t("login.learnMore", "Learn more")}
-            </Link>
-          </div>
           <AuthMarketingLinks />
         </AuthCardFooter>
       </div>

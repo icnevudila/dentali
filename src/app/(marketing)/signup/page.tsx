@@ -191,12 +191,6 @@ export default function SignupPage() {
                   {t("marketing.signIn", "Sign in")}
                 </Link>
               </p>
-              <p className="text-xs font-medium text-neutral-500">
-                {t("signup.enterprise", "Large group or custom rollout?")}{" "}
-                <Link href="/quote" className="text-primary-600 transition hover:text-primary-700">
-                  {t("marketing.navQuote", "Get a quote")}
-                </Link>
-              </p>
               <AuthMarketingLinks />
             </AuthCardFooter>
           </>
