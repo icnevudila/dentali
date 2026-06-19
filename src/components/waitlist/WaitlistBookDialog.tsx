@@ -50,6 +50,7 @@ export function WaitlistBookDialog({
   const [forceBillingOverride, setForceBillingOverride] = React.useState(false)
 
   const open = entry !== null
+  const entryPatientId = entry?.patient_id ?? null
 
   React.useEffect(() => {
     if (!open) return
@@ -59,6 +60,11 @@ export function WaitlistBookDialog({
       document.body.style.overflow = prevOverflow
     }
   }, [open])
+
+  const reloadBillingGate = React.useCallback(() => {
+    if (!entryPatientId) return
+    void getPatientBillingGate(entryPatientId).then(({ data }) => setBillingGate(data))
+  }, [entryPatientId])
 
   React.useEffect(() => {
     if (!entry) return
@@ -81,12 +87,10 @@ export function WaitlistBookDialog({
         setProviderId((prev) => prev || branchProviders[0].profile_id)
       }
     })
-    if (entry?.patient_id) {
-      getPatientBillingGate(entry.patient_id).then(({ data }) => setBillingGate(data))
-    }
+    reloadBillingGate()
     const id = window.setTimeout(() => setForceBillingOverride(false), 0)
     return () => window.clearTimeout(id)
-  }, [open, activeBranch, entry?.patient_id])
+  }, [open, activeBranch, reloadBillingGate])
 
   React.useEffect(() => {
     if (!open || !activeBranch || !providerId || !date) {
@@ -168,7 +172,12 @@ export function WaitlistBookDialog({
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] sm:px-6 sm:py-5">
             {billingGate?.has_billing_gap ? (
-              <PatientBillingGateBanner gate={billingGate} patientId={entry.patient_id} />
+              <PatientBillingGateBanner
+                gate={billingGate}
+                patientId={entry.patient_id}
+                branchId={activeBranch?.id}
+                onBackfill={reloadBillingGate}
+              />
             ) : null}
             {billingGate?.has_billing_gap ? (
               <label className="flex items-start gap-2 text-xs text-amber-900">

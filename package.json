@@ -29,6 +29,7 @@
     "verify:mask": "npx tsx scripts/verify-mask-patient-name.ts",
     "verify:pending-arrivals": "npx tsx scripts/verify-pending-arrivals.ts",
     "verify:encounter-journey": "npx tsx scripts/verify-encounter-journey.ts",
+    "audit:actions": "node scripts/audit-risky-actions.mjs",
     "odontogram:generate-svgs": "node scripts/generate-odontogram-svgs.mjs",
     "i18n:fetch-tr": "node scripts/fetch-tr-api.mjs",
     "i18n:phrase-tr": "node scripts/generate-phrase-tr.mjs",

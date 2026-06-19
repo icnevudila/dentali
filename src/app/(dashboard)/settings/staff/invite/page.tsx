@@ -41,6 +41,7 @@ export default function StaffInvitePage() {
   const [inviteRoleId, setInviteRoleId] = useState("")
   const [phoneNumber, setPhoneNumber] = useState("")
   const [specialization, setSpecialization] = useState("")
+  const [prcLicenseNumber, setPrcLicenseNumber] = useState("")
 
   useEffect(() => {
     if (activeBranch && !inviteBranchId) setInviteBranchId(activeBranch.id)
@@ -64,31 +65,20 @@ export default function StaffInvitePage() {
     setError(null)
 
     if (addMode === "direct") {
-      const { error: directError, profileId } = await addStaffMemberDirectly({
+      const { error: directError } = await addStaffMemberDirectly({
         email: inviteEmail.trim(),
         fullName: inviteName.trim(),
         branchId: inviteBranchId,
         roleId: inviteRoleId,
         phoneNumber: phoneNumber.trim() || undefined,
-        specialization: specialization.trim() || undefined
+        specialization: specialization.trim() || undefined,
+        prcLicenseNumber: prcLicenseNumber.trim() || undefined,
       })
 
       if (directError) {
         setError(directError)
         setInviting(false)
         return
-      }
-
-      const org = await fetchOrganization()
-      if (org) {
-        await logAuditEvent({
-          organizationId: org.id,
-          branchId: inviteBranchId,
-          action: "staff.invite",
-          entityType: "staff",
-          entityId: profileId ?? inviteEmail,
-          metadata: { email: inviteEmail.trim(), mode: "direct" },
-        })
       }
     } else {
       const { error: inviteError, invitationId } = await inviteStaffMember({
@@ -214,6 +204,17 @@ export default function StaffInvitePage() {
                         onChange={(e) => setSpecialization(e.target.value)}
                         placeholder="General Dentistry"
                       />
+                    </div>
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-xs font-medium">PRC license number</label>
+                      <Input
+                        value={prcLicenseNumber}
+                        onChange={(e) => setPrcLicenseNumber(e.target.value)}
+                        placeholder="e.g. PRC 1234567"
+                      />
+                      <p className="text-xs text-neutral-500">
+                        Used on doctor-signed prescriptions, certificates, abstracts, and discharge outputs.
+                      </p>
                     </div>
                   </>
                 )}

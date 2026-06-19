@@ -36,10 +36,10 @@ export async function deactivateStaff(
   profileId: string
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
-  const { error } = await supabase
-    .from("staff_profiles")
-    .update({ is_active: false, updated_at: new Date().toISOString() })
-    .eq("profile_id", profileId)
+  const { error } = await supabase.rpc("set_staff_active_status", {
+    p_profile_id: profileId,
+    p_is_active: false,
+  })
 
   return { error: error?.message ?? null }
 }
@@ -48,10 +48,10 @@ export async function reactivateStaff(
   profileId: string
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
-  const { error } = await supabase
-    .from("staff_profiles")
-    .update({ is_active: true, updated_at: new Date().toISOString() })
-    .eq("profile_id", profileId)
+  const { error } = await supabase.rpc("set_staff_active_status", {
+    p_profile_id: profileId,
+    p_is_active: true,
+  })
 
   return { error: error?.message ?? null }
 }
@@ -144,31 +144,11 @@ export async function updateStaffProfile(params: {
 }): Promise<{ error: string | null }> {
   const supabase = createClient()
 
-  const { data: existing } = await supabase
-    .from("staff_profiles")
-    .select("profile_id")
-    .eq("profile_id", params.profileId)
-    .maybeSingle()
-
-  const payload = {
-    phone_number: params.phoneNumber?.trim() || null,
-    specialization: params.specialization?.trim() || null,
-    prc_license_number: params.prcLicenseNumber?.trim() || null,
-    updated_at: new Date().toISOString(),
-  }
-
-  if (existing) {
-    const { error } = await supabase
-      .from("staff_profiles")
-      .update(payload)
-      .eq("profile_id", params.profileId)
-    return { error: error?.message ?? null }
-  }
-
-  const { error } = await supabase.from("staff_profiles").insert({
-    profile_id: params.profileId,
-    is_active: true,
-    ...payload,
+  const { error } = await supabase.rpc("update_staff_profile_contact", {
+    p_profile_id: params.profileId,
+    p_phone_number: params.phoneNumber?.trim() || null,
+    p_specialization: params.specialization?.trim() || null,
+    p_prc_license_number: params.prcLicenseNumber?.trim() || null,
   })
   return { error: error?.message ?? null }
 }
@@ -203,11 +183,10 @@ export async function removeStaffAssignment(
   branchId: string
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
-  const { error } = await supabase
-    .from("staff_branch_assignments")
-    .delete()
-    .eq("profile_id", profileId)
-    .eq("branch_id", branchId)
+  const { error } = await supabase.rpc("remove_staff_branch_assignment", {
+    p_profile_id: profileId,
+    p_branch_id: branchId,
+  })
   return { error: error?.message ?? null }
 }
 
@@ -283,56 +262,16 @@ export async function addStaffMemberDirectly(params: {
   prcLicenseNumber?: string
 }): Promise<{ error: string | null; profileId?: string }> {
   const supabase = createClient()
-  const newProfileId = crypto.randomUUID()
-
-  // Fetch current user's organization_id to associate with the new profile
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: "User not authenticated" }
-
-  const { data: currentUserProfile } = await supabase
-    .from("profiles")
-    .select("organization_id")
-    .eq("id", user.id)
-    .maybeSingle()
-
-  if (!currentUserProfile?.organization_id) {
-    return { error: "Organization not found for the current user" }
-  }
-
-  const orgId = currentUserProfile.organization_id
-  
-  // 1. Insert into profiles
-  const { error: profileError } = await supabase.from("profiles").insert({
-    id: newProfileId,
-    organization_id: orgId,
-    full_name: params.fullName,
-    email: params.email
-  })
-  if (profileError) return { error: profileError.message }
-
-  // 2. Insert into staff_profiles
-  const { error: staffError } = await supabase.from("staff_profiles").insert({
-    profile_id: newProfileId,
-    is_active: true,
-    phone_number: params.phoneNumber || null,
-    specialization: params.specialization || null,
-    prc_license_number: params.prcLicenseNumber || null
-  })
-  if (staffError) return { error: staffError.message }
-
-  // 3. Insert into staff_branch_assignments
-  const { error: assignError } = await supabase.from("staff_branch_assignments").insert({
-    profile_id: newProfileId,
-    branch_id: params.branchId,
-    role_id: params.roleId
-  })
-  if (assignError) return { error: assignError.message }
-
-  // 4. Ensure default provider availability slots (e.g., 9:00 - 17:00)
-  await supabase.rpc("ensure_provider_availability_defaults", {
+  const { data, error } = await supabase.rpc("add_staff_member_directly", {
+    p_email: params.email.trim(),
+    p_full_name: params.fullName.trim(),
     p_branch_id: params.branchId,
-    p_provider_id: newProfileId
+    p_role_id: params.roleId,
+    p_phone_number: params.phoneNumber?.trim() || null,
+    p_specialization: params.specialization?.trim() || null,
+    p_prc_license_number: params.prcLicenseNumber?.trim() || null,
   })
 
-  return { error: null, profileId: newProfileId }
+  if (error) return { error: error.message }
+  return { error: null, profileId: (data as { profile_id?: string } | null)?.profile_id }
 }

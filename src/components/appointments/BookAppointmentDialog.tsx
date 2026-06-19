@@ -52,6 +52,11 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
     }
   }, [open])
 
+  const reloadBillingGate = React.useCallback(() => {
+    if (!patientId) return
+    void getPatientBillingGate(patientId).then(({ data }) => setBillingGate(data))
+  }, [patientId])
+
   React.useEffect(() => {
     if (!open || !activeBranch) return
     fetchOrgStaff().then(({ data }) => {
@@ -63,10 +68,10 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
         setProviderId((prev) => prev || branchProviders[0].profile_id)
       }
     })
-    getPatientBillingGate(patientId).then(({ data }) => setBillingGate(data))
+    reloadBillingGate()
     const id = window.setTimeout(() => setForceBillingOverride(false), 0)
     return () => window.clearTimeout(id)
-  }, [open, activeBranch, patientId])
+  }, [open, activeBranch, reloadBillingGate])
 
   React.useEffect(() => {
     if (!open || !activeBranch || !providerId || !date) {
@@ -156,7 +161,12 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] sm:px-6 sm:py-5">
             {billingGate?.has_billing_gap ? (
-              <PatientBillingGateBanner gate={billingGate} patientId={patientId} />
+              <PatientBillingGateBanner
+                gate={billingGate}
+                patientId={patientId}
+                branchId={activeBranch?.id}
+                onBackfill={reloadBillingGate}
+              />
             ) : null}
             {billingGate?.has_billing_gap ? (
               <label className="flex items-start gap-2 text-xs text-amber-900">
