@@ -27,7 +27,10 @@ import {
   MapPin,
   LayoutDashboard,
   BarChart3,
+  UserCheck,
 } from "lucide-react"
+import { CollapsibleBelowFold } from "@/components/layout/CollapsibleBelowFold"
+import { StickyActionBar } from "@/components/layout/StickyActionBar"
 
 type DashboardPeriodDays = 7 | 30 | 90
 
@@ -77,7 +80,7 @@ export default function DashboardPage() {
           title={t("dashboard.title", "Dashboard")}
           description={dashboardDescription}
           actions={
-            <Button asChild className="gap-2 shadow-sm">
+            <Button asChild className="hidden gap-2 shadow-sm md:inline-flex">
               <Link href="/patients/new" transitionTypes={NAV_FORWARD_TRANSITION}>
                 <Plus className="h-4 w-4" />
                 {t("dashboard.newPatient", "New Patient")}
@@ -86,9 +89,22 @@ export default function DashboardPage() {
           }
         />
 
-        {activeBranch ? (
-          <DashboardOpsSummary stats={stats} loading={loading} />
-        ) : null}
+        <StickyActionBar>
+          <div className="flex gap-2">
+            <Button asChild className="h-11 flex-1 gap-2">
+              <Link href="/patients/new" transitionTypes={NAV_FORWARD_TRANSITION}>
+                <Plus className="h-4 w-4 shrink-0" />
+                {t("dashboard.newPatient", "New Patient")}
+              </Link>
+            </Button>
+            <Button variant="outline" asChild className="h-11 flex-1 gap-2">
+              <Link href="/queue">
+                <UserCheck className="h-4 w-4 shrink-0" />
+                {t("dashboard.openQueue", "Queue")}
+              </Link>
+            </Button>
+          </div>
+        </StickyActionBar>
 
         {activeBranch ? (
           <div className="flex flex-wrap items-center gap-2 animate-fade-rise">
@@ -126,6 +142,12 @@ export default function DashboardPage() {
 
         {activeBranch ? (
           <DashboardScheduleSection branchId={activeBranch.id} periodDays={chartPeriodDays} />
+        ) : null}
+
+        {activeBranch ? (
+          <CollapsibleBelowFold summary={t("dashboard.opsSummaryToggle", "Today's numbers")}>
+            <DashboardOpsSummary stats={stats} loading={loading} />
+          </CollapsibleBelowFold>
         ) : null}
 
         {activeBranch ? (

@@ -9,6 +9,9 @@ import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
+import { CollapsibleBelowFold } from "@/components/layout/CollapsibleBelowFold"
+import { StickyActionBar } from "@/components/layout/StickyActionBar"
+import { MetricStrip } from "@/components/layout/MetricStrip"
 import { FlaskConical, Plus, CheckCircle2, Clock, XCircle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -109,42 +112,23 @@ export default function LabCasesPage() {
         </SectionEyebrow>
 
         <PageHeader
+          compact
           title={t("labcases.title", "Laboratory Cases")}
           description={t("labcases.description", "Track impressions, crowns, and external lab orders.")}
           actions={
-            <Button size="sm" className="gap-2" onClick={() => setDialogOpen(true)}>
+            <Button size="sm" className="hidden gap-2 md:inline-flex" onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4" />
               {t("labcases.new", "New Lab Case")}
             </Button>
           }
         />
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className={caseStats.overdue > 0 ? "border-red-200 bg-red-50/40" : ""}>
-            <CardContent className="pt-4">
-              <p className="text-xs font-medium text-neutral-500">{t("labcases.overdue", "Overdue")}</p>
-              <p className="text-2xl font-bold text-red-700">{loading ? "—" : caseStats.overdue}</p>
-            </CardContent>
-          </Card>
-          <Card className={caseStats.dueToday > 0 ? "border-amber-200 bg-amber-50/40" : ""}>
-            <CardContent className="pt-4">
-              <p className="text-xs font-medium text-neutral-500">{t("labcases.dueToday", "Due today")}</p>
-              <p className="text-2xl font-bold text-amber-700">{loading ? "—" : caseStats.dueToday}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-xs font-medium text-neutral-500">{t("labcases.pending", "Pending")}</p>
-              <p className="text-2xl font-bold text-neutral-900">{loading ? "—" : caseStats.pending}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-xs font-medium text-neutral-500">{t("labcases.received", "Received")}</p>
-              <p className="text-2xl font-bold text-emerald-700">{loading ? "—" : caseStats.received}</p>
-            </CardContent>
-          </Card>
-        </div>
+        <StickyActionBar>
+          <Button className="h-11 w-full gap-2" onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 shrink-0" />
+            {t("labcases.new", "New Lab Case")}
+          </Button>
+        </StickyActionBar>
 
         {loading ? (
           <div className="py-12 text-center text-sm text-neutral-500 animate-pulse">
@@ -247,6 +231,33 @@ export default function LabCasesPage() {
             )})}
           </div>
         )}
+
+        <CollapsibleBelowFold summary={t("labcases.statsToggle", "Lab case stats")}>
+          <MetricStrip
+            items={[
+              {
+                label: t("labcases.overdue", "Overdue"),
+                value: loading ? "—" : caseStats.overdue,
+                variant: caseStats.overdue > 0 ? ("warning" as const) : undefined,
+              },
+              {
+                label: t("labcases.dueToday", "Due today"),
+                value: loading ? "—" : caseStats.dueToday,
+                variant: caseStats.dueToday > 0 ? ("warning" as const) : undefined,
+              },
+              {
+                label: t("labcases.pending", "Pending"),
+                value: loading ? "—" : caseStats.pending,
+              },
+              {
+                label: t("labcases.received", "Received"),
+                value: loading ? "—" : caseStats.received,
+                variant: caseStats.received > 0 ? ("success" as const) : undefined,
+              },
+            ]}
+            className="lg:grid-cols-4"
+          />
+        </CollapsibleBelowFold>
 
       </ContentPanel>
 

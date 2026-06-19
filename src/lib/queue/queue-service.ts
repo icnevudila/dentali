@@ -155,7 +155,10 @@ export async function checkInPatient(params: {
   forceCheckin?: boolean
   forceBillingOverride?: boolean
   reuseEncounterId?: string
-}): Promise<{ data: { id: string; display_code: string } | null; error: string | null }> {
+}): Promise<{
+  data: { id: string; display_code: string; alreadyQueued?: boolean } | null
+  error: string | null
+}> {
   const supabase = createClient()
   const payload: Record<string, string | boolean> = {
     branch_id: params.branchId,
@@ -172,7 +175,25 @@ export async function checkInPatient(params: {
     p_payload: payload,
   })
 
-  if (error) return { data: null, error: error.message }
+  if (error) {
+    if (error.message.includes("already in the queue")) {
+      const { data: active, error: activeError } = await fetchPatientActiveQueueEntry(
+        params.patientId,
+        params.branchId
+      )
+      if (!activeError && active) {
+        return {
+          data: {
+            id: active.id,
+            display_code: active.display_code,
+            alreadyQueued: true,
+          },
+          error: null,
+        }
+      }
+    }
+    return { data: null, error: error.message }
+  }
   const result = data as { id: string; display_code: string } | null
   return { data: result, error: null }
 }

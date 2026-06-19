@@ -35,7 +35,9 @@ import { WaitlistAddDialog } from "@/components/waitlist/WaitlistAddDialog"
 import { WaitlistOpsSummary } from "@/components/waitlist/WaitlistOpsSummary"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { notify } from "@/lib/ui/notify"
-import { WorkflowStatusBanner } from "@/components/layout/WorkflowStatusBanner"
+import { CollapsibleBelowFold } from "@/components/layout/CollapsibleBelowFold"
+import { StickyActionBar } from "@/components/layout/StickyActionBar"
+import { OpsStatusRow } from "@/components/layout/OpsStatusRow"
 import { logManualWhatsAppNotification } from "@/lib/notifications/notification-service"
 import { buildWhatsAppSendUrl } from "@/lib/notifications/whatsapp"
 
@@ -232,41 +234,82 @@ export default function WaitlistPage() {
         )}
         actions={
           canWriteAppointments ? (
-            <Button className="gap-2 shadow-sm" onClick={() => setShowAdd(true)}>
+            <Button className="hidden gap-2 shadow-sm md:inline-flex" onClick={() => setShowAdd(true)}>
               <Plus className="h-4 w-4" /> {t("waitlist.addPatient", "Add to waitlist")}
             </Button>
           ) : null
         }
         badges={
           activeBranch ? (
-            <div className="flex flex-wrap items-center gap-2 animate-fade-rise">
-              <Badge variant="info" className="gap-1 font-normal">
-                <MapPin className="h-3 w-3" aria-hidden />
-                {activeBranch.name}
-              </Badge>
-              <Badge variant="outline" className="font-normal capitalize">
-                {tab === "active" ? t("waitlist.active", "Active") : t("waitlist.history", "History")}
-              </Badge>
-            </div>
+            <OpsStatusRow
+              extra={
+                <>
+                  <Badge variant="info" className="gap-1 font-normal">
+                    <MapPin className="h-3 w-3" aria-hidden />
+                    {activeBranch.name}
+                  </Badge>
+                  <Badge variant="outline" className="font-normal capitalize">
+                    {tab === "active" ? t("waitlist.active", "Active") : t("waitlist.history", "History")}
+                  </Badge>
+                </>
+              }
+              workflowItems={
+                tab === "active"
+                  ? [
+                      {
+                        key: "auto_waitlist_on_slot_open",
+                        label: t("waitlist.workflowSlotAlerts", "Open-slot alerts"),
+                      },
+                    ]
+                  : []
+              }
+            />
           ) : null
-        }
-        summary={
-          <WaitlistOpsSummary
-            activeCount={entries.length}
-            waitingCount={waitingCount}
-            contactedCount={contactedCount}
-            historyCount={entries.length}
-            tab={tab}
-            loading={loading}
-          />
         }
         metrics={metricItems}
         metricsClassName="lg:grid-cols-1"
+        summaryBelowContent
         error={error && !loading ? error : null}
         onRetry={load}
         retryLabel={t("common.retry", "Retry")}
         panel={false}
+        compactHeader
+        hideEyebrowOnMobile
+        belowContent={
+          <>
+            <CollapsibleBelowFold summary={t("waitlist.opsSummaryToggle", "Waitlist summary")}>
+              <WaitlistOpsSummary
+                activeCount={entries.length}
+                waitingCount={waitingCount}
+                contactedCount={contactedCount}
+                historyCount={entries.length}
+                tab={tab}
+                loading={loading}
+              />
+            </CollapsibleBelowFold>
+            {activeBranch && tab === "active" ? (
+              <ReportDrillLink
+                title={t("waitlist.reportsTitle", "Waitlist recovery analytics")}
+                description={t(
+                  "waitlist.reportsDescription",
+                  "Conversion and contact trends for open waitlist demand are in Reports."
+                )}
+                href="/reports#operations"
+                linkLabel={t("waitlist.openReports", "Open waitlist reports")}
+              />
+            ) : null}
+          </>
+        }
       >
+        {canWriteAppointments ? (
+          <StickyActionBar>
+            <Button className="h-11 w-full gap-2" onClick={() => setShowAdd(true)}>
+              <Plus className="h-4 w-4 shrink-0" />
+              {t("waitlist.addPatient", "Add to waitlist")}
+            </Button>
+          </StickyActionBar>
+        ) : null}
+
         <div className="flex flex-wrap gap-2">
           <Button variant={tab === "active" ? "default" : "outline"} size="sm" onClick={() => setTab("active")}>
             {t("waitlist.active", "Active")}
@@ -275,34 +318,6 @@ export default function WaitlistPage() {
             {t("waitlist.history", "History")}
           </Button>
         </div>
-
-        {activeBranch && tab === "active" ? (
-          <WorkflowStatusBanner
-            title={t("waitlist.workflowBannerTitle", "Automation affecting waitlist")}
-            description={t(
-              "waitlist.workflowBannerDescription",
-              "Open-slot notifications and follow-up depend on branch workflow settings."
-            )}
-            items={[
-              {
-                key: "auto_waitlist_on_slot_open",
-                label: t("waitlist.workflowSlotAlerts", "Open-slot alerts"),
-              },
-            ]}
-          />
-        ) : null}
-
-        {activeBranch && tab === "active" ? (
-          <ReportDrillLink
-            title={t("waitlist.reportsTitle", "Waitlist recovery analytics")}
-            description={t(
-              "waitlist.reportsDescription",
-              "Conversion and contact trends for open waitlist demand are in Reports."
-            )}
-            href="/reports#operations"
-            linkLabel={t("waitlist.openReports", "Open waitlist reports")}
-          />
-        ) : null}
 
         <WaitlistAddDialog
           open={showAdd}

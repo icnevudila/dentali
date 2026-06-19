@@ -17,6 +17,7 @@ import {
 import {
   callNextPatient,
   checkInPatient,
+  fetchQueueEntries,
   fetchQueueEntriesForDay,
   updateQueueStatus,
   type QueueEntry,
@@ -70,6 +71,14 @@ import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { ClinicDayBar } from "@/components/layout/ClinicDayBar"
 import { useClinicDay } from "@/hooks/use-clinic-day"
 import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
+import {
+  clearPendingQueueCheckIn,
+  hrefWithQueueReturn,
+  loadPendingQueueCheckIn,
+  savePendingQueueCheckIn,
+  type PendingQueueCheckIn,
+  type PendingQueueCheckInInput,
+} from "@/lib/queue/queue-check-in-return"
 
 type Tab = "board" | "history"
 
@@ -105,6 +114,36 @@ function isConsentGateError(message: string) {
   return message.includes("Intake consents") || message.includes("Pending consents")
 }
 
+function pendingFromCheckInAction(
+  action: PendingCheckInAction,
+  gateKind: "consent" | "billing",
+  reuseEncounterId: string | null,
+  notes?: string
+): PendingQueueCheckInInput {
+  return {
+    patientId: action.patientId,
+    patientName: action.patientName,
+    mode: action.mode,
+    appointmentId: action.appointmentId,
+    notes,
+    forceBillingOverride: action.forceBillingOverride,
+    forceCheckin: action.forceCheckin,
+    reuseEncounterId,
+    gateKind,
+  }
+}
+
+function actionFromPending(pending: PendingQueueCheckIn): PendingCheckInAction {
+  return {
+    patientId: pending.patientId,
+    patientName: pending.patientName,
+    mode: pending.mode,
+    appointmentId: pending.appointmentId,
+    forceBillingOverride: pending.forceBillingOverride,
+    forceCheckin: pending.forceCheckin,
+  }
+}
+
 export default function QueuePage() {
   return (
     <React.Suspense fallback={<PageLoadingSkeleton variant="list" />}>
@@ -119,6 +158,7 @@ function QueuePageContent() {
   const highlightAppointmentId = searchParams.get("appointment")
   const walkinPatientParam = searchParams.get("walkinPatient")
   const walkinNameParam = searchParams.get("walkinName")
+  const resumeCheckInParam = searchParams.get("resumeCheckIn")
   const focusParam = searchParams.get("focus")
   const urlBoardFilter = parseQueueBoardFilter(searchParams.get("filter"))
   const { activeBranch, branchRevision } = useBranch()
@@ -159,7 +199,9 @@ function QueuePageContent() {
   const [pendingCheckIn, setPendingCheckIn] = React.useState<PendingCheckInAction | null>(null)
   const [encounterResolving, setEncounterResolving] = React.useState(false)
   const [checkInGate, setCheckInGate] = React.useState<CheckInGate | null>(null)
+  const [resumeCheckIn, setResumeCheckIn] = React.useState<PendingQueueCheckIn | null>(null)
   const seededWalkInRef = React.useRef(false)
+  const resumeHandledRef = React.useRef(false)
   const queueBoardRef = React.useRef<HTMLDivElement>(null)
 
   const today = clinicDay
@@ -347,19 +389,29 @@ function QueuePageContent() {
       if (!activeBranch) return
       if (!silent) setLoading(true)
 
-      void fetchQueueEntriesForDay(activeBranch.id, clinicDay).then(({ data: dayData, error: err }) => {
-        const sortedDay = sortQueueEntries(dayData)
+      void (async () => {
+        const { data: dayData, error: dayError } = await fetchQueueEntriesForDay(
+          activeBranch.id,
+          clinicDay
+        )
+        const { data: activeData, error: activeError } = isToday
+          ? await fetchQueueEntries(activeBranch.id, true)
+          : { data: [] as QueueEntry[], error: null }
+        const mergedById = new Map<string, QueueEntry>()
+        for (const entry of dayData) mergedById.set(entry.id, entry)
+        for (const entry of activeData) mergedById.set(entry.id, entry)
+        const sortedDay = sortQueueEntries([...mergedById.values()])
         setDayEntries(sortedDay)
         const filtered =
           tab === "board"
             ? sortedDay.filter((e) => !["served", "cancelled"].includes(e.status))
             : sortedDay.filter((e) => ["served", "cancelled"].includes(e.status))
         setEntries(filtered)
-        setError(err)
+        setError(dayError ?? activeError)
         setLoading(false)
-      })
+      })()
     },
-    [activeBranch, tab, clinicDay]
+    [activeBranch, tab, clinicDay, isToday]
   )
 
   React.useEffect(() => {
@@ -550,9 +602,14 @@ function QueuePageContent() {
   ) => {
     if (!action.forceCheckin && isConsentGateError(err)) {
       setError(null)
+      savePendingQueueCheckIn(
+        pendingFromCheckInAction(action, "consent", reuseEncounterId, checkInNotes || undefined)
+      )
       void fetchPatientConsents(action.patientId).then(({ data: consents }) => {
         const consentHref = resolveCheckInConsentHref(action.patientId, consents)
         const consentButtonLabel = checkInConsentFormLabel(consents, t)
+        const pending = pendingFromCheckInAction(action, "consent", reuseEncounterId, checkInNotes || undefined)
+        const consentHrefWithReturn = hrefWithQueueReturn(consentHref, pending)
         setCheckInGate({
           kind: "consent",
           message: t(
@@ -561,12 +618,12 @@ function QueuePageContent() {
           ),
           action,
           reuseEncounterId,
-          consentHref,
+          consentHref: consentHrefWithReturn,
           consentButtonLabel,
         })
         if (action.mode === "walk_in") {
           setConsentOverridePending(true)
-          setWalkInConsentHref(consentHref)
+          setWalkInConsentHref(consentHrefWithReturn)
           setWalkInConsentLabel(consentButtonLabel)
         }
       })
@@ -576,6 +633,9 @@ function QueuePageContent() {
 
     if (!action.forceBillingOverride && err.includes("Billing clearance")) {
       setError(null)
+      savePendingQueueCheckIn(
+        pendingFromCheckInAction(action, "billing", reuseEncounterId, checkInNotes || undefined)
+      )
       setCheckInGate({
         kind: "billing",
         message: t(
@@ -620,13 +680,20 @@ function QueuePageContent() {
         notify.error(err)
       } else {
         setCheckInGate(null)
+        setResumeCheckIn(null)
+        clearPendingQueueCheckIn()
         closeCheckInModal()
         notify.success(
-          data?.display_code
-            ? t("queue.checkInSuccess", "Checked in — queue #{code}").replace(
+          data?.alreadyQueued && data.display_code
+            ? t("queue.alreadyInWaiting", "Patient is already in Waiting — queue #{code}").replace(
                 "{code}",
                 data.display_code
               )
+            : data?.display_code
+              ? t("queue.checkInSuccess", "Checked in — queue #{code}").replace(
+                  "{code}",
+                  data.display_code
+                )
             : t(
                 "queue.walkInCheckInSuccess",
                 "Walk-in checked in — patient is in Waiting."
@@ -649,8 +716,18 @@ function QueuePageContent() {
         notify.error(err)
       } else if (data) {
         setCheckInGate(null)
+        setResumeCheckIn(null)
+        clearPendingQueueCheckIn()
         notify.success(
-          t("queue.checkInSuccess", "Checked in — queue #{code}").replace("{code}", data.display_code)
+          data.alreadyQueued
+            ? t("queue.alreadyInWaiting", "Patient is already in Waiting — queue #{code}").replace(
+                "{code}",
+                data.display_code
+              )
+            : t("queue.checkInSuccess", "Checked in — queue #{code}").replace(
+                "{code}",
+                data.display_code
+              )
         )
         void load(true)
       }
@@ -705,6 +782,35 @@ function QueuePageContent() {
     setEncounterResolving(false)
     await executeCheckIn(action, reuseEncounterId)
   }
+
+  React.useEffect(() => {
+    if (resumeCheckInParam !== "1" || resumeHandledRef.current || loading) return
+    const pending = loadPendingQueueCheckIn()
+    if (!pending) return
+    resumeHandledRef.current = true
+    router.replace("/queue", { scroll: false })
+
+    if (pending.gateKind === "consent") {
+      clearPendingQueueCheckIn()
+      queueMicrotask(() => {
+        void executeCheckIn(actionFromPending(pending), pending.reuseEncounterId ?? null)
+      })
+      return
+    }
+
+    queueMicrotask(() => {
+      setResumeCheckIn(pending)
+      setError(null)
+      notify.info(
+        t(
+          "queue.resumeCheckInHint",
+          "Return here after resolving billing — tap Complete check-in when ready."
+        )
+      )
+    })
+    // executeCheckIn intentionally stays out of deps: it is an event-style action that reads current page state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, resumeCheckInParam, router, t])
 
   const handleCheckIn = async (
     e: React.FormEvent,
@@ -1042,6 +1148,49 @@ function QueuePageContent() {
             </div>
           ) : null}
 
+          {resumeCheckIn ? (
+            <div className="rounded-xl border border-primary-200 bg-primary-50/90 p-4 text-primary-950 animate-fade-rise">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">
+                    {t("queue.resumeCheckInTitle", "Complete check-in")}
+                  </p>
+                  <p className="mt-1 text-sm text-primary-900/90">
+                    {resumeCheckIn.patientName
+                      ? t(
+                          "queue.resumeCheckInBodyNamed",
+                          "Ready to check in {name} to Waiting?"
+                        ).replace("{name}", resumeCheckIn.patientName)
+                      : t("queue.resumeCheckInBody", "Ready to finish check-in to Waiting?")}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const action = actionFromPending(resumeCheckIn)
+                      setResumeCheckIn(null)
+                      clearPendingQueueCheckIn()
+                      void beginGatedCheckIn(action)
+                    }}
+                  >
+                    {t("queue.resumeCheckInAction", "Complete check-in")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      clearPendingQueueCheckIn()
+                      setResumeCheckIn(null)
+                    }}
+                  >
+                    {t("common.dismiss", "Dismiss")}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {checkInGate ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4 text-amber-950 animate-fade-rise">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1057,11 +1206,20 @@ function QueuePageContent() {
                     <p className="text-sm font-semibold">
                       {checkInGate.kind === "consent"
                         ? t("queue.consentGateTitle", "Consent required before check-in")
-                        : t("billing.gateTitle", "Billing review required before check-in")}
+                        : t("billing.checkInGateTitle", "Billing review before check-in")}
                     </p>
                     <p className="mt-1 text-sm text-amber-900/90">{checkInGate.message}</p>
+                    <ol className="mt-2 list-decimal space-y-0.5 pl-4 text-xs text-amber-900/85">
+                      <li>
+                        {checkInGate.kind === "consent"
+                          ? t("queue.gateStepConsent", "Open and sign the required consent form")
+                          : t("queue.gateStepBilling", "Open billing, collect payment, or override if authorized")}
+                      </li>
+                      <li>{t("queue.gateStepReturn", "You will return here automatically")}</li>
+                      <li>{t("queue.gateStepFinish", "Tap Complete check-in or use override if allowed")}</li>
+                    </ol>
                     {checkInGate.action.patientName ? (
-                      <p className="mt-1 text-xs text-amber-900/80">
+                      <p className="mt-2 text-xs font-medium text-amber-900/80">
                         {checkInGate.action.patientName}
                       </p>
                     ) : null}
@@ -1070,12 +1228,18 @@ function QueuePageContent() {
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Button variant="outline" size="sm" className="border-amber-300 bg-white" asChild>
                     <Link
-                      href={
+                      href={hrefWithQueueReturn(
                         checkInGate.kind === "consent"
                           ? (checkInGate.consentHref ??
                               `/patients/${checkInGate.action.patientId}/consents/general-treatment`)
-                          : `/billing?patient=${checkInGate.action.patientId}`
-                      }
+                          : `/billing?patient=${checkInGate.action.patientId}`,
+                        pendingFromCheckInAction(
+                          checkInGate.action,
+                          checkInGate.kind,
+                          checkInGate.reuseEncounterId,
+                          checkInNotes || undefined
+                        )
+                      )}
                     >
                       {checkInGate.kind === "consent"
                         ? (checkInGate.consentButtonLabel ??
@@ -1097,7 +1261,7 @@ function QueuePageContent() {
                   >
                     {checkInGate.kind === "consent"
                       ? t("queue.consentOverride", "Check in anyway")
-                      : t("billing.gateOverrideCheckIn", "Check in with billing override")}
+                      : t("billing.checkInOverride", "Check in with billing override")}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => setCheckInGate(null)}>
                     {t("common.dismiss", "Dismiss")}

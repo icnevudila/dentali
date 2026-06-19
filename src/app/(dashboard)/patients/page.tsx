@@ -32,6 +32,8 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
 import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
+import { CollapsibleBelowFold } from "@/components/layout/CollapsibleBelowFold"
+import { StickyActionBar } from "@/components/layout/StickyActionBar"
 import type { IntakeDraftCounts } from "@/lib/patients/intake-draft-review"
 
 const PAGE_SIZE = 20
@@ -291,32 +293,30 @@ function PatientsPageContent() {
           </SectionEyebrow>
 
           <PageHeader
+            compact
             title={t("patients.registryTitle", "Patient Registry")}
             description={t(
               "patients.registrySubtitle",
               "Manage patient records, demographics, and clinical files."
             )}
             actions={
-              <>
-                <Button asChild size="sm" className="hidden gap-2 shadow-sm sm:inline-flex">
-                  <Link href="/patients/new" transitionTypes={NAV_FORWARD_TRANSITION}>
-                    <Plus className="h-4 w-4" />
-                    {t("patients.newPatient", "New Patient")}
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  size="icon"
-                  className="sm:hidden shadow-sm"
-                  aria-label={t("patients.newPatient", "New Patient")}
-                >
-                  <Link href="/patients/new" transitionTypes={NAV_FORWARD_TRANSITION}>
-                    <Plus className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </>
+              <Button asChild size="sm" className="hidden gap-2 shadow-sm md:inline-flex">
+                <Link href="/patients/new" transitionTypes={NAV_FORWARD_TRANSITION}>
+                  <Plus className="h-4 w-4" />
+                  {t("patients.newPatient", "New Patient")}
+                </Link>
+              </Button>
             }
           />
+
+          <StickyActionBar>
+            <Button asChild className="h-11 w-full gap-2">
+              <Link href="/patients/new" transitionTypes={NAV_FORWARD_TRANSITION}>
+                <Plus className="h-4 w-4 shrink-0" />
+                {t("patients.newPatient", "New Patient")}
+              </Link>
+            </Button>
+          </StickyActionBar>
 
           {activeBranch ? (
             <div className="flex flex-wrap items-center gap-2 animate-fade-rise">
@@ -377,29 +377,6 @@ function PatientsPageContent() {
             </div>
           ) : null}
 
-          <MetricStrip items={metricItems} className="lg:grid-cols-3 xl:grid-cols-4" />
-
-          {activeBranch ? (
-            <ReportDrillLink
-              title={t("patients.reportsTitle", "Registry and consent analytics")}
-              description={t(
-                "patients.reportsDescription",
-                "Patient growth, intake completion, and consent trends live in Reports."
-              )}
-              href="/reports#clinical"
-              linkLabel={t("patients.openRegistryReports", "Open registry reports")}
-            />
-          ) : null}
-
-          {activeBranch ? (
-            <PatientIntakeDraftPanel
-              branchId={activeBranch.id}
-              sourceFilter={intakeSourceFilter}
-              onSourceFilterChange={(filter) => scrollToIntakePanel(filter)}
-              onCountsChange={handleIntakeCountsChange}
-            />
-          ) : null}
-
           <div className="grid gap-6 xl:grid-cols-[15rem_minmax(0,1fr)] 2xl:grid-cols-[16.5rem_minmax(0,1fr)]">
             <PatientFilterBar
               filters={filters}
@@ -408,7 +385,7 @@ function PatientsPageContent() {
             />
 
             <div className="min-w-0 space-y-4 border-t border-neutral-100 pt-5 xl:border-t-0 xl:pt-0">
-              <div className="sticky top-0 z-10 -mx-1 space-y-3 bg-white/95 px-1 pb-3 backdrop-blur-sm supports-[backdrop-filter]:bg-white/80">
+              <div className="sticky top-0 z-10 -mx-1 space-y-3 bg-white/95 px-1 pb-3 backdrop-blur-sm supports-[backdrop-filter]:bg-white/80 md:top-14">
                 <SectionEyebrow icon={Users}>
                   {loading
                     ? t("patients.listLoading", "Patient list")
@@ -440,6 +417,29 @@ function PatientsPageContent() {
               />
             </div>
           </div>
+
+          {activeBranch ? (
+            <CollapsibleBelowFold summary={t("patients.registryMetricsToggle", "Registry metrics & intake")}>
+              <div className="space-y-4">
+                <MetricStrip items={metricItems} className="lg:grid-cols-3 xl:grid-cols-4" />
+                <PatientIntakeDraftPanel
+                  branchId={activeBranch.id}
+                  sourceFilter={intakeSourceFilter}
+                  onSourceFilterChange={(filter) => scrollToIntakePanel(filter)}
+                  onCountsChange={handleIntakeCountsChange}
+                />
+                <ReportDrillLink
+                  title={t("patients.reportsTitle", "Registry and consent analytics")}
+                  description={t(
+                    "patients.reportsDescription",
+                    "Patient growth, intake completion, and consent trends live in Reports."
+                  )}
+                  href="/reports#clinical"
+                  linkLabel={t("patients.openRegistryReports", "Open registry reports")}
+                />
+              </div>
+            </CollapsibleBelowFold>
+          ) : null}
         </ContentPanel>
       </DirectionalTransition>
     </PermissionGate>

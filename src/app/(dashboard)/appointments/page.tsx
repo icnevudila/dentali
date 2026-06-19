@@ -71,7 +71,9 @@ import { DirectionalTransition } from "@/components/layout/DirectionalTransition
 import { useOperationalRefresh } from "@/hooks/use-operational-refresh"
 import { resolveBookingSource } from "@/lib/appointments/booking-source"
 import type { BookingSource } from "@/lib/appointments/booking-source"
-import { WorkflowStatusBanner } from "@/components/layout/WorkflowStatusBanner"
+import { CollapsibleBelowFold } from "@/components/layout/CollapsibleBelowFold"
+import { StickyActionBar } from "@/components/layout/StickyActionBar"
+import { OpsStatusRow } from "@/components/layout/OpsStatusRow"
 
 const APPOINTMENT_PURPOSE_PRESETS = [
   "General Checkup",
@@ -639,15 +641,57 @@ function AppointmentsPageContent() {
               "Week calendar for booking and status — check-in happens on the Queue board."
             )}
             actions={
-            <>
+            <div className="hidden md:flex md:flex-wrap md:items-center md:gap-2">
               <WorkflowSettingsLink />
               <Button className="gap-2" onClick={openBookModal}>
                 <Plus className="h-4 w-4" />
                 {t("appointments.book", "Book")}
               </Button>
-            </>
+            </div>
           }
           />
+
+          <StickyActionBar>
+            <div className="flex gap-2">
+              <Button className="h-11 flex-1 gap-2" onClick={openBookModal}>
+                <Plus className="h-4 w-4 shrink-0" />
+                {t("appointments.book", "Book")}
+              </Button>
+              {canCheckIn ? (
+                <Button variant="outline" className="h-11 flex-1 gap-2" asChild>
+                  <Link href="/queue?focus=checkin">
+                    <UserCheck className="h-4 w-4 shrink-0" />
+                    {t("appointments.openQueue", "Open queue")}
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
+          </StickyActionBar>
+
+          {activeBranch ? (
+            <OpsStatusRow
+              extra={
+                <Badge variant="info" className="gap-1 font-normal">
+                  <MapPin className="h-3 w-3" aria-hidden />
+                  {activeBranch.name}
+                </Badge>
+              }
+              workflowItems={[
+                {
+                  key: "auto_checkin_updates_appointment",
+                  label: t("appointments.workflowCheckinSync", "Queue check-in sync"),
+                },
+                {
+                  key: "auto_waitlist_on_slot_open",
+                  label: t("appointments.workflowWaitlist", "Waitlist slot alerts"),
+                },
+                {
+                  key: "auto_no_show_after_grace",
+                  label: t("appointments.workflowNoShow", "Auto no-show rule"),
+                },
+              ]}
+            />
+          ) : null}
 
           {canCheckIn && todayAwaitingCheckinCount > 0 ? (
             <div className="rounded-xl border border-amber-200/90 bg-amber-50/80 px-4 py-3 text-sm text-amber-950 animate-fade-rise">
@@ -765,48 +809,6 @@ function AppointmentsPageContent() {
             </div>
           ) : null}
 
-          <WorkflowStatusBanner
-            title={t("appointments.workflowBannerTitle", "Automation affecting appointments")}
-            description={t(
-              "appointments.workflowBannerDescription",
-              "Check-in handoff, no-show handling, and waitlist follow-up depend on branch workflow toggles."
-            )}
-            items={[
-              {
-                key: "auto_checkin_updates_appointment",
-                label: t("appointments.workflowCheckinSync", "Queue check-in sync"),
-              },
-              {
-                key: "auto_waitlist_on_slot_open",
-                label: t("appointments.workflowWaitlist", "Waitlist slot alerts"),
-              },
-              {
-                key: "auto_no_show_after_grace",
-                label: t("appointments.workflowNoShow", "Auto no-show rule"),
-              },
-            ]}
-          />
-
-          {activeBranch ? (
-            <AppointmentsDaySummary
-              appointments={filteredWeekAppointments}
-              selectedDate={selectedDate}
-              isToday={selectedDate === today}
-              loading={loading}
-            />
-          ) : null}
-
-          {activeBranch ? (
-            <Badge variant="info" className="gap-1 w-fit font-normal">
-              <MapPin className="h-3 w-3" aria-hidden />
-              {activeBranch.name}
-            </Badge>
-          ) : null}
-
-          {metricItems.length > 0 ? (
-            <MetricStrip items={metricItems} snapOnMobile desktopCols={2} />
-          ) : null}
-
         {error ? <PageErrorNotifier error={error} onRetry={reload} /> : null}
         {reminderNotice && (
           <p className="text-sm text-green-800 bg-green-50 border border-green-200 rounded-md px-4 py-2">
@@ -866,6 +868,24 @@ function AppointmentsPageContent() {
           ) : null}
           </>
         )}
+
+          {activeBranch ? (
+            <CollapsibleBelowFold
+              summary={t("appointments.daySummaryToggle", "Day summary & metrics")}
+            >
+              <div className="space-y-4">
+                <AppointmentsDaySummary
+                  appointments={filteredWeekAppointments}
+                  selectedDate={selectedDate}
+                  isToday={selectedDate === today}
+                  loading={loading}
+                />
+                {metricItems.length > 0 ? (
+                  <MetricStrip items={metricItems} snapOnMobile desktopCols={2} />
+                ) : null}
+              </div>
+            </CollapsibleBelowFold>
+          ) : null}
         </ContentPanel>
       </DirectionalTransition>
       {portalReady && showBook

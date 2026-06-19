@@ -16,12 +16,27 @@ export function activeQueuedAppointmentIds(dayEntries: QueueEntry[]): Set<string
   return ids
 }
 
+/** Patient IDs with an active queue entry (walk-in/kiosk may omit appointment_id). */
+export function activeQueuedPatientIds(dayEntries: QueueEntry[]): Set<string> {
+  const ids = new Set<string>()
+  for (const entry of dayEntries) {
+    if (ACTIVE_QUEUE_STATUSES.has(entry.status)) {
+      ids.add(entry.patient_id)
+    }
+  }
+  return ids
+}
+
 export function filterPendingCheckInAppointments(
   appointments: AppointmentRecord[],
   dayEntries: QueueEntry[]
 ): AppointmentRecord[] {
-  const queued = activeQueuedAppointmentIds(dayEntries)
+  const queuedAppointments = activeQueuedAppointmentIds(dayEntries)
+  const queuedPatients = activeQueuedPatientIds(dayEntries)
   return appointments.filter(
-    (a) => PENDING_CHECK_IN_APPOINTMENT_STATUSES.has(a.status) && !queued.has(a.id)
+    (a) =>
+      PENDING_CHECK_IN_APPOINTMENT_STATUSES.has(a.status) &&
+      !queuedAppointments.has(a.id) &&
+      !queuedPatients.has(a.patient_id)
   )
 }

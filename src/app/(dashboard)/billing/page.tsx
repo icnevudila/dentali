@@ -25,7 +25,10 @@ import { RecordRow } from "@/components/layout/RecordRow"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
-import { WorkflowStatusBanner } from "@/components/layout/WorkflowStatusBanner"
+import { CollapsibleBelowFold } from "@/components/layout/CollapsibleBelowFold"
+import { StickyActionBar } from "@/components/layout/StickyActionBar"
+import { OpsStatusRow } from "@/components/layout/OpsStatusRow"
+import { queueResumeHref, loadPendingQueueCheckIn } from "@/lib/queue/queue-check-in-return"
 
 const STATUS_FILTERS: InvoiceStatusFilter[] = ["all", "open", "paid", "void"]
 
@@ -34,6 +37,7 @@ function BillingPageContent() {
   const { t } = useLocale()
   const searchParams = useSearchParams()
   const patientFilter = searchParams.get("patient")
+  const returnToQueue = searchParams.get("returnTo") === "queue"
   const focusParam = searchParams.get("focus")
   const focusOverdue = focusParam === "overdue"
   const focusOpen = focusParam === "open"
@@ -141,7 +145,7 @@ function BillingPageContent() {
               </Badge>
             ) : null}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="hidden flex-wrap items-center gap-2 md:flex">
             <WorkflowSettingsLink />
             <PermissionGate permission={PERMISSIONS.BILLING_WRITE}>
               <Button className="gap-2 shadow-sm" onClick={() => setShowCreate((v) => !v)}>
@@ -152,50 +156,32 @@ function BillingPageContent() {
           </div>
         </div>
 
-        {activeBranch ? (
-          <BillingOpsSummary
-            total={billingStats.total}
-            open={billingStats.open}
-            outstanding={billingStats.outstanding}
-            paid={billingStats.paid}
-            overdue={billingStats.overdue}
-            loading={loading}
-            branchName={activeBranch.name}
-          />
-        ) : null}
+        <PermissionGate permission={PERMISSIONS.BILLING_WRITE}>
+          <StickyActionBar>
+            <Button className="h-11 w-full gap-2" onClick={() => setShowCreate((v) => !v)}>
+              <Plus className="h-4 w-4 shrink-0" />
+              {showCreate ? t("common.cancel", "Cancel") : t("billing.createInvoice", "New invoice")}
+            </Button>
+          </StickyActionBar>
+        </PermissionGate>
 
-        <WorkflowStatusBanner
-          title={t("billing.workflowBannerTitle", "Automation affecting billing")}
-          description={t(
-            "billing.workflowBannerDescription",
-            "Invoice drafting, booking or check-in billing gates, and reminder automations depend on branch settings."
-          )}
-          items={[
-            {
-              key: "auto_approve_creates_invoice",
-              label: t("billing.workflowInvoiceDraft", "Plan approval event"),
-            },
-            {
-              key: "billing_gate_block_services",
-              label: t("billing.workflowBillingGate", "Booking and check-in gate"),
-            },
-            {
-              key: "auto_payment_reminder",
-              label: t("billing.workflowReminder", "Payment reminders"),
-            },
-          ]}
-        />
-
-        {activeBranch ? (
-          <ReportDrillLink
-            title={t("billing.reportsTitle", "Collections and AR analytics")}
-            description={t(
-              "billing.reportsDescription",
-              "Seven-day collections trends and accounts-receivable aging live in Reports finance."
-            )}
-            href="/reports#finance"
-            linkLabel={t("billing.openFinanceReports", "Open finance reports")}
-          />
+        {returnToQueue ? (
+          <div className="rounded-xl border border-primary-200 bg-primary-50/90 p-4">
+            <p className="text-sm font-medium text-primary-950">
+              {t("billing.returnToQueueTitle", "Check-in waiting in queue")}
+            </p>
+            <p className="mt-1 text-sm text-primary-900/90">
+              {t(
+                "billing.returnToQueueBody",
+                "After collecting payment or reviewing billing, return to the queue to complete check-in."
+              )}
+            </p>
+            <Button size="sm" className="mt-3" asChild>
+              <Link href={queueResumeHref(loadPendingQueueCheckIn())}>
+                {t("billing.returnToQueueAction", "Return to queue")}
+              </Link>
+            </Button>
+          </div>
         ) : null}
 
         <ContentPanel padding="lg" className="space-y-6">
@@ -350,6 +336,47 @@ function BillingPageContent() {
             )}
           </div>
         </ContentPanel>
+
+        {activeBranch ? (
+          <CollapsibleBelowFold summary={t("billing.opsSummaryToggle", "Billing summary & automation")}>
+            <div className="space-y-4">
+              <BillingOpsSummary
+                total={billingStats.total}
+                open={billingStats.open}
+                outstanding={billingStats.outstanding}
+                paid={billingStats.paid}
+                overdue={billingStats.overdue}
+                loading={loading}
+                branchName={activeBranch.name}
+              />
+              <OpsStatusRow
+                workflowItems={[
+                  {
+                    key: "auto_approve_creates_invoice",
+                    label: t("billing.workflowInvoiceDraft", "Plan approval event"),
+                  },
+                  {
+                    key: "billing_gate_block_services",
+                    label: t("billing.workflowBillingGate", "Booking and check-in gate"),
+                  },
+                  {
+                    key: "auto_payment_reminder",
+                    label: t("billing.workflowReminder", "Payment reminders"),
+                  },
+                ]}
+              />
+              <ReportDrillLink
+                title={t("billing.reportsTitle", "Collections and AR analytics")}
+                description={t(
+                  "billing.reportsDescription",
+                  "Seven-day collections trends and accounts-receivable aging live in Reports finance."
+                )}
+                href="/reports#finance"
+                linkLabel={t("billing.openFinanceReports", "Open finance reports")}
+              />
+            </div>
+          </CollapsibleBelowFold>
+        ) : null}
       </div>
     </PermissionGate>
   )

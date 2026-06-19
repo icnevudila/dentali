@@ -9,7 +9,7 @@ import { MobileNavTrigger } from "@/components/layout/Sidebar"
 export function Topbar() {
   return (
     <header
-      className="relative z-30 flex h-14 sm:h-16 shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-4 sm:px-6 gap-2"
+      className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-neutral-200 bg-white/95 px-4 backdrop-blur-sm supports-[backdrop-filter]:bg-white/85 sm:h-16 sm:px-6 md:relative md:z-30 md:bg-white"
       style={{ viewTransitionName: "app-topbar" } as React.CSSProperties}
     >
       <div className="flex items-center gap-2 sm:gap-4 min-w-0">

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/client"
 import { appointmentDateKey } from "@/lib/appointments/week-calendar"
 import type { AppointmentRecord } from "@/lib/appointments/types"
 import { getShowcaseSnapshot } from "@/lib/showcase/intercept"
+import { fetchPatientActiveQueueEntry } from "@/lib/queue/queue-service"
 
 export type { AppointmentRecord } from "@/lib/appointments/types"
 
@@ -274,6 +275,35 @@ export async function createAppointment(params: {
   return { data: { id: raw.id }, error: null }
 }
 
+async function syncAppointmentToActiveQueue(
+  appointmentId: string,
+  patientId: string,
+  branchId: string
+): Promise<{ queue_id: string; display_code: string } | null> {
+  const { data: active, error } = await fetchPatientActiveQueueEntry(patientId, branchId)
+  if (error || !active) return null
+
+  const supabase = createClient()
+
+  if (active.appointment_id !== appointmentId) {
+    const { error: linkError } = await supabase
+      .from("queue_entries")
+      .update({ appointment_id: appointmentId })
+      .eq("id", active.id)
+    if (linkError) {
+      console.warn("Could not link appointment to active queue entry:", linkError.message)
+    }
+  }
+
+  await supabase
+    .from("appointments")
+    .update({ status: "checked_in" })
+    .eq("id", appointmentId)
+    .in("status", ["scheduled", "confirmed"])
+
+  return { queue_id: active.id, display_code: active.display_code }
+}
+
 export async function checkInAppointment(
   appointmentId: string,
   options?: {
@@ -282,7 +312,12 @@ export async function checkInAppointment(
     reuseEncounterId?: string
   }
 ): Promise<{
-  data: { queue_id: string; display_code: string; encounter_id?: string | null } | null
+  data: {
+    queue_id: string
+    display_code: string
+    encounter_id?: string | null
+    alreadyQueued?: boolean
+  } | null
   error: string | null
 }> {
   const supabase = createClient()
@@ -293,7 +328,33 @@ export async function checkInAppointment(
     p_reuse_encounter_id: options?.reuseEncounterId ?? null,
   })
 
-  if (error) return { data: null, error: error.message }
+  if (error) {
+    if (error.message.includes("already in the queue")) {
+      const { data: appt, error: apptError } = await supabase
+        .from("appointments")
+        .select("patient_id, branch_id")
+        .eq("id", appointmentId)
+        .maybeSingle()
+      if (!apptError && appt) {
+        const synced = await syncAppointmentToActiveQueue(
+          appointmentId,
+          appt.patient_id,
+          appt.branch_id
+        )
+        if (synced) {
+          return {
+            data: {
+              ...synced,
+              encounter_id: null,
+              alreadyQueued: true,
+            },
+            error: null,
+          }
+        }
+      }
+    }
+    return { data: null, error: error.message }
+  }
   const raw = data as { queue_id: string; display_code: string; encounter_id?: string | null }
   return {
     data: {

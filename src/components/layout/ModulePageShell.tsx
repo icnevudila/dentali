@@ -51,7 +51,6 @@ export function ModulePageShell({
   metricsClassName,
   error,
   onRetry,
-  retryLabel: _retryLabel,
   children,
   panel = true,
   panelClassName,

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { ShieldCheck, PenTool, Link2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
@@ -45,10 +45,21 @@ import { ConsentScrollProgress } from "@/components/consent/ConsentScrollProgres
 import { ConsentSigningSteps } from "@/components/consent/ConsentSigningSteps"
 import { ConsentFieldProgress } from "@/components/consent/ConsentFieldProgress"
 import { useConsentScrollGate } from "@/hooks/use-consent-scroll-gate"
+import { queueResumeHref, loadPendingQueueCheckIn } from "@/lib/queue/queue-check-in-return"
 
 export default function ConsentFormPage() {
+  return (
+    <React.Suspense fallback={<PageLoadingSkeleton variant="consent" className="max-w-3xl px-4 py-8" />}>
+      <ConsentFormPageContent />
+    </React.Suspense>
+  )
+}
+
+function ConsentFormPageContent() {
   const { id: patientId, formId } = useRouteParams<{ id: string; formId: string }>()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const returnTo = searchParams.get("returnTo")
   const { user } = useAuth()
   const { activeBranch } = useBranch()
   const { t } = useLocale()
@@ -228,7 +239,13 @@ export default function ConsentFormPage() {
 
     setSigning(false)
     setIsSigned(true)
-    setTimeout(() => router.push(`/patients/${patientId}/consents/${formId}/view`), 1200)
+    setTimeout(() => {
+      if (returnTo === "queue") {
+        router.push(queueResumeHref(loadPendingQueueCheckIn()))
+        return
+      }
+      router.push(`/patients/${patientId}/consents/${formId}/view`)
+    }, 1200)
   }
 
   if (loading) {

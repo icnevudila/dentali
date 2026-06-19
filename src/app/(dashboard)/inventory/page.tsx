@@ -34,6 +34,8 @@ import { DirectionalTransition } from "@/components/layout/DirectionalTransition
 import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
+import { CollapsibleBelowFold } from "@/components/layout/CollapsibleBelowFold"
+import { StickyActionBar } from "@/components/layout/StickyActionBar"
 
 const LEVEL_VARIANT: Record<string, "default" | "success" | "warning" | "danger"> = {
   ok: "success",
@@ -257,17 +259,25 @@ function InventoryPageContent() {
           </SectionEyebrow>
 
           <PageHeader
+            compact
             title={t("inventory.title", "Inventory & Supplies")}
             description={t(
               "inventory.subtitle",
               "Track stock levels, expiry dates, and low-stock alerts."
             )}
             actions={
-              <Button className="gap-2 shadow-sm" onClick={() => setShowAdd(true)}>
+              <Button className="hidden gap-2 shadow-sm md:inline-flex" onClick={() => setShowAdd(true)}>
                 <Plus className="h-4 w-4" /> {t("inventory.addItem", "Add item")}
               </Button>
             }
           />
+
+          <StickyActionBar>
+            <Button className="h-11 w-full gap-2" onClick={() => setShowAdd(true)}>
+              <Plus className="h-4 w-4 shrink-0" />
+              {t("inventory.addItem", "Add item")}
+            </Button>
+          </StickyActionBar>
 
           {activeBranch ? (
             <div className="flex flex-wrap items-center gap-2 animate-fade-rise">
@@ -281,20 +291,6 @@ function InventoryPageContent() {
                 </Badge>
               ) : null}
             </div>
-          ) : null}
-
-          <MetricStrip items={metricItems} className="lg:grid-cols-3" />
-
-          {activeBranch ? (
-            <ReportDrillLink
-              title={t("inventory.reportsTitle", "Stock risk analytics")}
-              description={t(
-                "inventory.reportsDescription",
-                "Low-stock trends and supply pressure are tracked in Reports compliance."
-              )}
-              href="/reports#compliance"
-              linkLabel={t("inventory.openReports", "Open inventory reports")}
-            />
           ) : null}
 
           {error && (
@@ -522,6 +518,23 @@ function InventoryPageContent() {
           </CardContent>
         </Card>
         </div>
+
+        {activeBranch ? (
+          <CollapsibleBelowFold summary={t("inventory.metricsToggle", "Stock metrics & reports")}>
+            <div className="space-y-4">
+              <MetricStrip items={metricItems} className="lg:grid-cols-3" />
+              <ReportDrillLink
+                title={t("inventory.reportsTitle", "Stock risk analytics")}
+                description={t(
+                  "inventory.reportsDescription",
+                  "Low-stock trends and supply pressure are tracked in Reports compliance."
+                )}
+                href="/reports#compliance"
+                linkLabel={t("inventory.openReports", "Open inventory reports")}
+              />
+            </div>
+          </CollapsibleBelowFold>
+        ) : null}
         </ContentPanel>
       </DirectionalTransition>
     </PermissionGate>
