@@ -132,20 +132,45 @@ const PROFILE_PHOTO_NOTES = "profile_photo"
 export async function fetchPatientProfilePhotoUrl(
   patientId: string
 ): Promise<{ url: string | null; error: string | null }> {
+  const { urls, error } = await fetchPatientProfilePhotoUrls([patientId])
+  return { url: urls.get(patientId) ?? null, error }
+}
+
+/** Latest profile photo signed URL per patient (batch, for list views). */
+export async function fetchPatientProfilePhotoUrls(
+  patientIds: string[]
+): Promise<{ urls: Map<string, string>; error: string | null }> {
+  const uniqueIds = [...new Set(patientIds)]
+  if (uniqueIds.length === 0) return { urls: new Map(), error: null }
+
   const supabase = createClient()
   const { data, error } = await supabase
     .from("patient_documents")
-    .select("storage_path")
-    .eq("patient_id", patientId)
+    .select("patient_id, storage_path, created_at")
+    .in("patient_id", uniqueIds)
     .eq("notes", PROFILE_PHOTO_NOTES)
     .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle()
 
-  if (error) return { url: null, error: error.message }
-  if (!data?.storage_path) return { url: null, error: null }
+  if (error) return { urls: new Map(), error: error.message }
+  if (!data?.length) return { urls: new Map(), error: null }
 
-  return getPatientDocumentUrl(data.storage_path)
+  const storagePathByPatient = new Map<string, string>()
+  for (const row of data) {
+    const patientId = row.patient_id as string
+    if (!storagePathByPatient.has(patientId) && row.storage_path) {
+      storagePathByPatient.set(patientId, row.storage_path as string)
+    }
+  }
+
+  const urls = new Map<string, string>()
+  await Promise.all(
+    [...storagePathByPatient.entries()].map(async ([patientId, storagePath]) => {
+      const { url } = await getPatientDocumentUrl(storagePath)
+      if (url) urls.set(patientId, url)
+    })
+  )
+
+  return { urls, error: null }
 }
 
 export async function uploadPatientProfilePhoto(params: {

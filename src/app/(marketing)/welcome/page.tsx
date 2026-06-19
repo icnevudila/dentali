@@ -10,14 +10,14 @@ export const dynamic = "force-dynamic"
 const siteUrl = getSiteUrl()
 
 export const metadata: Metadata = {
-  title: "Dental clinic software for the Philippines",
+  title: "Dental clinic software — dentQL",
   description:
-    "Run your Metro Manila clinic on one system — appointments, dental chart, billing, HMO, queue display, kiosk check-in, and digital consent.",
+    "Run your clinic on one system — appointments, dental chart, billing, HMO, queue display, kiosk check-in, and digital consent.",
   alternates: {
     canonical: `${siteUrl}/welcome`,
   },
   openGraph: {
-    title: `${BRAND_NAME} — Philippine dental clinic OS`,
+    title: `${BRAND_NAME} — Dental clinic operating system`,
     description:
       "Patients, appointments, charting, billing, queue, and HMO — branch-aware from the first login.",
     url: `${siteUrl}/welcome`,

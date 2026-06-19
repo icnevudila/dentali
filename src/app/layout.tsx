@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     template: BRAND_TITLE_TEMPLATE,
   },
   description:
-    "Branch-aware dental clinic operating system for Philippine clinics — patients, charting, billing, queue, HMO, and consent.",
+    "Branch-aware dental clinic operating system — patients, charting, billing, queue, HMO, and consent.",
   applicationName: BRAND_NAME,
   manifest: "/manifest.webmanifest",
   appleWebApp: {

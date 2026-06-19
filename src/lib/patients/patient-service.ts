@@ -12,6 +12,7 @@ import {
   resolveVisitRange,
   type PatientListFilters,
 } from "@/lib/patients/patient-list-filters"
+import { fetchPatientProfilePhotoUrls } from "@/lib/patients/patient-documents-service"
 
 export interface PatientRecord {
   id: string
@@ -56,6 +57,16 @@ function mapSearchPatientsRows(rows: SearchPatientsRow[]) {
   return { data: patients, total }
 }
 
+async function attachProfilePhotoUrls(patients: PatientRecord[]): Promise<PatientRecord[]> {
+  if (patients.length === 0) return patients
+  const { urls } = await fetchPatientProfilePhotoUrls(patients.map((p) => p.id))
+  if (urls.size === 0) return patients
+  return patients.map((patient) => ({
+    ...patient,
+    profile_photo_url: urls.get(patient.id) ?? patient.profile_photo_url ?? null,
+  }))
+}
+
 export async function searchPatients(
   query: string,
   branchId: string | null,
@@ -91,7 +102,9 @@ export async function searchPatients(
   })
 
   if (!error) {
-    return { ...mapSearchPatientsRows((data ?? []) as SearchPatientsRow[]), error: null }
+    const mapped = mapSearchPatientsRows((data ?? []) as SearchPatientsRow[])
+    const dataWithPhotos = await attachProfilePhotoUrls(mapped.data)
+    return { data: dataWithPhotos, total: mapped.total, error: null }
   }
 
   if (!isMissingSearchPatientsRpc(error.message)) {
@@ -113,7 +126,9 @@ export async function searchPatients(
     }
   }
 
-  return { ...mapSearchPatientsRows((legacy.data ?? []) as SearchPatientsRow[]), error: null }
+  const mapped = mapSearchPatientsRows((legacy.data ?? []) as SearchPatientsRow[])
+  const dataWithPhotos = await attachProfilePhotoUrls(mapped.data)
+  return { data: dataWithPhotos, total: mapped.total, error: null }
 }
 
 function computeIntakePct(patient: {
@@ -179,12 +194,15 @@ export async function fetchPatientRecordsByIds(
   const hasMedical = new Set<string>((medicalRes.data ?? []).map((row) => row.patient_id as string))
   const hasSignedConsent = new Set<string>((consentsRes.data ?? []).map((row) => row.patient_id as string))
 
+  const records = (patientsRes.data ?? []).map((patient) => ({
+    ...patient,
+    last_visit_at: lastVisitById.get(patient.id) ?? null,
+    intake_pct: computeIntakePct(patient, hasMedical, hasSignedConsent),
+  }))
+  const dataWithPhotos = await attachProfilePhotoUrls(records)
+
   return {
-    data: (patientsRes.data ?? []).map((patient) => ({
-      ...patient,
-      last_visit_at: lastVisitById.get(patient.id) ?? null,
-      intake_pct: computeIntakePct(patient, hasMedical, hasSignedConsent),
-    })),
+    data: dataWithPhotos,
     error: null,
   }
 }

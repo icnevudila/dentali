@@ -31,7 +31,7 @@ export function PricingPlans({ className }: { className?: string }) {
       features: [
         t("pricingTiers.growthF1", "Everything in Starter"),
         t("pricingTiers.growthF2", "Multiple branches"),
-        t("pricingTiers.growthF3", "HMO & PhilHealth-ready fields"),
+        t("pricingTiers.growthF3", "HMO & insurer billing fields"),
         t("pricingTiers.growthF4", "Inventory & low-stock alerts"),
         t("pricingTiers.growthF5", "Reports & exports"),
       ],

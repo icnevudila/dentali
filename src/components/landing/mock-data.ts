@@ -43,7 +43,7 @@ export const WORKFLOW_STAGES = [
     title: "Appointments & waitlist",
     subtitle: "Web · Scheduling desk",
     description:
-      "Chair calendars, provider availability, SMS reminders, and waitlist callbacks — built for busy Philippine reception workflows.",
+      "Chair calendars, provider availability, SMS reminders, and waitlist callbacks — built for busy reception desks.",
     device: "tablet" as const,
   },
   {

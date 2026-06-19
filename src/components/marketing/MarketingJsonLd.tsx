@@ -13,7 +13,7 @@ export function MarketingJsonLd() {
         name: BRAND_NAME,
         url: siteUrl,
         description:
-          "Clinical operating system for Philippine dental clinics — patients, chart, queue, billing, and consent.",
+          "Clinical operating system for modern dental clinics — patients, chart, queue, billing, and consent.",
       },
       {
         "@type": "SoftwareApplication",

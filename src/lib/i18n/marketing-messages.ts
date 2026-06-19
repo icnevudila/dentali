@@ -3,10 +3,10 @@ type MessageTree = { [key: string]: string | MessageTree }
 /** Marketing / landing copy — merged into each locale catalog. */
 export const marketingMessagesEn: MessageTree = {
   landing: {
-    eyebrow: "Philippine dental clinic OS",
+    eyebrow: "Dental clinic operating system",
     heroTitle: "Run your clinic on",
     heroSubtitle:
-      "Patients, appointments, charting, billing, queue, and HMO — branch-aware from the first login. Built for busy Metro Manila clinics.",
+      "Patients, appointments, charting, billing, queue, and HMO — branch-aware from the first login. Built for busy front desks and multi-chair clinics.",
     previewUses: "Preview below uses",
     previewSession: " — your signed-in clinic",
     previewDemo: " — demo showcase data",
@@ -19,7 +19,7 @@ export const marketingMessagesEn: MessageTree = {
     workflowEyebrow: "Product tour",
     workflowTitle: "One system from front desk to chair side",
     workflowDescription:
-      "Walk through the modules your Philippine clinic team uses every day — with live data when showcase seed is configured.",
+      "Walk through the modules your clinic team uses every day — with live data when showcase seed is configured.",
     workflowStep: "Step",
     ctaBottomTitle: "Ready to run your clinic on one system?",
     ctaBottomSubtitle:
@@ -57,7 +57,7 @@ export const marketingMessagesEn: MessageTree = {
     wfAppointmentsTitle: "Appointments & waitlist",
     wfAppointmentsSubtitle: "Web · Scheduling desk",
     wfAppointmentsDesc:
-      "Chair calendars, provider availability, SMS reminders, and waitlist callbacks — built for busy Philippine reception workflows.",
+      "Chair calendars, provider availability, SMS reminders, and waitlist callbacks — built for busy reception desks.",
     wfKioskTitle: "Kiosk check-in",
     wfKioskSubtitle: "Tablet · Patient-facing",
     wfKioskDesc:
@@ -95,7 +95,7 @@ export const marketingMessagesEn: MessageTree = {
     growthDesc: "Multi-branch clinics with HMO and inventory.",
     growthF1: "Everything in Starter",
     growthF2: "Multiple branches",
-    growthF3: "HMO & PhilHealth-ready fields",
+    growthF3: "HMO & insurer billing fields",
     growthF4: "Inventory & low-stock alerts",
     growthF5: "Reports & exports",
     enterpriseName: "Enterprise",
@@ -108,8 +108,8 @@ export const marketingMessagesEn: MessageTree = {
   },
   pricingFaq: {
     title: "Frequently asked questions",
-    q1: "Is dentali. built for Philippine clinics?",
-    a1: "Yes. Branch-aware workflows, HMO and PhilHealth-ready billing fields, kiosk check-in, queue display, and digital consent are designed for Metro Manila and provincial multi-branch groups.",
+    q1: "Is dentQL built for multi-branch dental clinics?",
+    a1: "Yes. Branch-aware workflows, HMO and insurer billing fields, kiosk check-in, queue display, and digital consent are designed for single-site and multi-branch groups.",
     q2: "Can I start without a sales call?",
     a2: "Starter and Growth plans include a free trial. Create an account, run onboarding, and invite staff. Enterprise groups can request a quote for migration and custom integrations.",
     q3: "What is included in every plan?",
@@ -133,10 +133,10 @@ export const marketingMessagesEn: MessageTree = {
 
 export const marketingMessagesTr: MessageTree = {
   landing: {
-    eyebrow: "Filipin diş kliniği işletim sistemi",
+    eyebrow: "Diş kliniği işletim sistemi",
     heroTitle: "Kliniğinizi tek sistemde yönetin:",
     heroSubtitle:
-      "Hasta, randevu, chart, faturalama, sıra ve HMO — ilk girişten itibaren şube bazlı. Metro Manila yoğun klinikler için.",
+      "Hasta, randevu, chart, faturalama, sıra ve HMO — ilk girişten itibaren şube bazlı. Yoğun resepsiyon ve çok koltuklu klinikler için.",
     previewUses: "Aşağıdaki önizleme",
     previewSession: " — giriş yaptığınız klinik",
     previewDemo: " — demo vitrin verisi",
@@ -149,7 +149,7 @@ export const marketingMessagesTr: MessageTree = {
     workflowEyebrow: "Ürün turu",
     workflowTitle: "Resepsiyondan koltuğa tek sistem",
     workflowDescription:
-      "Filipin klinik ekibinizin günlük kullandığı modülleri gezin — vitrin seed yapılandırıldığında canlı veriyle.",
+      "Klinik ekibinizin günlük kullandığı modülleri gezin — vitrin seed yapılandırıldığında canlı veriyle.",
     workflowStep: "Adım",
     ctaBottomTitle: "Kliniğinizi tek sistemde çalıştırmaya hazır mısınız?",
     ctaBottomSubtitle:
@@ -187,7 +187,7 @@ export const marketingMessagesTr: MessageTree = {
     wfAppointmentsTitle: "Randevular ve bekleme listesi",
     wfAppointmentsSubtitle: "Web · Planlama masası",
     wfAppointmentsDesc:
-      "Koltuk takvimleri, doktor müsaitliği, SMS hatırlatmaları ve bekleme listesi — Filipin resepsiyon akışları için.",
+      "Koltuk takvimleri, doktor müsaitliği, SMS hatırlatmaları ve bekleme listesi — yoğun resepsiyon masaları için.",
     wfKioskTitle: "Kiosk check-in",
     wfKioskSubtitle: "Tablet · Hasta ekranı",
     wfKioskDesc:
@@ -225,7 +225,7 @@ export const marketingMessagesTr: MessageTree = {
     growthDesc: "HMO ve envanterli çok şubeli klinikler.",
     growthF1: "Starter'daki her şey",
     growthF2: "Birden fazla şube",
-    growthF3: "HMO ve PhilHealth alanları",
+    growthF3: "HMO ve sigorta faturalama alanları",
     growthF4: "Envanter ve düşük stok uyarıları",
     growthF5: "Raporlar ve dışa aktarma",
     enterpriseName: "Enterprise",
@@ -238,8 +238,8 @@ export const marketingMessagesTr: MessageTree = {
   },
   pricingFaq: {
     title: "Sık sorulan sorular",
-    q1: "dentali. Filipin klinikleri için mi?",
-    a1: "Evet. Şube bazlı akışlar, HMO/PhilHealth faturalama alanları, kiosk, sıra ekranı ve dijital onam Metro Manila ve il klinik grupları için tasarlandı.",
+    q1: "dentQL çok şubeli diş klinikleri için mi?",
+    a1: "Evet. Şube bazlı akışlar, HMO ve sigorta faturalama alanları, kiosk, sıra ekranı ve dijital onam tek şube ve çok şubeli gruplar için tasarlandı.",
     q2: "Satış görüşmesi olmadan başlayabilir miyim?",
     a2: "Starter ve Growth ücretsiz deneme içerir. Hesap açın, onboarding yapın, personel davet edin. Enterprise gruplar teklif isteyebilir.",
     q3: "Her planda neler var?",
@@ -263,10 +263,10 @@ export const marketingMessagesTr: MessageTree = {
 
 export const marketingMessagesFil: MessageTree = {
   landing: {
-    eyebrow: "Philippine dental clinic OS",
+    eyebrow: "Dental clinic operating system",
     heroTitle: "Patakbuhin ang clinic mo sa",
     heroSubtitle:
-      "Patients, appointments, chart, billing, queue, at HMO — branch-aware mula unang login. Para sa abalang Metro Manila clinics.",
+      "Patients, appointments, chart, billing, queue, at HMO — branch-aware mula unang login. Para sa abalang front desk at multi-chair clinics.",
     previewUses: "Ginagamit ng preview sa ibaba ang",
     previewSession: " — signed-in clinic mo",
     previewDemo: " — demo showcase data",
@@ -279,7 +279,7 @@ export const marketingMessagesFil: MessageTree = {
     workflowEyebrow: "Product tour",
     workflowTitle: "Isang system mula front desk hanggang chair side",
     workflowDescription:
-      "Libutin ang modules na ginagamit araw-araw ng Philippine clinic team — may live data kapag naka-config ang showcase seed.",
+      "Libutin ang modules na ginagamit araw-araw ng clinic team mo — may live data kapag naka-config ang showcase seed.",
     workflowStep: "Step",
     ctaBottomTitle: "Handa nang patakbuhin ang clinic sa isang system?",
     ctaBottomSubtitle:
@@ -317,7 +317,7 @@ export const marketingMessagesFil: MessageTree = {
     wfAppointmentsTitle: "Appointments at waitlist",
     wfAppointmentsSubtitle: "Web · Scheduling desk",
     wfAppointmentsDesc:
-      "Chair calendars, provider availability, SMS reminders, at waitlist callbacks — para sa busy Philippine reception.",
+      "Chair calendars, provider availability, SMS reminders, at waitlist callbacks — para sa busy reception desks.",
     wfKioskTitle: "Kiosk check-in",
     wfKioskSubtitle: "Tablet · Patient-facing",
     wfKioskDesc:
@@ -355,7 +355,7 @@ export const marketingMessagesFil: MessageTree = {
     growthDesc: "Multi-branch clinics na may HMO at inventory.",
     growthF1: "Lahat sa Starter",
     growthF2: "Maraming branch",
-    growthF3: "HMO at PhilHealth-ready fields",
+    growthF3: "HMO at insurer billing fields",
     growthF4: "Inventory at low-stock alerts",
     growthF5: "Reports at exports",
     enterpriseName: "Enterprise",
@@ -368,8 +368,8 @@ export const marketingMessagesFil: MessageTree = {
   },
   pricingFaq: {
     title: "Mga madalas itanong",
-    q1: "Para ba sa Philippine clinics ang dentali.?",
-    a1: "Oo. Branch-aware workflows, HMO/PhilHealth billing fields, kiosk, queue display, at digital consent — para sa Metro Manila at provincial groups.",
+    q1: "Para ba sa multi-branch dental clinics ang dentQL?",
+    a1: "Oo. Branch-aware workflows, HMO at insurer billing fields, kiosk, queue display, at digital consent — para sa single-site at multi-branch groups.",
     q2: "Puwede bang magsimula nang walang sales call?",
     a2: "May free trial ang Starter at Growth. Gumawa ng account, mag-onboard, mag-invite ng staff. Puwedeng humiling ng quote ang Enterprise groups.",
     q3: "Ano ang kasama sa bawat plan?",

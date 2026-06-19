@@ -94,7 +94,7 @@ export const messagesEnPh: MessageTree = {
     signIn: "Sign in",
     signUp: "Sign up",
     startTrial: "Start free trial",
-    footerTagline: "clinical operating system for Philippine clinics",
+    footerTagline: "clinical operating system for modern dental clinics",
   },
   signup: {
     title: "Create your clinic account",
@@ -1427,7 +1427,7 @@ export const messagesTr: MessageTree = {
     signIn: "Giriş yap",
     signUp: "Kayıt ol",
     startTrial: "Ücretsiz dene",
-    footerTagline: "Filipin diş klinikleri için klinik işletim sistemi",
+    footerTagline: "modern diş klinikleri için klinik işletim sistemi",
   },
   signup: {
     title: "Klinik hesabınızı oluşturun",
@@ -2721,7 +2721,7 @@ export const messagesFil: MessageTree = {
     signIn: "Mag-sign in",
     signUp: "Mag-sign up",
     startTrial: "Simulan ang free trial",
-    footerTagline: "clinical operating system para sa Philippine clinics",
+    footerTagline: "clinical operating system para sa modern dental clinics",
   },
   signup: {
     title: "Gumawa ng clinic account",

@@ -40,12 +40,12 @@ export const SOCIAL_HIGHLIGHTS: SocialHighlight[] = [
     detail: t("Runs in your browser", "Tarayıcınızda çalışır"),
   },
   {
-    label: t("Branch-ready", "Şubeye hazır"),
-    detail: t("Multi-site from day one", "İlk günden çok lokasyon"),
+    label: t("Multi-branch", "Çok şubeli"),
+    detail: t("One org, many locations", "Tek kuruluş, çok lokasyon"),
   },
   {
-    label: t("PH-ready", "Filipinler'e hazır"),
-    detail: t("HMO & local workflow", "HMO ve yerel iş akışı"),
+    label: t("Billing & claims", "Fatura ve talepler"),
+    detail: t("Invoices, HMO & consent", "Fatura, HMO ve onam"),
   },
 ]
 

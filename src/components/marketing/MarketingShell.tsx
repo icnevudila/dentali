@@ -96,7 +96,7 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
       <footer className="border-t border-neutral-200 bg-neutral-50/50">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
           <p className="text-xs text-neutral-500">
-            {BRAND_NAME} — {t("marketing.footerTagline", "clinical operating system for Philippine clinics")}
+            {BRAND_NAME} — {t("marketing.footerTagline", "clinical operating system for modern dental clinics")}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-neutral-600">
             <Link href="/welcome" className="hover:text-primary-700">

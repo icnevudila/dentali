@@ -716,7 +716,7 @@ export default function ReportsHubPage() {
             </Button>
           }
         >
-          <div className="grid min-w-0 gap-4 2xl:grid-cols-2">
+          <div className="grid min-w-0 gap-4 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <ReportPanelCaption
               title={t("reports.panelAppointmentsTitle", "Appointment calendar report")}
               description={t(
@@ -724,7 +724,7 @@ export default function ReportsHubPage() {
                 "Read the schedule like the appointment page: who is booked, which dentist is assigned, the visit reason, and daily load."
               )}
             >
-              <AppointmentsAnalyticsPanel branchId={activeBranch.id} periodDays={periodDays} />
+              <AppointmentsAnalyticsPanel branchId={activeBranch.id} periodDays={periodDays} compact />
             </ReportPanelCaption>
             <ReportPanelCaption
               title={t("reports.panelQueueTitle", "Queue pressure")}
@@ -783,7 +783,7 @@ export default function ReportsHubPage() {
             </Button>
           }
         >
-          <div className="grid min-w-0 gap-4 2xl:grid-cols-2">
+          <div className="grid min-w-0 gap-4 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <ReportPanelCaption
               title={t("reports.panelPatientsTitle", "Registry and consent health")}
               description={t(
@@ -838,7 +838,7 @@ export default function ReportsHubPage() {
             >
               <FinanceSummaryPanel branchId={activeBranch.id} />
             </ReportPanelCaption>
-            <div className="grid min-w-0 gap-4 2xl:grid-cols-2">
+            <div className="grid min-w-0 gap-4 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
               <ReportPanelCaption
                 title={t("reports.panelHmoTitle", "HMO pipeline")}
                 description={t(
@@ -906,7 +906,7 @@ export default function ReportsHubPage() {
             </div>
           }
         >
-          <div className="grid min-w-0 gap-4 2xl:grid-cols-3">
+          <div className="grid min-w-0 gap-4 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
             <ReportPanelCaption
               title={t("reports.panelInventoryTitle", "Inventory risk")}
               description={t(

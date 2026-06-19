@@ -230,7 +230,7 @@ export function AppointmentWeekCalendar({
   }
 
   return (
-    <div className="min-w-0 max-w-full space-y-4 rounded-xl border border-neutral-200/80 bg-white p-5 shadow-sm">
+    <div className="min-w-0 max-w-full overflow-hidden space-y-4 rounded-xl border border-neutral-200/80 bg-white p-5 shadow-sm">
       
       {/* Notion-Style Top Menu & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-neutral-100 gap-4">
@@ -296,9 +296,9 @@ export function AppointmentWeekCalendar({
           </p>
           <div
             className={cn(
-              "min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x",
+              "w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x",
               "scroll-px-3 pb-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]",
-              "-mx-5 px-5 md:mx-0 md:overflow-visible md:px-0"
+              "md:overflow-visible"
             )}
           >
             <div className="w-max min-w-[720px] rounded-lg border border-neutral-200 md:w-full md:min-w-0">
@@ -401,9 +401,9 @@ export function AppointmentWeekCalendar({
           </p>
           <div
             className={cn(
-              "min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x",
+              "w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x",
               "scroll-px-3 pb-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]",
-              "-mx-5 px-5 md:mx-0 md:overflow-visible md:px-0"
+              "md:overflow-visible"
             )}
           >
             <div className="grid w-max min-w-[720px] grid-cols-7 gap-1 md:w-full md:min-w-0 md:gap-2">

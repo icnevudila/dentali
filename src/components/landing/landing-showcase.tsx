@@ -259,7 +259,7 @@ function workflowStageCopy(
       subtitle: t("landing.wfAppointmentsSubtitle", "Web · Scheduling desk"),
       description: t(
         "landing.wfAppointmentsDesc",
-        "Chair calendars, provider availability, SMS reminders, and waitlist callbacks — built for busy Philippine reception workflows."
+        "Chair calendars, provider availability, SMS reminders, and waitlist callbacks — built for busy reception desks."
       ),
     },
     kiosk: {
@@ -308,7 +308,7 @@ export function LandingWorkflowSection({ showcase }: { showcase: ShowcaseSnapsho
           title={t("landing.workflowTitle", "One system from front desk to chair side")}
           description={t(
             "landing.workflowDescription",
-            "Walk through the modules your Philippine clinic team uses every day — with live data when showcase seed is configured."
+            "Walk through the modules your clinic team uses every day — with live data when showcase seed is configured."
           )}
           align="center"
         />

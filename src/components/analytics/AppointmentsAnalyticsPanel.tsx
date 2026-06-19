@@ -58,7 +58,7 @@ export function AppointmentsAnalyticsPanel({
   }, [load])
 
   return (
-    <div className="min-w-0 space-y-4">
+    <div className="min-w-0 max-w-full space-y-4">
       {compact ? null : (
         <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-neutral-200/80 bg-neutral-50/60 p-4">
           <div className="space-y-1">

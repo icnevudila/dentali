@@ -9,10 +9,10 @@ export function PricingFaqSection() {
 
   const faqItems = [
     {
-      q: t("pricingFaq.q1", "Is dentali. built for Philippine clinics?"),
+      q: t("pricingFaq.q1", "Is dentQL built for multi-branch dental clinics?"),
       a: t(
         "pricingFaq.a1",
-        "Yes. Branch-aware workflows, HMO and PhilHealth-ready billing fields, kiosk check-in, queue display, and digital consent are designed for Metro Manila and provincial multi-branch groups."
+        "Yes. Branch-aware workflows, HMO and insurer billing fields, kiosk check-in, queue display, and digital consent are designed for single-site and multi-branch groups."
       ),
     },
     {
