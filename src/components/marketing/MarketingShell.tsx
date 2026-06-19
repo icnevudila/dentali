@@ -24,13 +24,19 @@ function isNavActive(pathname: string, href: string) {
   return pathname === base || pathname.startsWith(`${base}/`)
 }
 
+const AUTH_ROUTES = ["/login", "/signup", "/forgot-password", "/reset-password"] as const
+
+function isAuthRoute(pathname: string) {
+  return AUTH_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`))
+}
+
 export function MarketingShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { t } = useLocale()
 
   const isLandingPage = pathname === "/welcome" || pathname === "/"
 
-  if (isLandingPage) {
+  if (isLandingPage || isAuthRoute(pathname)) {
     return <>{children}</>
   }
 
