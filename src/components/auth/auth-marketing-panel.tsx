@@ -55,20 +55,24 @@ export function AuthMarketingPanel({ variant }: AuthMarketingPanelProps) {
       : "Software that makes your clinic smile — from front desk to chair side."
 
   return (
-    <div className="relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-primary-100/80 bg-gradient-to-br from-primary-50 via-teal-50/50 to-emerald-50/40 p-10 lg:flex lg:w-[44%] xl:w-[42%]">
+    <div className="relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-primary-200/60 bg-gradient-to-br from-primary-100/70 via-teal-50/80 to-emerald-100/50 p-10 lg:flex lg:w-[44%] xl:w-[42%]">
       <div
-        className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-primary-500 via-teal-500 to-emerald-500"
+        className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-primary-500 via-teal-500 to-emerald-500"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute -left-24 top-[18%] h-72 w-72 rounded-full bg-primary-200/30 blur-3xl"
+        className="pointer-events-none absolute -left-20 top-[12%] h-80 w-80 rounded-full bg-primary-300/35 blur-3xl"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute -right-16 bottom-[22%] h-56 w-56 rounded-full bg-teal-200/25 blur-3xl"
+        className="pointer-events-none absolute -right-12 bottom-[18%] h-64 w-64 rounded-full bg-teal-300/30 blur-3xl"
         aria-hidden
       />
-      <div className="landing-hero-grid pointer-events-none absolute inset-0 opacity-[0.055]" />
+      <div
+        className="pointer-events-none absolute left-1/3 top-1/2 h-48 w-48 -translate-y-1/2 rounded-full bg-emerald-200/20 blur-3xl"
+        aria-hidden
+      />
+      <div className="landing-hero-grid pointer-events-none absolute inset-0 opacity-[0.07]" />
 
       <div className="relative z-10 flex flex-1 flex-col justify-center">
         <div className="max-w-md space-y-8">
@@ -94,7 +98,7 @@ export function AuthMarketingPanel({ variant }: AuthMarketingPanelProps) {
             {chips.map(({ icon: Icon, label }) => (
               <div
                 key={label}
-                className="inline-flex items-center gap-2 rounded-full border border-primary-200/70 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow-sm"
+                className="inline-flex items-center gap-2 rounded-full border border-primary-300/50 bg-white/90 px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow-sm backdrop-blur-sm"
               >
                 <Icon className="h-3.5 w-3.5 text-primary-600" />
                 {label}
