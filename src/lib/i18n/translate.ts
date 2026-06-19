@@ -1,6 +1,7 @@
 import type { AppLocale } from "./config"
 import { DEFAULT_LOCALE, getLocaleDefinition } from "./config"
 import { getMessages, type MessageTree } from "./messages"
+import { translateMissingFallback } from "./fallback-translations"
 
 function getNestedValue(tree: MessageTree, key: string): string | undefined {
   const parts = key.split(".")
@@ -19,7 +20,11 @@ export function createTranslator(locale: AppLocale) {
   const fallbackCatalog = getMessages(DEFAULT_LOCALE)
 
   return function t(key: string, fallback: string): string {
-    return getNestedValue(catalog, key) ?? getNestedValue(fallbackCatalog, key) ?? fallback
+    const localized = getNestedValue(catalog, key)
+    if (localized) return localized
+    const englishFallback = getNestedValue(fallbackCatalog, key) ?? fallback
+    if (locale === DEFAULT_LOCALE) return englishFallback
+    return translateMissingFallback(locale, englishFallback)
   }
 }
 
