@@ -11,6 +11,7 @@ import { PatientRowActions } from "@/components/patients/PatientRowActions"
 import type { PatientRecord } from "@/lib/patients/patient-service"
 import type { QueueEntry, QueueStatus } from "@/lib/queue/queue-service"
 import { waitMinutes } from "@/lib/queue/queue-service"
+import { isPriorClinicDay } from "@/lib/queue/queue-day"
 import type { ToothFinding } from "@/lib/types/dental"
 import { MiniOdontogram } from "@/components/odontogram/MiniOdontogram"
 import { CompletionRing } from "@/components/visual/CompletionRing"
@@ -256,6 +257,7 @@ export function PatientTable({
           const intakePct = patient.intake_pct ?? 0
           const lastVisitLabel = formatLastVisit(locale, patient.last_visit_at)
           const queue = queueByPatientId[patient.id]
+          const isStaleQueue = Boolean(queue && isPriorClinicDay(queue.checked_in_at))
           const statusBadge = queue ? (
             <Badge variant={queueStatusBadgeVariant(queue.status)} className="shrink-0 font-normal">
               {queueStatusLabel(t, queue.status)}
@@ -280,12 +282,18 @@ export function PatientTable({
                   queue?.status === "in_chair" &&
                     "ring-2 ring-emerald-400/70 bg-emerald-50/50 border-emerald-200",
                   queue?.status === "now_serving" &&
-                    "ring-2 ring-amber-400/60 bg-amber-50/40 border-amber-200"
+                    "ring-2 ring-amber-400/60 bg-amber-50/40 border-amber-200",
+                  isStaleQueue && "ring-2 ring-amber-300/70 bg-amber-50/60 border-amber-200"
                 )}
                 primary={
                   <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="truncate">{fullName}</span>
                     <span className="lg:hidden">{statusBadge}</span>
+                    {isStaleQueue ? (
+                      <Badge variant="warning" className="shrink-0 text-[10px] font-semibold">
+                        {t("queue.priorDayOpen", "Prior day open")}
+                      </Badge>
+                    ) : null}
                   </span>
                 }
                 secondary={

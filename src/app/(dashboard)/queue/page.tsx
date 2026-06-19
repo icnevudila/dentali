@@ -71,6 +71,7 @@ import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { ClinicDayBar } from "@/components/layout/ClinicDayBar"
 import { useClinicDay } from "@/hooks/use-clinic-day"
 import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
+import { isPriorClinicDay } from "@/lib/queue/queue-day"
 import {
   clearPendingQueueCheckIn,
   hrefWithQueueReturn,
@@ -865,6 +866,15 @@ function QueuePageContent() {
     (): QueueDayStats => computeQueueDayStats(dayEntries),
     [dayEntries]
   )
+  const staleActiveCount = React.useMemo(
+    () =>
+      entries.filter(
+        (entry) =>
+          ["waiting", "ready", "now_serving", "in_chair"].includes(entry.status) &&
+          isPriorClinicDay(entry.checked_in_at)
+      ).length,
+    [entries]
+  )
 
   const boardDisplayEntries = React.useMemo(() => {
     if (tab === "history") {
@@ -931,6 +941,19 @@ function QueuePageContent() {
             active: boardFilter === "serving",
             onClick: () => handleBoardFilterChange("serving"),
           },
+          ...(staleActiveCount > 0
+            ? [
+                {
+                  label: t("queue.priorDayOpen", "Prior day open"),
+                  value: loading ? "—" : staleActiveCount,
+                  hint: t("queue.priorDayMetricHint", "Review before closeout"),
+                  icon: AlertTriangle,
+                  variant: "warning" as const,
+                  active: false,
+                  onClick: () => handleBoardFilterChange("all", { scrollTo: "queue-waiting" }),
+                },
+              ]
+            : []),
           {
             label: t("queue.summaryServed", "Served today"),
             value: loading ? "—" : dayStats.served,

@@ -14,6 +14,7 @@ import {
   type QueueEntry,
   type QueueStatus,
 } from "@/lib/queue/queue-service"
+import { isPriorClinicDay } from "@/lib/queue/queue-day"
 import { cn } from "@/lib/utils"
 
 type BoardColumn = {
@@ -164,6 +165,7 @@ function QueueCard({
 }) {
   const mins = waitMinutes(entry.checked_in_at)
   const { t } = useLocale()
+  const isStaleActive = isPriorClinicDay(entry.checked_in_at)
 
   return (
     <div
@@ -176,9 +178,11 @@ function QueueCard({
       onDragEnd={onDragEnd}
       className={cn(
         "rounded-lg border bg-white p-3 shadow-sm border-l-4 transition-all",
-        entry.appointment_id
-          ? "border-l-blue-500 border-y-neutral-200 border-r-neutral-200 bg-blue-50/10 hover:bg-blue-50/20"
-          : "border-l-neutral-400 border-y-neutral-200 border-r-neutral-200 hover:bg-neutral-50/50",
+        isStaleActive
+          ? "border-l-amber-500 border-y-amber-200 border-r-amber-200 bg-amber-50/50 hover:bg-amber-50/70"
+          : entry.appointment_id
+            ? "border-l-blue-500 border-y-neutral-200 border-r-neutral-200 bg-blue-50/10 hover:bg-blue-50/20"
+            : "border-l-neutral-400 border-y-neutral-200 border-r-neutral-200 hover:bg-neutral-50/50",
         isDragging && "opacity-50 ring-2 ring-primary-300",
         draggable && "cursor-grab active:cursor-grabbing"
       )}
@@ -215,6 +219,11 @@ function QueueCard({
                   {t("queue.walkIn", "Walk-in")}
                 </Badge>
               )}
+              {isStaleActive ? (
+                <Badge variant="warning" className="text-[10px] font-semibold">
+                  {t("queue.priorDayOpen", "Prior day open")}
+                </Badge>
+              ) : null}
             </div>
             <Link href={`/patients/${entry.patient_id}`} className="block text-sm font-medium text-neutral-900 hover:underline truncate">
               {entry.patient_name ?? "Patient"}
@@ -224,6 +233,14 @@ function QueueCard({
         <Badge variant={entry.status === "ready" ? "info" : "warning"}>{entry.status.replace("_", " ")}</Badge>
       </div>
       <p className="text-xs text-neutral-500 mt-1">{mins} min waiting</p>
+      {isStaleActive ? (
+        <p className="mt-1 rounded-md border border-amber-200 bg-white/70 px-2 py-1 text-xs text-amber-900">
+          {t(
+            "queue.priorDayOpenHint",
+            "Review this old active queue entry: continue care or cancel/complete it before closing the day."
+          )}
+        </p>
+      ) : null}
       {entry.chair_label ? <p className="text-xs text-neutral-600">Chair: {entry.chair_label}</p> : null}
       {entry.notes ? <p className="text-xs text-neutral-400 mt-1 truncate">{entry.notes}</p> : null}
       {!readOnly ? (

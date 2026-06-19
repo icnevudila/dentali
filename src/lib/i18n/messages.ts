@@ -783,6 +783,10 @@ export const messagesEnPh: MessageTree = {
     arrivalsUpcoming: "Upcoming",
     checkingIn: "Checking in…",
     alreadyInWaiting: "Patient is already in Waiting — queue #{code}",
+    priorDayOpen: "Prior day open",
+    priorDayOpenHint:
+      "Review this old active queue entry: continue care or cancel/complete it before closing the day.",
+    priorDayMetricHint: "Review before closeout",
     gateStepBilling: "Open billing, collect payment, or override if authorized",
     gateStepReturn: "Return here after resolving the blocker",
     gateStepFinish: "Then complete check-in",
@@ -1985,6 +1989,10 @@ export const messagesTr: MessageTree = {
     arrivalsUpcoming: "Yaklaşan",
     checkingIn: "Check-in yapılıyor…",
     alreadyInWaiting: "Hasta zaten Bekleme sırasında — sıra #{code}",
+    priorDayOpen: "Önceki günden açık",
+    priorDayOpenHint:
+      "Bu eski aktif sıra kaydını kontrol edin: bakıma devam edin veya gün kapanmadan iptal/tamamla yapın.",
+    priorDayMetricHint: "Closeout öncesi kontrol edin",
     gateStepBilling: "Faturayı açın, ödeme alın veya yetkiliyseniz override kullanın",
     gateStepReturn: "Engeli çözdükten sonra buraya dönün",
     gateStepFinish: "Sonra check-in işlemini tamamlayın",
@@ -2861,6 +2869,10 @@ export const messagesFil: MessageTree = {
     complete: "Complete",
     checkingIn: "Nagche-check in…",
     alreadyInWaiting: "Nasa Waiting na ang pasyente — queue #{code}",
+    priorDayOpen: "Bukas mula kahapon",
+    priorDayOpenHint:
+      "I-review ang lumang active queue entry: ituloy ang care o i-cancel/complete bago isara ang araw.",
+    priorDayMetricHint: "I-review bago mag-closeout",
     gateStepBilling: "Buksan ang billing, kolektahin ang bayad, o gumamit ng override kung authorized",
     gateStepReturn: "Bumalik dito pagkatapos ayusin ang blocker",
     gateStepFinish: "Pagkatapos, tapusin ang check-in",
