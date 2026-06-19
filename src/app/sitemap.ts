@@ -38,12 +38,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.85,
     },
-    {
-      url: `${base}/resources`,
-      lastModified,
-      changeFrequency: "weekly",
-      priority: 0.75,
-    },
   ]
 
   const blogRoutes = BLOG_POSTS.map((post) => ({

@@ -9,6 +9,20 @@ const nextConfig: NextConfig = {
   experimental: {
     viewTransition: true,
   },
+  async redirects() {
+    return [
+      {
+        source: "/resources",
+        destination: "/blog",
+        permanent: true,
+      },
+      {
+        source: "/resources/:slug",
+        destination: "/blog/:slug",
+        permanent: true,
+      },
+    ]
+  },
   images: {
     remotePatterns: [
       {

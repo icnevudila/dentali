@@ -97,11 +97,6 @@ export function LandingFooter() {
                     {lt(LANDING_HEADINGS.footer.blogLink, locale)}
                   </Link>
                 </li>
-                <li>
-                  <Link href="/resources" className="text-neutral-600 hover:text-primary-600 transition">
-                    {locale === "tr" ? "Kaynaklar" : "Resources"}
-                  </Link>
-                </li>
               </ul>
             </div>
 
