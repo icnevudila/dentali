@@ -18,8 +18,10 @@ const NAV_ITEMS = [
 ] as const
 
 function isNavActive(pathname: string, href: string) {
-  if (href.includes("#")) return pathname === href.split("#")[0]
-  return pathname === href
+  const base = href.split("#")[0]
+  if (href.includes("#")) return pathname === base
+  if (base === "/welcome") return pathname === "/" || pathname === "/welcome"
+  return pathname === base || pathname.startsWith(`${base}/`)
 }
 
 export function MarketingShell({ children }: { children: React.ReactNode }) {

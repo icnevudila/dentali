@@ -2,7 +2,6 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ARTICLES } from "@/lib/marketing/resources-data"
-import { MarketingShell } from "@/components/marketing/MarketingShell"
 import { BlogCoverImage } from "@/components/marketing/BlogCoverImage"
 import { MarkdownContent } from "@/components/marketing/MarkdownContent"
 import { BlogArticleJsonLd } from "@/components/marketing/BlogArticleJsonLd"
@@ -65,7 +64,7 @@ export default async function ArticlePage({ params }: Props) {
   }
 
   return (
-    <MarketingShell>
+    <>
       <BlogArticleJsonLd post={article} urlPath={`/resources/${slug}`} />
 
       <div className="bg-white py-12 md:py-20">
@@ -134,6 +133,6 @@ export default async function ArticlePage({ params }: Props) {
           </main>
         </div>
       </div>
-    </MarketingShell>
+    </>
   )
 }

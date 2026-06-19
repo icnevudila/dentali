@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { ARTICLES } from "@/lib/marketing/resources-data"
-import { MarketingShell } from "@/components/marketing/MarketingShell"
 import { BlogPostCard } from "@/components/marketing/BlogPostCard"
 import { getSiteUrl } from "@/lib/site-url"
 import { BookOpen } from "lucide-react"
@@ -23,8 +22,7 @@ export const metadata: Metadata = {
 
 export default function ResourcesPage() {
   return (
-    <MarketingShell>
-      <div className="bg-neutral-50/50 py-16 md:py-24">
+    <div className="bg-neutral-50/50 py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="max-w-3xl">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 ring-1 ring-primary-600/10">
@@ -59,6 +57,5 @@ export default function ResourcesPage() {
           </div>
         </div>
       </div>
-    </MarketingShell>
   )
 }
