@@ -55,12 +55,20 @@ export function AuthMarketingPanel({ variant }: AuthMarketingPanelProps) {
       : "Software that makes your clinic smile — from front desk to chair side."
 
   return (
-    <div className="relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-neutral-200 bg-gradient-to-br from-neutral-50 via-white to-primary-50/50 p-10 lg:flex lg:w-[44%] xl:w-[42%]">
+    <div className="relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-primary-100/80 bg-gradient-to-br from-primary-50 via-teal-50/50 to-emerald-50/40 p-10 lg:flex lg:w-[44%] xl:w-[42%]">
       <div
         className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-primary-500 via-teal-500 to-emerald-500"
         aria-hidden
       />
-      <div className="landing-hero-grid pointer-events-none absolute inset-0 opacity-[0.035]" />
+      <div
+        className="pointer-events-none absolute -left-24 top-[18%] h-72 w-72 rounded-full bg-primary-200/30 blur-3xl"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -right-16 bottom-[22%] h-56 w-56 rounded-full bg-teal-200/25 blur-3xl"
+        aria-hidden
+      />
+      <div className="landing-hero-grid pointer-events-none absolute inset-0 opacity-[0.055]" />
 
       <div className="relative z-10 flex flex-1 flex-col justify-center">
         <div className="max-w-md space-y-8">

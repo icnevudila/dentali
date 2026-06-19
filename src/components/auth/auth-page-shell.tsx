@@ -17,7 +17,7 @@ export function AuthPageShell({ variant, children }: AuthPageShellProps) {
     <div className="flex min-h-[100dvh] flex-col bg-white lg:flex-row">
       <AuthMarketingPanel variant={variant} />
 
-      <div className="relative flex min-h-[100dvh] flex-1 flex-col overflow-hidden bg-white">
+      <div className="relative flex min-h-[100dvh] flex-1 flex-col overflow-hidden bg-neutral-50/60 lg:bg-neutral-50/40">
         <header className="relative z-10 flex items-center justify-between border-b border-neutral-100 px-5 py-4 sm:px-6 lg:border-b-0 lg:px-8">
           <DentQLLogo size="sm" href="/welcome" />
           <LocaleSwitcher />
