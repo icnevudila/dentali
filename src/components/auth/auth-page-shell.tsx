@@ -14,11 +14,21 @@ type AuthPageShellProps = {
 
 export function AuthPageShell({ variant, children }: AuthPageShellProps) {
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-white lg:flex-row">
+    <div className="flex min-h-[100dvh] flex-col bg-gradient-to-b from-primary-50/80 via-teal-50/30 to-neutral-50 lg:flex-row lg:bg-white">
       <AuthMarketingPanel variant={variant} />
 
-      <div className="relative flex min-h-[100dvh] flex-1 flex-col overflow-hidden bg-neutral-50/60 lg:bg-neutral-50/40">
-        <header className="relative z-10 flex items-center justify-between border-b border-neutral-100 px-5 py-4 sm:px-6 lg:border-b-0 lg:px-8">
+      <div className="relative flex min-h-[100dvh] flex-1 flex-col overflow-hidden bg-gradient-to-b from-primary-50/90 via-teal-50/45 to-neutral-100/80 lg:bg-neutral-50/40">
+        <div
+          className="pointer-events-none absolute -left-16 top-20 h-52 w-52 rounded-full bg-primary-200/45 blur-3xl lg:hidden"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -right-10 bottom-28 h-44 w-44 rounded-full bg-teal-200/35 blur-3xl lg:hidden"
+          aria-hidden
+        />
+        <div className="landing-hero-grid pointer-events-none absolute inset-0 opacity-[0.06] lg:hidden" />
+
+        <header className="relative z-10 flex items-center justify-between border-b border-primary-100/70 bg-white/75 px-5 py-4 backdrop-blur-sm sm:px-6 lg:border-b-0 lg:bg-transparent lg:px-8 lg:backdrop-blur-none">
           <DentQLLogo size="sm" href="/welcome" />
           <LocaleSwitcher />
         </header>

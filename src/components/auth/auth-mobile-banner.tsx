@@ -19,8 +19,8 @@ export function AuthMobileBanner({ variant }: AuthMobileBannerProps) {
         : "One system from front desk to chair side"
 
   return (
-    <div className="border-b border-neutral-100 bg-neutral-50/80 px-5 py-2.5 lg:hidden">
-      <p className="text-center text-xs font-medium text-neutral-500">{tagline}</p>
+    <div className="relative border-b border-primary-100/60 bg-gradient-to-r from-primary-50/90 via-white/50 to-teal-50/80 px-5 py-3 lg:hidden">
+      <p className="text-center text-xs font-medium text-neutral-600">{tagline}</p>
     </div>
   )
 }
