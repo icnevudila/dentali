@@ -1,9 +1,8 @@
 "use client"
 
-import { Building2, CalendarDays, Check, Tv } from "lucide-react"
-import { AuthClinicIllustration } from "@/components/auth/auth-clinic-illustration"
+import { Check } from "lucide-react"
+import { AuthFeatureChips } from "@/components/auth/auth-mobile-chips"
 import { useLocale } from "@/hooks/use-locale"
-import "@/components/landing/landing.css"
 
 const BULLETS = {
   en: [
@@ -18,19 +17,6 @@ const BULLETS = {
   ],
 } as const
 
-const CHIPS = {
-  en: [
-    { icon: Building2, label: "Multi-branch" },
-    { icon: CalendarDays, label: "Scheduling" },
-    { icon: Tv, label: "Queue TV" },
-  ],
-  tr: [
-    { icon: Building2, label: "Çok şubeli" },
-    { icon: CalendarDays, label: "Randevu" },
-    { icon: Tv, label: "Sıra TV" },
-  ],
-} as const
-
 type AuthMarketingPanelProps = {
   variant: "login" | "signup"
 }
@@ -38,7 +24,6 @@ type AuthMarketingPanelProps = {
 export function AuthMarketingPanel({ variant }: AuthMarketingPanelProps) {
   const { locale } = useLocale()
   const bullets = locale === "tr" ? BULLETS.tr : BULLETS.en
-  const chips = locale === "tr" ? CHIPS.tr : CHIPS.en
 
   const title =
     variant === "signup"
@@ -55,27 +40,14 @@ export function AuthMarketingPanel({ variant }: AuthMarketingPanelProps) {
       : "Software that makes your clinic smile — from front desk to chair side."
 
   return (
-    <div className="relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-primary-200/60 bg-gradient-to-br from-primary-100/70 via-teal-50/80 to-emerald-100/50 p-10 lg:flex lg:w-[44%] xl:w-[42%]">
+    <div className="relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-emerald-200/50 bg-gradient-to-br from-emerald-50/90 via-teal-50/70 to-primary-50/40 p-10 lg:flex lg:w-[44%] xl:w-[42%]">
       <div
-        className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-primary-500 via-teal-500 to-emerald-500"
+        className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-emerald-500 via-teal-500 to-primary-500"
         aria-hidden
       />
-      <div
-        className="pointer-events-none absolute -left-20 top-[12%] h-80 w-80 rounded-full bg-primary-300/35 blur-3xl"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -right-12 bottom-[18%] h-64 w-64 rounded-full bg-teal-300/30 blur-3xl"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute left-1/3 top-1/2 h-48 w-48 -translate-y-1/2 rounded-full bg-emerald-200/20 blur-3xl"
-        aria-hidden
-      />
-      <div className="landing-hero-grid pointer-events-none absolute inset-0 opacity-[0.07]" />
 
       <div className="relative z-10 flex flex-1 flex-col justify-center">
-        <div className="max-w-md space-y-8">
+        <div className="max-w-md space-y-7">
           <div className="space-y-4">
             <h2 className="font-[family-name:var(--font-clinic-display)] text-3xl font-bold leading-tight tracking-tight text-neutral-900 xl:text-4xl">
               {title}
@@ -86,7 +58,7 @@ export function AuthMarketingPanel({ variant }: AuthMarketingPanelProps) {
           <ul className="space-y-3">
             {bullets.map((item) => (
               <li key={item} className="flex items-start gap-3 text-sm text-neutral-700">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-600">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-200/80 text-emerald-800">
                   <Check className="h-3 w-3" strokeWidth={2.5} />
                 </span>
                 {item}
@@ -94,19 +66,7 @@ export function AuthMarketingPanel({ variant }: AuthMarketingPanelProps) {
             ))}
           </ul>
 
-          <div className="flex flex-wrap gap-2.5 pt-1">
-            {chips.map(({ icon: Icon, label }) => (
-              <div
-                key={label}
-                className="inline-flex items-center gap-2 rounded-full border border-primary-300/50 bg-white/90 px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow-sm backdrop-blur-sm"
-              >
-                <Icon className="h-3.5 w-3.5 text-primary-600" />
-                {label}
-              </div>
-            ))}
-          </div>
-
-          <AuthClinicIllustration />
+          <AuthFeatureChips />
         </div>
       </div>
 
