@@ -230,7 +230,7 @@ export function AppointmentWeekCalendar({
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-neutral-200/80 bg-white p-5 shadow-sm">
+    <div className="min-w-0 max-w-full space-y-4 rounded-xl border border-neutral-200/80 bg-white p-5 shadow-sm">
       
       {/* Notion-Style Top Menu & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-neutral-100 gap-4">
@@ -290,9 +290,19 @@ export function AppointmentWeekCalendar({
 
       {/* Monthly Grid View */}
       {viewMode === "month" && (
-        <div className="-mx-1 overflow-x-auto scroll-px-2 pb-1 snap-x snap-mandatory [scrollbar-width:thin] md:mx-0 md:overflow-visible md:snap-none">
-          <div className="min-w-[680px] border border-neutral-200 rounded-lg md:min-w-0">
-          <div className="grid grid-cols-7 gap-px overflow-hidden bg-neutral-200">
+        <div className="relative min-w-0 max-w-full">
+          <p className="mb-2 text-[11px] font-medium text-neutral-400 md:hidden">
+            {t("appointments.calendarSwipeHint", "Swipe sideways to see the full calendar")}
+          </p>
+          <div
+            className={cn(
+              "min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x",
+              "scroll-px-3 pb-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]",
+              "-mx-5 px-5 md:mx-0 md:overflow-visible md:px-0"
+            )}
+          >
+            <div className="w-max min-w-[720px] rounded-lg border border-neutral-200 md:w-full md:min-w-0">
+              <div className="grid grid-cols-7 gap-px overflow-hidden bg-neutral-200">
           {/* Weekday labels */}
           {DAY_LABELS.map((label) => (
             <div key={label} className="bg-neutral-50 p-2 text-center text-[10px] font-bold text-neutral-500 uppercase">
@@ -373,15 +383,30 @@ export function AppointmentWeekCalendar({
               </div>
             )
           })}
+              </div>
+            </div>
           </div>
-          </div>
+          <div
+            className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent md:hidden"
+            aria-hidden
+          />
         </div>
       )}
 
       {/* Weekly Grid View */}
       {viewMode === "week" && (
-        <div className="-mx-1 overflow-x-auto scroll-px-2 pb-1 snap-x snap-mandatory [scrollbar-width:thin] md:mx-0 md:overflow-visible md:snap-none">
-          <div className="grid min-w-[640px] grid-cols-7 gap-1 md:min-w-0 md:gap-2">
+        <div className="relative min-w-0 max-w-full">
+          <p className="mb-2 text-[11px] font-medium text-neutral-400 md:hidden">
+            {t("appointments.calendarSwipeHint", "Swipe sideways to see the full calendar")}
+          </p>
+          <div
+            className={cn(
+              "min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x",
+              "scroll-px-3 pb-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]",
+              "-mx-5 px-5 md:mx-0 md:overflow-visible md:px-0"
+            )}
+          >
+            <div className="grid w-max min-w-[720px] grid-cols-7 gap-1 md:w-full md:min-w-0 md:gap-2">
           {weekDays.map((day, i) => {
             const key = toDateKey(day)
             const dayAppts = groupedAppointments.get(key) ?? []
@@ -469,7 +494,12 @@ export function AppointmentWeekCalendar({
               </div>
             )
           })}
+            </div>
           </div>
+          <div
+            className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent md:hidden"
+            aria-hidden
+          />
         </div>
       )}
 

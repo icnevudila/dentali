@@ -39,21 +39,28 @@ import { PatientEncountersWorkspace } from "@/components/patients/PatientEncount
 import { fetchOrthoCase, type OrthoCase } from "@/lib/clinical/ortho-service"
 import { AuditHistoryPanel } from "@/components/audit/AuditHistoryPanel"
 import { useBranch } from "@/hooks/use-branch"
+import { useLocale } from "@/hooks/use-locale"
 import { cn } from "@/lib/utils"
 
-const RECORD_SECTIONS: { id: string; label: string; icon: LucideIcon }[] = [
-  { id: "record-status", label: "Status", icon: Activity },
-  { id: "record-contact", label: "Contact", icon: Phone },
-  { id: "record-medical", label: "Medical", icon: Stethoscope },
-  { id: "record-chart", label: "Chart", icon: FileText },
-  { id: "record-consents", label: "Forms", icon: ShieldCheck },
-  { id: "record-notes", label: "Notes", icon: ClipboardList },
-  { id: "record-treatment", label: "Treatment", icon: ListOrdered },
-  { id: "record-ortho", label: "Ortho", icon: Activity },
-  { id: "record-appointments", label: "Appts", icon: Calendar },
-  { id: "record-visit-history", label: "Visits", icon: UserCheck },
-  { id: "record-billing", label: "Billing", icon: Wallet },
-]
+function useRecordSections() {
+  const { t } = useLocale()
+  return React.useMemo(
+    (): { id: string; label: string; icon: LucideIcon }[] => [
+      { id: "record-status", label: t("patients.recordNavStatus", "Status"), icon: Activity },
+      { id: "record-contact", label: t("patients.recordNavContact", "Contact"), icon: Phone },
+      { id: "record-medical", label: t("patients.recordNavMedical", "Medical"), icon: Stethoscope },
+      { id: "record-chart", label: t("patients.recordNavChart", "Chart"), icon: FileText },
+      { id: "record-consents", label: t("patients.recordNavForms", "Forms"), icon: ShieldCheck },
+      { id: "record-notes", label: t("patients.recordNavNotes", "Notes"), icon: ClipboardList },
+      { id: "record-treatment", label: t("patients.recordNavTreatment", "Treatment"), icon: ListOrdered },
+      { id: "record-ortho", label: t("patients.recordNavOrtho", "Ortho"), icon: Activity },
+      { id: "record-appointments", label: t("patients.recordNavAppts", "Appts"), icon: Calendar },
+      { id: "record-visit-history", label: t("patients.recordNavVisits", "Visits"), icon: UserCheck },
+      { id: "record-billing", label: t("patients.recordNavBilling", "Billing"), icon: Wallet },
+    ],
+    [t]
+  )
+}
 
 function RecordSection({
   id,
@@ -84,7 +91,13 @@ function RecordSection({
   )
 }
 
-function SectionNav({ activeId }: { activeId: string | null }) {
+function SectionNav({
+  activeId,
+  sections,
+}: {
+  activeId: string | null
+  sections: { id: string; label: string; icon: LucideIcon }[]
+}) {
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
@@ -92,7 +105,7 @@ function SectionNav({ activeId }: { activeId: string | null }) {
   return (
     <>
       <nav className="xl:hidden sticky top-0 z-10 -mx-1 mb-4 flex gap-1.5 overflow-x-auto hide-scrollbar rounded-lg border border-neutral-200 bg-white/95 p-1.5 backdrop-blur-sm">
-        {RECORD_SECTIONS.map((s) => {
+        {sections.map((s) => {
           const SectionIcon = s.icon
           return (
             <button
@@ -115,7 +128,7 @@ function SectionNav({ activeId }: { activeId: string | null }) {
 
       <aside className="hidden xl:block w-40 shrink-0">
         <nav className="sticky top-24 space-y-0.5 text-sm">
-          {RECORD_SECTIONS.map((s) => {
+          {sections.map((s) => {
             const SectionIcon = s.icon
             return (
               <button
@@ -174,8 +187,10 @@ export function PatientRecordOnePage({
   onAppointmentsChange: () => void
   onOpenTab: (tabId: string) => void
 }) {
+  const { t } = useLocale()
+  const recordSections = useRecordSections()
   const { activeBranch } = useBranch()
-  const [activeSection, setActiveSection] = React.useState<string | null>(RECORD_SECTIONS[0].id)
+  const [activeSection, setActiveSection] = React.useState<string | null>(recordSections[0]?.id ?? null)
   const [orthoCase, setOrthoCase] = React.useState<OrthoCase | null>(null)
 
   React.useEffect(() => {
@@ -193,12 +208,12 @@ export function PatientRecordOnePage({
       },
       { rootMargin: "-20% 0px -60% 0px", threshold: [0, 0.25, 0.5] }
     )
-    for (const s of RECORD_SECTIONS) {
+    for (const s of recordSections) {
       const el = document.getElementById(s.id)
       if (el) observer.observe(el)
     }
     return () => observer.disconnect()
-  }, [])
+  }, [recordSections])
 
   const { items: checklist, percent } = buildPatientRecordChecklist({
     patient,
@@ -218,19 +233,32 @@ export function PatientRecordOnePage({
   const pendingConsents = consents.filter((c) => c.status === "pending").length
   const signedConsents = consents.filter((c) => c.status === "signed").length
 
+  const consentsDesc = t(
+    "patients.recordConsentsDesc",
+    "{signed} signed · {pending} pending — fill at desk or send patient link"
+  )
+    .replace("{signed}", String(signedConsents))
+    .replace("{pending}", String(pendingConsents))
+
   return (
     <div className="flex flex-col xl:flex-row gap-6 xl:gap-8">
-      <SectionNav activeId={activeSection} />
+      <SectionNav activeId={activeSection} sections={recordSections} />
 
       <div className="min-w-0 flex-1 space-y-10 pb-8">
-        <RecordSection id="record-status" title="Record status" description="Intake checklist for this patient">
+        <RecordSection
+          id="record-status"
+          title={t("patients.recordStatusTitle", "Record status")}
+          description={t("patients.recordStatusDesc", "Intake checklist for this patient")}
+        >
           <ContentPanel>
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-50 text-lg font-bold text-primary-700">
                 {percent}%
               </div>
               <div className="flex-1 min-w-[200px]">
-                <p className="text-sm font-medium text-neutral-900">Chart completeness</p>
+                <p className="text-sm font-medium text-neutral-900">
+                  {t("patients.recordChartCompleteness", "Chart completeness")}
+                </p>
                 <div className="mt-2 h-2 w-full max-w-md overflow-hidden rounded-full bg-neutral-100">
                   <div
                     className="h-full rounded-full bg-primary-500 transition-all"
@@ -263,10 +291,10 @@ export function PatientRecordOnePage({
 
         <RecordSection
           id="record-contact"
-          title="Contact & emergency"
+          title={t("patients.recordContactTitle", "Contact & emergency")}
           action={
             <Button variant="ghost" size="sm" asChild>
-              <Link href={`/patients/${patientId}/edit`}>Edit</Link>
+              <Link href={`/patients/${patientId}/edit`}>{t("patients.recordContactEdit", "Edit profile")}</Link>
             </Button>
           }
         >
@@ -276,28 +304,32 @@ export function PatientRecordOnePage({
                 <Phone className="h-4 w-4 text-neutral-400 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium">{patient.phone ?? "—"}</p>
-                  <p className="text-xs text-neutral-500">Mobile</p>
+                  <p className="text-xs text-neutral-500">{t("patients.recordMobile", "Mobile")}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <Mail className="h-4 w-4 text-neutral-400 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium">{patient.email ?? "—"}</p>
-                  <p className="text-xs text-neutral-500">Email</p>
+                  <p className="text-xs text-neutral-500">{t("patients.recordEmail", "Email")}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <MapPin className="h-4 w-4 text-neutral-400 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium">{patient.address ?? "—"}</p>
-                  <p className="text-xs text-neutral-500">Address</p>
+                  <p className="text-xs text-neutral-500">{t("patients.recordAddress", "Address")}</p>
                 </div>
               </div>
             </ContentPanel>
             <div className="space-y-4">
               <ContentPanel>
-                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Emergency</p>
-                <p className="mt-2 text-sm font-medium">{patient.emergency_contact?.name ?? "Not provided"}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                  {t("patients.recordEmergency", "Emergency")}
+                </p>
+                <p className="mt-2 text-sm font-medium">
+                  {patient.emergency_contact?.name ?? t("patients.recordNotProvided", "Not provided")}
+                </p>
                 <p className="text-sm text-neutral-500">{patient.emergency_contact?.phone ?? "—"}</p>
               </ContentPanel>
               <PatientInsurancePanel patientId={patientId} />
@@ -307,21 +339,27 @@ export function PatientRecordOnePage({
 
         <RecordSection
           id="record-medical"
-          title="Medical history"
-          description="Allergies, conditions, and medications"
+          title={t("patients.recordMedicalTitle", "Medical history")}
+          description={t("patients.recordMedicalDesc", "Allergies, conditions, and medications")}
           action={
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/patients/${patientId}/medical-history`}>Update</Link>
+              <Link href={`/patients/${patientId}/medical-history`}>
+                {t("patients.recordUpdate", "Update")}
+              </Link>
             </Button>
           }
         >
           <ContentPanel>
             <div className="grid gap-6 md:grid-cols-3">
               <div>
-                <h3 className="text-xs font-semibold uppercase text-neutral-500 mb-2">Allergies</h3>
+                <h3 className="text-xs font-semibold uppercase text-neutral-500 mb-2">
+                  {t("patients.recordAllergies", "Allergies")}
+                </h3>
                 <ul className="space-y-1">
                   {(medicalHistory?.allergies ?? []).length === 0 ? (
-                    <li className="text-sm text-neutral-500">None recorded</li>
+                    <li className="text-sm text-neutral-500">
+                      {t("patients.recordNoneRecorded", "None recorded")}
+                    </li>
                   ) : (
                     medicalHistory!.allergies.map((a) => (
                       <li key={a} className="flex items-center gap-2 text-sm">
@@ -332,10 +370,14 @@ export function PatientRecordOnePage({
                 </ul>
               </div>
               <div>
-                <h3 className="text-xs font-semibold uppercase text-neutral-500 mb-2">Conditions</h3>
+                <h3 className="text-xs font-semibold uppercase text-neutral-500 mb-2">
+                  {t("patients.recordConditions", "Conditions")}
+                </h3>
                 <ul className="space-y-1">
                   {(medicalHistory?.conditions ?? []).length === 0 ? (
-                    <li className="text-sm text-neutral-500">None recorded</li>
+                    <li className="text-sm text-neutral-500">
+                      {t("patients.recordNoneRecorded", "None recorded")}
+                    </li>
                   ) : (
                     medicalHistory!.conditions.map((c) => (
                       <li key={c} className="flex items-center gap-2 text-sm">
@@ -346,10 +388,14 @@ export function PatientRecordOnePage({
                 </ul>
               </div>
               <div>
-                <h3 className="text-xs font-semibold uppercase text-neutral-500 mb-2">Medications</h3>
+                <h3 className="text-xs font-semibold uppercase text-neutral-500 mb-2">
+                  {t("patients.recordMedications", "Medications")}
+                </h3>
                 <ul className="space-y-1">
                   {(medicalHistory?.medications ?? []).length === 0 ? (
-                    <li className="text-sm text-neutral-500">None recorded</li>
+                    <li className="text-sm text-neutral-500">
+                      {t("patients.recordNoneRecorded", "None recorded")}
+                    </li>
                   ) : (
                     medicalHistory!.medications.map((m) => (
                       <li key={m} className="text-sm text-neutral-700">
@@ -365,10 +411,12 @@ export function PatientRecordOnePage({
 
         <RecordSection
           id="record-chart"
-          title="Dental chart"
+          title={t("patients.recordChartTitle", "Dental chart")}
           action={
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/patients/${patientId}/chart`}>Full chart</Link>
+              <Link href={`/patients/${patientId}/chart`}>
+                {t("patients.recordOpenChart", "Full chart")}
+              </Link>
             </Button>
           }
         >
@@ -379,8 +427,8 @@ export function PatientRecordOnePage({
 
         <RecordSection
           id="record-consents"
-          title="Consent forms"
-          description={`${signedConsents} signed · ${pendingConsents} pending — fill at desk or send patient link`}
+          title={t("patients.recordConsentsTitle", "Consent forms")}
+          description={consentsDesc}
         >
           <ConsentFormsPanel
             patientId={patientId}
@@ -391,11 +439,12 @@ export function PatientRecordOnePage({
 
         <RecordSection
           id="record-notes"
-          title="Clinical notes"
+          title={t("patients.recordNotesTitle", "Clinical notes")}
           action={
             <Button variant="outline" size="sm" className="gap-1" asChild>
               <Link href={`/patients/${patientId}/notes`}>
-                Open timeline <ChevronRight className="h-3.5 w-3.5" />
+                {t("patients.recordOpenTimeline", "Open timeline")}{" "}
+                <ChevronRight className="h-3.5 w-3.5" />
               </Link>
             </Button>
           }
@@ -406,10 +455,12 @@ export function PatientRecordOnePage({
             ) : noteEvents.length === 0 ? (
               <div className="text-center py-8 text-sm text-neutral-500">
                 <Stethoscope className="h-8 w-8 mx-auto mb-2 text-neutral-300" />
-                No clinical notes yet.
+                {t("patients.recordNoNotes", "No clinical notes yet.")}
                 <div className="mt-3">
                   <Button size="sm" asChild>
-                    <Link href={`/patients/${patientId}/notes`}>Create first note</Link>
+                    <Link href={`/patients/${patientId}/notes`}>
+                      {t("patients.recordCreateFirstNote", "Create first note")}
+                    </Link>
                   </Button>
                 </div>
               </div>
@@ -438,11 +489,11 @@ export function PatientRecordOnePage({
 
         <RecordSection
           id="record-treatment"
-          title="Treatment plans"
+          title={t("patients.recordTreatmentTitle", "Treatment plans")}
           action={
             <Button size="sm" className="gap-1" asChild>
               <Link href={`/patients/${patientId}/treatment-plan`}>
-                <FileText className="h-3.5 w-3.5" /> New plan
+                <FileText className="h-3.5 w-3.5" /> {t("patients.recordNewPlan", "New plan")}
               </Link>
             </Button>
           }
@@ -457,17 +508,25 @@ export function PatientRecordOnePage({
               <table className="w-full text-sm text-left">
                 <thead className="bg-neutral-50 border-b border-neutral-200">
                   <tr>
-                    <th className="px-4 py-3 font-medium text-neutral-700">Plan</th>
-                    <th className="px-4 py-3 font-medium text-neutral-700">Created</th>
-                    <th className="px-4 py-3 font-medium text-neutral-700">Total</th>
-                    <th className="px-4 py-3 font-medium text-neutral-700">Status</th>
+                    <th className="px-4 py-3 font-medium text-neutral-700">
+                      {t("patients.recordTablePlan", "Plan")}
+                    </th>
+                    <th className="px-4 py-3 font-medium text-neutral-700">
+                      {t("patients.recordTableCreated", "Created")}
+                    </th>
+                    <th className="px-4 py-3 font-medium text-neutral-700">
+                      {t("patients.recordTableTotal", "Total")}
+                    </th>
+                    <th className="px-4 py-3 font-medium text-neutral-700">
+                      {t("patients.recordTableStatus", "Status")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-200">
                   {treatmentPlans.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">
-                        No treatment plans yet.
+                        {t("patients.recordNoPlans", "No treatment plans yet.")}
                       </td>
                     </tr>
                   ) : (
@@ -497,16 +556,21 @@ export function PatientRecordOnePage({
           </ContentPanel>
         </RecordSection>
 
-        <RecordSection id="record-visit-history" title="Visit history">
+        <RecordSection
+          id="record-visit-history"
+          title={t("patients.recordVisitsTitle", "Visit history")}
+        >
           <PatientEncountersWorkspace patientId={patientId} branchId={activeBranch?.id} />
         </RecordSection>
 
         <RecordSection
           id="record-ortho"
-          title="Orthodontics"
+          title={t("patients.recordOrthoTitle", "Orthodontics")}
           action={
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/patients/${patientId}/ortho`}>Ortho record</Link>
+              <Link href={`/patients/${patientId}/ortho`}>
+                {t("patients.recordOrthoRecord", "Ortho record")}
+              </Link>
             </Button>
           }
         >
@@ -514,41 +578,45 @@ export function PatientRecordOnePage({
             {orthoCase ? (
               <div className="flex flex-wrap gap-4 text-sm">
                 <div>
-                  <p className="text-xs text-neutral-500">Status</p>
+                  <p className="text-xs text-neutral-500">{t("patients.recordTableStatus", "Status")}</p>
                   <Badge variant={orthoCase.status === "active" ? "info" : "default"}>{orthoCase.status}</Badge>
                 </div>
                 {orthoCase.appliance_type ? (
                   <div>
-                    <p className="text-xs text-neutral-500">Appliance</p>
+                    <p className="text-xs text-neutral-500">{t("patients.recordAppliance", "Appliance")}</p>
                     <p className="font-medium">{orthoCase.appliance_type}</p>
                   </div>
                 ) : null}
                 <div>
-                  <p className="text-xs text-neutral-500">Contract</p>
+                  <p className="text-xs text-neutral-500">{t("patients.recordContract", "Contract")}</p>
                   <p className="font-medium">₱{Number(orthoCase.contract_amount).toLocaleString()}</p>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-neutral-500">No active ortho case. Open ortho record to start.</p>
+              <p className="text-sm text-neutral-500">
+                {t("patients.recordNoOrthoHint", "No active ortho case. Open ortho record to start.")}
+              </p>
             )}
           </ContentPanel>
         </RecordSection>
 
         <RecordSection
           id="record-appointments"
-          title="Appointments"
+          title={t("patients.recordApptsTitle", "Appointments")}
           action={<BookAppointmentDialog patientId={patientId} onBooked={onAppointmentsChange} />}
         >
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <Calendar className="h-4 w-4" /> Upcoming
+                  <Calendar className="h-4 w-4" /> {t("patients.recordApptsUpcoming", "Upcoming")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {upcomingAppts.length === 0 ? (
-                  <p className="text-sm text-neutral-500">No upcoming visits.</p>
+                  <p className="text-sm text-neutral-500">
+                    {t("patients.recordNoUpcoming", "No upcoming appointments.")}
+                  </p>
                 ) : (
                   <ul className="space-y-2">
                     {upcomingAppts.map((a) => (
@@ -568,20 +636,22 @@ export function PatientRecordOnePage({
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Recent</CardTitle>
+                <CardTitle className="text-sm">{t("patients.recordApptsPast", "Past")}</CardTitle>
                 <CardDescription>
                   <button
                     type="button"
                     className="text-primary-600 hover:underline"
                     onClick={() => onOpenTab("appointments")}
                   >
-                    Full history
+                    {t("patients.recordOpenHistory", "Open full history")}
                   </button>
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {recentAppts.length === 0 ? (
-                  <p className="text-sm text-neutral-500">No past visits.</p>
+                  <p className="text-sm text-neutral-500">
+                    {t("patients.recordNoPastAppts", "No past appointments.")}
+                  </p>
                 ) : (
                   <ul className="space-y-2">
                     {recentAppts.map((a) => (
@@ -602,11 +672,11 @@ export function PatientRecordOnePage({
 
         <RecordSection
           id="record-billing"
-          title="Billing"
+          title={t("patients.recordBillingTitle", "Billing")}
           action={
             <Button variant="outline" size="sm" asChild>
               <Link href={`/billing?patient=${patientId}`}>
-                <Receipt className="h-3.5 w-3.5" /> Invoices
+                <Receipt className="h-3.5 w-3.5" /> {t("nav.invoices", "Invoices")}
               </Link>
             </Button>
           }
@@ -621,19 +691,25 @@ export function PatientRecordOnePage({
                     <Wallet className="h-5 w-5 text-neutral-400" />
                     ₱{balance.open_balance.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                   </p>
-                  <p className="text-xs text-neutral-500">Open balance</p>
+                  <p className="text-xs text-neutral-500">
+                    {t("patients.recordOpenBalance", "Open balance")}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium">₱{balance.total_billed.toLocaleString()}</p>
-                  <p className="text-xs text-neutral-500">Total billed</p>
+                  <p className="text-xs text-neutral-500">
+                    {t("patients.recordTotalBilled", "Total billed")}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-success-600">₱{balance.total_paid.toLocaleString()}</p>
-                  <p className="text-xs text-neutral-500">Total paid</p>
+                  <p className="text-xs text-neutral-500">
+                    {t("patients.recordTotalPaid", "Total paid")}
+                  </p>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-neutral-500">Loading balance…</p>
+              <p className="text-sm text-neutral-500">{t("common.loading", "Loading balance…")}</p>
             )}
           </ContentPanel>
         </RecordSection>

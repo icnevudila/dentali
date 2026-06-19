@@ -61,23 +61,36 @@ import { cn } from "@/lib/utils"
 import { useLocale } from "@/hooks/use-locale"
 import { notify } from "@/lib/ui/notify"
 
-const PATIENT_TABS: { id: string; label: string; icon: LucideIcon }[] = [
-  { id: "record", label: "Patient Record", icon: ClipboardList },
-  { id: "medical-history", label: "Medical History", icon: Activity },
-  { id: "dental-chart", label: "Dental Chart", icon: Scan },
-  { id: "clinical-notes", label: "Clinical Notes", icon: FileText },
-  { id: "treatment-plans", label: "Treatment Plans", icon: ListOrdered },
-  { id: "orthodontics", label: "Orthodontics", icon: Braces },
-  { id: "prescriptions", label: "Prescriptions", icon: Pill },
-  { id: "appointments", label: "Appointments", icon: Calendar },
-  { id: "visits", label: "Visits", icon: UserCheck },
-  { id: "epicrisis", label: "Epicrisis & Letters", icon: FileCheck2 },
-  { id: "consents", label: "Consents & Forms", icon: ShieldCheck },
-  { id: "radiology", label: "Radiology & Imaging", icon: ScanLine },
-  { id: "documents", label: "Documents", icon: FolderOpen },
-]
+type PatientTabId =
+  | "record"
+  | "medical-history"
+  | "dental-chart"
+  | "clinical-notes"
+  | "treatment-plans"
+  | "orthodontics"
+  | "prescriptions"
+  | "appointments"
+  | "visits"
+  | "epicrisis"
+  | "consents"
+  | "radiology"
+  | "documents"
 
-type PatientTabId = (typeof PATIENT_TABS)[number]["id"]
+const PATIENT_TAB_DEFS: { id: PatientTabId; labelKey: string; fallback: string; icon: LucideIcon }[] = [
+  { id: "record", labelKey: "patients.tabRecord", fallback: "Patient Record", icon: ClipboardList },
+  { id: "medical-history", labelKey: "patients.tabMedicalHistory", fallback: "Medical History", icon: Activity },
+  { id: "dental-chart", labelKey: "patients.tabDentalChart", fallback: "Dental Chart", icon: Scan },
+  { id: "clinical-notes", labelKey: "patients.tabClinicalNotes", fallback: "Clinical Notes", icon: FileText },
+  { id: "treatment-plans", labelKey: "patients.tabTreatmentPlans", fallback: "Treatment Plans", icon: ListOrdered },
+  { id: "orthodontics", labelKey: "patients.tabOrthodontics", fallback: "Orthodontics", icon: Braces },
+  { id: "prescriptions", labelKey: "patients.tabPrescriptions", fallback: "Prescriptions", icon: Pill },
+  { id: "appointments", labelKey: "patients.tabAppointments", fallback: "Appointments", icon: Calendar },
+  { id: "visits", labelKey: "patients.tabVisits", fallback: "Visits", icon: UserCheck },
+  { id: "epicrisis", labelKey: "patients.tabEpicrisis", fallback: "Epicrisis & Letters", icon: FileCheck2 },
+  { id: "consents", labelKey: "patients.tabConsents", fallback: "Consents & Forms", icon: ShieldCheck },
+  { id: "radiology", labelKey: "patients.tabRadiology", fallback: "Radiology & Imaging", icon: ScanLine },
+  { id: "documents", labelKey: "patients.tabDocuments", fallback: "Documents", icon: FolderOpen },
+]
 
 export default function PatientProfilePage() {
   const { id: patientId } = useRouteParams<{ id: string }>()
@@ -89,7 +102,7 @@ export default function PatientProfilePage() {
   const tabParam = searchParams.get("tab")
   const intakeComplete = searchParams.get("intake") === "complete"
   const activeTab: PatientTabId =
-    PATIENT_TABS.some((t) => t.id === tabParam) ? (tabParam as PatientTabId) : "record"
+    PATIENT_TAB_DEFS.some((tab) => tab.id === tabParam) ? (tabParam as PatientTabId) : "record"
 
   const setActiveTab = React.useCallback(
     (tabId: PatientTabId) => {
@@ -489,7 +502,7 @@ export default function PatientProfilePage() {
 
       const tabMatch = step.href.match(/[?&]tab=([^&]+)/)
       const tabId = tabMatch?.[1]
-      if (tabId && PATIENT_TABS.some((tab) => tab.id === tabId)) {
+      if (tabId && PATIENT_TAB_DEFS.some((tab) => tab.id === tabId)) {
         handleTabChangeAndScroll(tabId as PatientTabId)
         return
       }
@@ -758,9 +771,9 @@ export default function PatientProfilePage() {
               onChange={(e) => setActiveTab(e.target.value as PatientTabId)}
               className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              {PATIENT_TABS.map((tab) => (
+              {PATIENT_TAB_DEFS.map((tab) => (
                 <option key={tab.id} value={tab.id}>
-                  {tab.label}
+                  {t(tab.labelKey, tab.fallback)}
                 </option>
               ))}
             </select>
@@ -768,9 +781,10 @@ export default function PatientProfilePage() {
 
           {/* Desktop sidebar list */}
           <nav className="hidden xl:flex w-full flex-col gap-1 border-r border-neutral-200 pr-6">
-            {PATIENT_TABS.map((tab) => {
+            {PATIENT_TAB_DEFS.map((tab) => {
               const isActive = activeTab === tab.id
               const TabIcon = tab.icon
+              const tabLabel = t(tab.labelKey, tab.fallback)
               return (
                 <button
                   key={tab.id}
@@ -789,7 +803,7 @@ export default function PatientProfilePage() {
                       isActive ? "text-primary-600" : "text-neutral-500"
                     )}
                   />
-                  <span className="truncate">{tab.label}</span>
+                  <span className="truncate">{tabLabel}</span>
                 </button>
               )
             })}

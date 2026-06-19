@@ -1,4 +1,7 @@
 import type { AppLocale } from "./config"
+import { codeMessagesEn, codeMessagesTr } from "./code-messages"
+import { codeMessagesTrOverrides } from "./code-messages-tr-overrides"
+import type { MessageTree } from "./message-tree"
 import {
   marketingMessagesEn,
   marketingMessagesFil,
@@ -6,9 +9,7 @@ import {
   mergeMessageTrees,
 } from "./marketing-messages"
 
-export type MessageTree = {
-  [key: string]: string | MessageTree
-}
+export type { MessageTree } from "./message-tree"
 
 export const messagesEnPh: MessageTree = {
   nav: {
@@ -377,7 +378,82 @@ export const messagesEnPh: MessageTree = {
     tabAppointments: "Appointments",
     tabConsents: "Consents & Forms",
     tabDocuments: "Documents",
-    tabRadiology: "Radiology",
+    tabRadiology: "Radiology & Imaging",
+    tabPrescriptions: "Prescriptions",
+    tabVisits: "Visits",
+    tabEpicrisis: "Epicrisis & Letters",
+    recordNavStatus: "Status",
+    recordNavContact: "Contact",
+    recordNavMedical: "Medical",
+    recordNavChart: "Chart",
+    recordNavForms: "Forms",
+    recordNavNotes: "Notes",
+    recordNavTreatment: "Treatment",
+    recordNavOrtho: "Ortho",
+    recordNavAppts: "Appts",
+    recordNavVisits: "Visits",
+    recordNavBilling: "Billing",
+    recordStatusTitle: "Record status",
+    recordStatusDesc: "Intake checklist for this patient",
+    recordChartCompleteness: "Chart completeness",
+    recordContactTitle: "Contact & emergency",
+    recordContactEdit: "Edit profile",
+    recordMobile: "Mobile",
+    recordEmail: "Email",
+    recordAddress: "Address",
+    recordEmergency: "Emergency",
+    recordNotProvided: "Not provided",
+    recordMedicalTitle: "Medical history",
+    recordMedicalDesc: "Allergies, conditions, and medications",
+    recordNoneRecorded: "None recorded",
+    recordOpenHistory: "Open full history",
+    recordChartTitle: "Dental chart",
+    recordChartDesc: "Odontogram summary for this branch",
+    recordOpenChart: "Full chart",
+    recordConsentsDesc: "{signed} signed · {pending} pending — fill at desk or send patient link",
+    recordConsentsTitle: "Consent forms",
+    recordAllergies: "Allergies",
+    recordConditions: "Conditions",
+    recordMedications: "Medications",
+    recordNotesTitle: "Clinical notes",
+    recordNoNotes: "No clinical notes yet.",
+    recordOpenTimeline: "Open timeline",
+    recordNewPlan: "New plan",
+    recordTablePlan: "Plan",
+    recordTableCreated: "Created",
+    recordTableTotal: "Total",
+    recordTableStatus: "Status",
+    recordOrthoRecord: "Ortho record",
+    recordAppliance: "Appliance",
+    recordContract: "Contract",
+    recordNoOrthoHint: "No active ortho case. Open ortho record to start.",
+    recordUpdate: "Update",
+    recordNotesDesc: "Recent signed and draft notes",
+    recordCreateFirstNote: "Create first note",
+    recordOpenNotes: "Open notes",
+    recordTreatmentTitle: "Treatment plans",
+    recordTreatmentDesc: "Active and past plans",
+    recordNoPlans: "No treatment plans yet.",
+    recordOpenPlans: "View all plans",
+    recordOrthoTitle: "Orthodontics",
+    recordOrthoDesc: "Active ortho case and adjustments",
+    recordNoOrtho: "No active orthodontic case.",
+    recordOpenOrtho: "Open ortho record",
+    recordApptsTitle: "Appointments",
+    recordApptsUpcoming: "Upcoming",
+    recordApptsPast: "Past",
+    recordNoUpcoming: "No upcoming appointments.",
+    recordNoPastAppts: "No past appointments.",
+    recordTotalBilled: "Total billed",
+    recordTotalPaid: "Total paid",
+    recordBookAppt: "Book appointment",
+    recordVisitsTitle: "Visit history",
+    recordVisitsDesc: "Encounters and check-in trail",
+    recordBillingTitle: "Billing",
+    recordBillingDesc: "Balance and recent invoices",
+    recordOpenBalance: "Open balance",
+    recordSettled: "Settled",
+    recordViewBilling: "View billing",
   },
   appointments: {
     title: "Appointments",
@@ -508,6 +584,27 @@ export const messagesEnPh: MessageTree = {
     invoiceLinked:
       "Invoice draft created from this plan. Collect payment before the patient leaves.",
     openInvoice: "Open invoice",
+    clinicalRiskTitle: "Attention: Clinical safety risk",
+    clinicalRiskIntro: "Critical warnings in the patient's medical history:",
+    clinicalRiskOutro:
+      "Review the medical history in detail before planning surgical procedures.",
+  },
+  chartFindings: {
+    title: "Suggested from chart findings",
+    loading: "Loading chart suggestions…",
+    summary: "{count} {findingWord} can be added as plan items.",
+    findingSingular: "finding",
+    findingPlural: "findings",
+    unmatchedHint: "{count} need a manual procedure match in the catalog.",
+    openChart: "Open chart",
+    toothLabel: "Tooth {number}",
+    noCatalogMatch: "No catalog match",
+    setPriceOnPlan: "Set price on plan",
+    pricingHintCatalog:
+      "Prices are not copied from the catalog — set patient-specific amounts on each plan row after adding.",
+    pricingHintReview: "Review matches, then set prices on the plan before approving.",
+    adding: "Adding…",
+    addAll: "Add all suggestions",
   },
   consent: {
     formNotFound: "Form not found",
@@ -1607,14 +1704,89 @@ export const messagesTr: MessageTree = {
     outputEpicrisisHint: "Ziyaret, ortho, reçete ve faturalama teslim özeti",
     tabRecord: "Hasta kaydı",
     tabMedicalHistory: "Medikal geçmiş",
-    tabDentalChart: "Dental chart",
+    tabDentalChart: "Diş chartı",
     tabTreatmentPlans: "Tedavi planları",
     tabClinicalNotes: "Klinik notlar",
-    tabConsents: "Onamlar",
+    tabConsents: "Onamlar ve formlar",
     tabAppointments: "Randevular",
     tabOrthodontics: "Ortodonti",
     tabDocuments: "Belgeler",
-    tabRadiology: "Radyoloji",
+    tabRadiology: "Radyoloji ve görüntüleme",
+    tabPrescriptions: "Reçeteler",
+    tabVisits: "Ziyaretler",
+    tabEpicrisis: "Epikriz ve yazılar",
+    recordNavStatus: "Durum",
+    recordNavContact: "İletişim",
+    recordNavMedical: "Medikal",
+    recordNavChart: "Chart",
+    recordNavForms: "Formlar",
+    recordNavNotes: "Notlar",
+    recordNavTreatment: "Tedavi",
+    recordNavOrtho: "Ortho",
+    recordNavAppts: "Randevu",
+    recordNavVisits: "Ziyaret",
+    recordNavBilling: "Fatura",
+    recordStatusTitle: "Kayıt durumu",
+    recordStatusDesc: "Bu hasta için intake kontrol listesi",
+    recordChartCompleteness: "Chart tamlığı",
+    recordContactTitle: "İletişim ve acil durum",
+    recordContactEdit: "Profili düzenle",
+    recordMobile: "Cep telefonu",
+    recordEmail: "E-posta",
+    recordAddress: "Adres",
+    recordEmergency: "Acil durum",
+    recordNotProvided: "Belirtilmedi",
+    recordMedicalTitle: "Medikal geçmiş",
+    recordMedicalDesc: "Alerjiler, durumlar ve ilaçlar",
+    recordNoneRecorded: "Kayıt yok",
+    recordOpenHistory: "Tam geçmişi aç",
+    recordChartTitle: "Diş chartı",
+    recordChartDesc: "Bu şube için odontogram özeti",
+    recordOpenChart: "Tam chart",
+    recordConsentsDesc: "{signed} imzalı · {pending} bekleyen — bankoda doldurun veya hasta linki gönderin",
+    recordConsentsTitle: "Onam formları",
+    recordAllergies: "Alerjiler",
+    recordConditions: "Durumlar",
+    recordMedications: "İlaçlar",
+    recordNotesTitle: "Klinik notlar",
+    recordNoNotes: "Henüz klinik not yok.",
+    recordOpenTimeline: "Zaman çizelgesini aç",
+    recordNewPlan: "Yeni plan",
+    recordTablePlan: "Plan",
+    recordTableCreated: "Oluşturulma",
+    recordTableTotal: "Toplam",
+    recordTableStatus: "Durum",
+    recordOrthoRecord: "Ortho kaydı",
+    recordAppliance: "Aparat",
+    recordContract: "Sözleşme",
+    recordNoOrthoHint: "Aktif ortho vakası yok. Başlamak için ortho kaydını açın.",
+    recordUpdate: "Güncelle",
+    recordNotesDesc: "Son imzalı ve taslak notlar",
+    recordCreateFirstNote: "İlk notu oluştur",
+    recordOpenNotes: "Notları aç",
+    recordTreatmentTitle: "Tedavi planları",
+    recordTreatmentDesc: "Aktif ve geçmiş planlar",
+    recordNoPlans: "Henüz tedavi planı yok.",
+    recordOpenPlans: "Tüm planları görüntüle",
+    recordOrthoTitle: "Ortodonti",
+    recordOrthoDesc: "Aktif ortho vakası ve ayarlamalar",
+    recordNoOrtho: "Aktif ortodonti vakası yok.",
+    recordOpenOrtho: "Ortho kaydını aç",
+    recordApptsTitle: "Randevular",
+    recordApptsUpcoming: "Yaklaşan",
+    recordApptsPast: "Geçmiş",
+    recordNoUpcoming: "Yaklaşan randevu yok.",
+    recordNoPastAppts: "Geçmiş randevu yok.",
+    recordTotalBilled: "Toplam faturalanan",
+    recordTotalPaid: "Toplam ödenen",
+    recordBookAppt: "Randevu oluştur",
+    recordVisitsTitle: "Ziyaret geçmişi",
+    recordVisitsDesc: "Muayene ve check-in izi",
+    recordBillingTitle: "Faturalama",
+    recordBillingDesc: "Bakiye ve son faturalar",
+    recordOpenBalance: "Açık bakiye",
+    recordSettled: "Kapandı",
+    recordViewBilling: "Faturalamayı görüntüle",
   },
   appointments: {
     title: "Randevular",
@@ -1744,6 +1916,27 @@ export const messagesTr: MessageTree = {
     noInvoiceBackfill: "Oluşturulacak eksik fatura yok.",
     invoiceLinked: "Bu plandan taslak fatura oluşturuldu. Hasta ayrılmadan önce tahsilat yapın.",
     openInvoice: "Faturayı aç",
+    clinicalRiskTitle: "DİKKAT: Klinik Güvenlik Riski",
+    clinicalRiskIntro: "Hastanın tıbbi geçmişinde kritik uyarılar bulunmaktadır:",
+    clinicalRiskOutro:
+      "Cerrahi işlem planlamadan önce lütfen tıbbi geçmişini detaylı inceleyiniz.",
+  },
+  chartFindings: {
+    title: "Chart bulgularından öneriler",
+    loading: "Chart önerileri yükleniyor…",
+    summary: "{count} {findingWord} plan kalemi olarak eklenebilir.",
+    findingSingular: "bulgu",
+    findingPlural: "bulgu",
+    unmatchedHint: "{count} tanesi katalogda manuel işlem eşleşmesi gerektiriyor.",
+    openChart: "Chart'ı aç",
+    toothLabel: "Diş {number}",
+    noCatalogMatch: "Katalog eşleşmesi yok",
+    setPriceOnPlan: "Planda fiyat belirle",
+    pricingHintCatalog:
+      "Fiyatlar katalogdan kopyalanmaz — ekledikten sonra her plan satırında hasta özel tutarı girin.",
+    pricingHintReview: "Eşleşmeleri kontrol edin, onaylamadan önce planda fiyatları belirleyin.",
+    adding: "Ekleniyor…",
+    addAll: "Tüm önerileri ekle",
   },
   consent: {
     formNotFound: "Form bulunamadı",
@@ -2778,6 +2971,10 @@ export const messagesFil: MessageTree = {
     invoiceLinked:
       "Gumawa ng draft invoice mula sa plan na ito. Kolektahin ang bayad bago umalis ang pasyente.",
     openInvoice: "Buksan ang invoice",
+    clinicalRiskTitle: "Babala: Panganib sa klinikal na kaligtasan",
+    clinicalRiskIntro: "May kritikal na babala sa medical history ng pasyente:",
+    clinicalRiskOutro:
+      "Suriin nang detalyado ang medical history bago magplano ng surgical procedure.",
   },
   consent: {
     formNotFound: "Hindi nahanap ang form",
@@ -3220,9 +3417,21 @@ export const MESSAGE_CATALOG: Record<AppLocale, MessageTree> = {
 }
 
 export function getMessages(locale: AppLocale): MessageTree {
-  const raw = MESSAGE_CATALOG[locale] ?? MESSAGE_CATALOG.en
-  let merged = mergeMessageTrees(raw, marketingMessagesEn)
-  if (locale === "tr") merged = mergeMessageTrees(merged, marketingMessagesTr)
-  if (locale === "fil") merged = mergeMessageTrees(merged, marketingMessagesFil)
+  const enBase = mergeMessageTrees(
+    mergeMessageTrees(MESSAGE_CATALOG.en, codeMessagesEn),
+    marketingMessagesEn
+  )
+  if (locale === "en") return enBase
+
+  const localeCatalog = MESSAGE_CATALOG[locale] ?? MESSAGE_CATALOG.en
+  let merged = mergeMessageTrees(enBase, localeCatalog)
+  if (locale === "tr") {
+    merged = mergeMessageTrees(
+      mergeMessageTrees(mergeMessageTrees(merged, codeMessagesTr), codeMessagesTrOverrides),
+      marketingMessagesTr
+    )
+  } else if (locale === "fil") {
+    merged = mergeMessageTrees(merged, marketingMessagesFil)
+  }
   return merged
 }

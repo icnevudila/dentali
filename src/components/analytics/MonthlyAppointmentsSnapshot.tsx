@@ -148,7 +148,7 @@ export function MonthlyAppointmentsSnapshot({
   return (
     <section
       className={cn(
-        "rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]",
+        "min-w-0 max-w-full rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]",
         className
       )}
     >
@@ -179,8 +179,18 @@ export function MonthlyAppointmentsSnapshot({
         </div>
       ) : null}
 
-      <div className="mt-4 overflow-x-auto">
-        <div className="grid min-w-0 grid-cols-7 gap-2 sm:min-w-[860px]">
+      <div className="relative mt-4 min-w-0 max-w-full">
+        <p className="mb-2 text-[11px] font-medium text-neutral-400 md:hidden">
+          {t("appointments.calendarSwipeHint", "Swipe sideways to see the full calendar")}
+        </p>
+        <div
+          className={cn(
+            "min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x",
+            "scroll-px-3 pb-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]",
+            "-mx-4 px-4 md:mx-0 md:overflow-visible md:px-0"
+          )}
+        >
+          <div className="grid w-max min-w-[720px] grid-cols-7 gap-2 md:w-full md:min-w-0">
           {DAY_LABELS.map((dayLabel) => (
             <div
               key={dayLabel}
@@ -278,7 +288,12 @@ export function MonthlyAppointmentsSnapshot({
                   </div>
                 )
               })}
+          </div>
         </div>
+        <div
+          className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent md:hidden"
+          aria-hidden
+        />
       </div>
 
       <p className="mt-3 text-xs leading-5 text-neutral-500">

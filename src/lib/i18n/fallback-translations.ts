@@ -215,8 +215,11 @@ const TR_EXACT: Record<string, string> = {
 }
 
 const TR_REPLACEMENTS: Array<[RegExp, string]> = [
+  [/\ba patient\b/gi, "bir hasta"],
+  [/\ban appointment\b/gi, "bir randevu"],
+  [/\bthe patient\b/gi, "hasta"],
   [/\bappointment(s)?\b/gi, "randevu$1"],
-  [/\bpatient(s)?\b/gi, "hasta"],
+  [/\bpatient(s)?\b/gi, "hasta$1"],
   [/\bdentists\b/gi, "diş hekimleri"],
   [/\bdentist\b/gi, "diş hekimi"],
   [/\bdoctors\b/gi, "doktorlar"],
@@ -338,20 +341,35 @@ const TR_REPLACEMENTS: Array<[RegExp, string]> = [
   [/\bWhatsApp\b/g, "WhatsApp"],
 ]
 
+function isHybridTr(text: string): boolean {
+  if (!/[ğüşıöçĞÜŞİÖÇ]/.test(text)) return false
+  return /\b(the|and|for|with|from|who|which|this|that|before|after|without|showing|review|use|read|open|select|need|your)\b/i.test(
+    text
+  )
+}
+
 function translateTrFallback(fallback: string): string {
   if (!fallback) return fallback
   const exact = TR_EXACT[fallback]
   if (exact) return exact
+  return fallback
+}
 
-  let translated = fallback
-  for (const [pattern, replacement] of TR_REPLACEMENTS) {
-    translated = translated.replace(pattern, replacement)
-  }
-
-  return translated
+/** Resolve Turkish from exact catalog only (no regex mangling). */
+export function resolveTrString(english: string): string | undefined {
+  if (!english) return undefined
+  const exact = TR_EXACT[english]
+  return exact && exact !== english ? exact : undefined
 }
 
 export function translateMissingFallback(locale: AppLocale, fallback: string): string {
-  if (locale === "tr") return translateTrFallback(fallback)
+  if (locale === "tr") {
+    const resolved = resolveTrString(fallback)
+    if (resolved) return resolved
+    return translateTrFallback(fallback)
+  }
   return fallback
 }
+
+/** Exported for tr-ui-strings builder */
+export const TR_EXACT_EXPORT: Record<string, string> = { ...TR_EXACT }

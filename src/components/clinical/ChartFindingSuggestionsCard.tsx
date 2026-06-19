@@ -13,6 +13,7 @@ import {
   type ChartFindingSuggestion,
   type ProcedureLike,
 } from "@/lib/clinical/chart-finding-suggestions"
+import { useLocale } from "@/hooks/use-locale"
 
 type ChartFindingSuggestionsCardProps = {
   patientId: string
@@ -33,6 +34,7 @@ export function ChartFindingSuggestionsCard({
   saving,
   disabled,
 }: ChartFindingSuggestionsCardProps) {
+  const { t } = useLocale()
   const [suggestions, setSuggestions] = React.useState<ChartFindingSuggestion[]>([])
   const [loading, setLoading] = React.useState(true)
 
@@ -54,7 +56,9 @@ export function ChartFindingSuggestionsCard({
   if (loading) {
     return (
       <Card className="border-dashed">
-        <CardContent className="py-6 text-sm text-neutral-500">Loading chart suggestions…</CardContent>
+        <CardContent className="py-6 text-sm text-neutral-500">
+          {t("chartFindings.loading", "Loading chart suggestions…")}
+        </CardContent>
       </Card>
     )
   }
@@ -65,21 +69,33 @@ export function ChartFindingSuggestionsCard({
 
   const unmatched = suggestions.filter((s) => !s.procedureId).length
   const needsPricing = suggestions.filter((s) => s.procedureId).length
+  const findingWord =
+    suggestions.length === 1
+      ? t("chartFindings.findingSingular", "finding")
+      : t("chartFindings.findingPlural", "findings")
 
   return (
     <Card className="border-primary-200/80 bg-primary-50/20">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <Stethoscope className="h-4 w-4 text-primary-600" />
-          Suggested from chart findings
+          {t("chartFindings.title", "Suggested from chart findings")}
         </CardTitle>
         <CardDescription>
-          {suggestions.length} finding{suggestions.length === 1 ? "" : "s"} can be added as plan items.
+          {t(
+            "chartFindings.summary",
+            "{count} {findingWord} can be added as plan items."
+          )
+            .replace("{count}", String(suggestions.length))
+            .replace("{findingWord}", findingWord)}
           {unmatched > 0
-            ? ` ${unmatched} need a manual procedure match in the catalog.`
+            ? ` ${t(
+                "chartFindings.unmatchedHint",
+                "{count} need a manual procedure match in the catalog."
+              ).replace("{count}", String(unmatched))}`
             : null}{" "}
           <Link href={`/patients/${patientId}/chart`} className="text-primary-600 hover:underline">
-            Open chart
+            {t("chartFindings.openChart", "Open chart")}
           </Link>
         </CardDescription>
       </CardHeader>
@@ -89,16 +105,21 @@ export function ChartFindingSuggestionsCard({
             <li key={s.finding.tooth_number} className="flex items-center justify-between gap-3 px-3 py-2">
               <div className="min-w-0 flex-1">
                 <BulletTextList text={s.description} className="text-sm font-medium text-neutral-900" />
-                <p className="text-xs text-neutral-500 mt-0.5">Tooth {s.finding.tooth_number}</p>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  {t("chartFindings.toothLabel", "Tooth {number}").replace(
+                    "{number}",
+                    String(s.finding.tooth_number)
+                  )}
+                </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {!s.procedureId ? (
                   <Badge variant="outline" className="text-xs">
-                    No catalog match
+                    {t("chartFindings.noCatalogMatch", "No catalog match")}
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="text-xs text-neutral-600">
-                    Set price on plan
+                    {t("chartFindings.setPriceOnPlan", "Set price on plan")}
                   </Badge>
                 )}
               </div>
@@ -109,8 +130,14 @@ export function ChartFindingSuggestionsCard({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-neutral-600">
             {needsPricing > 0
-              ? "Prices are not copied from the catalog — set patient-specific amounts on each plan row after adding."
-              : "Review matches, then set prices on the plan before approving."}
+              ? t(
+                  "chartFindings.pricingHintCatalog",
+                  "Prices are not copied from the catalog — set patient-specific amounts on each plan row after adding."
+                )
+              : t(
+                  "chartFindings.pricingHintReview",
+                  "Review matches, then set prices on the plan before approving."
+                )}
           </p>
           <Button
             type="button"
@@ -121,7 +148,9 @@ export function ChartFindingSuggestionsCard({
             onClick={onAddAll}
           >
             <Sparkles className="h-4 w-4" />
-            {saving ? "Adding…" : "Add all suggestions"}
+            {saving
+              ? t("chartFindings.adding", "Adding…")
+              : t("chartFindings.addAll", "Add all suggestions")}
           </Button>
         </div>
       </CardContent>

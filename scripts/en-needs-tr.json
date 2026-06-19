@@ -1,0 +1,2182 @@
+[
+  {
+    "k": "appointments.awaitingCheckinBannerHint",
+    "en": "Open Queue — first column is Check-in. Tap Check in to Waiting for each patient who arrived.",
+    "tr": "açık sıra — first column is check-in. Tap check-in yap to bekliyor for each hasta who geldi."
+  },
+  {
+    "k": "appointments.awaitingCheckinBannerTitle",
+    "en": "{n} patient(s) need check-in on Queue",
+    "tr": "{n} hasta(s) need check-in on sıra"
+  },
+  {
+    "k": "appointments.bookModalHint",
+    "en": "Booking schedules a future arrival. Use Queue > Patient arrival if the patient is already in clinic.",
+    "tr": "Booking schedules a future geliş. Use sıra > hasta geliş if hasta is already in klinik."
+  },
+  {
+    "k": "appointments.calendarReportHint",
+    "en": "Read-only appointment scheduler view. Review who is booked, which dentist is assigned, the visit reason, and daily load without changing live appointments.",
+    "tr": "Read-only randevu scheduler görüntüle. incele who is booked, which diş hekimi is assigned, the ziyaret reason, and daily load without changing canlı randevus."
+  },
+  {
+    "k": "appointments.checkInOnQueueTitle",
+    "en": "Patient check-in is on the Queue board",
+    "tr": "hasta check-in is on the sıra board"
+  },
+  {
+    "k": "appointments.checkingIn",
+    "en": "Checking in…",
+    "tr": "Checking in…"
+  },
+  {
+    "k": "appointments.configureSlots",
+    "en": "Configure working hours & slots",
+    "tr": "Configure working hours & slots"
+  },
+  {
+    "k": "appointments.daySummaryPast",
+    "en": "Schedule summary — {day}",
+    "tr": "Schedule summary — {gün}"
+  },
+  {
+    "k": "appointments.leakageMix",
+    "en": "Schedule leakage",
+    "tr": "Schedule leakage"
+  },
+  {
+    "k": "appointments.metricPortal",
+    "en": "Online bookings",
+    "tr": "Online bookings"
+  },
+  {
+    "k": "appointments.missingNotesHint",
+    "en": "Review recent completed appointments and open the patient chart to sign a note for the visit.",
+    "tr": "incele recent tamamlandı randevus and açık hasta chart to sign a note for the ziyaret."
+  },
+  {
+    "k": "appointments.missingNotesTitle",
+    "en": "Completed visits may need clinical notes",
+    "tr": "tamamlandı ziyaretler may need klinik nots"
+  },
+  {
+    "k": "appointments.monthBoardBooked",
+    "en": "booked slots",
+    "tr": "booked slots"
+  },
+  {
+    "k": "appointments.monthBoardFooter",
+    "en": "Use this board to see which days are packed, who is booked, and what kind of visit is coming before you switch into the full appointment scheduler.",
+    "tr": "Use this board to see which gün are packed, who is booked, and what kind of ziyaret is coming before you switch into the full randevu scheduler."
+  },
+  {
+    "k": "appointments.monthBoardHint",
+    "en": "Read-only monthly view showing time, patient, assigned dentist, and visit reason before you open the live scheduler.",
+    "tr": "Read-only monthly görüntüle showing saat, hasta, assigned diş hekimi, and ziyaret reason before you açık the canlı scheduler."
+  },
+  {
+    "k": "appointments.occupancy",
+    "en": "Schedule occupancy ({days}d)",
+    "tr": "Schedule occupancy ({gün}d)"
+  },
+  {
+    "k": "appointments.peakHour",
+    "en": "Peak hour",
+    "tr": "Peak hour"
+  },
+  {
+    "k": "appointments.peakHourEmpty",
+    "en": "No peak yet",
+    "tr": "No peak yet"
+  },
+  {
+    "k": "appointments.periodReportHint",
+    "en": "Quick read of schedule pressure, leakage, and chair demand for the selected window.",
+    "tr": "Quick read of schedule pressure, leakage, and chair demand for the selected window."
+  },
+  {
+    "k": "appointments.pickOpenSlot",
+    "en": "Pick an open slot for the appointment.",
+    "tr": "Pick an açık slot for the randevu."
+  },
+  {
+    "k": "appointments.portalFilterTitle",
+    "en": "Showing online portal bookings only",
+    "tr": "Showing online portal bookings only"
+  },
+  {
+    "k": "appointments.providerUtilization",
+    "en": "Provider utilization",
+    "tr": "Provider utilization"
+  },
+  {
+    "k": "appointments.slotPast",
+    "en": "Past",
+    "tr": "Past"
+  },
+  {
+    "k": "appointments.slotsConfigured",
+    "en": "Working hours configured for this dentist.",
+    "tr": "Working hours configured for this diş hekimi."
+  },
+  {
+    "k": "appointments.summaryTotalSub",
+    "en": "On this clinic day",
+    "tr": "On this klinik gün"
+  },
+  {
+    "k": "appointments.summaryUpcoming",
+    "en": "Upcoming",
+    "tr": "Upcoming"
+  },
+  {
+    "k": "appointments.viewTodayTitle",
+    "en": "Showing today",
+    "tr": "Showing bugün"
+  },
+  {
+    "k": "audit.dailyVolume",
+    "en": "Daily volume",
+    "tr": "Daily volume"
+  },
+  {
+    "k": "audit.historyTitle",
+    "en": "Activity history",
+    "tr": "Activity history"
+  },
+  {
+    "k": "billing.applyDiscount",
+    "en": "Apply",
+    "tr": "Apply"
+  },
+  {
+    "k": "billing.approveClaim",
+    "en": "Approve",
+    "tr": "Approve"
+  },
+  {
+    "k": "billing.discount",
+    "en": "Discount",
+    "tr": "Discount"
+  },
+  {
+    "k": "billing.discountSaved",
+    "en": "Discount applied",
+    "tr": "Discount applied"
+  },
+  {
+    "k": "billing.emptyPatientHint",
+    "en": "This patient has no invoices yet. Start from the treatment plan or create a manual invoice.",
+    "tr": "This hasta has no faturalar yet. Start from the tedavi planı or oluştur a manuel fatura."
+  },
+  {
+    "k": "billing.gateFriendly",
+    "en": "Outstanding billing must be reviewed before check-in. Collect payment or override if authorized.",
+    "tr": "Outstanding faturalama must be reviewed before check-in. Collect ödeme or override if authorized."
+  },
+  {
+    "k": "billing.gatewayDryRun",
+    "en": "Sandbox mode: checkout links are placeholders until PAYMONGO_SECRET_KEY is configured on the server. Open the link to preview, then record payment after the patient pays.",
+    "tr": "Sandbox mode: checkout links are placeholders until PAYMONGO_SECRET_KEY is configured on the server. açık the link to preview, then record ödeme after hasta pays."
+  },
+  {
+    "k": "billing.hmoPending",
+    "en": "In progress",
+    "tr": "In progress"
+  },
+  {
+    "k": "billing.hmoQueueHint",
+    "en": "Draft claims are prepared here, then submitted for provider review and settlement.",
+    "tr": "taslak talepler are prepared here, then gönderildi for provider incele and settlement."
+  },
+  {
+    "k": "billing.hmoRejectReason",
+    "en": "Rejection reason",
+    "tr": "Rejection reason"
+  },
+  {
+    "k": "billing.hmoSubtitle",
+    "en": "Prepare, review, and settle provider claims from one queue.",
+    "tr": "Prepare, incele, and settle provider talepler from one sıra."
+  },
+  {
+    "k": "billing.hubSubtitle",
+    "en": "Invoices, payments, HMO claims, and PhilHealth sync in one place.",
+    "tr": "faturalar, ödemeler, HMO talepler, and PhilHealth sync in one place."
+  },
+  {
+    "k": "billing.metricPaidHint",
+    "en": "Fully settled",
+    "tr": "Fully settled"
+  },
+  {
+    "k": "billing.onlinePaymentLive",
+    "en": "Live PayMongo checkout is active. Open the checkout link, then mark the invoice paid after confirmation.",
+    "tr": "canlı PayMongo checkout is aktif. açık the checkout link, then mark the fatura ödendi after confirmation."
+  },
+  {
+    "k": "billing.outstanding",
+    "en": "Outstanding",
+    "tr": "Outstanding"
+  },
+  {
+    "k": "billing.paymentCompleteHint",
+    "en": "Return to the patient chart or print a receipt for checkout.",
+    "tr": "Return to hasta chart or yazdır a receipt for checkout."
+  },
+  {
+    "k": "billing.paymongoTitle",
+    "en": "PayMongo online checkout",
+    "tr": "PayMongo online checkout"
+  },
+  {
+    "k": "billing.phIncomplete",
+    "en": "Incomplete",
+    "tr": "Incomplete"
+  },
+  {
+    "k": "billing.phReadyHint",
+    "en": "Checklist complete",
+    "tr": "Checklist complete"
+  },
+  {
+    "k": "billing.phSubmitted",
+    "en": "Synced",
+    "tr": "Synced"
+  },
+  {
+    "k": "billing.philhealthIntegration",
+    "en": "PhilHealth eClaims sync",
+    "tr": "PhilHealth eClaims sync"
+  },
+  {
+    "k": "billing.providerRef",
+    "en": "Provider ref",
+    "tr": "Provider ref"
+  },
+  {
+    "k": "billing.rejectClaim",
+    "en": "Reject",
+    "tr": "Reject"
+  },
+  {
+    "k": "billing.rejectionReason",
+    "en": "Rejection",
+    "tr": "Rejection"
+  },
+  {
+    "k": "billing.reportsDescription",
+    "en": "Seven-day collections trends and accounts-receivable aging live in Reports finance.",
+    "tr": "Seven-gün collections trends and accounts-receivable aging canlı in raporlar finance."
+  },
+  {
+    "k": "billing.reportsTitle",
+    "en": "Collections and AR analytics",
+    "tr": "Collections and AR analytics"
+  },
+  {
+    "k": "billing.returnToQueueAction",
+    "en": "Return to queue",
+    "tr": "Return to sıra"
+  },
+  {
+    "k": "billing.returnToQueueBody",
+    "en": "After collecting payment or reviewing billing, return to the queue to complete check-in.",
+    "tr": "After collecting ödeme or reviewing faturalama, return to the sıra to complete check-in."
+  },
+  {
+    "k": "billing.settled",
+    "en": "Fully settled",
+    "tr": "Fully settled"
+  },
+  {
+    "k": "billing.submitClaim",
+    "en": "Submit",
+    "tr": "Submit"
+  },
+  {
+    "k": "billing.subtotal",
+    "en": "Subtotal",
+    "tr": "Subtotal"
+  },
+  {
+    "k": "billing.summaryTotalSub",
+    "en": "All statuses",
+    "tr": "All statuses"
+  },
+  {
+    "k": "billing.workflowBillingGate",
+    "en": "Booking and check-in gate",
+    "tr": "Booking and check-in gate"
+  },
+  {
+    "k": "billing.workflowInvoiceDraft",
+    "en": "Plan approval event",
+    "tr": "Plan approval event"
+  },
+  {
+    "k": "chairtime.eyebrow",
+    "en": "Analytics · AI",
+    "tr": "Analytics · AI"
+  },
+  {
+    "k": "chairtime.howItWorks",
+    "en": "How does it work?",
+    "tr": "How does it work?"
+  },
+  {
+    "k": "chairtime.howItWorksDesc",
+    "en": "The system calculates these times **completely autonomously** from patient movements on the Queue screen.",
+    "tr": "The system calculates these times **completely autonomously** from hasta movements on the sıra screen."
+  },
+  {
+    "k": "chart.affectedTeeth",
+    "en": "Affected teeth",
+    "tr": "Affected teeth"
+  },
+  {
+    "k": "chart.conditionMix",
+    "en": "Condition distribution",
+    "tr": "Condition distribution"
+  },
+  {
+    "k": "chart.decayedTeeth",
+    "en": "Decayed",
+    "tr": "Decayed"
+  },
+  {
+    "k": "chart.noRestorations",
+    "en": "No restorations recorded",
+    "tr": "No restorations recorded"
+  },
+  {
+    "k": "chart.planSuggestDescription",
+    "en": "chart finding(s) can be added to a treatment plan as matched procedures.",
+    "tr": "chart finding(s) can be added to a tedavi planı as matched procedures."
+  },
+  {
+    "k": "chart.planSuggestTitle",
+    "en": "Plan from chart",
+    "tr": "Plan from chart"
+  },
+  {
+    "k": "chart.restorationsCount",
+    "en": "{n} restoration(s)",
+    "tr": "{n} restoration(s)"
+  },
+  {
+    "k": "closeout.dayCompareHint",
+    "en": "Comparing {day} with the previous clinic day ({prev}).",
+    "tr": "Comparing {gün} with the önceki klinik gün ({prev})."
+  },
+  {
+    "k": "closeout.dayLockedBadge",
+    "en": "Billing locked for today",
+    "tr": "faturalama locked for bugün"
+  },
+  {
+    "k": "closeout.dayLockedHint",
+    "en": "This day is finalized — billing is locked",
+    "tr": "This gün is finalized — faturalama is locked"
+  },
+  {
+    "k": "closeout.finalizeConfirm",
+    "en": "This locks invoice and payment edits for today",
+    "tr": "This locks fatura and ödeme edits for bugün"
+  },
+  {
+    "k": "closeout.finalizeHint",
+    "en": "Run at end of shift to lock billing for this day",
+    "tr": "Run at end of shift to lock faturalama for this gün"
+  },
+  {
+    "k": "closeout.finalized",
+    "en": "Clinic day finalized — billing is locked for today",
+    "tr": "klinik gün finalized — faturalama is locked for bugün"
+  },
+  {
+    "k": "closeout.finalizedHint",
+    "en": "This clinic day is finalized. Invoice and payment edits are locked; admins can reopen today",
+    "tr": "This klinik gün is finalized. fatura and ödeme edits are locked; admins can reopen bugün"
+  },
+  {
+    "k": "closeout.finalizedLabel",
+    "en": "Finalized",
+    "tr": "Finalized"
+  },
+  {
+    "k": "closeout.history",
+    "en": "Saved snapshots",
+    "tr": "Saved snapshots"
+  },
+  {
+    "k": "closeout.howItWorksCompare",
+    "en": "Day-over-day table compares the selected clinic day with the previous Manila calendar day.",
+    "tr": "gün-over-gün table compares the selected klinik gün with the önceki Manila calendar gün."
+  },
+  {
+    "k": "closeout.howItWorksLive",
+    "en": "Numbers refresh from billing, appointments, queue, and inventory — they change during the day.",
+    "tr": "Numbers yenile from faturalama, randevus, sıra, and envanter — they change during the gün."
+  },
+  {
+    "k": "closeout.howItWorksSnapshot",
+    "en": "Save draft snapshot anytime for audit — it does not lock billing. Finalize at end of shift to lock invoice edits for the day.",
+    "tr": "kaydet taslak snapshot anytime for denetim — it does not lock faturalama. Finalize at end of shift to lock fatura edits for the gün."
+  },
+  {
+    "k": "closeout.metric",
+    "en": "Metric",
+    "tr": "Metric"
+  },
+  {
+    "k": "closeout.noData",
+    "en": "No closeout data",
+    "tr": "No closeout data"
+  },
+  {
+    "k": "closeout.pastDayHint",
+    "en": "Viewing closeout for a past clinic day. Use Today to close the current shift.",
+    "tr": "Viewing closeout for a past klinik gün. Use bugün to close the current shift."
+  },
+  {
+    "k": "closeout.reopenHint",
+    "en": "Admin-only undo for an accidental same-day closeout",
+    "tr": "Admin-only undo for an accidental same-gün closeout"
+  },
+  {
+    "k": "closeout.reopened",
+    "en": "Clinic day reopened — billing edits are unlocked",
+    "tr": "klinik gün reopened — faturalama edits are unlocked"
+  },
+  {
+    "k": "closeout.reopening",
+    "en": "Reopening…",
+    "tr": "Reopening…"
+  },
+  {
+    "k": "closeout.snapshotHint",
+    "en": "Save a draft anytime. Use Finalize at end of shift to lock billing for the day.",
+    "tr": "kaydet a taslak anytime. Use Finalize at end of shift to lock faturalama for the gün."
+  },
+  {
+    "k": "closeout.snapshotSaved",
+    "en": "Closeout snapshot saved for today",
+    "tr": "Closeout snapshot saved for bugün"
+  },
+  {
+    "k": "closeout.snapshotTodayOnly",
+    "en": "Snapshots can only be saved for today",
+    "tr": "Snapshots can only be saved for bugün"
+  },
+  {
+    "k": "closeout.snapshotUpdated",
+    "en": "Closeout snapshot updated for today",
+    "tr": "Closeout snapshot updated for bugün"
+  },
+  {
+    "k": "closeout.subtitle",
+    "en": "Review collections, open balances, and exceptions before closing the day.",
+    "tr": "incele collections, açık balances, and exceptions before closing the gün."
+  },
+  {
+    "k": "closeout.title",
+    "en": "Daily closeout",
+    "tr": "Daily closeout"
+  },
+  {
+    "k": "common.typeToConfirm",
+    "en": "Type {token} to confirm",
+    "tr": "Type {token} to confirm"
+  },
+  {
+    "k": "common.typeToConfirmMismatch",
+    "en": "Text must match exactly: {token}",
+    "tr": "Text must match exactly: {token}"
+  },
+  {
+    "k": "consent.fillRequiredNow",
+    "en": "Sign now",
+    "tr": "Sign now"
+  },
+  {
+    "k": "consent.linkCopied",
+    "en": "Link copied",
+    "tr": "Link copied"
+  },
+  {
+    "k": "consent.notStarted",
+    "en": "Not started",
+    "tr": "Not started"
+  },
+  {
+    "k": "consent.requiredForCheckInBody",
+    "en": "Complete and sign this form first — queue check-in stays blocked until it is signed.",
+    "tr": "Complete and sign this form first — sıra check-in stays blocked until it is signed."
+  },
+  {
+    "k": "consent.signHere",
+    "en": "Sign here",
+    "tr": "Sign here"
+  },
+  {
+    "k": "consent.signSuccessCloseHint",
+    "en": "You may close this page or return to the front desk.",
+    "tr": "You may close this page or return to the front desk."
+  },
+  {
+    "k": "consent.signSuccessKioskHint",
+    "en": "Return to the kiosk to finish check-in.",
+    "tr": "Return to the kiosk to finish check-in."
+  },
+  {
+    "k": "consent.signed",
+    "en": "Signed",
+    "tr": "Signed"
+  },
+  {
+    "k": "consent.signingProgress",
+    "en": "Signing progress",
+    "tr": "Signing progress"
+  },
+  {
+    "k": "consent.stepComplete",
+    "en": "Complete",
+    "tr": "Complete"
+  },
+  {
+    "k": "consent.stepRead",
+    "en": "Read",
+    "tr": "Read"
+  },
+  {
+    "k": "consent.stepSign",
+    "en": "Sign",
+    "tr": "Sign"
+  },
+  {
+    "k": "dashboard.closeoutCardStaticHint",
+    "en": "End-of-day snapshot for this branch",
+    "tr": "End-of-gün snapshot for this şube"
+  },
+  {
+    "k": "dashboard.closeoutCardTitle",
+    "en": "Daily closeout",
+    "tr": "Daily closeout"
+  },
+  {
+    "k": "dashboard.closeoutNudgeBalance",
+    "en": "Open balance remains — settle invoices before closeout.",
+    "tr": "açık bakiye remains — settle faturalar before closeout."
+  },
+  {
+    "k": "dashboard.closeoutNudgeBoth",
+    "en": "Open balance and missing notes — review before closing the day.",
+    "tr": "açık bakiye and eksik notes — incele before closing the gün."
+  },
+  {
+    "k": "dashboard.completionRate",
+    "en": "completion",
+    "tr": "completion"
+  },
+  {
+    "k": "dashboard.extendedReportsSubtitle",
+    "en": "Operations, finance, patients, and compliance — last {days} days at this branch.",
+    "tr": "Operations, finance, hastas, and compliance — last {gün} gün at this şube."
+  },
+  {
+    "k": "dashboard.lowStockHint",
+    "en": "Below reorder level",
+    "tr": "Below reorder level"
+  },
+  {
+    "k": "dashboard.morningTitle",
+    "en": "Morning snapshot",
+    "tr": "Morning snapshot"
+  },
+  {
+    "k": "dashboard.occupancyHint",
+    "en": "Scheduled slots used",
+    "tr": "planlandı slots used"
+  },
+  {
+    "k": "dashboard.openEncountersStaleHint",
+    "en": "Open from prior days",
+    "tr": "açık from prior gün"
+  },
+  {
+    "k": "dashboard.opsSummarySubtitle",
+    "en": "Live branch totals — open modules for actions",
+    "tr": "canlı şube totals — açık modules for aksiyonlar"
+  },
+  {
+    "k": "dashboard.ownerBranchEmpty",
+    "en": "No cross-branch activity in the last 7 days.",
+    "tr": "No cross-şube activity in the last 7 gün."
+  },
+  {
+    "k": "dashboard.ownerBranchHint",
+    "en": "for branch benchmarks and finance breakdown.",
+    "tr": "for şube benchmarks and finance breakdown."
+  },
+  {
+    "k": "dashboard.reportFinanceTitle",
+    "en": "Finance & receivables",
+    "tr": "Finance & receivables"
+  },
+  {
+    "k": "dentist.listEyebrowDay",
+    "en": "Queue that day",
+    "tr": "sıra that gün"
+  },
+  {
+    "k": "dentist.providerLockedHint",
+    "en": "Showing only your patients in today",
+    "tr": "Showing only your hastas in bugün"
+  },
+  {
+    "k": "display.noHeartbeat",
+    "en": "No heartbeat yet",
+    "tr": "No heartbeat yet"
+  },
+  {
+    "k": "display.offline",
+    "en": "Offline / stale",
+    "tr": "Offline / stale"
+  },
+  {
+    "k": "display.online",
+    "en": "Online",
+    "tr": "Online"
+  },
+  {
+    "k": "display.polling",
+    "en": "Polling",
+    "tr": "Polling"
+  },
+  {
+    "k": "display.queueEmptyHint",
+    "en": "New check-ins will appear in the waiting queue.",
+    "tr": "New check-ins will appear in the bekliyor sıra."
+  },
+  {
+    "k": "display.sinceRefresh",
+    "en": "Since last ping",
+    "tr": "Since last ping"
+  },
+  {
+    "k": "display.syncedAgo",
+    "en": "{n}s ago",
+    "tr": "{n}s ago"
+  },
+  {
+    "k": "display.tickerSeat",
+    "en": "Have a seat — we will call your queue number shortly",
+    "tr": "Have a seat — we will call your sıra number shortly"
+  },
+  {
+    "k": "display.uptimeHours",
+    "en": "{n} hr ago",
+    "tr": "{n} hr ago"
+  },
+  {
+    "k": "display.uptimeMinutes",
+    "en": "{n} min ago",
+    "tr": "{n} min ago"
+  },
+  {
+    "k": "finance.hmoDrafts",
+    "en": "HMO drafts",
+    "tr": "HMO drafts"
+  },
+  {
+    "k": "hmo.reportsTitle",
+    "en": "HMO pipeline analytics",
+    "tr": "HMO pipeline analytics"
+  },
+  {
+    "k": "inbox.allClear",
+    "en": "All clear",
+    "tr": "All clear"
+  },
+  {
+    "k": "inbox.awaitingCheckinDetail",
+    "en": "Scheduled today but not on the board",
+    "tr": "planlandı bugün but not on the board"
+  },
+  {
+    "k": "inbox.cron",
+    "en": "Auto",
+    "tr": "Auto"
+  },
+  {
+    "k": "inbox.hygieneRecall",
+    "en": "Hygiene recall",
+    "tr": "Hygiene recall"
+  },
+  {
+    "k": "inbox.overdueBalancesDetail",
+    "en": "Follow up on payment this week",
+    "tr": "Follow up on ödeme this hafta"
+  },
+  {
+    "k": "inbox.subtitle",
+    "en": "Automation inbox — recall, overdue, no-show, and intake gaps",
+    "tr": "Automation inbox — recall, gecikmiş, gelmeyen, and intake gaps"
+  },
+  {
+    "k": "inventory.bom",
+    "en": "BOM",
+    "tr": "BOM"
+  },
+  {
+    "k": "inventory.expiryTimeline",
+    "en": "Expiry timeline",
+    "tr": "Expiry timeline"
+  },
+  {
+    "k": "inventory.expiryTimelineHint",
+    "en": "SKUs by expiry window",
+    "tr": "SKUs by expiry window"
+  },
+  {
+    "k": "inventory.eyebrow",
+    "en": "Operations",
+    "tr": "Operations"
+  },
+  {
+    "k": "inventory.itemList",
+    "en": "All items",
+    "tr": "All items"
+  },
+  {
+    "k": "inventory.metricCritical",
+    "en": "Critical",
+    "tr": "Critical"
+  },
+  {
+    "k": "inventory.metricCriticalHint",
+    "en": "Reorder now",
+    "tr": "Reorder now"
+  },
+  {
+    "k": "inventory.metricItems",
+    "en": "Items",
+    "tr": "Items"
+  },
+  {
+    "k": "inventory.noMovement",
+    "en": "No movement data",
+    "tr": "No movement data"
+  },
+  {
+    "k": "inventory.reorderSuggest",
+    "en": "Reorder",
+    "tr": "Reorder"
+  },
+  {
+    "k": "journey.complete",
+    "en": "complete",
+    "tr": "complete"
+  },
+  {
+    "k": "journey.completeBadge",
+    "en": "Complete",
+    "tr": "Complete"
+  },
+  {
+    "k": "kiosk.consentAlreadySigned",
+    "en": "This form is already signed.",
+    "tr": "This form is already signed."
+  },
+  {
+    "k": "kiosk.consentsComplete",
+    "en": "All forms signed — continuing check-in…",
+    "tr": "All forms signed — continuing check-in…"
+  },
+  {
+    "k": "kiosk.dailyCheckins",
+    "en": "Daily kiosk check-ins",
+    "tr": "Daily kiosk check-ins"
+  },
+  {
+    "k": "kiosk.proceedToFrontDesk",
+    "en": "Please proceed to the front desk",
+    "tr": "Please proceed to the front desk"
+  },
+  {
+    "k": "kiosk.registrationFailed",
+    "en": "Registration could not be submitted. Please see the front desk.",
+    "tr": "Registration could not be gönderildi. Please see the front desk."
+  },
+  {
+    "k": "kiosk.registrationReference",
+    "en": "Your registration reference",
+    "tr": "Your registration reference"
+  },
+  {
+    "k": "kiosk.signForm",
+    "en": "Sign",
+    "tr": "Sign"
+  },
+  {
+    "k": "kiosk.speechCheckIn",
+    "en": "Check-in successful. Your queue number is ${queueCode.split(",
+    "tr": "check-in successful. Your sıra number is ${queueCode.split("
+  },
+  {
+    "k": "kiosk.speechIntake",
+    "en": "Registration received. Please wait for the front desk.",
+    "tr": "Registration received. Please wait for the front desk."
+  },
+  {
+    "k": "kiosk.speechPending",
+    "en": "Your registration has been received but is pending approval at the front desk. Kaydınız alınmıştır ancak henüz banko tarafından onaylanmamıştır.",
+    "tr": "Your registration has been received but is bekleyen approval at the front desk. Kaydınız alınmıştır ancak henüz banko tarafından onaylanmamıştır."
+  },
+  {
+    "k": "labcases.field.caseType",
+    "en": "Case Type*",
+    "tr": "Case Type*"
+  },
+  {
+    "k": "labcases.field.cost",
+    "en": "Lab Cost (₱)",
+    "tr": "Lab Cost (₱)"
+  },
+  {
+    "k": "labcases.field.labName",
+    "en": "Laboratory Name*",
+    "tr": "Laboratory Name*"
+  },
+  {
+    "k": "labcases.field.notes",
+    "en": "Notes / Instructions",
+    "tr": "Notes / Instructions"
+  },
+  {
+    "k": "labcases.new.desc",
+    "en": "Send an impression or order to an external lab.",
+    "tr": "Send an impression or order to an external lab."
+  },
+  {
+    "k": "labcases.new.title",
+    "en": "New Lab Case",
+    "tr": "New Lab Case"
+  },
+  {
+    "k": "labcases.statsToggle",
+    "en": "Lab case stats",
+    "tr": "Lab case stats"
+  },
+  {
+    "k": "labcases.success.created",
+    "en": "Lab case successfully created!",
+    "tr": "Lab case successfully created!"
+  },
+  {
+    "k": "landing.wfAppointmentsSubtitle",
+    "en": "Web · Scheduling desk",
+    "tr": "Web · Scheduling desk"
+  },
+  {
+    "k": "landing.wfBillingDesc",
+    "en": "Invoices in PHP minor units, payment ledger, HMO claim tracking, and PhilHealth eClaims readiness with audit-friendly records.",
+    "tr": "faturalar in PHP minor units, ödeme ledger, HMO talep tracking, and PhilHealth eClaims readiness with denetim-friendly records."
+  },
+  {
+    "k": "landing.wfBillingSubtitle",
+    "en": "Web · Finance desk",
+    "tr": "Web · Finance desk"
+  },
+  {
+    "k": "landing.wfChartDesc",
+    "en": "FDI odontogram, tooth findings, treatment plans, and clinical notes stay linked to the same patient profile your billing team uses.",
+    "tr": "FDI odontogram, tooth findings, tedavi planıs, and klinik nots stay linked to the same hasta profile your faturalama team uses."
+  },
+  {
+    "k": "landing.wfChartSubtitle",
+    "en": "Web · Chair-side clinical",
+    "tr": "Web · Chair-side clinical"
+  },
+  {
+    "k": "landing.wfDashboardDesc",
+    "en": "Owners and front desk see today",
+    "tr": "Owners and front desk see bugün"
+  },
+  {
+    "k": "landing.wfDashboardSubtitle",
+    "en": "Web · Desktop & tablet",
+    "tr": "Web · Desktop & tablet"
+  },
+  {
+    "k": "landing.wfDisplayDesc",
+    "en": "Large-format queue codes for the waiting area. Now serving and up next — calm typography, no PHI beyond first names.",
+    "tr": "Large-format sıra codes for the bekliyor area. Now serving and up sonraki — calm typography, no PHI beyond first names."
+  },
+  {
+    "k": "landing.wfKioskDesc",
+    "en": "Patients check in at the branch tablet, confirm contact details, and receive a queue number — no raw errors on screen.",
+    "tr": "hastas check-in yap at the şube tablet, confirm contact details, and receive a sıra number — no raw errors on screen."
+  },
+  {
+    "k": "landing.wfKioskTitle",
+    "en": "Kiosk check-in",
+    "tr": "Kiosk check-in"
+  },
+  {
+    "k": "landing.wfPatientsSubtitle",
+    "en": "Web · Searchable records",
+    "tr": "Web · Searchable records"
+  },
+  {
+    "k": "landing.workflowDescription",
+    "en": "Walk through the modules your Philippine clinic team uses every day — with live data when showcase seed is configured.",
+    "tr": "Walk through the modules your Philippine klinik team uses every gün — with canlı data when showcase seed is configured."
+  },
+  {
+    "k": "landing.workflowEyebrow",
+    "en": "Product tour",
+    "tr": "Product tour"
+  },
+  {
+    "k": "landing.workflowStep",
+    "en": "Step",
+    "tr": "Step"
+  },
+  {
+    "k": "landing.workflowTitle",
+    "en": "One system from front desk to chair side",
+    "tr": "One system from front desk to chair side"
+  },
+  {
+    "k": "notifications.dailyDelivery",
+    "en": "Daily delivery",
+    "tr": "Daily delivery"
+  },
+  {
+    "k": "ortho.adjustmentTimeline",
+    "en": "Adjustment timeline (12w)",
+    "tr": "Adjustment timeline (12w)"
+  },
+  {
+    "k": "ortho.visitTimelineHint",
+    "en": "Visits and payments per session",
+    "tr": "ziyaretler and ödemeler per session"
+  },
+  {
+    "k": "patients.abstractNotesPlaceholder",
+    "en": "Optional notes for receiving physician…",
+    "tr": "isteğe bağlı notes for receiving physician…"
+  },
+  {
+    "k": "patients.actionDentalChart",
+    "en": "Dental chart",
+    "tr": "Dental chart"
+  },
+  {
+    "k": "patients.additionalNotes",
+    "en": "Additional remarks",
+    "tr": "Additional remarks"
+  },
+  {
+    "k": "patients.certificateForm",
+    "en": "Certificate details",
+    "tr": "Certificate details"
+  },
+  {
+    "k": "patients.certificateFormHint",
+    "en": "Standard TO WHOM IT MAY CONCERN format — edit findings and print.",
+    "tr": "Standard TO WHOM IT MAY CONCERN format — düzenle findings and yazdır."
+  },
+  {
+    "k": "patients.certificatePurpose",
+    "en": "Purpose / request",
+    "tr": "Purpose / request"
+  },
+  {
+    "k": "patients.certificateType",
+    "en": "Certificate type",
+    "tr": "Certificate type"
+  },
+  {
+    "k": "patients.clinicalSummary",
+    "en": "Clinical summary",
+    "tr": "Clinical summary"
+  },
+  {
+    "k": "patients.colChart",
+    "en": "Chart",
+    "tr": "Chart"
+  },
+  {
+    "k": "patients.colIntake",
+    "en": "Intake",
+    "tr": "Intake"
+  },
+  {
+    "k": "patients.diagnosis",
+    "en": "Findings / diagnosis",
+    "tr": "Findings / diagnosis"
+  },
+  {
+    "k": "patients.emptySearchHint",
+    "en": "Try a different name or phone number.",
+    "tr": "Try a different name or phone number."
+  },
+  {
+    "k": "patients.eyebrow",
+    "en": "Clinical",
+    "tr": "Clinical"
+  },
+  {
+    "k": "patients.filterChairHint",
+    "en": "Chair flow is managed on Queue — not here.",
+    "tr": "Chair flow is managed on sıra — not here."
+  },
+  {
+    "k": "patients.filterFrom",
+    "en": "From",
+    "tr": "From"
+  },
+  {
+    "k": "patients.filterSort",
+    "en": "Sort",
+    "tr": "Sort"
+  },
+  {
+    "k": "patients.filterTimezoneHint",
+    "en": "Visit dates use Asia/Manila (branch timezone).",
+    "tr": "ziyaret dates use Asia/Manila (şube timezone)."
+  },
+  {
+    "k": "patients.filterTo",
+    "en": "To",
+    "tr": "To"
+  },
+  {
+    "k": "patients.filterVisitCustom",
+    "en": "Custom",
+    "tr": "Custom"
+  },
+  {
+    "k": "patients.filterVisitNever",
+    "en": "Never visited",
+    "tr": "Never visited"
+  },
+  {
+    "k": "patients.filtersReset",
+    "en": "Reset",
+    "tr": "Reset"
+  },
+  {
+    "k": "patients.filtersTitle",
+    "en": "Filters",
+    "tr": "Filters"
+  },
+  {
+    "k": "patients.generateAbstract",
+    "en": "Generate medical abstract",
+    "tr": "Generate medical abstract"
+  },
+  {
+    "k": "patients.generateCertificate",
+    "en": "Generate medical certificate",
+    "tr": "Generate medical certificate"
+  },
+  {
+    "k": "patients.intake",
+    "en": "Intake",
+    "tr": "Intake"
+  },
+  {
+    "k": "patients.intakeDownload",
+    "en": "Download intake form",
+    "tr": "Download intake form"
+  },
+  {
+    "k": "patients.intakeDraftsHint",
+    "en": "New patients from the kiosk tablet or online portal — review and register before end of day.",
+    "tr": "New hastas from the kiosk tablet or online portal — incele and register before end of gün."
+  },
+  {
+    "k": "patients.intakeLabel",
+    "en": "Intake",
+    "tr": "Intake"
+  },
+  {
+    "k": "patients.intakeShowLess",
+    "en": "Show less",
+    "tr": "Show less"
+  },
+  {
+    "k": "patients.licenseNumber",
+    "en": "PRC license no.",
+    "tr": "PRC license no."
+  },
+  {
+    "k": "patients.medicalAbstract",
+    "en": "Medical Abstract",
+    "tr": "Medical Abstract"
+  },
+  {
+    "k": "patients.medicalAbstractDesc",
+    "en": "Clinical summary letter for referral, insurance, or handover — {name}",
+    "tr": "Clinical summary letter for referral, insurance, or handover — {name}"
+  },
+  {
+    "k": "patients.medicalAbstractForm",
+    "en": "Abstract content",
+    "tr": "Abstract content"
+  },
+  {
+    "k": "patients.medicalAbstractFormHint",
+    "en": "Review auto-filled summaries from the chart, edit as needed, then print.",
+    "tr": "incele auto-filled summaries from the chart, düzenle as needed, then yazdır."
+  },
+  {
+    "k": "patients.medicalAbstractTitle",
+    "en": "Medical Abstract",
+    "tr": "Medical Abstract"
+  },
+  {
+    "k": "patients.medicalCertificate",
+    "en": "Medical Certificate",
+    "tr": "Medical Certificate"
+  },
+  {
+    "k": "patients.medicalCertificateDesc",
+    "en": "Fit-to-work, rest, or procedure certificate for {name}",
+    "tr": "Fit-to-work, rest, or procedure certificate for {name}"
+  },
+  {
+    "k": "patients.medicalCertificateTitle",
+    "en": "Medical Certificate",
+    "tr": "Medical Certificate"
+  },
+  {
+    "k": "patients.metricKioskIntake",
+    "en": "Kiosk intake",
+    "tr": "Kiosk intake"
+  },
+  {
+    "k": "patients.metricPortalIntake",
+    "en": "Portal intake",
+    "tr": "Portal intake"
+  },
+  {
+    "k": "patients.recommendation",
+    "en": "Recommendation",
+    "tr": "Recommendation"
+  },
+  {
+    "k": "patients.recordPlural",
+    "en": "records",
+    "tr": "records"
+  },
+  {
+    "k": "patients.recordSingular",
+    "en": "record",
+    "tr": "record"
+  },
+  {
+    "k": "patients.registryEyebrow",
+    "en": "Clinical",
+    "tr": "Clinical"
+  },
+  {
+    "k": "patients.registryMetricsToggle",
+    "en": "Registry metrics & intake",
+    "tr": "Registry metrics & intake"
+  },
+  {
+    "k": "patients.remarks",
+    "en": "Remarks",
+    "tr": "Remarks"
+  },
+  {
+    "k": "patients.reportsDescription",
+    "en": "Patient growth, intake completion, and consent trends live in Reports.",
+    "tr": "hasta growth, intake completion, and onam trends canlı in raporlar."
+  },
+  {
+    "k": "patients.searchActive",
+    "en": "Filtering results",
+    "tr": "Filtering results"
+  },
+  {
+    "k": "patients.searching",
+    "en": "Searching…",
+    "tr": "Searching…"
+  },
+  {
+    "k": "patients.selectBranchHint",
+    "en": "Use the branch switcher in the top bar.",
+    "tr": "Use the şube switcher in the top bar."
+  },
+  {
+    "k": "patients.selectBranchTitle",
+    "en": "Select a branch to view patients",
+    "tr": "Select a şube to görüntüle hastas"
+  },
+  {
+    "k": "patients.sortName",
+    "en": "Name",
+    "tr": "Name"
+  },
+  {
+    "k": "patients.sourceKiosk",
+    "en": "Kiosk tablet",
+    "tr": "Kiosk tablet"
+  },
+  {
+    "k": "patients.sourceKioskShort",
+    "en": "kiosk",
+    "tr": "kiosk"
+  },
+  {
+    "k": "patients.sourcePortal",
+    "en": "Online portal",
+    "tr": "Online portal"
+  },
+  {
+    "k": "patients.sourcePortalShort",
+    "en": "portal",
+    "tr": "portal"
+  },
+  {
+    "k": "patients.sourceUnknownShort",
+    "en": "other",
+    "tr": "other"
+  },
+  {
+    "k": "patients.treatmentSummary",
+    "en": "Treatment summary",
+    "tr": "Treatment summary"
+  },
+  {
+    "k": "patients.validFrom",
+    "en": "Valid from",
+    "tr": "Valid from"
+  },
+  {
+    "k": "patients.validUntil",
+    "en": "Valid until",
+    "tr": "Valid until"
+  },
+  {
+    "k": "philhealth.readiness",
+    "en": "PhilHealth readiness",
+    "tr": "PhilHealth readiness"
+  },
+  {
+    "k": "philhealth.reportsTitle",
+    "en": "PhilHealth readiness analytics",
+    "tr": "PhilHealth readiness analytics"
+  },
+  {
+    "k": "portal.brandSuffix",
+    "en": "Portal",
+    "tr": "Portal"
+  },
+  {
+    "k": "portal.consentAlreadySigned",
+    "en": "This form is already signed.",
+    "tr": "This form is already signed."
+  },
+  {
+    "k": "portal.consentsReady",
+    "en": "Intake forms complete — you",
+    "tr": "Intake forms complete — you"
+  },
+  {
+    "k": "portal.notInQueue",
+    "en": "You",
+    "tr": "You"
+  },
+  {
+    "k": "portal.queueInChair",
+    "en": "In treatment",
+    "tr": "In treatment"
+  },
+  {
+    "k": "portal.queueNext",
+    "en": "You",
+    "tr": "You"
+  },
+  {
+    "k": "portal.queueServing",
+    "en": "Now serving",
+    "tr": "Now serving"
+  },
+  {
+    "k": "portal.signNow",
+    "en": "Sign now",
+    "tr": "Sign now"
+  },
+  {
+    "k": "portal.statusGreeting",
+    "en": "Hello, {name}",
+    "tr": "Hello, {name}"
+  },
+  {
+    "k": "queue.arrivalIn",
+    "en": "In {n} min",
+    "tr": "In {n} min"
+  },
+  {
+    "k": "queue.arrivalLate",
+    "en": "{n} min late",
+    "tr": "{n} min late"
+  },
+  {
+    "k": "queue.arrivalsColumnEmptyOperational",
+    "en": "No scheduled arrivals waiting for check-in. Use Patient arrival for registered walk-ins, or New walk-in patient for first-time patients.",
+    "tr": "No planlandı geliş bekliyor for check-in. Use hasta geliş for registered walk-ins, or New walk-in hasta for first-saat hastas."
+  },
+  {
+    "k": "queue.commandCenterBlocked",
+    "en": "Resolve items below before check-in.",
+    "tr": "Resolve items below before check-in."
+  },
+  {
+    "k": "queue.commandCenterError",
+    "en": "Could not load check-in summary.",
+    "tr": "Could not load check-in summary."
+  },
+  {
+    "k": "queue.commandCenterLoading",
+    "en": "Preparing check-in summary…",
+    "tr": "Preparing check-in summary…"
+  },
+  {
+    "k": "queue.consentGateFriendly",
+    "en": "Consent is required before check-in. Open the required form to sign, or override if clinic policy allows it.",
+    "tr": "onam is zorunlu before check-in. açık the zorunlu form to sign, or override if klinik policy allows it."
+  },
+  {
+    "k": "queue.eyebrow",
+    "en": "Front desk",
+    "tr": "Front desk"
+  },
+  {
+    "k": "queue.flowBadge",
+    "en": "Front desk rule",
+    "tr": "Front desk rule"
+  },
+  {
+    "k": "queue.flowCheckoutBody",
+    "en": "Mark Served when treatment ends. Workflow can draft an invoice; collect payment in Billing, then close the visit.",
+    "tr": "Mark tamamlandı when treatment ends. Workflow can taslak an fatura; collect ödeme in faturalama, then close the ziyaret."
+  },
+  {
+    "k": "queue.flowDentistBody",
+    "en": "Move patients Waiting → Called → In Chair on the board. Clinical notes and chart open from the dentist workspace.",
+    "tr": "Move hastas bekliyor → çağrıldı → koltukta on the board. klinik nots and chart açık from the diş hekimi workspace."
+  },
+  {
+    "k": "queue.flowNewWalkInBody",
+    "en": "Create the patient file first. The form returns here with the patient selected for check-in.",
+    "tr": "oluştur hasta file first. The form returns here with hasta selected for check-in."
+  },
+  {
+    "k": "queue.flowNewWalkInTitle",
+    "en": "New walk-in",
+    "tr": "New walk-in"
+  },
+  {
+    "k": "queue.flowRegisteredWalkInBody",
+    "en": "Use Patient arrival to search an existing file, add the reason, and check in to Waiting.",
+    "tr": "Use hasta geliş to ara an existing file, ekle the reason, and check-in yap to bekliyor."
+  },
+  {
+    "k": "queue.flowRegisteredWalkInTitle",
+    "en": "Registered walk-in",
+    "tr": "Registered walk-in"
+  },
+  {
+    "k": "queue.flowScheduledBody",
+    "en": "Appears in Check-in on appointment day. Front desk confirms arrival and moves them to Waiting.",
+    "tr": "Appears in check-in on randevu gün. Front desk confirms geliş and moves them to bekliyor."
+  },
+  {
+    "k": "queue.flowSubtitle",
+    "en": "Check-in opens the visit, creates the queue card, and places the patient in Waiting. Appointment booking alone is not a clinic arrival.",
+    "tr": "check-in opens the ziyaret, creates the sıra card, and places hasta in bekliyor. randevu booking alone is not a klinik geliş."
+  },
+  {
+    "k": "queue.flowTitle",
+    "en": "Every physical arrival is checked in from Queue.",
+    "tr": "Every physical geliş is checked in from sıra."
+  },
+  {
+    "k": "queue.gateStepConsent",
+    "en": "Open and sign the required consent form",
+    "tr": "açık and sign the zorunlu onam form"
+  },
+  {
+    "k": "queue.historyBoardHint",
+    "en": "Read-only snapshot for the selected clinic day.",
+    "tr": "Read-only snapshot for the selected klinik gün."
+  },
+  {
+    "k": "queue.liveBoardOperatingHint",
+    "en": "Front desk checks in arrivals here. After check-in, move patients Waiting -> Called -> In Chair -> Complete.",
+    "tr": "Front desk checks in geliş here. After check-in, move hastas bekliyor -> çağrıldı -> koltukta -> Complete."
+  },
+  {
+    "k": "queue.metricServedHint",
+    "en": "Completed this clinic day",
+    "tr": "tamamlandı this klinik gün"
+  },
+  {
+    "k": "queue.noHistoryDay",
+    "en": "No queue entries on this clinic day.",
+    "tr": "No sıra entries on this klinik gün."
+  },
+  {
+    "k": "queue.openRequiredConsentNamed",
+    "en": "Sign: {name}",
+    "tr": "Sign: {name}"
+  },
+  {
+    "k": "queue.pastDayHint",
+    "en": "Viewing queue history for {day}. Switch to Today for live check-in and flow.",
+    "tr": "Viewing sıra history for {gün}. Switch to bugün for canlı check-in and flow."
+  },
+  {
+    "k": "queue.peakHours",
+    "en": "Peak check-in hours",
+    "tr": "Peak check-in hours"
+  },
+  {
+    "k": "queue.reportsDevicesTitle",
+    "en": "Kiosk, TV display, and portal links",
+    "tr": "Kiosk, TV display, and portal links"
+  },
+  {
+    "k": "queue.reportsQueueDescription",
+    "en": "Arrival speed, wait duration, and chair movement live in Reports — keep this screen for live flow only.",
+    "tr": "geliş speed, wait duration, and chair movement canlı in raporlar — keep this screen for canlı flow only."
+  },
+  {
+    "k": "queue.reportsQueueTitle",
+    "en": "Queue trends and wait analytics",
+    "tr": "sıra trends and wait analytics"
+  },
+  {
+    "k": "queue.resumeCheckInAction",
+    "en": "Complete check-in",
+    "tr": "Complete check-in"
+  },
+  {
+    "k": "queue.resumeCheckInHint",
+    "en": "Return here after resolving billing — tap Complete check-in when ready.",
+    "tr": "Return here after resolving faturalama — tap Complete check-in when hazır."
+  },
+  {
+    "k": "queue.resumeCheckInTitle",
+    "en": "Complete check-in",
+    "tr": "Complete check-in"
+  },
+  {
+    "k": "queue.subtitle",
+    "en": "Scheduled patients check in here, become a Waiting queue entry, then move to Chair and checkout.",
+    "tr": "planlandı hastas check-in yap here, become a bekliyor sıra entry, then move to Chair and checkout."
+  },
+  {
+    "k": "queue.summaryActivePast",
+    "en": "Unfinished at EOD",
+    "tr": "Unfinished at EOD"
+  },
+  {
+    "k": "queue.summaryActiveSub",
+    "en": "On the live board",
+    "tr": "On the canlı board"
+  },
+  {
+    "k": "queue.summaryCheckedIn",
+    "en": "Checked in",
+    "tr": "Checked in"
+  },
+  {
+    "k": "queue.summaryCheckedInSub",
+    "en": "Total visits this day",
+    "tr": "toplam ziyaretler this gün"
+  },
+  {
+    "k": "queue.summaryTapFilter",
+    "en": "Tap to show all",
+    "tr": "Tap to show all"
+  },
+  {
+    "k": "queue.walkInNotePlaceholder",
+    "en": "e.g. tooth pain, cleaning, follow-up…",
+    "tr": "e.g. tooth pain, cleaning, follow-up…"
+  },
+  {
+    "k": "queue.walkInSearchPlaceholder",
+    "en": "Name or phone number…",
+    "tr": "Name or phone number…"
+  },
+  {
+    "k": "reports.benchmarkDescription",
+    "en": "Compare branches across appointments and collections in the same period. This is the fastest way to spot underperforming sites.",
+    "tr": "Compare şubeler across randevus and collections in the same period. This is the fastest way to spot underperforming sites."
+  },
+  {
+    "k": "reports.branchCompareHint",
+    "en": "Useful when owners want to see where AR pressure is accumulating across the group.",
+    "tr": "Useful when owners want to see where AR pressure is accumulating across the group."
+  },
+  {
+    "k": "reports.chartAppointmentsHint",
+    "en": "How busy the calendar has been across the selected period.",
+    "tr": "How busy the calendar has been across the selected period."
+  },
+  {
+    "k": "reports.chartCollectionsHint",
+    "en": "Payments posted each day for the active branch.",
+    "tr": "ödemeler posted each gün for the aktif şube."
+  },
+  {
+    "k": "reports.chartConditions",
+    "en": "Chart findings mix",
+    "tr": "Chart findings mix"
+  },
+  {
+    "k": "reports.clinicalEyebrow",
+    "en": "Clinical",
+    "tr": "Clinical"
+  },
+  {
+    "k": "reports.complianceEyebrow",
+    "en": "Compliance",
+    "tr": "Compliance"
+  },
+  {
+    "k": "reports.devicesTitle",
+    "en": "Kiosk, TV display, and public-link controls",
+    "tr": "Kiosk, TV display, and public-link controls"
+  },
+  {
+    "k": "reports.financeDescription",
+    "en": "This section combines daily collections, AR aging, HMO pipeline, and PhilHealth readiness so finance can act without hopping between modules.",
+    "tr": "This section combines daily collections, AR aging, HMO pipeline, and PhilHealth readiness so finance can act without hopping between modules."
+  },
+  {
+    "k": "reports.financeEyebrow",
+    "en": "Finance",
+    "tr": "Finance"
+  },
+  {
+    "k": "reports.focusAppointmentsDescription",
+    "en": "Review schedule volume, monthly booking board, status mix, no-shows, and queue conversion for the selected period.",
+    "tr": "incele schedule volume, monthly booking board, durum mix, gelmeyens, and sıra conversion for the selected period."
+  },
+  {
+    "k": "reports.focusBillingDescription",
+    "en": "Collections, open balances, AR, HMO, and PhilHealth signals are grouped in Finance for action.",
+    "tr": "Collections, açık balances, AR, HMO, and PhilHealth signals are grouped in Finance for aksiyon."
+  },
+  {
+    "k": "reports.focusClinicalTitle",
+    "en": "Opened from clinical KPI",
+    "tr": "Opened from clinical KPI"
+  },
+  {
+    "k": "reports.focusQueueDescription",
+    "en": "Use queue pressure, waiting duration, and chair-time panels to see where front-desk handoffs slow down.",
+    "tr": "Use sıra pressure, bekliyor duration, and chair-saat panels to see where front-desk handoffs slow down."
+  },
+  {
+    "k": "reports.focusQueueTitle",
+    "en": "Opened from queue KPI",
+    "tr": "Opened from sıra KPI"
+  },
+  {
+    "k": "reports.linkCloseout",
+    "en": "Daily closeout",
+    "tr": "Daily closeout"
+  },
+  {
+    "k": "reports.linkCloseoutDesc",
+    "en": "End-of-day collections and balances",
+    "tr": "End-of-gün collections and balances"
+  },
+  {
+    "k": "reports.linkHmoDesc",
+    "en": "Draft and submitted reimbursements",
+    "tr": "taslak and gönderildi reimbursements"
+  },
+  {
+    "k": "reports.linkPhilHealth",
+    "en": "PhilHealth",
+    "tr": "PhilHealth"
+  },
+  {
+    "k": "reports.linkQueueDesc",
+    "en": "Live board, check-in, and patient flow",
+    "tr": "canlı board, check-in, and hasta flow"
+  },
+  {
+    "k": "reports.linkWaitlistDesc",
+    "en": "Off-calendar demand and slot recovery",
+    "tr": "Off-calendar demand and slot recovery"
+  },
+  {
+    "k": "reports.navBusiness",
+    "en": "Business",
+    "tr": "Business"
+  },
+  {
+    "k": "reports.navOperations",
+    "en": "Operations",
+    "tr": "Operations"
+  },
+  {
+    "k": "reports.navPulse",
+    "en": "Pulse",
+    "tr": "Pulse"
+  },
+  {
+    "k": "reports.navRisk",
+    "en": "Risk & devices",
+    "tr": "Risk & devices"
+  },
+  {
+    "k": "reports.operationsDescription",
+    "en": "Track schedule occupancy, queue pressure, waitlist conversion, kiosk intake behavior, and chair-time efficiency from one section.",
+    "tr": "Track schedule occupancy, sıra pressure, bekleme listesi conversion, kiosk intake behavior, and chair-saat efficiency from one section."
+  },
+  {
+    "k": "reports.operationsEyebrow",
+    "en": "Operations",
+    "tr": "Operations"
+  },
+  {
+    "k": "reports.operationsTitle",
+    "en": "Reception, queue, and patient flow",
+    "tr": "Reception, sıra, and hasta flow"
+  },
+  {
+    "k": "reports.panelAppointmentsDescription",
+    "en": "Read the schedule like the appointment page: who is booked, which dentist is assigned, the visit reason, and daily load.",
+    "tr": "Read the schedule like the randevu page: who is booked, which diş hekimi is assigned, the ziyaret reason, and daily load."
+  },
+  {
+    "k": "reports.panelBenchmarkDescription",
+    "en": "Owners can compare visit volume and collections side by side here instead of opening each branch one at a time.",
+    "tr": "Owners can compare ziyaret volume and collections side by side here instead of opening each şube one at a saat."
+  },
+  {
+    "k": "reports.panelChairDescription",
+    "en": "This view highlights how long the branch is spending in active treatment so owners can see whether schedule pressure is turning into productive chair time.",
+    "tr": "This görüntüle highlights how long the şube is spending in aktif treatment so owners can see whether schedule pressure is turning into productive chair saat."
+  },
+  {
+    "k": "reports.panelChartDescription",
+    "en": "Review active chart conditions and unresolved findings so the branch can keep treatment planning anchored to current clinical reality.",
+    "tr": "incele aktif chart conditions and unresolved findings so the şube can keep treatment planning anchored to current clinical reality."
+  },
+  {
+    "k": "reports.panelDisplayDescription",
+    "en": "Monitor kiosk and TV status here so patients are not looking at stale queue information or a dead waiting-room screen.",
+    "tr": "Monitor kiosk and TV durum here so hastas are not looking at stale sıra information or a dead bekliyor-room screen."
+  },
+  {
+    "k": "reports.panelDisplayTitle",
+    "en": "Display health",
+    "tr": "Display health"
+  },
+  {
+    "k": "reports.panelFinanceSummaryDescription",
+    "en": "Use this summary to see whether money collected today is keeping up with open balances and whether billing follow-up should happen before day close.",
+    "tr": "Use this summary to see whether money tahsil edildi bugün is keeping up with açık balances and whether faturalama follow-up should happen before gün close."
+  },
+  {
+    "k": "reports.panelFinanceSummaryTitle",
+    "en": "Collections and accounts receivable",
+    "tr": "Collections and accounts receivable"
+  },
+  {
+    "k": "reports.panelHmoTitle",
+    "en": "HMO pipeline",
+    "tr": "HMO pipeline"
+  },
+  {
+    "k": "reports.panelInventoryDescription",
+    "en": "Low stock and stock pressure appear here so the branch can prevent treatment interruptions caused by avoidable supply gaps.",
+    "tr": "Low stok and stok pressure appear here so the şube can prevent treatment interruptions caused by avoidable supply gaps."
+  },
+  {
+    "k": "reports.panelKioskDescription",
+    "en": "Watch self-check-in and intake completion so reception can intervene before the patient reaches the dentist without a complete file.",
+    "tr": "Watch self-check-in and intake completion so reception can intervene before hasta reaches the diş hekimi without a complete file."
+  },
+  {
+    "k": "reports.panelKioskTitle",
+    "en": "Kiosk and intake behavior",
+    "tr": "Kiosk and intake behavior"
+  },
+  {
+    "k": "reports.panelNotificationsDescription",
+    "en": "Watch template usage and delivery health to make sure reminders, recalls, and payment follow-ups actually reach patients.",
+    "tr": "Watch şablon usage and delivery health to make sure reminders, recalls, and ödeme follow-ups actually reach hastas."
+  },
+  {
+    "k": "reports.panelNotificationsTitle",
+    "en": "SMS delivery and messaging",
+    "tr": "SMS delivery and messaging"
+  },
+  {
+    "k": "reports.panelOrthoDescription",
+    "en": "This panel shows adjustment workload and future ortho follow-ups, which helps the team spot recurring specialty demand before it crowds general slots.",
+    "tr": "This panel shows adjustment workload and future ortho follow-ups, which helps the team spot recurring specialty demand before it crowds general slots."
+  },
+  {
+    "k": "reports.panelOrthoTitle",
+    "en": "Orthodontic follow-up load",
+    "tr": "Orthodontic follow-up load"
+  },
+  {
+    "k": "reports.panelPhilHealthTitle",
+    "en": "PhilHealth readiness",
+    "tr": "PhilHealth readiness"
+  },
+  {
+    "k": "reports.panelQueueDescription",
+    "en": "Use this panel when the front desk needs to see whether arrivals are moving into chair time fast enough or whether staff handoffs are slowing down.",
+    "tr": "Use this panel when the front desk needs to see whether geliş are moving into chair saat fast enough or whether staff handoffs are slowing down."
+  },
+  {
+    "k": "reports.panelTokensDescription",
+    "en": "Review branch public links and token state so staff can close stale access paths before they create front-desk confusion.",
+    "tr": "incele şube public links and token state so staff can close stale access paths before they oluştur front-desk confusion."
+  },
+  {
+    "k": "reports.panelWaitlistDescription",
+    "en": "Shows how much demand is waiting off-calendar so staff can convert open slots into real visits instead of leaving chairs idle.",
+    "tr": "Shows how much demand is bekliyor off-calendar so staff can convert açık slots into real ziyaretler instead of leaving chairs idle."
+  },
+  {
+    "k": "reports.printSubtitle",
+    "en": "Branch operations summary for the selected reporting window.",
+    "tr": "şube operations summary for the selected reporting window."
+  },
+  {
+    "k": "reports.sectionModulesDescription",
+    "en": "These links open the operational screens where the numbers above are created, corrected, and closed.",
+    "tr": "These links açık the operational screens where the numbers above are created, corrected, and kapalı."
+  },
+  {
+    "k": "reports.sectionOverview",
+    "en": "Overview",
+    "tr": "Overview"
+  },
+  {
+    "k": "reports.sectionOverviewDescription",
+    "en": "Use these top-line charts to spot branch momentum fast: visit volume, cash movement, and appointment status mix.",
+    "tr": "Use these top-line charts to spot şube momentum fast: ziyaret volume, cash movement, and randevu durum mix."
+  },
+  {
+    "k": "reports.sectionStatusHint",
+    "en": "See whether the branch is completing visits or leaking them through no-shows and cancellations.",
+    "tr": "See whether the şube is completing ziyaretler or leaking them through gelmeyens and cancellations."
+  },
+  {
+    "k": "reports.todayPulseDescription",
+    "en": "A quick read of today",
+    "tr": "A quick read of bugün"
+  },
+  {
+    "k": "reports.totalFindings",
+    "en": "findings logged",
+    "tr": "findings logged"
+  },
+  {
+    "k": "settings.attentionRulesHint",
+    "en": "Toggle which KPI alerts appear on the owner dashboard for this branch.",
+    "tr": "Toggle which KPI alerts appear on the owner panel for this şube."
+  },
+  {
+    "k": "settings.automationLog",
+    "en": "Recent automation events",
+    "tr": "Recent automation events"
+  },
+  {
+    "k": "settings.branchesEyebrow",
+    "en": "Locations",
+    "tr": "Locations"
+  },
+  {
+    "k": "settings.consentEmptyHint",
+    "en": "Run the paper consent migration in Supabase, then refresh. Global templates will appear here for org overrides.",
+    "tr": "Run the paper onam migration in Supabase, then yenile. Global şablonlar will appear here for org overrides."
+  },
+  {
+    "k": "settings.consentEyebrow",
+    "en": "Clinical",
+    "tr": "Clinical"
+  },
+  {
+    "k": "settings.eyebrow",
+    "en": "Administration",
+    "tr": "Administration"
+  },
+  {
+    "k": "settings.hubModules",
+    "en": "modules",
+    "tr": "modules"
+  },
+  {
+    "k": "settings.hubSubtitle",
+    "en": "Open the admin modules for clinic profile, branches, staff, permissions, messaging, consent templates, audit, and workflow automation.",
+    "tr": "açık the admin modules for klinik profile, şubeler, staff, permissions, messaging, onam şablonlar, denetim, and workflow automation."
+  },
+  {
+    "k": "settings.metricActiveHint",
+    "en": "Can sign in",
+    "tr": "Can sign in"
+  },
+  {
+    "k": "settings.metricBranchesActiveHint",
+    "en": "Open for operations",
+    "tr": "açık for operations"
+  },
+  {
+    "k": "settings.metricCategories",
+    "en": "Categories",
+    "tr": "Categories"
+  },
+  {
+    "k": "settings.metricCategoriesHint",
+    "en": "Grouped services",
+    "tr": "Grouped services"
+  },
+  {
+    "k": "settings.metricCustomHint",
+    "en": "Org overrides",
+    "tr": "Org overrides"
+  },
+  {
+    "k": "settings.metricLogs",
+    "en": "Recent logs",
+    "tr": "Recent logs"
+  },
+  {
+    "k": "settings.metricLogsHint",
+    "en": "Delivery history",
+    "tr": "Delivery history"
+  },
+  {
+    "k": "settings.metricPlan",
+    "en": "Plan",
+    "tr": "Plan"
+  },
+  {
+    "k": "settings.metricProcedures",
+    "en": "Procedures",
+    "tr": "Procedures"
+  },
+  {
+    "k": "settings.metricProceduresHint",
+    "en": "In catalog",
+    "tr": "In catalog"
+  },
+  {
+    "k": "settings.metricSmsHint",
+    "en": "SMS message types",
+    "tr": "SMS message types"
+  },
+  {
+    "k": "settings.metricStaff",
+    "en": "Team members",
+    "tr": "Team members"
+  },
+  {
+    "k": "settings.metricStaffHint",
+    "en": "All profiles",
+    "tr": "All profiles"
+  },
+  {
+    "k": "settings.metricTemplatesHint",
+    "en": "Form types",
+    "tr": "Form types"
+  },
+  {
+    "k": "settings.notificationsBranchHint",
+    "en": "Configure channels, templates, and delivery logs for this branch.",
+    "tr": "Configure channels, şablonlar, and delivery logs for this şube."
+  },
+  {
+    "k": "settings.notificationsDisableDryRun",
+    "en": "Disable dry-run",
+    "tr": "Disable dry-run"
+  },
+  {
+    "k": "settings.notificationsDryRunHint",
+    "en": "Messages are logged but not sent to a real SMS provider yet.",
+    "tr": "Messages are logged but not sent to a real SMS provider yet."
+  },
+  {
+    "k": "settings.notificationsEnableDryRun",
+    "en": "Re-enable dry-run",
+    "tr": "Re-enable dry-run"
+  },
+  {
+    "k": "settings.notificationsEyebrow",
+    "en": "Messaging",
+    "tr": "Messaging"
+  },
+  {
+    "k": "settings.notificationsLiveMode",
+    "en": "Live send mode — test messages use the SMS provider.",
+    "tr": "canlı send mode — test messages use the SMS provider."
+  },
+  {
+    "k": "settings.notificationsLoggingWhatsApp",
+    "en": "Logging…",
+    "tr": "Logging…"
+  },
+  {
+    "k": "settings.notificationsLogs",
+    "en": "Message logs",
+    "tr": "Message logs"
+  },
+  {
+    "k": "settings.notificationsManualWhatsAppHint",
+    "en": "Opens the same preview in WhatsApp. No paid WhatsApp API is used; keep SMS dry-run on while testing templates.",
+    "tr": "Opens the same preview in WhatsApp. No ödendi WhatsApp API is used; keep SMS dry-run on while testing şablonlar."
+  },
+  {
+    "k": "settings.notificationsMessageBody",
+    "en": "Message body for this branch",
+    "tr": "Message body for this şube"
+  },
+  {
+    "k": "settings.notificationsNoLogs",
+    "en": "No messages logged yet. Send a test from Templates.",
+    "tr": "No messages logged yet. Send a test from şablonlar."
+  },
+  {
+    "k": "settings.notificationsOrgDefault",
+    "en": "Org default",
+    "tr": "Org default"
+  },
+  {
+    "k": "settings.notificationsOrgDefaultBody",
+    "en": "Organization default message",
+    "tr": "Organization default message"
+  },
+  {
+    "k": "settings.notificationsPopupBlocked",
+    "en": "WhatsApp popup was blocked by the browser.",
+    "tr": "WhatsApp popup was blocked by the browser."
+  },
+  {
+    "k": "settings.notificationsPreview",
+    "en": "Preview",
+    "tr": "Preview"
+  },
+  {
+    "k": "settings.notificationsReportsDescription",
+    "en": "Template usage and delivery health trends are in Reports compliance.",
+    "tr": "şablon usage and delivery health trends are in raporlar compliance."
+  },
+  {
+    "k": "settings.notificationsReportsTitle",
+    "en": "SMS delivery analytics",
+    "tr": "SMS delivery analytics"
+  },
+  {
+    "k": "settings.notificationsResetToOrg",
+    "en": "Reset to org default",
+    "tr": "Reset to org default"
+  },
+  {
+    "k": "settings.notificationsSendTest",
+    "en": "Send test",
+    "tr": "Send test"
+  },
+  {
+    "k": "settings.notificationsTest",
+    "en": "Test",
+    "tr": "Test"
+  },
+  {
+    "k": "settings.notificationsTo",
+    "en": "To",
+    "tr": "To"
+  },
+  {
+    "k": "settings.orgDefault",
+    "en": "Org",
+    "tr": "Org"
+  },
+  {
+    "k": "settings.procedureBom",
+    "en": "Procedure BOM",
+    "tr": "Procedure BOM"
+  },
+  {
+    "k": "settings.procedureBomEmpty",
+    "en": "No materials linked yet.",
+    "tr": "No materials linked yet."
+  },
+  {
+    "k": "settings.procedureBomHint",
+    "en": "Materials auto-deduct from inventory when the procedure is marked served.",
+    "tr": "Materials auto-deduct from envanter when the procedure is marked tamamlandı."
+  },
+  {
+    "k": "settings.procedureBomQty",
+    "en": "Quantity",
+    "tr": "Quantity"
+  },
+  {
+    "k": "settings.staffEyebrow",
+    "en": "Team",
+    "tr": "Team"
+  },
+  {
+    "k": "settings.timezone",
+    "en": "Timezone",
+    "tr": "Timezone"
+  },
+  {
+    "k": "settings.workflowEyebrow",
+    "en": "Automation",
+    "tr": "Automation"
+  },
+  {
+    "k": "settings.workflowSubtitle",
+    "en": "Branch-level automation rules. Toggle per branch; changes are audited.",
+    "tr": "şube-level automation rules. Toggle per şube; changes are audited."
+  },
+  {
+    "k": "settings.workflowTitle",
+    "en": "Workflow automation",
+    "tr": "Workflow automation"
+  },
+  {
+    "k": "visits.carryForwardApplyNote",
+    "en": "Use prior SOAP",
+    "tr": "Use prior SOAP"
+  },
+  {
+    "k": "visits.carryForwardNoteHint",
+    "en": "Previous note {title} from {code} can pre-fill today",
+    "tr": "önceki note {title} from {code} can pre-fill bugün"
+  },
+  {
+    "k": "visits.carryForwardPlanHint",
+    "en": "Plan {title} ({count} items) from {code}.",
+    "tr": "Plan {title} ({sayı} items) from {code}."
+  },
+  {
+    "k": "visits.emptyArrivalHint",
+    "en": "When the patient arrives, open Patient arrival from Queue. Check-in creates the visit and puts them in Waiting.",
+    "tr": "When hasta arrives, açık hasta geliş from sıra. check-in creates the ziyaret and puts them in bekliyor."
+  },
+  {
+    "k": "visits.encountersDescription",
+    "en": "Each arrival is a separate visit. Tap a row to review queue, notes, chart, plan, and billing for that day.",
+    "tr": "Each geliş is a separate ziyaret. Tap a row to incele sıra, notes, chart, plan, and faturalama for that gün."
+  },
+  {
+    "k": "visits.labCases",
+    "en": "Lab cases",
+    "tr": "Lab cases"
+  },
+  {
+    "k": "visits.noActiveVisitHint",
+    "en": "Send this patient to Queue when they physically arrive. Check-in opens today",
+    "tr": "Send this hasta to sıra when they physically arrive. check-in opens bugün"
+  },
+  {
+    "k": "visits.pageDescription",
+    "en": "Every check-in is a separate visit — expand each row to control queue, notes, chart, plan, and billing.",
+    "tr": "Every check-in is a separate ziyaret — expand each row to control sıra, notes, chart, plan, and faturalama."
+  },
+  {
+    "k": "visits.walkIn",
+    "en": "Walk-in",
+    "tr": "Walk-in"
+  },
+  {
+    "k": "waitlist.activeSummarySubtitle",
+    "en": "FIFO with urgency when slots open",
+    "tr": "FIFO with urgency when slots açık"
+  },
+  {
+    "k": "waitlist.anyAvailableSlot",
+    "en": "any available slot",
+    "tr": "any available slot"
+  },
+  {
+    "k": "waitlist.contactTitle",
+    "en": "Contact",
+    "tr": "Contact"
+  },
+  {
+    "k": "waitlist.emptyHistoryTitle",
+    "en": "No history",
+    "tr": "No history"
+  },
+  {
+    "k": "waitlist.eyebrow",
+    "en": "Scheduling",
+    "tr": "Scheduling"
+  },
+  {
+    "k": "waitlist.listHistory",
+    "en": "History",
+    "tr": "History"
+  },
+  {
+    "k": "waitlist.logContact",
+    "en": "Log contact",
+    "tr": "Log contact"
+  },
+  {
+    "k": "waitlist.metricContacted",
+    "en": "Contacted",
+    "tr": "Contacted"
+  },
+  {
+    "k": "waitlist.metricContactedHint",
+    "en": "Follow-up in progress",
+    "tr": "Follow-up in progress"
+  },
+  {
+    "k": "waitlist.note",
+    "en": "Note",
+    "tr": "Note"
+  },
+  {
+    "k": "waitlist.outcome",
+    "en": "Outcome",
+    "tr": "Outcome"
+  },
+  {
+    "k": "waitlist.previewLabel",
+    "en": "Preview - how entries will look",
+    "tr": "Preview - how entries will look"
+  },
+  {
+    "k": "waitlist.registrySubtitle",
+    "en": "First-in-first-served queue with urgency priority when slots open.",
+    "tr": "First-in-first-tamamlandı sıra with urgency priority when slots açık."
+  },
+  {
+    "k": "waitlist.reportsDescription",
+    "en": "Conversion and contact trends for open waitlist demand are in Reports.",
+    "tr": "Conversion and contact trends for açık bekleme listesi demand are in raporlar."
+  },
+  {
+    "k": "waitlist.urgency",
+    "en": "Urgency",
+    "tr": "Urgency"
+  }
+]

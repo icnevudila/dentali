@@ -1,7 +1,8 @@
 import type { AppLocale } from "./config"
 import { DEFAULT_LOCALE, getLocaleDefinition } from "./config"
 import { getMessages, type MessageTree } from "./messages"
-import { translateMissingFallback } from "./fallback-translations"
+import { translateMissingFallback, resolveTrString } from "./fallback-translations"
+import { translateUiString } from "./tr-ui-strings"
 
 function getNestedValue(tree: MessageTree, key: string): string | undefined {
   const parts = key.split(".")
@@ -15,15 +16,30 @@ function getNestedValue(tree: MessageTree, key: string): string | undefined {
   return typeof current === "string" ? current : undefined
 }
 
+function isHybridTr(text: string): boolean {
+  if (!/[ğüşıöçĞÜŞİÖÇ]/.test(text)) return false
+  return /\b(the|and|for|with|from|who|which|this|that|before|after|without|showing|review|use|read|open|select|need|your)\b/i.test(
+    text
+  )
+}
+
 export function createTranslator(locale: AppLocale) {
   const catalog = getMessages(locale)
   const fallbackCatalog = getMessages(DEFAULT_LOCALE)
 
   return function t(key: string, fallback: string): string {
-    const localized = getNestedValue(catalog, key)
-    if (localized) return localized
     const englishFallback = getNestedValue(fallbackCatalog, key) ?? fallback
+    let localized = getNestedValue(catalog, key)
+    if (localized && locale === "tr" && isHybridTr(localized)) {
+      localized =
+        resolveTrString(englishFallback) ?? translateUiString(englishFallback) ?? undefined
+    }
+    if (localized) return localized
     if (locale === DEFAULT_LOCALE) return englishFallback
+    if (locale === "tr") {
+      const fromUi = translateUiString(englishFallback)
+      if (fromUi) return fromUi
+    }
     return translateMissingFallback(locale, englishFallback)
   }
 }

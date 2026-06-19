@@ -777,9 +777,19 @@ function TreatmentPlanContent() {
                   <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 mb-4 animate-fade-rise flex gap-3">
                     <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
                     <div>
-                      <h4 className="text-sm font-semibold text-red-900">DİKKAT: Klinik Güvenlik Riski</h4>
+                      <h4 className="text-sm font-semibold text-red-900">
+                        {t("treatmentPlan.clinicalRiskTitle", "Attention: Clinical safety risk")}
+                      </h4>
                       <p className="mt-1 text-sm text-red-800">
-                        Hastanın tıbbi geçmişinde kritik uyarılar bulunmaktadır: <strong>{riskFlags.join(", ")}</strong>. Cerrahi işlem planlamadan önce lütfen tıbbi geçmişini detaylı inceleyiniz.
+                        {t(
+                          "treatmentPlan.clinicalRiskIntro",
+                          "Critical warnings in the patient's medical history:"
+                        )}{" "}
+                        <strong>{riskFlags.join(", ")}</strong>.{" "}
+                        {t(
+                          "treatmentPlan.clinicalRiskOutro",
+                          "Review the medical history in detail before planning surgical procedures."
+                        )}
                       </p>
                     </div>
                   </div>

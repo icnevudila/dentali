@@ -1,0 +1,1894 @@
+[
+  {
+    "k": "appointments.calendarReportTitle",
+    "en": "Appointment calendar report"
+  },
+  {
+    "k": "appointments.cancelTrend",
+    "en": "Cancel trend ({days}d)"
+  },
+  {
+    "k": "appointments.focusMissingNotes",
+    "en": "Appointments filter"
+  },
+  {
+    "k": "appointments.hourlyLoad",
+    "en": "Hourly appointment load"
+  },
+  {
+    "k": "appointments.leakageClear",
+    "en": "No no-shows or cancellations in period"
+  },
+  {
+    "k": "appointments.leakageSummary",
+    "en": "{noShow} no-shows · {cancel} cancellations · {pct}% no-show share"
+  },
+  {
+    "k": "appointments.monthBoardBusyDays",
+    "en": "active days"
+  },
+  {
+    "k": "appointments.monthBoardMore",
+    "en": "more appointments"
+  },
+  {
+    "k": "appointments.monthBoardNoVisits",
+    "en": "No visits"
+  },
+  {
+    "k": "appointments.monthBoardPatient",
+    "en": "Patient"
+  },
+  {
+    "k": "appointments.monthBoardTitle",
+    "en": "Monthly appointment board"
+  },
+  {
+    "k": "appointments.noShowTrend",
+    "en": "No-show trend ({days}d)"
+  },
+  {
+    "k": "appointments.openScheduler",
+    "en": "Open scheduler"
+  },
+  {
+    "k": "appointments.peakHourHint",
+    "en": "Busiest appointment slot in this period"
+  },
+  {
+    "k": "appointments.periodReportLabel",
+    "en": "Period summary report"
+  },
+  {
+    "k": "appointments.periodReportTitle",
+    "en": "{days}-day period report"
+  },
+  {
+    "k": "appointments.summaryCancelled",
+    "en": "Cancelled"
+  },
+  {
+    "k": "appointments.summaryNoShow",
+    "en": "No-show"
+  },
+  {
+    "k": "appointments.summaryTotal",
+    "en": "Total"
+  },
+  {
+    "k": "appointments.topProviders",
+    "en": "Top dentists"
+  },
+  {
+    "k": "audit.emptyEntity",
+    "en": "No audit events for this record yet."
+  },
+  {
+    "k": "audit.openReports",
+    "en": "Open audit reports"
+  },
+  {
+    "k": "audit.reportsDescription",
+    "en": "Volume and pattern trends for sensitive actions are in Reports compliance."
+  },
+  {
+    "k": "audit.reportsTitle",
+    "en": "Audit activity analytics"
+  },
+  {
+    "k": "audit.topActions",
+    "en": "Top actions"
+  },
+  {
+    "k": "audit.totalEvents",
+    "en": "Events ({days}d)"
+  },
+  {
+    "k": "audit.viewAll",
+    "en": "Full audit log"
+  },
+  {
+    "k": "billing.arAging",
+    "en": "Open balance aging"
+  },
+  {
+    "k": "billing.arAgingHint",
+    "en": "Outstanding invoices by age"
+  },
+  {
+    "k": "billing.dueDateLabel",
+    "en": "Due date"
+  },
+  {
+    "k": "billing.hmoHint",
+    "en": "Patient uses HMO coverage?"
+  },
+  {
+    "k": "billing.invoiceAmountLabel",
+    "en": "Invoice amount (PHP)"
+  },
+  {
+    "k": "billing.invoiceDiscount",
+    "en": "Invoice discount (₱)"
+  },
+  {
+    "k": "billing.invoiceList",
+    "en": "Invoice list"
+  },
+  {
+    "k": "billing.metricOpenHint",
+    "en": "Tap to filter open"
+  },
+  {
+    "k": "billing.metricOutstandingHint",
+    "en": "Unpaid total"
+  },
+  {
+    "k": "billing.metricOverdueHint",
+    "en": "Past due — tap to filter"
+  },
+  {
+    "k": "billing.noPhilhealthClaimsHint",
+    "en": "Prepare a claim with patient PhilHealth ID and case rate, then complete the checklist before sync."
+  },
+  {
+    "k": "billing.noPhilhealthClaimsTitle",
+    "en": "No PhilHealth claims yet"
+  },
+  {
+    "k": "billing.noPhilhealthPendingClaims",
+    "en": "No pending PhilHealth claims"
+  },
+  {
+    "k": "billing.openBilling",
+    "en": "Open billing"
+  },
+  {
+    "k": "billing.openFinanceReports",
+    "en": "Open finance reports"
+  },
+  {
+    "k": "billing.openOnly",
+    "en": "Open only"
+  },
+  {
+    "k": "billing.opsSummaryTitle",
+    "en": "Billing summary"
+  },
+  {
+    "k": "billing.opsSummaryToggle",
+    "en": "Billing summary & automation"
+  },
+  {
+    "k": "billing.overdue",
+    "en": "Overdue"
+  },
+  {
+    "k": "billing.overdueOnly",
+    "en": "Overdue only"
+  },
+  {
+    "k": "billing.paidHint",
+    "en": "Recorded payments"
+  },
+  {
+    "k": "billing.paymentComplete",
+    "en": "Payment recorded — invoice settled"
+  },
+  {
+    "k": "billing.paymentReminderLogged",
+    "en": "Payment reminder logged"
+  },
+  {
+    "k": "billing.phFailed",
+    "en": "failed"
+  },
+  {
+    "k": "billing.phIncompleteHint",
+    "en": "Missing checklist items"
+  },
+  {
+    "k": "billing.phPendingFilter",
+    "en": "Pending claims only"
+  },
+  {
+    "k": "billing.phSubmittedHint",
+    "en": "Submitted or acknowledged"
+  },
+  {
+    "k": "billing.print",
+    "en": "Print"
+  },
+  {
+    "k": "billing.printReceipt",
+    "en": "Print receipt"
+  },
+  {
+    "k": "billing.returnToQueueTitle",
+    "en": "Check-in waiting in queue"
+  },
+  {
+    "k": "billing.viewHmoDrafts",
+    "en": "View HMO claim drafts"
+  },
+  {
+    "k": "billing.workflowReminder",
+    "en": "Payment reminders"
+  },
+  {
+    "k": "billing.workflowSettings",
+    "en": "Automation settings"
+  },
+  {
+    "k": "chairtime.avgChairDesc",
+    "en": "Time from being seated to checkout"
+  },
+  {
+    "k": "chairtime.avgChairTime",
+    "en": "Average Chair Time"
+  },
+  {
+    "k": "chairtime.avgWaitDesc",
+    "en": "Time from check-in to being seated"
+  },
+  {
+    "k": "chairtime.avgWaitTime",
+    "en": "Average Wait Time"
+  },
+  {
+    "k": "chairtime.description",
+    "en": "Analysis of average times patients spend in the waiting room and dental chair."
+  },
+  {
+    "k": "chairtime.step1",
+    "en": "When the patient arrives and the receptionist performs "
+  },
+  {
+    "k": "chairtime.step2",
+    "en": "When the doctor moves the patient to "
+  },
+  {
+    "k": "chairtime.step3",
+    "en": "When the procedure is finished and the patient is marked as "
+  },
+  {
+    "k": "chairtime.title",
+    "en": "Real-Time Chair Efficiency (Chair-Time Tracker)"
+  },
+  {
+    "k": "chairtime.totalCases",
+    "en": "Total Cases"
+  },
+  {
+    "k": "chairtime.totalCasesDesc",
+    "en": "Total completed patient records"
+  },
+  {
+    "k": "chart.activeFindings",
+    "en": "Active chart findings (branch)"
+  },
+  {
+    "k": "chart.noFindings",
+    "en": "No active findings recorded"
+  },
+  {
+    "k": "chart.patientConditionMix",
+    "en": "This patient"
+  },
+  {
+    "k": "closeout.alreadyFinalized",
+    "en": "Day already finalized"
+  },
+  {
+    "k": "closeout.collectedDay",
+    "en": "Collected"
+  },
+  {
+    "k": "closeout.completed",
+    "en": "Completed visits"
+  },
+  {
+    "k": "closeout.dayFinalized",
+    "en": "Day finalized"
+  },
+  {
+    "k": "closeout.daySnapshot",
+    "en": "Day snapshot"
+  },
+  {
+    "k": "closeout.draftOnFile",
+    "en": "Draft snapshot on file — not locked"
+  },
+  {
+    "k": "closeout.eyebrow",
+    "en": "Owner · End of day"
+  },
+  {
+    "k": "closeout.finalizeDay",
+    "en": "Finalize day & lock billing"
+  },
+  {
+    "k": "closeout.finalizeDialogTitle",
+    "en": "Finalize clinic day"
+  },
+  {
+    "k": "closeout.hmoPending",
+    "en": "HMO pending"
+  },
+  {
+    "k": "closeout.hmoPendingHint",
+    "en": "Open HMO claims"
+  },
+  {
+    "k": "closeout.howItWorksTitle",
+    "en": "How this report works"
+  },
+  {
+    "k": "closeout.noShow",
+    "en": "No-shows"
+  },
+  {
+    "k": "closeout.openBalanceHint",
+    "en": "View open invoices"
+  },
+  {
+    "k": "closeout.reopenConfirm",
+    "en": "Unlock today"
+  },
+  {
+    "k": "closeout.reopenDialogTitle",
+    "en": "Reopen today"
+  },
+  {
+    "k": "closeout.reopenToday",
+    "en": "Reopen today"
+  },
+  {
+    "k": "closeout.saveSnapshot",
+    "en": "Save draft snapshot"
+  },
+  {
+    "k": "closeout.snapshot",
+    "en": "Today snapshot"
+  },
+  {
+    "k": "closeout.snapshotResaveHint",
+    "en": "Updates today"
+  },
+  {
+    "k": "closeout.today",
+    "en": "today"
+  },
+  {
+    "k": "closeout.updateSnapshot",
+    "en": "Update draft snapshot"
+  },
+  {
+    "k": "closeout.vsPreviousDay",
+    "en": "Vs previous day"
+  },
+  {
+    "k": "consent.allFieldsDone",
+    "en": "All required fields completed"
+  },
+  {
+    "k": "consent.awaitingSignature",
+    "en": "Awaiting signature"
+  },
+  {
+    "k": "consent.backToKiosk",
+    "en": "Back to check-in"
+  },
+  {
+    "k": "consent.backToMyVisit",
+    "en": "Back to My visit"
+  },
+  {
+    "k": "consent.form",
+    "en": "Consent form"
+  },
+  {
+    "k": "consent.patientLink",
+    "en": "Patient link"
+  },
+  {
+    "k": "consent.pending",
+    "en": "Awaiting signature"
+  },
+  {
+    "k": "consent.pendingSignatures",
+    "en": "Pending signatures"
+  },
+  {
+    "k": "consent.requiredFields",
+    "en": "required fields"
+  },
+  {
+    "k": "consent.requiredForCheckIn",
+    "en": "Required for check-in"
+  },
+  {
+    "k": "consent.requiredForCheckInTitle",
+    "en": "Required before check-in"
+  },
+  {
+    "k": "consent.signSuccessPortalHint",
+    "en": "You can return to your visit page to see updated status."
+  },
+  {
+    "k": "consent.signSuccessTitle",
+    "en": "Thank you — your consent has been recorded."
+  },
+  {
+    "k": "dashboard.activeBranch",
+    "en": "Active"
+  },
+  {
+    "k": "dashboard.attentionManualHint",
+    "en": "Automation off — staff action required"
+  },
+  {
+    "k": "dashboard.awaitingCheckinHint",
+    "en": "Check in on Queue → Today"
+  },
+  {
+    "k": "dashboard.closeoutCardHint",
+    "en": "End-of-day summary — tap to open full closeout report"
+  },
+  {
+    "k": "dashboard.closeoutNudgeNotes",
+    "en": "Missing clinical notes — document visits before closeout."
+  },
+  {
+    "k": "dashboard.extendedReportsTitle",
+    "en": "Branch reports"
+  },
+  {
+    "k": "dashboard.hmoDraft",
+    "en": "HMO draft claims"
+  },
+  {
+    "k": "dashboard.hmoDraftHint",
+    "en": "Not yet submitted"
+  },
+  {
+    "k": "dashboard.missingNotesHint",
+    "en": "Visits without SOAP documentation"
+  },
+  {
+    "k": "dashboard.morningAwaitingCheckin",
+    "en": "To check in"
+  },
+  {
+    "k": "dashboard.morningNoShows",
+    "en": "No-shows (7d)"
+  },
+  {
+    "k": "dashboard.morningOverdue",
+    "en": "Overdue"
+  },
+  {
+    "k": "dashboard.morningQueue",
+    "en": "In queue"
+  },
+  {
+    "k": "dashboard.morningSubtitle",
+    "en": "Owner view — today"
+  },
+  {
+    "k": "dashboard.ofScheduled",
+    "en": "of scheduled"
+  },
+  {
+    "k": "dashboard.openAr",
+    "en": "Open AR"
+  },
+  {
+    "k": "dashboard.openInvoicesHint",
+    "en": "Outstanding balance"
+  },
+  {
+    "k": "dashboard.openReportsHub",
+    "en": "Full reports hub"
+  },
+  {
+    "k": "dashboard.opsFinanceTitle",
+    "en": "Finance & claims"
+  },
+  {
+    "k": "dashboard.opsOperationsTitle",
+    "en": "Operations today"
+  },
+  {
+    "k": "dashboard.opsRecordsTitle",
+    "en": "Records & stock"
+  },
+  {
+    "k": "dashboard.overdueInvoices",
+    "en": "Overdue invoices"
+  },
+  {
+    "k": "dashboard.overdueInvoicesHint",
+    "en": "Past due — follow up today"
+  },
+  {
+    "k": "dashboard.ownerBranchGrid",
+    "en": "All branches — 7-day pulse"
+  },
+  {
+    "k": "dashboard.pendingIntakeDrafts",
+    "en": "Pending intake drafts"
+  },
+  {
+    "k": "dashboard.pendingIntakeDraftsHint",
+    "en": "Kiosk or portal registrations to review"
+  },
+  {
+    "k": "dashboard.periodAppointmentsHint",
+    "en": "Last {days} days"
+  },
+  {
+    "k": "dashboard.periodCollected",
+    "en": "Collected"
+  },
+  {
+    "k": "dashboard.periodCollectedHint",
+    "en": "Payments in period"
+  },
+  {
+    "k": "dashboard.periodNoShow",
+    "en": "No-shows"
+  },
+  {
+    "k": "dashboard.philhealthPending",
+    "en": "PhilHealth pending"
+  },
+  {
+    "k": "dashboard.philhealthPendingHint",
+    "en": "Pending claims"
+  },
+  {
+    "k": "dashboard.queueWaitHint",
+    "en": "Check-in to called"
+  },
+  {
+    "k": "dashboard.queueWaitingHint",
+    "en": "Waiting through in-chair"
+  },
+  {
+    "k": "dashboard.reportComplianceTitle",
+    "en": "Claims, stock & outreach"
+  },
+  {
+    "k": "dashboard.reportDevicesTitle",
+    "en": "Kiosk & patient-facing"
+  },
+  {
+    "k": "dashboard.reportOpsTitle",
+    "en": "Queue & appointments"
+  },
+  {
+    "k": "dashboard.reportPatientsTitle",
+    "en": "Patients & waitlist"
+  },
+  {
+    "k": "dashboard.waitlistWaiting",
+    "en": "Waitlist pending"
+  },
+  {
+    "k": "dashboard.waitlistWaitingHint",
+    "en": "Awaiting contact or slot"
+  },
+  {
+    "k": "dentist.daySummaryToggle",
+    "en": "Day summary & metrics"
+  },
+  {
+    "k": "dentist.filterServed",
+    "en": "Completed today"
+  },
+  {
+    "k": "dentist.providerAll",
+    "en": "All doctors"
+  },
+  {
+    "k": "dentist.providerFilterLabel",
+    "en": "Doctor"
+  },
+  {
+    "k": "display.activeDisplays7d",
+    "en": "Active displays (7d)"
+  },
+  {
+    "k": "display.beingServed",
+    "en": "{n} active"
+  },
+  {
+    "k": "display.callingPatient",
+    "en": "Calling Patient"
+  },
+  {
+    "k": "display.healthTitle",
+    "en": "TV queue display"
+  },
+  {
+    "k": "display.linkFailed",
+    "en": "Failed to generate device link"
+  },
+  {
+    "k": "display.live",
+    "en": "Live"
+  },
+  {
+    "k": "display.openQueue",
+    "en": "Open queue"
+  },
+  {
+    "k": "display.tickerSilence",
+    "en": "Please keep your voice low in the waiting area"
+  },
+  {
+    "k": "display.upNext",
+    "en": "Up next"
+  },
+  {
+    "k": "finance.hmoPending",
+    "en": "HMO pending"
+  },
+  {
+    "k": "finance.openAr",
+    "en": "Open AR"
+  },
+  {
+    "k": "finance.openArVsHmo",
+    "en": "Open AR vs HMO pending"
+  },
+  {
+    "k": "hmo.openReports",
+    "en": "Open HMO reports"
+  },
+  {
+    "k": "hmo.pendingAmount",
+    "en": "Pending claim amount"
+  },
+  {
+    "k": "hmo.pipelineFunnel",
+    "en": "Claims pipeline"
+  },
+  {
+    "k": "hmo.reportsDescription",
+    "en": "Claim volume and status trends are in Reports finance."
+  },
+  {
+    "k": "inbox.awaitingCheckin",
+    "en": "Patients to check in"
+  },
+  {
+    "k": "inbox.hygieneRecallDetail",
+    "en": "6-month check-up SMS — review queue in reports"
+  },
+  {
+    "k": "inbox.noShows",
+    "en": "No-shows to rebook"
+  },
+  {
+    "k": "inbox.noShowsDetail",
+    "en": "Last 7 days — call or SMS to reschedule"
+  },
+  {
+    "k": "inbox.overdueBalances",
+    "en": "Overdue invoices"
+  },
+  {
+    "k": "inbox.pendingConsentsDetail",
+    "en": "Intake forms awaiting signature"
+  },
+  {
+    "k": "inbox.staleEncounters",
+    "en": "Open visits (stale)"
+  },
+  {
+    "k": "inbox.staleEncountersDetail",
+    "en": "Encounters open too long — close or review"
+  },
+  {
+    "k": "inbox.title",
+    "en": "This week"
+  },
+  {
+    "k": "inventory.alertList",
+    "en": "Low-stock items"
+  },
+  {
+    "k": "inventory.metricLowHint",
+    "en": "Below minimum — tap to filter"
+  },
+  {
+    "k": "inventory.metricsToggle",
+    "en": "Stock metrics & reports"
+  },
+  {
+    "k": "inventory.movementTrend",
+    "en": "Stock movement (30d)"
+  },
+  {
+    "k": "inventory.openReports",
+    "en": "Open inventory reports"
+  },
+  {
+    "k": "inventory.reportsDescription",
+    "en": "Low-stock trends and supply pressure are tracked in Reports compliance."
+  },
+  {
+    "k": "inventory.reportsTitle",
+    "en": "Stock risk analytics"
+  },
+  {
+    "k": "inventory.stockBreakdown",
+    "en": "Stock health"
+  },
+  {
+    "k": "inventory.stockLevels",
+    "en": "Inventory levels"
+  },
+  {
+    "k": "inventory.subtitle",
+    "en": "Track stock levels, expiry dates, and low-stock alerts."
+  },
+  {
+    "k": "inventory.totalSkus",
+    "en": "Active SKUs"
+  },
+  {
+    "k": "journey.fullTitle",
+    "en": "A→Z clinic journey"
+  },
+  {
+    "k": "journey.nextStep",
+    "en": "Next step"
+  },
+  {
+    "k": "journey.ofVisitPath",
+    "en": "of visit path"
+  },
+  {
+    "k": "journey.pathComplete",
+    "en": "Visit path complete"
+  },
+  {
+    "k": "journey.pathCompleteHint",
+    "en": "Intake, clinical work, and billing milestones are all on file for this patient."
+  },
+  {
+    "k": "journey.title",
+    "en": "Clinic journey"
+  },
+  {
+    "k": "kiosk.checkins7d",
+    "en": "Kiosk check-ins ({days}d)"
+  },
+  {
+    "k": "kiosk.consentHint",
+    "en": "Please review and sign each form below before check-in."
+  },
+  {
+    "k": "kiosk.consentLoading",
+    "en": "Loading required forms…"
+  },
+  {
+    "k": "kiosk.consentTitle",
+    "en": "Sign required forms"
+  },
+  {
+    "k": "kiosk.consentsRequired",
+    "en": "Both forms must be signed to check in."
+  },
+  {
+    "k": "kiosk.defaultClinic",
+    "en": "Our clinic"
+  },
+  {
+    "k": "kiosk.intakes7d",
+    "en": "Kiosk intakes ({days}d)"
+  },
+  {
+    "k": "kiosk.intakesPeriod",
+    "en": "New patient intakes"
+  },
+  {
+    "k": "kiosk.pendingTitle",
+    "en": "Registration Pending Approval"
+  },
+  {
+    "k": "kiosk.periodCheckins",
+    "en": "Kiosk arrivals ({days}d)"
+  },
+  {
+    "k": "labcases.error.required",
+    "en": "Please fill all required fields."
+  },
+  {
+    "k": "labcases.field.expectedDate",
+    "en": "Expected Back"
+  },
+  {
+    "k": "labcases.field.sentDate",
+    "en": "Sent Date*"
+  },
+  {
+    "k": "landing.deviceDesktopAdmin",
+    "en": "Desktop · Admin dashboard"
+  },
+  {
+    "k": "landing.deviceMobileLookup",
+    "en": "Mobile · Patient lookup"
+  },
+  {
+    "k": "landing.deviceTabletQueue",
+    "en": "Tablet · Queue board"
+  },
+  {
+    "k": "landing.deviceTvWaiting",
+    "en": "TV · Waiting room"
+  },
+  {
+    "k": "landing.wfAppointmentsDesc",
+    "en": "Chair calendars, provider availability, SMS reminders, and waitlist callbacks — built for busy Philippine reception workflows."
+  },
+  {
+    "k": "landing.wfAppointmentsTitle",
+    "en": "Appointments & waitlist"
+  },
+  {
+    "k": "landing.wfBillingTitle",
+    "en": "Billing, HMO & PhilHealth prep"
+  },
+  {
+    "k": "landing.wfChartTitle",
+    "en": "Dental chart & treatment plan"
+  },
+  {
+    "k": "landing.wfDashboardTitle",
+    "en": "Clinic command center"
+  },
+  {
+    "k": "landing.wfDisplaySubtitle",
+    "en": "TV · Waiting room"
+  },
+  {
+    "k": "landing.wfDisplayTitle",
+    "en": "Queue display board"
+  },
+  {
+    "k": "landing.wfKioskSubtitle",
+    "en": "Tablet · Patient-facing"
+  },
+  {
+    "k": "landing.wfPatientsDesc",
+    "en": "Register walk-ins and returning patients, capture demographics, insurance, and intake drafts without losing paper-form completeness."
+  },
+  {
+    "k": "landing.wfPatientsTitle",
+    "en": "Patient registry & intake"
+  },
+  {
+    "k": "notifications.deliveryRate",
+    "en": "Delivery rate ({days}d)"
+  },
+  {
+    "k": "notifications.deliveryTrend",
+    "en": "SMS / notification delivery"
+  },
+  {
+    "k": "notifications.totalSent",
+    "en": "Messages sent ({days}d)"
+  },
+  {
+    "k": "ops.toastAppointment",
+    "en": "New appointment activity"
+  },
+  {
+    "k": "ops.toastAppointmentAction",
+    "en": "View calendar"
+  },
+  {
+    "k": "ops.toastIntake",
+    "en": "New patient intake draft submitted"
+  },
+  {
+    "k": "ops.toastIntakeAction",
+    "en": "Review"
+  },
+  {
+    "k": "ops.toastQueue",
+    "en": "Patient checked in to queue"
+  },
+  {
+    "k": "ops.toastQueueAction",
+    "en": "Open queue"
+  },
+  {
+    "k": "ortho.activeCases",
+    "en": "Active ortho cases"
+  },
+  {
+    "k": "ortho.balanceDistribution",
+    "en": "Balance distribution"
+  },
+  {
+    "k": "ortho.balanceTimeline",
+    "en": "Balance over visits"
+  },
+  {
+    "k": "ortho.balanceTimelineHint",
+    "en": "Remaining contract balance after each visit"
+  },
+  {
+    "k": "ortho.timelineEmpty",
+    "en": "Log visits to see balance and adjustment charts."
+  },
+  {
+    "k": "patient.intakeCompleteWelcome",
+    "en": "Patient registered — welcome them and complete the chart file before the first visit."
+  },
+  {
+    "k": "patients.actionAppointment",
+    "en": "Schedule visit"
+  },
+  {
+    "k": "patients.actionEdit",
+    "en": "Edit demographics"
+  },
+  {
+    "k": "patients.actionProfile",
+    "en": "Open profile"
+  },
+  {
+    "k": "patients.actionQueue",
+    "en": "Send to queue check-in"
+  },
+  {
+    "k": "patients.activeRegistry",
+    "en": "Active registry"
+  },
+  {
+    "k": "patients.attendingDentist",
+    "en": "Attending dentist"
+  },
+  {
+    "k": "patients.attentionConsentsHint",
+    "en": "Open a patient profile → Consents tab to collect or follow up on unsigned forms."
+  },
+  {
+    "k": "patients.attentionConsentsTitle",
+    "en": "Pending consents need action"
+  },
+  {
+    "k": "patients.attentionIntakeHint",
+    "en": "Review kiosk and portal registrations below before check-in."
+  },
+  {
+    "k": "patients.attentionIntakeTitle",
+    "en": "Pending intake drafts need review"
+  },
+  {
+    "k": "patients.back",
+    "en": "Back to patients"
+  },
+  {
+    "k": "patients.clearSearch",
+    "en": "Clear search"
+  },
+  {
+    "k": "patients.colPatient",
+    "en": "Patient"
+  },
+  {
+    "k": "patients.consentCompletion",
+    "en": "Consent rate"
+  },
+  {
+    "k": "patients.consentRate",
+    "en": "Consent completion"
+  },
+  {
+    "k": "patients.emptyHint",
+    "en": "Register a new patient to get started."
+  },
+  {
+    "k": "patients.emptySearch",
+    "en": "No patients match your search."
+  },
+  {
+    "k": "patients.examinationDate",
+    "en": "Examination date"
+  },
+  {
+    "k": "patients.filterActive",
+    "en": "Active"
+  },
+  {
+    "k": "patients.filterInactive",
+    "en": "Inactive"
+  },
+  {
+    "k": "patients.filterStatus",
+    "en": "Status"
+  },
+  {
+    "k": "patients.filterVisitAll",
+    "en": "Any time"
+  },
+  {
+    "k": "patients.filterVisitMonth",
+    "en": "30 days"
+  },
+  {
+    "k": "patients.filterVisitWeek",
+    "en": "7 days"
+  },
+  {
+    "k": "patients.filtersActive",
+    "en": "active"
+  },
+  {
+    "k": "patients.intakeDraftsTitle",
+    "en": "Pending registrations"
+  },
+  {
+    "k": "patients.intakeFilterEmpty",
+    "en": "No registrations for this source."
+  },
+  {
+    "k": "patients.intakeFilterLabel",
+    "en": "Filter by registration source"
+  },
+  {
+    "k": "patients.intakeMetricTap",
+    "en": "Tap to review"
+  },
+  {
+    "k": "patients.intakeRegisterQueue",
+    "en": "Register + queue"
+  },
+  {
+    "k": "patients.intakeReview",
+    "en": "Review & register"
+  },
+  {
+    "k": "patients.intakeShowMore",
+    "en": "Show {count} more"
+  },
+  {
+    "k": "patients.listEyebrow",
+    "en": "Patient list"
+  },
+  {
+    "k": "patients.listLoading",
+    "en": "Patient list"
+  },
+  {
+    "k": "patients.metricKioskIntakeHint",
+    "en": "Tablet registrations — tap to filter"
+  },
+  {
+    "k": "patients.metricPendingIntake",
+    "en": "Pending registrations"
+  },
+  {
+    "k": "patients.metricPendingIntakeHint",
+    "en": "Kiosk & portal drafts to review"
+  },
+  {
+    "k": "patients.metricPortalIntakeHint",
+    "en": "Online new patients — tap to filter"
+  },
+  {
+    "k": "patients.newPatientsTrend",
+    "en": "New patient registrations"
+  },
+  {
+    "k": "patients.newTrend",
+    "en": "New patients ({days}d)"
+  },
+  {
+    "k": "patients.openRegistryReports",
+    "en": "Open registry reports"
+  },
+  {
+    "k": "patients.pagination",
+    "en": "Patient list pagination"
+  },
+  {
+    "k": "patients.reportsTitle",
+    "en": "Registry and consent analytics"
+  },
+  {
+    "k": "patients.restDays",
+    "en": "Rest days (optional)"
+  },
+  {
+    "k": "patients.rowActions",
+    "en": "Patient actions"
+  },
+  {
+    "k": "patients.searchShortcut",
+    "en": "Press / to focus search"
+  },
+  {
+    "k": "patients.showing",
+    "en": "Showing {start}–{end} of {total}"
+  },
+  {
+    "k": "patients.sortLastVisitNew",
+    "en": "Last visit ↓"
+  },
+  {
+    "k": "patients.sortLastVisitOld",
+    "en": "Last visit ↑"
+  },
+  {
+    "k": "patients.sourceUnknown",
+    "en": "Unknown source"
+  },
+  {
+    "k": "philhealth.openReports",
+    "en": "Open PhilHealth reports"
+  },
+  {
+    "k": "philhealth.reportsDescription",
+    "en": "Pending claim preparation trends are in Reports finance."
+  },
+  {
+    "k": "philhealth.statusMix",
+    "en": "PhilHealth claims"
+  },
+  {
+    "k": "portal.balanceClear",
+    "en": "No open balance on file."
+  },
+  {
+    "k": "portal.balanceDue",
+    "en": "Outstanding balance — settle at the front desk before leaving."
+  },
+  {
+    "k": "portal.bookAnother",
+    "en": "Book an appointment"
+  },
+  {
+    "k": "portal.consentSection",
+    "en": "Required forms"
+  },
+  {
+    "k": "portal.consentsPending",
+    "en": "Sign the forms above before your visit or at check-in."
+  },
+  {
+    "k": "portal.queueAhead",
+    "en": "{count} ahead of you"
+  },
+  {
+    "k": "portal.queueReady",
+    "en": "Ready to be called"
+  },
+  {
+    "k": "portal.queueWaiting",
+    "en": "Waiting"
+  },
+  {
+    "k": "portal.statusLoading",
+    "en": "Loading your visit status…"
+  },
+  {
+    "k": "portal.statusTitle",
+    "en": "My visit"
+  },
+  {
+    "k": "queue.actionNeeded",
+    "en": "Action needed"
+  },
+  {
+    "k": "queue.apptCheckIn",
+    "en": "appointments to check in"
+  },
+  {
+    "k": "queue.arrivalDue",
+    "en": "Due now"
+  },
+  {
+    "k": "queue.avgVisit",
+    "en": "Avg visit"
+  },
+  {
+    "k": "queue.checkInToWaiting",
+    "en": "Check in to Waiting"
+  },
+  {
+    "k": "queue.commandCenterAllClear",
+    "en": "Intake consents signed. Proceed with check-in."
+  },
+  {
+    "k": "queue.commandCenterBalance",
+    "en": "Outstanding balance"
+  },
+  {
+    "k": "queue.commandCenterReady",
+    "en": "No blockers — ready to check in."
+  },
+  {
+    "k": "queue.commandCenterTitle",
+    "en": "Check-in readiness"
+  },
+  {
+    "k": "queue.consentGate",
+    "en": "Patient has unsigned consents. Override is logged in audit."
+  },
+  {
+    "k": "queue.consentGateShort",
+    "en": "Consent required before check-in."
+  },
+  {
+    "k": "queue.consentGateTitle",
+    "en": "Consent required before check-in"
+  },
+  {
+    "k": "queue.consentOverride",
+    "en": "Check in anyway"
+  },
+  {
+    "k": "queue.dayBoard",
+    "en": "Day board"
+  },
+  {
+    "k": "queue.daySummaryPast",
+    "en": "Queue summary — {day}"
+  },
+  {
+    "k": "queue.flowBookAppointment",
+    "en": "Book appointment"
+  },
+  {
+    "k": "queue.flowCheckoutTitle",
+    "en": "Served & billing"
+  },
+  {
+    "k": "queue.flowDentistTitle",
+    "en": "Dentist handoff"
+  },
+  {
+    "k": "queue.flowHowItWorks",
+    "en": "How queue check-in works"
+  },
+  {
+    "k": "queue.flowOpenDentist",
+    "en": "Open dentist board"
+  },
+  {
+    "k": "queue.flowScheduledTitle",
+    "en": "Scheduled patient"
+  },
+  {
+    "k": "queue.medianWait",
+    "en": "Median wait ({days}d)"
+  },
+  {
+    "k": "queue.metricInQueue",
+    "en": "Active now"
+  },
+  {
+    "k": "queue.metricInQueueHint",
+    "en": "Waiting through in-chair"
+  },
+  {
+    "k": "queue.metricServing",
+    "en": "Called / chair"
+  },
+  {
+    "k": "queue.metricServingHint",
+    "en": "Being seen — tap to filter"
+  },
+  {
+    "k": "queue.metricWaiting",
+    "en": "Waiting"
+  },
+  {
+    "k": "queue.metricWaitingHint",
+    "en": "Not yet called — tap to filter"
+  },
+  {
+    "k": "queue.noHistoryToday",
+    "en": "No completed queue entries today."
+  },
+  {
+    "k": "queue.openDeviceReports",
+    "en": "Manage patient-facing screens"
+  },
+  {
+    "k": "queue.openQueueReports",
+    "en": "Open queue reports"
+  },
+  {
+    "k": "queue.openRequiredConsent",
+    "en": "Sign required consent"
+  },
+  {
+    "k": "queue.patientArrivalHint",
+    "en": "Use this for registered walk-ins or patients opened from a profile. If the patient has no file yet, register them first and return here."
+  },
+  {
+    "k": "queue.patientArrivalSubtitle",
+    "en": "Find the patient, add an optional note, then check in to Waiting."
+  },
+  {
+    "k": "queue.registerWalkInPatient",
+    "en": "Register new walk-in patient"
+  },
+  {
+    "k": "queue.reportsDevicesDescription",
+    "en": "Generate public links and monitor waiting-room screens from Reports."
+  },
+  {
+    "k": "queue.resumeCheckInBody",
+    "en": "Ready to finish check-in to Waiting?"
+  },
+  {
+    "k": "queue.resumeCheckInBodyNamed",
+    "en": "Ready to check in {name} to Waiting?"
+  },
+  {
+    "k": "queue.reviewSmsSent",
+    "en": "Review request SMS sent."
+  },
+  {
+    "k": "queue.servedVsYesterday",
+    "en": "Served yesterday: {prev}"
+  },
+  {
+    "k": "queue.summaryActive",
+    "en": "Active now"
+  },
+  {
+    "k": "queue.summaryArrivals",
+    "en": "To check in"
+  },
+  {
+    "k": "queue.summaryArrivalsSub",
+    "en": "Scheduled, not in queue"
+  },
+  {
+    "k": "queue.summaryAvgVisitSub",
+    "en": "Check-in to complete"
+  },
+  {
+    "k": "queue.summaryCancelled",
+    "en": "Cancelled"
+  },
+  {
+    "k": "queue.summaryServed",
+    "en": "Served today"
+  },
+  {
+    "k": "queue.summaryServing",
+    "en": "Called / chair"
+  },
+  {
+    "k": "queue.summaryTapActive",
+    "en": "Tap to filter live board"
+  },
+  {
+    "k": "queue.summaryTapServed",
+    "en": "Tap to filter completed"
+  },
+  {
+    "k": "queue.summaryTapServing",
+    "en": "Tap to filter called"
+  },
+  {
+    "k": "queue.summaryTapWaiting",
+    "en": "Tap to filter waiting"
+  },
+  {
+    "k": "queue.summaryWaiting",
+    "en": "Waiting"
+  },
+  {
+    "k": "queue.vsYesterdayShort",
+    "en": "vs yesterday"
+  },
+  {
+    "k": "queue.walkInNoResults",
+    "en": "No patients found — try another spelling or register a new patient."
+  },
+  {
+    "k": "queue.walkInNote",
+    "en": "Visit note"
+  },
+  {
+    "k": "queue.walkInPatient",
+    "en": "Patient"
+  },
+  {
+    "k": "queue.walkInSearchHint",
+    "en": "Type at least 2 characters to search."
+  },
+  {
+    "k": "queue.walkInSelectPatientHint",
+    "en": "Select a patient above to enable check-in."
+  },
+  {
+    "k": "queue.walkInSelected",
+    "en": "Ready to check in"
+  },
+  {
+    "k": "queue.workflowAppointmentSync",
+    "en": "Appointment sync"
+  },
+  {
+    "k": "queue.workflowConsentGate",
+    "en": "Consent gate"
+  },
+  {
+    "k": "queue.workflowServed",
+    "en": "Served completes appointment"
+  },
+  {
+    "k": "reports.benchmarkAppointments",
+    "en": "Appointments by branch"
+  },
+  {
+    "k": "reports.benchmarkCollected",
+    "en": "Collections by branch"
+  },
+  {
+    "k": "reports.benchmarkEyebrow",
+    "en": "Owner view"
+  },
+  {
+    "k": "reports.benchmarkPeriod",
+    "en": "{days}d period"
+  },
+  {
+    "k": "reports.branchBenchmark",
+    "en": "Branch benchmark"
+  },
+  {
+    "k": "reports.branchCompare",
+    "en": "Open invoices by branch"
+  },
+  {
+    "k": "reports.clinicalDescription",
+    "en": "Review registry growth, consent completion, active chart findings, and orthodontic workload without opening each patient one by one."
+  },
+  {
+    "k": "reports.clinicalTitle",
+    "en": "Patient and clinical quality"
+  },
+  {
+    "k": "reports.closeout",
+    "en": "Daily closeout report"
+  },
+  {
+    "k": "reports.complianceDescription",
+    "en": "Operational safety depends on more than visits. Watch stock risk, message delivery, and audit volume together."
+  },
+  {
+    "k": "reports.complianceTitle",
+    "en": "Audit, stock, and messaging health"
+  },
+  {
+    "k": "reports.devicesDescription",
+    "en": "Keep the waiting-room experience healthy: verify display heartbeat, check kiosk traffic, and close stale public tokens before they confuse staff."
+  },
+  {
+    "k": "reports.devicesEyebrow",
+    "en": "Patient-facing"
+  },
+  {
+    "k": "reports.exportPdf",
+    "en": "Export PDF"
+  },
+  {
+    "k": "reports.financeTitle",
+    "en": "Revenue, AR, and claims"
+  },
+  {
+    "k": "reports.focusAppointmentsTitle",
+    "en": "Opened from appointments KPI"
+  },
+  {
+    "k": "reports.focusBillingTitle",
+    "en": "Opened from billing KPI"
+  },
+  {
+    "k": "reports.focusClinicalDescription",
+    "en": "Check registry readiness, consents, chart findings, and ortho workload before patients reach the chair."
+  },
+  {
+    "k": "reports.focusDevicesDescription",
+    "en": "Kiosk, TV display, and public-link health are here so reception can avoid stale patient-facing screens."
+  },
+  {
+    "k": "reports.focusDevicesTitle",
+    "en": "Opened from patient-facing flow"
+  },
+  {
+    "k": "reports.hmoPipeline",
+    "en": "HMO claim pipeline"
+  },
+  {
+    "k": "reports.linkHmo",
+    "en": "HMO claims"
+  },
+  {
+    "k": "reports.linkPhilHealthDesc",
+    "en": "Pending claim preparation"
+  },
+  {
+    "k": "reports.metricAppointmentsOpen",
+    "en": "Open appointments reports"
+  },
+  {
+    "k": "reports.metricCollectedOpen",
+    "en": "Open finance reports"
+  },
+  {
+    "k": "reports.metricCompletedOpen",
+    "en": "Review visit completion"
+  },
+  {
+    "k": "reports.metricNoShowOpen",
+    "en": "Review appointment leakage"
+  },
+  {
+    "k": "reports.panelAppointmentsTitle",
+    "en": "Appointment calendar report"
+  },
+  {
+    "k": "reports.panelAuditDescription",
+    "en": "This panel helps supervisors confirm that sensitive actions and operational changes are being logged at the right pace."
+  },
+  {
+    "k": "reports.panelAuditTitle",
+    "en": "Audit activity"
+  },
+  {
+    "k": "reports.panelBenchmarkTitle",
+    "en": "Cross-branch performance"
+  },
+  {
+    "k": "reports.panelChairTitle",
+    "en": "Chair-time efficiency"
+  },
+  {
+    "k": "reports.panelChartTitle",
+    "en": "Dental chart findings"
+  },
+  {
+    "k": "reports.panelHmoDescription",
+    "en": "Shows claim volume and status so billing can see where reimbursements are stuck before AR quietly grows."
+  },
+  {
+    "k": "reports.panelInventoryTitle",
+    "en": "Inventory risk"
+  },
+  {
+    "k": "reports.panelPatientsDescription",
+    "en": "See whether patient files are growing cleanly, whether consents are lagging, and where chart readiness may block the visit flow."
+  },
+  {
+    "k": "reports.panelPatientsTitle",
+    "en": "Registry and consent health"
+  },
+  {
+    "k": "reports.panelPhilHealthDescription",
+    "en": "Tracks pending claim preparation and readiness gaps so staff can clean up documentation before submission windows are missed."
+  },
+  {
+    "k": "reports.panelQueueTitle",
+    "en": "Queue pressure"
+  },
+  {
+    "k": "reports.panelTokensTitle",
+    "en": "Public links and tokens"
+  },
+  {
+    "k": "reports.panelWaitlistTitle",
+    "en": "Waitlist recovery"
+  },
+  {
+    "k": "reports.sectionModulesTitle",
+    "en": "Jump into the source modules"
+  },
+  {
+    "k": "settings.active",
+    "en": "Active"
+  },
+  {
+    "k": "settings.attentionRulesTitle",
+    "en": "Dashboard — Needs attention"
+  },
+  {
+    "k": "settings.branchSettingsHint",
+    "en": "Configure this clinic location."
+  },
+  {
+    "k": "settings.consentEmptyTitle",
+    "en": "No consent templates yet"
+  },
+  {
+    "k": "settings.dryRun",
+    "en": "Dry-run mode"
+  },
+  {
+    "k": "settings.inactive",
+    "en": "Inactive"
+  },
+  {
+    "k": "settings.metricActive",
+    "en": "Active"
+  },
+  {
+    "k": "settings.metricBranches",
+    "en": "Branches"
+  },
+  {
+    "k": "settings.metricBranchesHint",
+    "en": "Clinic locations"
+  },
+  {
+    "k": "settings.metricInvites",
+    "en": "Pending invites"
+  },
+  {
+    "k": "settings.metricInvitesHint",
+    "en": "Awaiting acceptance"
+  },
+  {
+    "k": "settings.metricTemplates",
+    "en": "Templates"
+  },
+  {
+    "k": "settings.notificationsBranchOverride",
+    "en": "Branch override"
+  },
+  {
+    "k": "settings.notificationsDryRun",
+    "en": "Dry-run mode is ON"
+  },
+  {
+    "k": "settings.notificationsDryRunToday",
+    "en": "Dry-run today"
+  },
+  {
+    "k": "settings.notificationsFailedToday",
+    "en": "Failed today"
+  },
+  {
+    "k": "settings.notificationsManualWhatsApp",
+    "en": "Manual WhatsApp option"
+  },
+  {
+    "k": "settings.notificationsNoTemplates",
+    "en": "No templates yet."
+  },
+  {
+    "k": "settings.notificationsOpenReports",
+    "en": "Open messaging reports"
+  },
+  {
+    "k": "settings.notificationsOpenWhatsApp",
+    "en": "Open WhatsApp"
+  },
+  {
+    "k": "settings.notificationsSaveBranch",
+    "en": "Save branch override"
+  },
+  {
+    "k": "settings.notificationsSaveOrg",
+    "en": "Save org default"
+  },
+  {
+    "k": "settings.notificationsSentToday",
+    "en": "Sent today"
+  },
+  {
+    "k": "settings.notificationsStatus",
+    "en": "Status"
+  },
+  {
+    "k": "settings.notificationsTemplateCol",
+    "en": "Template"
+  },
+  {
+    "k": "settings.notificationsTemplates",
+    "en": "Templates"
+  },
+  {
+    "k": "settings.notificationsTime",
+    "en": "Time"
+  },
+  {
+    "k": "settings.openDays",
+    "en": "Open days"
+  },
+  {
+    "k": "settings.orgEyebrow",
+    "en": "Clinic"
+  },
+  {
+    "k": "settings.perWeek",
+    "en": "Per week"
+  },
+  {
+    "k": "settings.procedureBomNoItems",
+    "en": "No inventory items"
+  },
+  {
+    "k": "settings.procedureBomSelectItem",
+    "en": "Select inventory item"
+  },
+  {
+    "k": "visits.allAppointments",
+    "en": "All appointments"
+  },
+  {
+    "k": "visits.carryForwardTitle",
+    "en": "Carry forward from last visit"
+  },
+  {
+    "k": "visits.carryForwardViewPlan",
+    "en": "View prior plan"
+  },
+  {
+    "k": "visits.empty",
+    "en": "No visits recorded yet."
+  },
+  {
+    "k": "visits.encountersTitle",
+    "en": "Clinic visits"
+  },
+  {
+    "k": "visits.finishVisit",
+    "en": "Finish visit"
+  },
+  {
+    "k": "visits.open",
+    "en": "open"
+  },
+  {
+    "k": "visits.pageTitle",
+    "en": "Visit records"
+  },
+  {
+    "k": "visits.scheduled",
+    "en": "Scheduled"
+  },
+  {
+    "k": "visits.visitChecklist",
+    "en": "Visit checklist"
+  },
+  {
+    "k": "waitlist.activeSummaryTitle",
+    "en": "Active waitlist"
+  },
+  {
+    "k": "waitlist.activeWaiting",
+    "en": "actively waiting"
+  },
+  {
+    "k": "waitlist.addFirst",
+    "en": "Add first entry"
+  },
+  {
+    "k": "waitlist.addFormTitle",
+    "en": "Add patient to waitlist"
+  },
+  {
+    "k": "waitlist.bookTitle",
+    "en": "Book appointment"
+  },
+  {
+    "k": "waitlist.conversion",
+    "en": "Conversion ({days}d)"
+  },
+  {
+    "k": "waitlist.conversionRate",
+    "en": "Waitlist conversion"
+  },
+  {
+    "k": "waitlist.emptyActiveHint",
+    "en": "Each row shows urgency, contact progress, and quick actions."
+  },
+  {
+    "k": "waitlist.emptyActiveTitle",
+    "en": "No active entries"
+  },
+  {
+    "k": "waitlist.emptyHistoryHint",
+    "en": "Booked, cancelled, and expired entries appear here."
+  },
+  {
+    "k": "waitlist.historySummaryTitle",
+    "en": "Waitlist history"
+  },
+  {
+    "k": "waitlist.listActive",
+    "en": "Active queue"
+  },
+  {
+    "k": "waitlist.metricActiveHint",
+    "en": "On waitlist now"
+  },
+  {
+    "k": "waitlist.metricHistoryHint",
+    "en": "Booked, cancelled, expired"
+  },
+  {
+    "k": "waitlist.metricWaiting",
+    "en": "Waiting"
+  },
+  {
+    "k": "waitlist.metricWaitingHint",
+    "en": "Active entries - tap to review"
+  },
+  {
+    "k": "waitlist.openReports",
+    "en": "Open waitlist reports"
+  },
+  {
+    "k": "waitlist.opsSummaryToggle",
+    "en": "Waitlist summary"
+  },
+  {
+    "k": "waitlist.preferredDate",
+    "en": "Preferred date"
+  },
+  {
+    "k": "waitlist.previousAttempts",
+    "en": "Previous attempts"
+  },
+  {
+    "k": "waitlist.reportsTitle",
+    "en": "Waitlist recovery analytics"
+  },
+  {
+    "k": "waitlist.statusFunnel",
+    "en": "Waitlist funnel"
+  },
+  {
+    "k": "waitlist.timeFrom",
+    "en": "Time from"
+  },
+  {
+    "k": "waitlist.timeTo",
+    "en": "Time to"
+  },
+  {
+    "k": "waitlist.whatsAppSlotBody",
+    "en": "Hello {patient}, this is {clinic}. We are following up on your waitlist request for {preference}. Please reply if you are still interested."
+  },
+  {
+    "k": "waitlist.workflowSlotAlerts",
+    "en": "Open-slot alerts"
+  }
+]
