@@ -14,7 +14,11 @@ import {
 import { resolvePostLoginPath } from "@/lib/navigation/post-login-route"
 import { AuthPageShell } from "@/components/auth/auth-page-shell"
 import {
+  AuthCardFooter,
+  AuthErrorAlert,
   AuthField,
+  AuthMarketingLinks,
+  AuthPasswordField,
   authFormCardClassName,
   authPrimaryButtonClassName,
 } from "@/components/auth/auth-field"
@@ -118,14 +122,7 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
-          {error ? (
-            <div
-              role="alert"
-              className="rounded-xl border border-red-100 bg-red-50 px-3 py-2.5 text-center text-xs font-medium text-red-600"
-            >
-              {error}
-            </div>
-          ) : null}
+          {error ? <AuthErrorAlert message={error} /> : null}
 
           <AuthField
             id="login-email"
@@ -137,14 +134,21 @@ export default function LoginPage() {
             required
             autoComplete="email"
           />
-          <AuthField
+          <AuthPasswordField
             id="login-password"
             label={t("login.password", "Password")}
-            type="password"
             value={password}
             onChange={setPassword}
             required
             autoComplete="current-password"
+            labelAction={
+              <Link
+                href="/forgot-password"
+                className="text-xs font-medium text-primary-600 transition hover:text-primary-700"
+              >
+                {t("login.forgotPassword", "Forgot password?")}
+              </Link>
+            }
           />
 
           <button type="submit" disabled={loading} className={authPrimaryButtonClassName()}>
@@ -152,7 +156,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="space-y-3 border-t border-neutral-100 pt-1 text-center text-sm">
+        <AuthCardFooter>
           <p className="text-neutral-500">
             {t("login.newToProduct", "New to dentali.?")}{" "}
             <Link href="/signup" className="font-semibold text-primary-600 transition hover:text-primary-700">
@@ -170,7 +174,8 @@ export default function LoginPage() {
               {t("login.learnMore", "Learn more")}
             </Link>
           </div>
-        </div>
+          <AuthMarketingLinks />
+        </AuthCardFooter>
       </div>
     </AuthPageShell>
   )

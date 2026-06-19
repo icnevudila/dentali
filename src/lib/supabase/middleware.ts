@@ -39,6 +39,8 @@ export async function updateSession(request: NextRequest) {
   const PUBLIC_PATH_PREFIXES = [
     '/login',
     '/signup',
+    '/forgot-password',
+    '/reset-password',
     '/auth',
     '/welcome',
     '/pricing',

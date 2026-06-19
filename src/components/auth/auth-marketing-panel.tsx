@@ -1,6 +1,7 @@
 "use client"
 
 import { Building2, CalendarDays, Check, Tv } from "lucide-react"
+import { AuthClinicIllustration } from "@/components/auth/auth-clinic-illustration"
 import { DentQLLogo } from "@/components/brand/dentql-logo"
 import { useLocale } from "@/hooks/use-locale"
 import "@/components/landing/landing.css"
@@ -92,6 +93,8 @@ export function AuthMarketingPanel({ variant }: AuthMarketingPanelProps) {
             </div>
           ))}
         </div>
+
+        <AuthClinicIllustration />
       </div>
 
       <p className="relative z-10 text-xs text-white/60">

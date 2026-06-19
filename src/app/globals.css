@@ -306,6 +306,49 @@
   .auth-input:focus:-webkit-autofill {
     -webkit-box-shadow: 0 0 0 1000px white inset;
   }
+
+  @keyframes auth-shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20%,
+    60% {
+      transform: translateX(-5px);
+    }
+    40%,
+    80% {
+      transform: translateX(5px);
+    }
+  }
+
+  .auth-error-shake {
+    animation: auth-shake 0.45s ease-in-out;
+  }
+
+  .auth-btn-shine {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .auth-btn-shine::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 38%,
+      rgb(255 255 255 / 0.22) 50%,
+      transparent 62%
+    );
+    transform: translateX(-120%);
+    transition: transform 0.55s ease;
+    pointer-events: none;
+  }
+
+  .auth-btn-shine:hover:not(:disabled)::after {
+    transform: translateX(120%);
+  }
 }
 
 /* View transition timing (React <ViewTransition> recipes) */
