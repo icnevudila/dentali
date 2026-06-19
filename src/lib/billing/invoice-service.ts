@@ -15,20 +15,32 @@ export interface InvoiceRecord {
 }
 
 export async function fetchInvoices(
-  branchId: string
+  branchId: string,
+  patientId?: string | null
 ): Promise<{ data: InvoiceRecord[]; error: string | null }> {
   const showcase = getShowcaseSnapshot()
   if (showcase && branchId === showcase.branch.id) {
-    return { data: showcase.invoices, error: null }
+    return {
+      data: patientId
+        ? showcase.invoices.filter((invoice) => invoice.patient_id === patientId)
+        : showcase.invoices,
+      error: null,
+    }
   }
 
   const supabase = createClient()
-  const { data, error } = await supabase
+  let query = supabase
     .from("invoices")
     .select("id, invoice_number, total_amount, paid_amount, status, patient_id, created_at, due_date, series, patients(first_name, last_name)")
     .eq("branch_id", branchId)
     .order("created_at", { ascending: false })
-    .limit(50)
+    .limit(patientId ? 200 : 50)
+
+  if (patientId) {
+    query = query.eq("patient_id", patientId)
+  }
+
+  const { data, error } = await query
 
   if (error) return { data: [], error: error.message }
 

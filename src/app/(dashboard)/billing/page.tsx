@@ -13,7 +13,9 @@ import {
   fetchInvoices,
   filterInvoicesByStatus,
   filterOverdueInvoices,
+  getPatientBalance,
   type InvoiceStatusFilter,
+  type PatientBalance,
 } from "@/lib/billing/invoice-service"
 import { ManualInvoiceDrawer } from "@/components/billing/ManualInvoiceDrawer"
 import { Badge } from "@/components/ui/badge"
@@ -48,16 +50,17 @@ function BillingPageContent() {
   const [showCreate, setShowCreate] = React.useState(false)
   const [prefillPatientId, setPrefillPatientId] = React.useState<string | undefined>()
   const [prefillPatientLabel, setPrefillPatientLabel] = React.useState<string | undefined>()
+  const [patientBalance, setPatientBalance] = React.useState<PatientBalance | null>(null)
 
   const load = React.useCallback(() => {
     if (!activeBranch) return
     setLoading(true)
-    fetchInvoices(activeBranch.id).then(({ data, error: err }) => {
+    fetchInvoices(activeBranch.id, patientFilter).then(({ data, error: err }) => {
       setInvoices(data)
       setError(err)
       setLoading(false)
     })
-  }, [activeBranch])
+  }, [activeBranch, patientFilter])
 
   React.useEffect(() => {
     const id = window.setTimeout(() => {
@@ -78,9 +81,11 @@ function BillingPageContent() {
         if (searchParams.get("create") === "true") {
           setShowCreate(true)
         }
+        getPatientBalance(patientFilter).then(({ data }) => setPatientBalance(data))
       } else {
         setPrefillPatientId(undefined)
         setPrefillPatientLabel(undefined)
+        setPatientBalance(null)
       }
     }, 0)
     return () => window.clearTimeout(id)
@@ -107,6 +112,12 @@ function BillingPageContent() {
     const overdue = filterOverdueInvoices(scopedInvoices).length
     return { total: scopedInvoices.length, open: open.length, outstanding, paid, overdue }
   }, [scopedInvoices])
+
+  const hasUninvoicedOrthoBalance =
+    !!patientFilter &&
+    !!patientBalance &&
+    patientBalance.ortho_open_balance > 0 &&
+    patientBalance.invoice_open_balance <= 0
 
   const filterLabel = (f: InvoiceStatusFilter) => {
     const map: Record<InvoiceStatusFilter, string> = {
@@ -179,6 +190,23 @@ function BillingPageContent() {
             <Button size="sm" className="mt-3" asChild>
               <Link href={queueResumeHref(loadPendingQueueCheckIn())}>
                 {t("billing.returnToQueueAction", "Return to queue")}
+              </Link>
+            </Button>
+          </div>
+        ) : null}
+
+        {hasUninvoicedOrthoBalance ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-4 text-sm text-amber-950">
+            <p className="font-semibold">{t("billing.orthoBalanceSource", "Open balance is from orthodontics")}</p>
+            <p className="mt-1 text-amber-900/90">
+              {t(
+                "billing.orthoBalanceSourceHint",
+                "This patient has an active ortho contract balance that has not been converted to an invoice yet."
+              )}
+            </p>
+            <Button size="sm" variant="outline" className="mt-3" asChild>
+              <Link href={`/patients/${patientFilter}/ortho`}>
+                {t("billing.openOrthoCase", "Open ortho case")}
               </Link>
             </Button>
           </div>

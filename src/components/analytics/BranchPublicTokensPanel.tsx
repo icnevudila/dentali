@@ -39,6 +39,7 @@ function TokenRow({
   revoking,
   onRevoke,
   typeLabel,
+  nowMs,
 }: {
   row: BranchPublicTokenRow
   locale: string
@@ -46,6 +47,7 @@ function TokenRow({
   revoking: string | null
   onRevoke: (id: string) => void
   typeLabel: string
+  nowMs: number
 }) {
   const activityAt =
     row.token_type === "display"
@@ -57,7 +59,7 @@ function TokenRow({
   const isRecentPing =
     row.token_type === "display" &&
     row.last_display_ping_at != null &&
-    Date.now() - new Date(row.last_display_ping_at).getTime() < 5 * 60 * 1000
+    nowMs - new Date(row.last_display_ping_at).getTime() < 5 * 60 * 1000
 
   return (
     <tr className="border-b border-neutral-100 last:border-0">
@@ -113,6 +115,7 @@ export function BranchPublicTokensPanel({
   const [rows, setRows] = useState<BranchPublicTokenRow[]>([])
   const [revoking, setRevoking] = useState<string | null>(null)
   const [bulkType, setBulkType] = useState<PublicTokenType | null>(null)
+  const [nowMs, setNowMs] = useState(() => Date.now())
   const neverLabel = t("display.never", "Never")
 
   const load = useCallback(async () => {
@@ -126,6 +129,11 @@ export function BranchPublicTokensPanel({
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 30_000)
+    return () => window.clearInterval(id)
+  }, [])
 
   const counts = useMemo(() => {
     const display = rows.filter((r) => r.token_type === "display").length
@@ -294,6 +302,7 @@ export function BranchPublicTokensPanel({
                   revoking={revoking}
                   onRevoke={handleRevokeOne}
                   typeLabel={t(TYPE_LABEL[row.token_type].key, TYPE_LABEL[row.token_type].fallback)}
+                  nowMs={nowMs}
                 />
               ))}
             </tbody>

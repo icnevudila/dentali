@@ -175,7 +175,7 @@ function DisplayContent() {
   }, [branchId, token])
 
   const syncAgeSec =
-    lastSyncAt != null ? Math.max(0, Math.floor((Date.now() - lastSyncAt) / 1000)) : null
+    lastSyncAt != null ? Math.max(0, Math.floor((liveNow.getTime() - lastSyncAt) / 1000)) : null
 
   if (loading) {
     return (

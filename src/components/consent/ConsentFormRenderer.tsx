@@ -86,12 +86,6 @@ export function ConsentFormRenderer({
   /** Paper-style flow without the “Information to complete” chrome. */
   documentMode?: boolean
 }) {
-  if (fields.length === 0) return null
-
-  const set = (id: string, value: string | boolean) => {
-    onChange?.({ ...values, [id]: value })
-  }
-
   const paragraphOpenByIndex = React.useMemo(() => {
     let index = 0
     return fields.map((field) => {
@@ -101,6 +95,12 @@ export function ConsentFormRenderer({
       return openFirst
     })
   }, [fields])
+
+  if (fields.length === 0) return null
+
+  const set = (id: string, value: string | boolean) => {
+    onChange?.({ ...values, [id]: value })
+  }
 
   return (
     <div

@@ -792,9 +792,38 @@ function QueuePageContent() {
     router.replace("/queue", { scroll: false })
 
     if (pending.gateKind === "consent") {
-      clearPendingQueueCheckIn()
+      if (pending.mode === "walk_in") {
+        clearPendingQueueCheckIn()
+        queueMicrotask(() => {
+          setSelectedPatientId(pending.patientId)
+          setSelectedPatientName(pending.patientName ?? "")
+          setPatientQuery(pending.patientName ?? "")
+          setPatients([])
+          setCheckInNotes(pending.notes ?? "")
+          setConsentOverridePending(false)
+          setWalkInConsentHref(null)
+          setWalkInConsentLabel(null)
+          setBillingOverridePending(false)
+          setCheckInGate(null)
+          setShowCheckIn(true)
+          notify.success(
+            t(
+              "queue.consentReturnReady",
+              "Consent saved — continue check-in for the same patient."
+            )
+          )
+        })
+        return
+      }
       queueMicrotask(() => {
-        void executeCheckIn(actionFromPending(pending), pending.reuseEncounterId ?? null)
+        setResumeCheckIn(pending)
+        setError(null)
+        notify.success(
+          t(
+            "queue.consentReturnReady",
+            "Consent saved — continue check-in for the same patient."
+          )
+        )
       })
       return
     }
@@ -809,8 +838,6 @@ function QueuePageContent() {
         )
       )
     })
-    // executeCheckIn intentionally stays out of deps: it is an event-style action that reads current page state.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, resumeCheckInParam, router, t])
 
   const handleCheckIn = async (

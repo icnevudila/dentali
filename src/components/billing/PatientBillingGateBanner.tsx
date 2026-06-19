@@ -28,6 +28,8 @@ export function PatientBillingGateBanner({
   if (!gate.has_billing_gap) return null
 
   const missingPlans = gate.approved_plans_missing_invoice
+  const hasOrthoOnlyBalance =
+    gate.ortho_open_balance > 0 && !gate.primary_open_invoice_id && missingPlans.length === 0
   const invoiceHref = gate.primary_open_invoice_id
     ? `/billing/${gate.primary_open_invoice_id}`
     : `/billing?patient=${patientId}`
@@ -115,6 +117,13 @@ export function PatientBillingGateBanner({
                 <Link href={`/patients/${patientId}/treatment-plan?plan=${missingPlans[0].plan_id}`}>
                   <Wallet className="h-3.5 w-3.5" />
                   {t("billing.gateOpenPlan", "Open treatment plan")}
+                </Link>
+              </Button>
+            ) : hasOrthoOnlyBalance ? (
+              <Button size="sm" variant="outline" className="gap-1.5" asChild>
+                <Link href={`/patients/${patientId}/ortho`}>
+                  <Receipt className="h-3.5 w-3.5" />
+                  {t("billing.gateOpenOrtho", "Open ortho case")}
                 </Link>
               </Button>
             ) : (

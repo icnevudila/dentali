@@ -190,10 +190,11 @@ export async function upsertStaffAssignment(
   roleId: string
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
-  const { error } = await supabase.from("staff_branch_assignments").upsert(
-    { profile_id: profileId, branch_id: branchId, role_id: roleId },
-    { onConflict: "profile_id,branch_id" }
-  )
+  const { error } = await supabase.rpc("upsert_staff_branch_assignment", {
+    p_profile_id: profileId,
+    p_branch_id: branchId,
+    p_role_id: roleId,
+  })
   return { error: error?.message ?? null }
 }
 
