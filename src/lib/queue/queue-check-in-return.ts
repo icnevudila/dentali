@@ -15,35 +15,55 @@ export type PendingQueueCheckIn = {
 
 export type PendingQueueCheckInInput = Omit<PendingQueueCheckIn, "savedAt">
 
-export function savePendingQueueCheckIn(pending: PendingQueueCheckInInput) {
-  if (typeof window === "undefined") return
-  sessionStorage.setItem(
-    PENDING_QUEUE_CHECKIN_KEY,
-    JSON.stringify({ ...pending, savedAt: Date.now() } satisfies PendingQueueCheckIn)
-  )
+const PENDING_TTL_MS = 2 * 60 * 60 * 1000
+
+function serializePending(pending: PendingQueueCheckInInput): string {
+  return JSON.stringify({ ...pending, savedAt: Date.now() } satisfies PendingQueueCheckIn)
 }
 
-export function loadPendingQueueCheckIn(): PendingQueueCheckIn | null {
-  if (typeof window === "undefined") return null
+function parsePending(raw: string | null): PendingQueueCheckIn | null {
+  if (!raw) return null
   try {
-    const raw = sessionStorage.getItem(PENDING_QUEUE_CHECKIN_KEY)
-    if (!raw) return null
     const parsed = JSON.parse(raw) as PendingQueueCheckIn
     if (!parsed?.patientId || !parsed?.mode) return null
-    // Expire after 2 hours
-    if (Date.now() - (parsed.savedAt ?? 0) > 2 * 60 * 60 * 1000) {
-      sessionStorage.removeItem(PENDING_QUEUE_CHECKIN_KEY)
-      return null
-    }
+    if (Date.now() - (parsed.savedAt ?? 0) > PENDING_TTL_MS) return null
     return parsed
   } catch {
     return null
   }
 }
 
+export function savePendingQueueCheckIn(pending: PendingQueueCheckInInput) {
+  if (typeof window === "undefined") return
+  const serialized = serializePending(pending)
+  sessionStorage.setItem(PENDING_QUEUE_CHECKIN_KEY, serialized)
+  try {
+    localStorage.setItem(PENDING_QUEUE_CHECKIN_KEY, serialized)
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+export function loadPendingQueueCheckIn(): PendingQueueCheckIn | null {
+  if (typeof window === "undefined") return null
+
+  const fromSession = parsePending(sessionStorage.getItem(PENDING_QUEUE_CHECKIN_KEY))
+  if (fromSession) return fromSession
+
+  const fromLocal = parsePending(localStorage.getItem(PENDING_QUEUE_CHECKIN_KEY))
+  if (fromLocal) return fromLocal
+
+  return null
+}
+
 export function clearPendingQueueCheckIn() {
   if (typeof window === "undefined") return
   sessionStorage.removeItem(PENDING_QUEUE_CHECKIN_KEY)
+  try {
+    localStorage.removeItem(PENDING_QUEUE_CHECKIN_KEY)
+  } catch {
+    // ignore
+  }
 }
 
 /** Append returnTo=queue and persist pending check-in before leaving the queue page. */
@@ -52,6 +72,19 @@ export function hrefWithQueueReturn(href: string, pending: PendingQueueCheckInIn
   const url = new URL(href, "http://local")
   url.searchParams.set("returnTo", "queue")
   return `${url.pathname}${url.search}`
+}
+
+/** Open consent in a new tab; queue page stays open and receives a sign event via BroadcastChannel. */
+export function openQueueConsentWindow(href: string, pending: PendingQueueCheckInInput): boolean {
+  if (typeof window === "undefined") return false
+
+  savePendingQueueCheckIn(pending)
+  const url = new URL(href, window.location.origin)
+  url.searchParams.set("returnTo", "queue")
+  url.searchParams.set("popup", "1")
+
+  const popup = window.open(url.toString(), "_blank", "noopener,noreferrer")
+  return popup != null
 }
 
 export function queueResumeHref(pending?: PendingQueueCheckInInput | null): string {

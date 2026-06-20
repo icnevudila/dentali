@@ -12,6 +12,7 @@ import { sendReviewRequestAfterServed } from "@/lib/notifications/review-request
 import { fetchPatientConsents } from "@/lib/patients/consent-service"
 import {
   checkInConsentFormLabel,
+  findCheckInBlockingConsentSlug,
   resolveCheckInConsentHref,
 } from "@/lib/patients/checkin-consent"
 import {
@@ -76,10 +77,12 @@ import {
   clearPendingQueueCheckIn,
   hrefWithQueueReturn,
   loadPendingQueueCheckIn,
+  openQueueConsentWindow,
   savePendingQueueCheckIn,
   type PendingQueueCheckIn,
   type PendingQueueCheckInInput,
 } from "@/lib/queue/queue-check-in-return"
+import { subscribeQueueConsentSigned } from "@/lib/queue/queue-consent-channel"
 
 type Tab = "board" | "history"
 
@@ -736,6 +739,80 @@ function QueuePageContent() {
     }
   }
 
+  const applyConsentSignedFromQueue = async (patientId: string) => {
+    const pending = loadPendingQueueCheckIn()
+    if (!pending || pending.patientId !== patientId) return
+
+    const { data: consents } = await fetchPatientConsents(patientId)
+    const blockingSlug = findCheckInBlockingConsentSlug(consents ?? [])
+    const action = actionFromPending(pending)
+
+    if (blockingSlug) {
+      const consentHref = hrefWithQueueReturn(
+        resolveCheckInConsentHref(patientId, consents ?? []),
+        pending
+      )
+      const consentButtonLabel = checkInConsentFormLabel(consents ?? [], t)
+      setCheckInGate({
+        kind: "consent",
+        message: t(
+          "queue.consentNextForm",
+          "One consent signed — open the next required form to continue."
+        ),
+        action,
+        reuseEncounterId: pending.reuseEncounterId ?? null,
+        consentHref,
+        consentButtonLabel,
+      })
+      if (pending.mode === "walk_in") {
+        setConsentOverridePending(true)
+        setWalkInConsentHref(consentHref)
+        setWalkInConsentLabel(consentButtonLabel)
+        setSelectedPatientId(pending.patientId)
+        setSelectedPatientName(pending.patientName ?? "")
+        setCheckInNotes(pending.notes ?? "")
+        setShowCheckIn(true)
+      } else {
+        setResumeCheckIn(pending)
+      }
+      notify.info(
+        t("queue.consentPartialSigned", "Consent signed — one more form is still required.")
+      )
+      return
+    }
+
+    setCheckInGate(null)
+    setConsentOverridePending(false)
+    setWalkInConsentHref(null)
+    setWalkInConsentLabel(null)
+
+    if (pending.mode === "walk_in") {
+      setSelectedPatientId(pending.patientId)
+      setSelectedPatientName(pending.patientName ?? "")
+      setCheckInNotes(pending.notes ?? "")
+      setShowCheckIn(true)
+    }
+
+    notify.success(
+      t("queue.consentReturnReady", "Consent saved — continue check-in for the same patient.")
+    )
+    await executeCheckIn(action, pending.reuseEncounterId ?? null)
+  }
+
+  const applyConsentSignedRef = React.useRef(applyConsentSignedFromQueue)
+  applyConsentSignedRef.current = applyConsentSignedFromQueue
+
+  React.useEffect(() => {
+    return subscribeQueueConsentSigned((message) => {
+      void applyConsentSignedRef.current(message.patientId)
+    })
+  }, [])
+
+  const openConsentInNewTab = (href: string, pending: PendingQueueCheckInInput) => {
+    if (openQueueConsentWindow(href, pending)) return
+    router.push(hrefWithQueueReturn(href.split("?")[0] ?? href, pending))
+  }
+
   const beginGatedCheckIn = async (action: PendingCheckInAction) => {
     if (!activeBranch) return
     if (action.mode === "walk_in") setCheckingIn(true)
@@ -1265,7 +1342,7 @@ function QueuePageContent() {
                           ? t("queue.gateStepConsent", "Open and sign the required consent form")
                           : t("queue.gateStepBilling", "Open billing, collect payment, or override if authorized")}
                       </li>
-                      <li>{t("queue.gateStepReturn", "You will return here automatically")}</li>
+                      <li>{t("queue.gateStepReturn", "Queue screen updates automatically when signed")}</li>
                       <li>{t("queue.gateStepFinish", "Tap Complete check-in or use override if allowed")}</li>
                     </ol>
                     {checkInGate.action.patientName ? (
@@ -1276,26 +1353,33 @@ function QueuePageContent() {
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
-                  <Button variant="outline" size="sm" className="border-amber-300 bg-white" asChild>
-                    <Link
-                      href={hrefWithQueueReturn(
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-amber-300 bg-white"
+                    onClick={() => {
+                      const pending = pendingFromCheckInAction(
+                        checkInGate.action,
+                        checkInGate.kind,
+                        checkInGate.reuseEncounterId,
+                        checkInNotes || undefined
+                      )
+                      const href =
                         checkInGate.kind === "consent"
                           ? (checkInGate.consentHref ??
                               `/patients/${checkInGate.action.patientId}/consents/general-treatment`)
-                          : `/billing?patient=${checkInGate.action.patientId}`,
-                        pendingFromCheckInAction(
-                          checkInGate.action,
-                          checkInGate.kind,
-                          checkInGate.reuseEncounterId,
-                          checkInNotes || undefined
-                        )
-                      )}
-                    >
-                      {checkInGate.kind === "consent"
-                        ? (checkInGate.consentButtonLabel ??
-                            t("queue.openRequiredConsent", "Sign required consent"))
-                        : t("billing.openBilling", "Open billing")}
-                    </Link>
+                          : `/billing?patient=${checkInGate.action.patientId}`
+                      if (checkInGate.kind === "consent") {
+                        openConsentInNewTab(href, pending)
+                        return
+                      }
+                      router.push(hrefWithQueueReturn(href, pending))
+                    }}
+                  >
+                    {checkInGate.kind === "consent"
+                      ? (checkInGate.consentButtonLabel ??
+                          t("queue.openRequiredConsent", "Sign required consent"))
+                      : t("billing.openBilling", "Open billing")}
                   </Button>
                   <Button
                     size="sm"
@@ -1508,6 +1592,22 @@ function QueuePageContent() {
           onSubmit={handleCheckIn}
           onBillingOverride={() => void handleCheckIn({ preventDefault: () => {} } as React.FormEvent, false, true)}
           onConsentOverride={() => void handleCheckIn({ preventDefault: () => {} } as React.FormEvent, true)}
+          onOpenConsentForm={() => {
+            if (!walkInConsentHref || !selectedPatientId) return
+            openConsentInNewTab(
+              walkInConsentHref,
+              pendingFromCheckInAction(
+                {
+                  patientId: selectedPatientId,
+                  patientName: selectedPatientName || undefined,
+                  mode: "walk_in",
+                },
+                "consent",
+                null,
+                checkInNotes || undefined
+              )
+            )
+          }}
           onClose={closeCheckInModal}
         />
 

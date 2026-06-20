@@ -26,8 +26,8 @@ export type WalkInCheckInDialogProps = {
   checkingIn: boolean
   billingOverridePending: boolean
   consentOverridePending: boolean
-  consentFormHref?: string | null
   consentFormLabel?: string | null
+  onOpenConsentForm?: () => void
   onSubmit: (e: React.FormEvent) => void
   onBillingOverride: () => void
   onConsentOverride: () => void
@@ -50,8 +50,8 @@ export function WalkInCheckInDialog({
   checkingIn,
   billingOverridePending,
   consentOverridePending,
-  consentFormHref,
   consentFormLabel,
+  onOpenConsentForm,
   onSubmit,
   onBillingOverride,
   onConsentOverride,
@@ -286,16 +286,15 @@ export function WalkInCheckInDialog({
               <div className="rounded-lg border border-amber-200 bg-amber-50/90 p-3 text-sm text-amber-950">
                 <p>{t("queue.consentGate", "Patient has unsigned consents. Override is logged in audit.")}</p>
                 {selectedPatientId ? (
-                  <Button variant="link" size="sm" className="mt-1 h-auto p-0 text-amber-900" asChild>
-                    <Link
-                      href={
-                        consentFormHref ??
-                        `/patients/${selectedPatientId}/consents/general-treatment`
-                      }
-                    >
-                      {consentFormLabel ??
-                        t("queue.openRequiredConsent", "Sign required consent")}
-                    </Link>
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="mt-1 h-auto p-0 text-amber-900"
+                    onClick={() => onOpenConsentForm?.()}
+                  >
+                    {consentFormLabel ??
+                      t("queue.openRequiredConsent", "Sign required consent")}
                   </Button>
                 ) : null}
                 <Button

@@ -46,6 +46,7 @@ import { ConsentSigningSteps } from "@/components/consent/ConsentSigningSteps"
 import { ConsentFieldProgress } from "@/components/consent/ConsentFieldProgress"
 import { useConsentScrollGate } from "@/hooks/use-consent-scroll-gate"
 import { queueResumeHref, loadPendingQueueCheckIn } from "@/lib/queue/queue-check-in-return"
+import { broadcastQueueConsentSigned } from "@/lib/queue/queue-consent-channel"
 
 export default function ConsentFormPage() {
   return (
@@ -60,6 +61,7 @@ function ConsentFormPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const returnTo = searchParams.get("returnTo")
+  const isQueuePopup = returnTo === "queue" && searchParams.get("popup") === "1"
   const { user } = useAuth()
   const { activeBranch } = useBranch()
   const { t } = useLocale()
@@ -241,6 +243,8 @@ function ConsentFormPageContent() {
     setIsSigned(true)
     setTimeout(() => {
       if (returnTo === "queue") {
+        broadcastQueueConsentSigned(patientId, formId)
+        if (isQueuePopup) return
         router.push(queueResumeHref(loadPendingQueueCheckIn()))
         return
       }
@@ -315,8 +319,20 @@ function ConsentFormPageContent() {
 
           <CardFooter className="flex shrink-0 flex-col items-stretch border-t border-neutral-200 bg-neutral-50 rounded-b-xl p-6 gap-4">
             {isSigned ? (
-              <div className="bg-success-50 border border-success-200 text-success-800 p-4 rounded-md text-center font-medium">
-                {t("consent.signedRedirecting", "Document signed successfully! Redirecting…")}
+              <div className="space-y-3">
+                <div className="bg-success-50 border border-success-200 text-success-800 p-4 rounded-md text-center font-medium">
+                  {isQueuePopup
+                    ? t("consent.signedQueuePopupTitle", "Consent signed — return to the queue screen.")
+                    : t("consent.signedRedirecting", "Document signed successfully! Redirecting…")}
+                </div>
+                {isQueuePopup ? (
+                  <p className="text-center text-sm text-success-800/90">
+                    {t(
+                      "consent.signedQueuePopupHint",
+                      "You can close this tab — the queue screen will finish check-in automatically."
+                    )}
+                  </p>
+                ) : null}
               </div>
             ) : (
               <ConsentScrollGate
