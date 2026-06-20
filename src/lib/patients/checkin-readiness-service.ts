@@ -3,16 +3,18 @@ import { fetchAppointments } from "@/lib/appointments/appointment-service"
 import { getPatientBillingGate } from "@/lib/billing/invoice-service"
 import { fetchPatientConsents } from "@/lib/patients/consent-service"
 import {
-  CHECKIN_REQUIRED_CONSENT_SLUGS,
   findCheckInBlockingConsentSlug,
   resolveCheckInConsentHref,
   resolveConsentDisplayStatus,
-  type CheckInRequiredConsentSlug,
 } from "@/lib/patients/checkin-consent"
+import {
+  fetchIntakeConsentSlugs,
+  normalizeIntakeConsentSlugs,
+} from "@/lib/patients/intake-consent-slugs-service"
 import { toDateKey } from "@/lib/appointments/week-calendar"
 
 export type CheckInReadinessConsent = {
-  slug: CheckInRequiredConsentSlug
+  slug: string
   label: string
   status: "not_started" | "pending" | "signed" | "voided"
 }
@@ -20,7 +22,7 @@ export type CheckInReadinessConsent = {
 export type CheckInReadiness = {
   patientId: string
   consents: CheckInReadinessConsent[]
-  blockingConsentSlug: CheckInRequiredConsentSlug | null
+  blockingConsentSlug: string | null
   consentHref: string
   consentReady: boolean
   billing: {
@@ -39,20 +41,26 @@ export type CheckInReadiness = {
   blockers: string[]
 }
 
-const CONSENT_LABELS: Record<CheckInRequiredConsentSlug, string> = {
+const DEFAULT_CONSENT_LABELS: Record<string, string> = {
   "general-treatment": "Data Privacy & General Treatment Consent",
 }
 
 export async function fetchCheckInReadiness(
   patientId: string,
-  branchId: string
+  branchId: string,
+  organizationId?: string | null
 ): Promise<{ data: CheckInReadiness | null; error: string | null }> {
   const today = toDateKey(new Date())
 
-  const [consentsRes, billingRes, appointmentsRes] = await Promise.all([
+  const slugsPromise = organizationId
+    ? fetchIntakeConsentSlugs(organizationId)
+    : Promise.resolve<string[]>([])
+
+  const [consentsRes, billingRes, appointmentsRes, intakeSlugs] = await Promise.all([
     fetchPatientConsents(patientId),
     getPatientBillingGate(patientId),
     fetchAppointments(branchId, today),
+    slugsPromise,
   ])
 
   if (consentsRes.error) return { data: null, error: consentsRes.error }
@@ -61,13 +69,14 @@ export async function fetchCheckInReadiness(
 
   const consents = consentsRes.data
   const billing = billingRes.data
-  const blockingSlug = findCheckInBlockingConsentSlug(consents)
+  const normalizedSlugs = normalizeIntakeConsentSlugs(intakeSlugs)
+  const blockingSlug = findCheckInBlockingConsentSlug(consents, normalizedSlugs)
 
-  const consentItems: CheckInReadinessConsent[] = CHECKIN_REQUIRED_CONSENT_SLUGS.map((slug) => {
+  const consentItems: CheckInReadinessConsent[] = normalizedSlugs.map((slug) => {
     const record = consents.find((c) => c.template_slug === slug && c.status !== "voided")
     return {
       slug,
-      label: record?.template_name ?? CONSENT_LABELS[slug],
+      label: record?.template_name ?? DEFAULT_CONSENT_LABELS[slug] ?? slug,
       status: resolveConsentDisplayStatus(slug, consents),
     }
   })
@@ -90,7 +99,7 @@ export async function fetchCheckInReadiness(
       patientId,
       consents: consentItems,
       blockingConsentSlug: blockingSlug,
-      consentHref: resolveCheckInConsentHref(patientId, consents),
+      consentHref: resolveCheckInConsentHref(patientId, consents, normalizedSlugs),
       consentReady: blockingSlug === null,
       billing: {
         openBalance,

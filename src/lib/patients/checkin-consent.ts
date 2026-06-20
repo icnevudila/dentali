@@ -1,16 +1,17 @@
 import type { PatientConsent } from "@/lib/patients/consent-service"
 import type { ConsentCatalogItem } from "@/lib/patients/consent-service"
+import {
+  FALLBACK_INTAKE_CONSENT_SLUGS,
+  normalizeIntakeConsentSlugs,
+} from "@/lib/patients/intake-consent-slugs-service"
 
-/**
- * Must match active slugs from `public._intake_consent_slugs` in Supabase.
- * DPA was merged into general-treatment (20260613180000); standalone dpa-consent is inactive.
- */
-export const CHECKIN_REQUIRED_CONSENT_SLUGS = ["general-treatment"] as const
+/** Fallback when `_intake_consent_slugs` RPC is unavailable. */
+export const CHECKIN_REQUIRED_CONSENT_SLUGS = FALLBACK_INTAKE_CONSENT_SLUGS
 
-export type CheckInRequiredConsentSlug = (typeof CHECKIN_REQUIRED_CONSENT_SLUGS)[number]
+export type CheckInRequiredConsentSlug = string
 
 /** Legacy slug — redirects to general-treatment when opened directly. */
-export const MERGED_CONSENT_SLUG_ALIASES: Record<string, CheckInRequiredConsentSlug> = {
+export const MERGED_CONSENT_SLUG_ALIASES: Record<string, string> = {
   "dpa-consent": "general-treatment",
 }
 
@@ -23,12 +24,18 @@ export function resolveConsentFormHref(patientId: string, slug: string): string 
   return `/patients/${patientId}/consents/${target}`
 }
 
-const CHECKIN_CONSENT_PRIORITY: CheckInRequiredConsentSlug[] = [...CHECKIN_REQUIRED_CONSENT_SLUGS]
-
 export type ConsentDisplayStatus = "not_started" | "pending" | "signed" | "voided"
 
-export function isCheckInRequiredConsentSlug(slug: string): slug is CheckInRequiredConsentSlug {
-  return (CHECKIN_REQUIRED_CONSENT_SLUGS as readonly string[]).includes(slug)
+function requiredConsentOrder(slug: string, requiredSlugs: readonly string[]): number {
+  const index = requiredSlugs.indexOf(slug)
+  return index === -1 ? 999 : index
+}
+
+export function isCheckInRequiredConsentSlug(
+  slug: string,
+  requiredSlugs?: readonly string[]
+): boolean {
+  return normalizeIntakeConsentSlugs(requiredSlugs).includes(slug)
 }
 
 export function resolveConsentDisplayStatus(
@@ -52,21 +59,19 @@ function consentStatusSortRank(status: ConsentDisplayStatus): number {
   return 2
 }
 
-function requiredConsentOrder(slug: string): number {
-  const index = CHECKIN_CONSENT_PRIORITY.indexOf(slug as CheckInRequiredConsentSlug)
-  return index === -1 ? 999 : index
-}
-
 /** Required + unsigned consents first, then other pending, then signed. */
 export function sortConsentCatalogItems(
   items: ConsentCatalogItem[],
-  consents: PatientConsent[]
+  consents: PatientConsent[],
+  requiredSlugs?: readonly string[]
 ): ConsentCatalogItem[] {
+  const slugs = normalizeIntakeConsentSlugs(requiredSlugs)
+
   return [...items].sort((a, b) => {
     const statusA = resolveConsentDisplayStatus(a.slug, consents)
     const statusB = resolveConsentDisplayStatus(b.slug, consents)
-    const requiredIncompleteA = isCheckInRequiredConsentSlug(a.slug) && consentIncomplete(statusA)
-    const requiredIncompleteB = isCheckInRequiredConsentSlug(b.slug) && consentIncomplete(statusB)
+    const requiredIncompleteA = isCheckInRequiredConsentSlug(a.slug, slugs) && consentIncomplete(statusA)
+    const requiredIncompleteB = isCheckInRequiredConsentSlug(b.slug, slugs) && consentIncomplete(statusB)
 
     if (requiredIncompleteA !== requiredIncompleteB) {
       return requiredIncompleteA ? -1 : 1
@@ -82,8 +87,8 @@ export function sortConsentCatalogItems(
     const rankB = consentStatusSortRank(statusB)
     if (rankA !== rankB) return rankA - rankB
 
-    const orderA = requiredConsentOrder(a.slug)
-    const orderB = requiredConsentOrder(b.slug)
+    const orderA = requiredConsentOrder(a.slug, slugs)
+    const orderB = requiredConsentOrder(b.slug, slugs)
     if (orderA !== orderB) return orderA - orderB
 
     if (a.is_default !== b.is_default) return a.is_default ? -1 : 1
@@ -92,18 +97,23 @@ export function sortConsentCatalogItems(
   })
 }
 
-export function sortPatientConsentsForDisplay(consents: PatientConsent[]): PatientConsent[] {
+export function sortPatientConsentsForDisplay(
+  consents: PatientConsent[],
+  requiredSlugs?: readonly string[]
+): PatientConsent[] {
+  const slugs = normalizeIntakeConsentSlugs(requiredSlugs)
+
   return [...consents].sort((a, b) => {
-    const requiredA = isCheckInRequiredConsentSlug(a.template_slug) && a.status === "pending"
-    const requiredB = isCheckInRequiredConsentSlug(b.template_slug) && b.status === "pending"
+    const requiredA = isCheckInRequiredConsentSlug(a.template_slug, slugs) && a.status === "pending"
+    const requiredB = isCheckInRequiredConsentSlug(b.template_slug, slugs) && b.status === "pending"
     if (requiredA !== requiredB) return requiredA ? -1 : 1
 
     const pendingA = a.status === "pending"
     const pendingB = b.status === "pending"
     if (pendingA !== pendingB) return pendingA ? -1 : 1
 
-    const orderA = requiredConsentOrder(a.template_slug)
-    const orderB = requiredConsentOrder(b.template_slug)
+    const orderA = requiredConsentOrder(a.template_slug, slugs)
+    const orderB = requiredConsentOrder(b.template_slug, slugs)
     if (orderA !== orderB) return orderA - orderB
 
     return a.template_name.localeCompare(b.template_name)
@@ -112,9 +122,10 @@ export function sortPatientConsentsForDisplay(consents: PatientConsent[]): Patie
 
 /** First intake consent blocking check-in (unsigned or not yet created). */
 export function findCheckInBlockingConsentSlug(
-  consents: PatientConsent[]
-): CheckInRequiredConsentSlug | null {
-  for (const slug of CHECKIN_CONSENT_PRIORITY) {
+  consents: PatientConsent[],
+  requiredSlugs?: readonly string[]
+): string | null {
+  for (const slug of normalizeIntakeConsentSlugs(requiredSlugs)) {
     const active = consents.filter((c) => c.template_slug === slug && c.status !== "voided")
     const signed = active.some((c) => c.status === "signed")
     if (!signed) return slug
@@ -122,21 +133,26 @@ export function findCheckInBlockingConsentSlug(
   return null
 }
 
-export function resolveCheckInConsentHref(patientId: string, consents: PatientConsent[]): string {
-  const slug = findCheckInBlockingConsentSlug(consents) ?? "general-treatment"
+export function resolveCheckInConsentHref(
+  patientId: string,
+  consents: PatientConsent[],
+  requiredSlugs?: readonly string[]
+): string {
+  const slug =
+    findCheckInBlockingConsentSlug(consents, requiredSlugs) ?? normalizeIntakeConsentSlugs(requiredSlugs)[0]
   return `/patients/${patientId}/consents/${slug}`
 }
 
 export function checkInConsentFormLabel(
   consents: PatientConsent[],
-  t: (key: string, fallback: string) => string
+  t: (key: string, fallback: string) => string,
+  requiredSlugs?: readonly string[]
 ): string {
-  const slug = findCheckInBlockingConsentSlug(consents)
+  const slug = findCheckInBlockingConsentSlug(consents, requiredSlugs)
   if (!slug) {
     return t("queue.openRequiredConsent", "Sign required consent")
   }
   const record = consents.find((c) => c.template_slug === slug && c.status !== "voided")
-  const name =
-    record?.template_name ?? "Data Privacy & General Treatment Consent"
+  const name = record?.template_name ?? "Data Privacy & General Treatment Consent"
   return t("queue.openRequiredConsentNamed", "Sign: {name}").replace("{name}", name)
 }

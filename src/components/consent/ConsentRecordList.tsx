@@ -16,6 +16,8 @@ import {
   resolveConsentFormHref,
   sortPatientConsentsForDisplay,
 } from "@/lib/patients/checkin-consent"
+import { useIntakeConsentSlugs } from "@/hooks/use-intake-consent-slugs"
+import { fetchOrganization } from "@/lib/auth/auth-service"
 import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 
 export function ConsentRecordList({
@@ -25,6 +27,8 @@ export function ConsentRecordList({
   consents: PatientConsent[]
   patientId: string
 }) {
+  const [orgId, setOrgId] = React.useState<string | null>(null)
+  const intakeConsentSlugs = useIntakeConsentSlugs(orgId)
   const [linkLoading, setLinkLoading] = React.useState<string | null>(null)
   const [linkCopied, setLinkCopied] = React.useState<string | null>(null)
   const [linkError, setLinkError] = React.useState<string | null>(null)
@@ -44,14 +48,21 @@ export function ConsentRecordList({
     setTimeout(() => setLinkCopied(null), 2500)
   }
 
+  React.useEffect(() => {
+    void fetchOrganization().then((org) => {
+      if (org?.id) setOrgId(org.id)
+    })
+  }, [])
+
   const sortedConsents = React.useMemo(
     () =>
       sortPatientConsentsForDisplay(
         consents.filter(
           (c) => c.status !== "pending" || !isLegacyMergedConsentSlug(c.template_slug)
-        )
+        ),
+        intakeConsentSlugs
       ),
-    [consents]
+    [consents, intakeConsentSlugs]
   )
 
   if (consents.length === 0) {
@@ -76,7 +87,7 @@ export function ConsentRecordList({
           primary={
             <span className="inline-flex flex-wrap items-center gap-2">
               {c.template_name}
-              {isCheckInRequiredConsentSlug(c.template_slug) && c.status === "pending" ? (
+              {isCheckInRequiredConsentSlug(c.template_slug, intakeConsentSlugs) && c.status === "pending" ? (
                 <Badge variant="warning" className="text-[10px]">
                   Required
                 </Badge>

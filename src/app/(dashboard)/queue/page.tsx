@@ -84,6 +84,8 @@ import {
 } from "@/lib/queue/queue-check-in-return"
 import { subscribeQueueConsentSigned } from "@/lib/queue/queue-consent-channel"
 import { suppressOperationalQueueToast } from "@/lib/operational/operational-toast-guard"
+import { fetchOrganization } from "@/lib/auth/auth-service"
+import { useIntakeConsentSlugs } from "@/hooks/use-intake-consent-slugs"
 import { cn } from "@/lib/utils"
 
 type Tab = "board" | "history"
@@ -211,10 +213,25 @@ function QueuePageContent() {
     patientName: string
     displayCode?: string
   } | null>(null)
+  const [autoCheckInFailed, setAutoCheckInFailed] = React.useState<{
+    action: PendingCheckInAction
+    reuseEncounterId: string | null
+    patientDisplayName: string
+    notes?: string
+    error: string
+  } | null>(null)
+  const [orgId, setOrgId] = React.useState<string | null>(null)
+  const intakeConsentSlugs = useIntakeConsentSlugs(orgId)
   const seededWalkInRef = React.useRef(false)
   const resumeHandledRef = React.useRef(false)
   const autoCheckInBannerTimerRef = React.useRef<number | null>(null)
   const queueBoardRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    void fetchOrganization().then((org) => {
+      if (org?.id) setOrgId(org.id)
+    })
+  }, [])
 
   const scheduleAutoCheckInBannerClear = React.useCallback((ms: number) => {
     if (autoCheckInBannerTimerRef.current) {
@@ -636,8 +653,8 @@ function QueuePageContent() {
         pendingFromCheckInAction(action, "consent", reuseEncounterId, checkInNotes || undefined)
       )
       void fetchPatientConsents(action.patientId).then(({ data: consents }) => {
-        const consentHref = resolveCheckInConsentHref(action.patientId, consents)
-        const consentButtonLabel = checkInConsentFormLabel(consents, t)
+        const consentHref = resolveCheckInConsentHref(action.patientId, consents, intakeConsentSlugs)
+        const consentButtonLabel = checkInConsentFormLabel(consents, t, intakeConsentSlugs)
         const pending = pendingFromCheckInAction(action, "consent", reuseEncounterId, checkInNotes || undefined)
         const consentHrefWithReturn = hrefWithQueueReturn(consentHref, pending)
         setCheckInGate({
@@ -721,11 +738,21 @@ function QueuePageContent() {
       setCheckingIn(false)
       if (loadingToastId !== undefined) notify.dismiss(loadingToastId)
       if (err) {
-        if (meta?.afterConsent) setAutoCheckInBanner(null)
+        if (meta?.afterConsent) {
+          setAutoCheckInBanner(null)
+          setAutoCheckInFailed({
+            action,
+            reuseEncounterId: reuseEncounterId ?? null,
+            patientDisplayName: displayName,
+            notes: visitNotes,
+            error: err,
+          })
+        }
         if (handleCheckInGateError(err, action, reuseEncounterId)) return
         setError(err)
         notify.error(err)
       } else {
+        setAutoCheckInFailed(null)
         setCheckInGate(null)
         setResumeCheckIn(null)
         clearPendingQueueCheckIn()
@@ -786,11 +813,21 @@ function QueuePageContent() {
       setApptCheckInId(null)
       if (loadingToastId !== undefined) notify.dismiss(loadingToastId)
       if (err) {
-        if (meta?.afterConsent) setAutoCheckInBanner(null)
+        if (meta?.afterConsent) {
+          setAutoCheckInBanner(null)
+          setAutoCheckInFailed({
+            action,
+            reuseEncounterId: reuseEncounterId ?? null,
+            patientDisplayName: displayName,
+            notes: visitNotes,
+            error: err,
+          })
+        }
         if (handleCheckInGateError(err, action, reuseEncounterId)) return
         setError(err)
         notify.error(err)
       } else if (data) {
+        setAutoCheckInFailed(null)
         setCheckInGate(null)
         setResumeCheckIn(null)
         clearPendingQueueCheckIn()
@@ -843,15 +880,15 @@ function QueuePageContent() {
     if (!pending || pending.patientId !== patientId) return
 
     const { data: consents } = await fetchPatientConsents(patientId)
-    const blockingSlug = findCheckInBlockingConsentSlug(consents ?? [])
+    const blockingSlug = findCheckInBlockingConsentSlug(consents ?? [], intakeConsentSlugs)
     const action = actionFromPending(pending)
 
     if (blockingSlug) {
       const consentHref = hrefWithQueueReturn(
-        resolveCheckInConsentHref(patientId, consents ?? []),
+        resolveCheckInConsentHref(patientId, consents ?? [], intakeConsentSlugs),
         pending
       )
-      const consentButtonLabel = checkInConsentFormLabel(consents ?? [], t)
+      const consentButtonLabel = checkInConsentFormLabel(consents ?? [], t, intakeConsentSlugs)
       setCheckInGate({
         kind: "consent",
         message: t(
@@ -1382,6 +1419,56 @@ function QueuePageContent() {
             </div>
           ) : null}
 
+          {autoCheckInFailed ? (
+            <div
+              className="rounded-xl border border-red-200 bg-red-50/90 p-4 text-red-950 animate-fade-rise"
+              role="alert"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">
+                    {t("queue.consentAutoCheckInFailedTitle", "Check-in could not finish")}
+                  </p>
+                  <p className="mt-1 text-sm opacity-90">
+                    {t(
+                      "queue.consentAutoCheckInFailedBody",
+                      "Consent was signed for {name}, but check-in failed. You can retry or check in manually from the queue."
+                    ).replace("{name}", autoCheckInFailed.patientDisplayName)}
+                  </p>
+                  <p className="mt-2 text-xs text-red-800/80">{autoCheckInFailed.error}</p>
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    disabled={checkingIn || apptCheckInId !== null}
+                    onClick={() => {
+                      const failed = autoCheckInFailed
+                      setAutoCheckInFailed(null)
+                      setAutoCheckInBanner({
+                        phase: "checking",
+                        patientName: failed.patientDisplayName,
+                      })
+                      void executeCheckIn(failed.action, failed.reuseEncounterId, {
+                        afterConsent: true,
+                        patientDisplayName: failed.patientDisplayName,
+                        notes: failed.notes,
+                      })
+                    }}
+                  >
+                    {t("queue.consentAutoCheckInRetry", "Retry check-in")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAutoCheckInFailed(null)}
+                  >
+                    {t("common.dismiss", "Dismiss")}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {autoCheckInBanner ? (
             <div
               className={cn(
@@ -1537,7 +1624,11 @@ function QueuePageContent() {
                       const href =
                         checkInGate.kind === "consent"
                           ? (checkInGate.consentHref ??
-                              resolveCheckInConsentHref(checkInGate.action.patientId, []))
+                              resolveCheckInConsentHref(
+                                checkInGate.action.patientId,
+                                [],
+                                intakeConsentSlugs
+                              ))
                           : `/billing?patient=${checkInGate.action.patientId}`
                       if (checkInGate.kind === "consent") {
                         openConsentInNewTab(href.split("?")[0] ?? href, pending)
@@ -1766,7 +1857,7 @@ function QueuePageContent() {
             const path =
               consentHref?.split("?")[0] ??
               walkInConsentHref?.split("?")[0] ??
-              resolveCheckInConsentHref(selectedPatientId, [])
+              resolveCheckInConsentHref(selectedPatientId, [], intakeConsentSlugs)
             openConsentInNewTab(
               path,
               pendingFromCheckInAction(

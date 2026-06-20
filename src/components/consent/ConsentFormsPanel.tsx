@@ -33,6 +33,7 @@ import {
 } from "@/lib/patients/checkin-consent"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
+import { useIntakeConsentSlugs } from "@/hooks/use-intake-consent-slugs"
 import { cn } from "@/lib/utils"
 import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 import { ConsentScanUploadButton } from "@/components/consent/ConsentScanUploadButton"
@@ -70,6 +71,7 @@ export function ConsentFormsPanel({
   const [linkCopiedSlug, setLinkCopiedSlug] = React.useState<string | null>(null)
   const [activeLinks, setActiveLinks] = React.useState<Record<string, string>>({})
   const [orgId, setOrgId] = React.useState<string | null>(null)
+  const intakeConsentSlugs = useIntakeConsentSlugs(orgId)
 
   React.useEffect(() => {
     void fetchOrganization().then((org) => {
@@ -140,19 +142,20 @@ export function ConsentFormsPanel({
   }
 
   const sortedCatalog = React.useMemo(
-    () => sortConsentCatalogItems(catalog, consents),
-    [catalog, consents]
+    () => sortConsentCatalogItems(catalog, consents, intakeConsentSlugs),
+    [catalog, consents, intakeConsentSlugs]
   )
   const pendingConsents = React.useMemo(
     () =>
       sortPatientConsentsForDisplay(
         consents.filter(
           (c) => c.status === "pending" && !isLegacyMergedConsentSlug(c.template_slug)
-        )
+        ),
+        intakeConsentSlugs
       ),
-    [consents]
+    [consents, intakeConsentSlugs]
   )
-  const blockingSlug = findCheckInBlockingConsentSlug(consents)
+  const blockingSlug = findCheckInBlockingConsentSlug(consents, intakeConsentSlugs)
   const blockingTemplate = blockingSlug
     ? sortedCatalog.find((item) => item.slug === blockingSlug)
     : null
@@ -251,7 +254,7 @@ export function ConsentFormsPanel({
           const isBusy = busySlug === template.slug
           const consentRecord = consents.find((c) => c.template_slug === template.slug)
           const requiredForCheckIn =
-            isCheckInRequiredConsentSlug(template.slug) && status !== "signed"
+            isCheckInRequiredConsentSlug(template.slug, intakeConsentSlugs) && status !== "signed"
 
           return (
             <article

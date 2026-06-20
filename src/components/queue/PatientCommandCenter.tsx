@@ -18,6 +18,7 @@ import {
   fetchCheckInReadiness,
   type CheckInReadiness,
 } from "@/lib/patients/checkin-readiness-service"
+import { fetchOrganization } from "@/lib/auth/auth-service"
 import { cn } from "@/lib/utils"
 
 type PatientCommandCenterProps = {
@@ -55,12 +56,18 @@ export function PatientCommandCenter({
     let cancelled = false
     setLoading(true)
     setError(null)
-    void fetchCheckInReadiness(patientId, branchId).then(({ data, error: err }) => {
+    void (async () => {
+      const org = await fetchOrganization()
+      const { data, error: err } = await fetchCheckInReadiness(
+        patientId,
+        branchId,
+        org?.id ?? null
+      )
       if (cancelled) return
       setReadiness(data)
       setError(err)
       setLoading(false)
-    })
+    })()
     return () => {
       cancelled = true
     }

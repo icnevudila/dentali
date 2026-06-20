@@ -749,6 +749,10 @@ export const codeMessagesEn: MessageTree = {
     consentAutoCheckInBannerDone: "Checked in to Waiting",
     consentAutoCheckInBannerDoneBody: "{name} is in Waiting · queue #{code}",
     consentAutoCheckInBannerDoneBodyNoCode: "{name} is now in Waiting.",
+    consentAutoCheckInFailedTitle: "Check-in could not finish",
+    consentAutoCheckInFailedBody:
+      "Consent was signed for {name}, but check-in failed. You can retry or check in manually from the queue.",
+    consentAutoCheckInRetry: "Retry check-in",
     patientFallback: "Patient",
     dayBoard: "Day board",
     daySummaryPast: "Queue summary — {day}",
@@ -1851,6 +1855,10 @@ export const codeMessagesTr: MessageTree = {
     consentAutoCheckInBannerDone: "Waiting'e check-in yapıldı",
     consentAutoCheckInBannerDoneBody: "{name} Waiting'de · sıra #{code}",
     consentAutoCheckInBannerDoneBodyNoCode: "{name} artık Waiting'de.",
+    consentAutoCheckInFailedTitle: "Check-in tamamlanamadı",
+    consentAutoCheckInFailedBody:
+      "{name} için onam imzalandı ancak check-in başarısız oldu. Tekrar deneyebilir veya sıradan manuel check-in yapabilirsiniz.",
+    consentAutoCheckInRetry: "Check-in'i tekrar dene",
     patientFallback: "Hasta",
     dayBoard: "Gün panosu",
     daySummaryPast: "Sıra özeti — {day}",
