@@ -25,6 +25,7 @@ import { ConsentExportActions } from "@/components/consent/ConsentExportActions"
 import { ConsentSignedDocument } from "@/components/consent/ConsentSignedDocument"
 import { parseConsentFields, type ConsentFieldResponses } from "@/lib/consent/consent-field-types"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
+import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { MERGED_CONSENT_SLUG_ALIASES } from "@/lib/patients/checkin-consent"
 
 export default function ConsentViewPage() {
