@@ -79,11 +79,12 @@ export function openQueueConsentWindow(href: string, pending: PendingQueueCheckI
   if (typeof window === "undefined") return false
 
   savePendingQueueCheckIn(pending)
-  const url = new URL(href, window.location.origin)
+  const parsed = new URL(href, window.location.origin)
+  const url = new URL(parsed.pathname, window.location.origin)
   url.searchParams.set("returnTo", "queue")
   url.searchParams.set("popup", "1")
 
-  const popup = window.open(url.toString(), "_blank", "noopener,noreferrer")
+  const popup = window.open(url.toString(), "_blank")
   return popup != null
 }
 

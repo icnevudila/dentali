@@ -24,6 +24,7 @@ type PatientCommandCenterProps = {
   patientId: string
   branchId: string
   className?: string
+  onOpenConsent?: (href: string) => void
 }
 
 function statusBadge(
@@ -39,7 +40,12 @@ function statusBadge(
   return { label: t("consent.notStarted", "Not started"), variant: "outline" }
 }
 
-export function PatientCommandCenter({ patientId, branchId, className }: PatientCommandCenterProps) {
+export function PatientCommandCenter({
+  patientId,
+  branchId,
+  className,
+  onOpenConsent,
+}: PatientCommandCenterProps) {
   const { t } = useLocale()
   const [readiness, setReadiness] = React.useState<CheckInReadiness | null>(null)
   const [loading, setLoading] = React.useState(true)
@@ -168,12 +174,24 @@ export function PatientCommandCenter({ patientId, branchId, className }: Patient
       </ul>
 
       {!readiness.consentReady ? (
-        <Button asChild size="sm" className="w-full gap-2">
-          <Link href={readiness.consentHref}>
+        onOpenConsent ? (
+          <Button
+            type="button"
+            size="sm"
+            className="w-full gap-2"
+            onClick={() => onOpenConsent(readiness.consentHref)}
+          >
             <FileSignature className="h-4 w-4" aria-hidden />
             {t("queue.openRequiredConsent", "Sign required consent")}
-          </Link>
-        </Button>
+          </Button>
+        ) : (
+          <Button asChild size="sm" className="w-full gap-2">
+            <Link href={readiness.consentHref}>
+              <FileSignature className="h-4 w-4" aria-hidden />
+              {t("queue.openRequiredConsent", "Sign required consent")}
+            </Link>
+          </Button>
+        )
       ) : readiness.ready ? (
         <p className="flex items-center gap-2 text-xs text-emerald-800">
           <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />

@@ -27,7 +27,7 @@ export type WalkInCheckInDialogProps = {
   billingOverridePending: boolean
   consentOverridePending: boolean
   consentFormLabel?: string | null
-  onOpenConsentForm?: () => void
+  onOpenConsentForm?: (consentHref?: string) => void
   onSubmit: (e: React.FormEvent) => void
   onBillingOverride: () => void
   onConsentOverride: () => void
@@ -246,7 +246,12 @@ export function WalkInCheckInDialog({
             </div>
 
             {selectedPatientId && branchId ? (
-              <PatientCommandCenter patientId={selectedPatientId} branchId={branchId} className="p-3" />
+              <PatientCommandCenter
+                patientId={selectedPatientId}
+                branchId={branchId}
+                className="p-3"
+                onOpenConsent={onOpenConsentForm}
+              />
             ) : null}
 
             <div className="space-y-2">

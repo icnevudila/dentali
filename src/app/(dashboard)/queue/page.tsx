@@ -809,8 +809,15 @@ function QueuePageContent() {
   }, [])
 
   const openConsentInNewTab = (href: string, pending: PendingQueueCheckInInput) => {
-    if (openQueueConsentWindow(href, pending)) return
-    router.push(hrefWithQueueReturn(href.split("?")[0] ?? href, pending))
+    const path = href.split("?")[0] ?? href
+    if (openQueueConsentWindow(path, pending)) return
+    notify.info(
+      t(
+        "queue.consentPopupBlocked",
+        "Popup blocked — opening consent in this tab instead."
+      )
+    )
+    router.push(hrefWithQueueReturn(path, pending))
   }
 
   const beginGatedCheckIn = async (action: PendingCheckInAction) => {
@@ -1370,7 +1377,7 @@ function QueuePageContent() {
                               `/patients/${checkInGate.action.patientId}/consents/general-treatment`)
                           : `/billing?patient=${checkInGate.action.patientId}`
                       if (checkInGate.kind === "consent") {
-                        openConsentInNewTab(href, pending)
+                        openConsentInNewTab(href.split("?")[0] ?? href, pending)
                         return
                       }
                       router.push(hrefWithQueueReturn(href, pending))
@@ -1591,10 +1598,14 @@ function QueuePageContent() {
           onSubmit={handleCheckIn}
           onBillingOverride={() => void handleCheckIn({ preventDefault: () => {} } as React.FormEvent, false, true)}
           onConsentOverride={() => void handleCheckIn({ preventDefault: () => {} } as React.FormEvent, true)}
-          onOpenConsentForm={() => {
-            if (!walkInConsentHref || !selectedPatientId) return
+          onOpenConsentForm={(consentHref) => {
+            if (!selectedPatientId) return
+            const path =
+              consentHref?.split("?")[0] ??
+              walkInConsentHref?.split("?")[0] ??
+              `/patients/${selectedPatientId}/consents/general-treatment`
             openConsentInNewTab(
-              walkInConsentHref,
+              path,
               pendingFromCheckInAction(
                 {
                   patientId: selectedPatientId,

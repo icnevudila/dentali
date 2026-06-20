@@ -244,8 +244,14 @@ function ConsentFormPageContent() {
     setTimeout(() => {
       if (returnTo === "queue") {
         broadcastQueueConsentSigned(patientId, formId)
-        if (isQueuePopup) return
-        router.push(queueResumeHref(loadPendingQueueCheckIn()))
+        if (isQueuePopup) {
+          window.setTimeout(() => {
+            window.close()
+          }, 800)
+          return
+        }
+        const pending = loadPendingQueueCheckIn()
+        window.location.assign(queueResumeHref(pending))
         return
       }
       router.push(`/patients/${patientId}/consents/${formId}/view`)
