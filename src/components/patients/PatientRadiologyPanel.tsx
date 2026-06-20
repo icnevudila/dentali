@@ -18,6 +18,12 @@ import {
   EyeOff,
   FileText,
   Images,
+  Move,
+  Pencil,
+  Circle,
+  ArrowUpRight,
+  Undo2,
+  Eraser,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,6 +44,14 @@ import {
   uploadPatientDocument,
   type PatientDocument,
 } from "@/lib/patients/patient-documents-service"
+import { RadiologyAnnotationLayer } from "@/components/patients/RadiologyAnnotationLayer"
+import {
+  RADIOLOGY_STROKE_COLORS,
+  type InteractionMode,
+  type RadiologyAnnotation,
+  type RadiologyDrawTool,
+  type RadiologyStrokeColor,
+} from "@/lib/radiology/annotation-types"
 
 interface RadiologyImage extends PatientDocument {
   url: string | null
@@ -65,6 +79,30 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
   const [isDragging, setIsDragging] = React.useState(false)
   const dragStart = React.useRef({ x: 0, y: 0 })
   const [viewerMounted, setViewerMounted] = React.useState(false)
+  const imageRef = React.useRef<HTMLImageElement>(null)
+  const [interactionMode, setInteractionMode] = React.useState<InteractionMode>("navigate")
+  const [drawTool, setDrawTool] = React.useState<RadiologyDrawTool>("freehand")
+  const [strokeColor, setStrokeColor] = React.useState<RadiologyStrokeColor>("#ef4444")
+  const [annotationsByImageId, setAnnotationsByImageId] = React.useState<Record<string, RadiologyAnnotation[]>>({})
+
+  const currentAnnotations = selectedImage ? (annotationsByImageId[selectedImage.id] ?? []) : []
+
+  const setCurrentAnnotations = React.useCallback(
+    (next: RadiologyAnnotation[]) => {
+      if (!selectedImage) return
+      setAnnotationsByImageId((prev) => ({ ...prev, [selectedImage.id]: next }))
+    },
+    [selectedImage]
+  )
+
+  const undoAnnotation = React.useCallback(() => {
+    if (currentAnnotations.length === 0) return
+    setCurrentAnnotations(currentAnnotations.slice(0, -1))
+  }, [currentAnnotations, setCurrentAnnotations])
+
+  const clearAnnotations = React.useCallback(() => {
+    setCurrentAnnotations([])
+  }, [setCurrentAnnotations])
 
   React.useEffect(() => {
     setViewerMounted(true)
@@ -77,7 +115,14 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
     document.body.style.overflow = "hidden"
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSelectedImage(null)
+      if (event.key === "Escape") {
+        setSelectedImage(null)
+        return
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+        event.preventDefault()
+        undoAnnotation()
+      }
     }
     window.addEventListener("keydown", onKeyDown)
 
@@ -85,7 +130,7 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
       document.body.style.overflow = previousOverflow
       window.removeEventListener("keydown", onKeyDown)
     }
-  }, [selectedImage])
+  }, [selectedImage, undoAnnotation])
 
   const dateLocale = locale === "tr" ? "tr-PH" : locale === "fil" ? "fil-PH" : "en-PH"
 
@@ -217,8 +262,14 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
   const pdfCount = images.filter((image) => image.file_type === "application/pdf").length
   const latestImage = images[0] ?? null
 
+  const openImageViewer = (img: RadiologyImage) => {
+    setSelectedImage(img)
+    setInteractionMode("navigate")
+    resetFilters()
+  }
+
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (zoom <= 1) return
+    if (interactionMode !== "navigate" || zoom <= 1) return
     setIsDragging(true)
     dragStart.current = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y }
   }
@@ -288,8 +339,8 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
             <div className="flex min-h-0 flex-1 flex-col md:flex-row">
               <div
                 className={`relative flex min-h-[55vh] min-w-0 flex-1 items-center justify-center overflow-hidden bg-neutral-950 p-3 md:min-h-0 md:p-6 ${
-                  zoom > 1 ? "cursor-grab" : ""
-                } ${isDragging ? "cursor-grabbing" : ""}`}
+                  interactionMode === "navigate" && zoom > 1 ? "cursor-grab" : ""
+                } ${interactionMode === "navigate" && isDragging ? "cursor-grabbing" : ""}`}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
@@ -297,19 +348,28 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
               >
                 {selectedImage.url ? (
                   <div
-                    className="flex max-h-full max-w-full items-center justify-center transition-transform duration-100 ease-out"
+                    className="relative inline-flex max-h-full max-w-full items-center justify-center transition-transform duration-100 ease-out"
                     style={{
                       transform: `translate(${panOffset.x}px, ${panOffset.y}px) rotate(${rotation}deg) scale(${zoom})`,
                     }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
+                      ref={imageRef}
                       src={selectedImage.url}
                       alt={selectedImage.file_name}
-                      className="pointer-events-none max-h-[calc(100dvh-11rem)] max-w-[calc(100vw-1.5rem)] object-contain md:max-h-[calc(100dvh-7rem)] md:max-w-[calc(100vw-22rem)]"
+                      className="pointer-events-none block max-h-[calc(100dvh-11rem)] max-w-[calc(100vw-1.5rem)] object-contain md:max-h-[calc(100dvh-7rem)] md:max-w-[calc(100vw-22rem)]"
                       style={{
                         filter: `brightness(${brightness}%) contrast(${contrast}%) invert(${invert ? 100 : 0}%)`,
                       }}
+                    />
+                    <RadiologyAnnotationLayer
+                      imageRef={imageRef}
+                      annotations={currentAnnotations}
+                      onAnnotationsChange={setCurrentAnnotations}
+                      tool={drawTool}
+                      color={strokeColor}
+                      enabled={interactionMode === "draw"}
                     />
                   </div>
                 ) : null}
@@ -426,12 +486,132 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
                       {t("patients.invertColors", "Invert Colors")}
                     </Button>
                   </div>
+
+                  <div className="space-y-3 border-t border-neutral-800 pt-4">
+                    <div>
+                      <h4 className="mb-1 text-sm font-bold uppercase tracking-wider text-neutral-300">
+                        {t("patients.markupTools", "Marking tools")}
+                      </h4>
+                      <p className="text-xs text-neutral-400">
+                        {t(
+                          "patients.markupSessionHint",
+                          "Markings stay for this session only and are not saved to the patient record."
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        className={`h-9 gap-1.5 border-neutral-700 text-xs text-white hover:bg-neutral-800 ${
+                          interactionMode === "navigate" ? "border-primary-600 bg-primary-600/20" : "bg-transparent"
+                        }`}
+                        onClick={() => setInteractionMode("navigate")}
+                      >
+                        <Move className="h-3.5 w-3.5" />
+                        {t("patients.toolNavigate", "Pan / zoom")}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className={`h-9 gap-1.5 border-neutral-700 text-xs text-white hover:bg-neutral-800 ${
+                          interactionMode === "draw" ? "border-primary-600 bg-primary-600/20" : "bg-transparent"
+                        }`}
+                        onClick={() => setInteractionMode("draw")}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        {t("patients.toolDraw", "Draw")}
+                      </Button>
+                    </div>
+
+                    {interactionMode === "draw" ? (
+                      <>
+                        <div className="grid grid-cols-3 gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={`h-9 border-neutral-700 text-xs text-white hover:bg-neutral-800 ${
+                              drawTool === "freehand" ? "border-primary-600 bg-primary-600/20" : "bg-transparent"
+                            }`}
+                            onClick={() => setDrawTool("freehand")}
+                          >
+                            <Pencil className="mr-1 h-3.5 w-3.5" />
+                            {t("patients.toolFreehand", "Pen")}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={`h-9 border-neutral-700 text-xs text-white hover:bg-neutral-800 ${
+                              drawTool === "arrow" ? "border-primary-600 bg-primary-600/20" : "bg-transparent"
+                            }`}
+                            onClick={() => setDrawTool("arrow")}
+                          >
+                            <ArrowUpRight className="mr-1 h-3.5 w-3.5" />
+                            {t("patients.toolArrow", "Arrow")}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={`h-9 border-neutral-700 text-xs text-white hover:bg-neutral-800 ${
+                              drawTool === "circle" ? "border-primary-600 bg-primary-600/20" : "bg-transparent"
+                            }`}
+                            onClick={() => setDrawTool("circle")}
+                          >
+                            <Circle className="mr-1 h-3.5 w-3.5" />
+                            {t("patients.toolCircle", "Circle")}
+                          </Button>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-neutral-400">{t("patients.markupColor", "Color")}</span>
+                          {RADIOLOGY_STROKE_COLORS.map((color) => (
+                            <button
+                              key={color}
+                              type="button"
+                              aria-label={color}
+                              className={`h-7 w-7 rounded-full border-2 transition-transform ${
+                                strokeColor === color ? "scale-110 border-white" : "border-neutral-600"
+                              }`}
+                              style={{ backgroundColor: color }}
+                              onClick={() => setStrokeColor(color)}
+                            />
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-9 gap-1.5 border-neutral-700 bg-transparent text-xs text-white hover:bg-neutral-800"
+                            disabled={currentAnnotations.length === 0}
+                            onClick={undoAnnotation}
+                          >
+                            <Undo2 className="h-3.5 w-3.5" />
+                            {t("patients.undoMarkup", "Undo")}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-9 gap-1.5 border-neutral-700 bg-transparent text-xs text-white hover:bg-neutral-800"
+                            disabled={currentAnnotations.length === 0}
+                            onClick={clearAnnotations}
+                          >
+                            <Eraser className="h-3.5 w-3.5" />
+                            {t("patients.clearMarkup", "Clear all")}
+                          </Button>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div className="space-y-4 border-t border-neutral-800 pt-6">
-                  {zoom > 1 ? (
+                  {interactionMode === "navigate" && zoom > 1 ? (
                     <p className="text-center text-xs italic text-neutral-400">
                       {t("patients.panHint", "Drag the image to pan around")}
+                    </p>
+                  ) : interactionMode === "draw" ? (
+                    <p className="text-center text-xs italic text-neutral-400">
+                      {t("patients.drawHint", "Draw on the image to mark findings")}
                     </p>
                   ) : null}
                   <Button
@@ -570,8 +750,7 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
                     className="group relative border rounded-lg overflow-hidden bg-white hover:shadow-md transition-all cursor-pointer flex flex-col"
                     onClick={() => {
                       if (!isPdf && img.url) {
-                        setSelectedImage(img)
-                        resetFilters()
+                        openImageViewer(img)
                       } else {
                         handleDownload(img)
                       }
