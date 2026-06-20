@@ -217,7 +217,7 @@ export function buildClinicalVisitJourney(params: {
     {
       id: "consents",
       label: "Consents signed",
-      description: "DPA and general treatment consent on file",
+      description: "Data privacy & general treatment consent on file",
       status: stepStatus(statuses, "consents"),
       href: consentsDone ? undefined : `/patients/${patientId}?tab=consents`,
       phase: "intake",

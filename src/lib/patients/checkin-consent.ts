@@ -1,12 +1,29 @@
 import type { PatientConsent } from "@/lib/patients/consent-service"
 import type { ConsentCatalogItem } from "@/lib/patients/consent-service"
 
-/** Must match active slugs from `public._intake_consent_slugs` in Supabase. */
-export const CHECKIN_REQUIRED_CONSENT_SLUGS = ["general-treatment", "dpa-consent"] as const
+/**
+ * Must match active slugs from `public._intake_consent_slugs` in Supabase.
+ * DPA was merged into general-treatment (20260613180000); standalone dpa-consent is inactive.
+ */
+export const CHECKIN_REQUIRED_CONSENT_SLUGS = ["general-treatment"] as const
 
 export type CheckInRequiredConsentSlug = (typeof CHECKIN_REQUIRED_CONSENT_SLUGS)[number]
 
-const CHECKIN_CONSENT_PRIORITY: CheckInRequiredConsentSlug[] = ["general-treatment", "dpa-consent"]
+/** Legacy slug — redirects to general-treatment when opened directly. */
+export const MERGED_CONSENT_SLUG_ALIASES: Record<string, CheckInRequiredConsentSlug> = {
+  "dpa-consent": "general-treatment",
+}
+
+export function isLegacyMergedConsentSlug(slug: string): boolean {
+  return slug in MERGED_CONSENT_SLUG_ALIASES
+}
+
+export function resolveConsentFormHref(patientId: string, slug: string): string {
+  const target = MERGED_CONSENT_SLUG_ALIASES[slug] ?? slug
+  return `/patients/${patientId}/consents/${target}`
+}
+
+const CHECKIN_CONSENT_PRIORITY: CheckInRequiredConsentSlug[] = [...CHECKIN_REQUIRED_CONSENT_SLUGS]
 
 export type ConsentDisplayStatus = "not_started" | "pending" | "signed" | "voided"
 
@@ -119,6 +136,7 @@ export function checkInConsentFormLabel(
     return t("queue.openRequiredConsent", "Sign required consent")
   }
   const record = consents.find((c) => c.template_slug === slug && c.status !== "voided")
-  const name = record?.template_name ?? (slug === "general-treatment" ? "General Treatment Consent" : "Data Privacy Consent")
+  const name =
+    record?.template_name ?? "Data Privacy & General Treatment Consent"
   return t("queue.openRequiredConsentNamed", "Sign: {name}").replace("{name}", name)
 }

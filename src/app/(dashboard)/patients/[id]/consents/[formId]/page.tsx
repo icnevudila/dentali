@@ -45,6 +45,7 @@ import { ConsentScrollProgress } from "@/components/consent/ConsentScrollProgres
 import { ConsentSigningSteps } from "@/components/consent/ConsentSigningSteps"
 import { ConsentFieldProgress } from "@/components/consent/ConsentFieldProgress"
 import { useConsentScrollGate } from "@/hooks/use-consent-scroll-gate"
+import { MERGED_CONSENT_SLUG_ALIASES } from "@/lib/patients/checkin-consent"
 import { queueResumeHref, loadPendingQueueCheckIn } from "@/lib/queue/queue-check-in-return"
 import { broadcastQueueConsentSigned } from "@/lib/queue/queue-consent-channel"
 
@@ -93,6 +94,15 @@ function ConsentFormPageContent() {
   }, [])
 
   React.useEffect(() => {
+    const aliasTarget = MERGED_CONSENT_SLUG_ALIASES[formId]
+    if (aliasTarget) {
+      const qs = searchParams.toString()
+      router.replace(
+        `/patients/${patientId}/consents/${aliasTarget}${qs ? `?${qs}` : ""}`
+      )
+      return
+    }
+
     const slug = formId
     Promise.all([
       fetchConsentTemplate(slug),
@@ -135,7 +145,7 @@ function ConsentFormPageContent() {
       }
       setLoading(false)
     })
-  }, [patientId, formId, user, activeBranch?.id, router, t, loadKey])
+  }, [patientId, formId, user, activeBranch?.id, router, searchParams, t, loadKey])
 
   const fields = parseConsentFields(templateFields)
   const variables = buildConsentVariables({

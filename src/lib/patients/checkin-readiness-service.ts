@@ -40,8 +40,7 @@ export type CheckInReadiness = {
 }
 
 const CONSENT_LABELS: Record<CheckInRequiredConsentSlug, string> = {
-  "general-treatment": "General Treatment Consent",
-  "dpa-consent": "Data Privacy Consent",
+  "general-treatment": "Data Privacy & General Treatment Consent",
 }
 
 export async function fetchCheckInReadiness(

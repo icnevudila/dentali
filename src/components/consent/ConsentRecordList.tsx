@@ -10,7 +10,12 @@ import {
   createConsentSigningToken,
   type PatientConsent,
 } from "@/lib/patients/consent-service"
-import { isCheckInRequiredConsentSlug, sortPatientConsentsForDisplay } from "@/lib/patients/checkin-consent"
+import {
+  isCheckInRequiredConsentSlug,
+  isLegacyMergedConsentSlug,
+  resolveConsentFormHref,
+  sortPatientConsentsForDisplay,
+} from "@/lib/patients/checkin-consent"
 import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 
 export function ConsentRecordList({
@@ -40,7 +45,12 @@ export function ConsentRecordList({
   }
 
   const sortedConsents = React.useMemo(
-    () => sortPatientConsentsForDisplay(consents),
+    () =>
+      sortPatientConsentsForDisplay(
+        consents.filter(
+          (c) => c.status !== "pending" || !isLegacyMergedConsentSlug(c.template_slug)
+        )
+      ),
     [consents]
   )
 
@@ -103,7 +113,7 @@ export function ConsentRecordList({
                 </Button>
                 <Button size="sm" asChild onClick={(e) => e.stopPropagation()}>
                   <Link
-                    href={`/patients/${patientId}/consents/${c.template_slug}`}
+                    href={resolveConsentFormHref(patientId, c.template_slug)}
                     transitionTypes={NAV_FORWARD_TRANSITION}
                   >
                     Sign

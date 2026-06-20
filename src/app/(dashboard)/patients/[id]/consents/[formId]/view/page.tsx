@@ -25,7 +25,7 @@ import { ConsentExportActions } from "@/components/consent/ConsentExportActions"
 import { ConsentSignedDocument } from "@/components/consent/ConsentSignedDocument"
 import { parseConsentFields, type ConsentFieldResponses } from "@/lib/consent/consent-field-types"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
-import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
+import { MERGED_CONSENT_SLUG_ALIASES } from "@/lib/patients/checkin-consent"
 
 export default function ConsentViewPage() {
   const { id: patientId, formId: templateSlug } = useRouteParams<{ id: string; formId: string }>()
@@ -69,30 +69,44 @@ export default function ConsentViewPage() {
         setPatientDob(patientResult.data.date_of_birth ?? "")
       }
       if (org) setOrgName(org.name)
-      if (templateResult.error || !templateResult.data) {
-        setError(templateResult.error ?? "Template not found")
-      } else {
-        setTemplateName(templateResult.data.name)
-        setTemplateBody(templateResult.data.body)
-        setTemplateVersion(templateResult.data.version)
-        setTemplateFields(templateResult.data.fields ?? [])
+
+      const consent = consentResult.data
+      const template = templateResult.data
+
+      if (template) {
+        setTemplateName(template.name)
+        setTemplateBody(template.body)
+        setTemplateVersion(template.version)
+        setTemplateFields(template.fields ?? [])
+      } else if (consent) {
+        setTemplateName(consent.template_name)
       }
+
+      if ((templateResult.error || !template) && !consent?.body_snapshot) {
+        setError(templateResult.error ?? "Template not found")
+      }
+
       if (consentResult.error) setError(consentResult.error)
-      else if (consentResult.data) {
-        setConsentId(consentResult.data.id)
-        setStatus(consentResult.data.status)
-        setSignature(consentResult.data.signature_data)
-        setSignedAt(consentResult.data.signed_at)
-        setBodySnapshot(consentResult.data.body_snapshot)
-        if (consentResult.data.field_responses) {
-          setFieldResponses(consentResult.data.field_responses as ConsentFieldResponses)
+      else if (consent) {
+        setConsentId(consent.id)
+        setStatus(consent.status)
+        setSignature(consent.signature_data)
+        setSignedAt(consent.signed_at)
+        setBodySnapshot(consent.body_snapshot)
+        if (consent.field_responses) {
+          setFieldResponses(consent.field_responses as ConsentFieldResponses)
         }
-        if (consentResult.data.signed_pdf_path) {
-          getSignedConsentExportUrl(consentResult.data.signed_pdf_path).then(({ url }) => {
+        if (consent.signed_pdf_path) {
+          getSignedConsentExportUrl(consent.signed_pdf_path).then(({ url }) => {
             if (url) setStoredExportUrl(url)
           })
         }
-        if (consentResult.data.status !== "signed") {
+        if (consent.status !== "signed") {
+          const alias = MERGED_CONSENT_SLUG_ALIASES[templateSlug]
+          if (alias) {
+            router.replace(`/patients/${patientId}/consents/${alias}`)
+            return
+          }
           setError("This consent has not been signed yet.")
         }
       } else {
@@ -100,7 +114,7 @@ export default function ConsentViewPage() {
       }
       setLoading(false)
     })
-  }, [patientId, templateSlug, loadKey])
+  }, [patientId, templateSlug, loadKey, router])
 
   const handleVoid = async () => {
     if (!consentId || !voidReason.trim()) return

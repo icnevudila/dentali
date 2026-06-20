@@ -25,7 +25,9 @@ import {
 import {
   findCheckInBlockingConsentSlug,
   isCheckInRequiredConsentSlug,
+  isLegacyMergedConsentSlug,
   resolveConsentDisplayStatus,
+  resolveConsentFormHref,
   sortConsentCatalogItems,
   sortPatientConsentsForDisplay,
 } from "@/lib/patients/checkin-consent"
@@ -109,7 +111,7 @@ export function ConsentFormsPanel({
     const consentId = await ensureAndGetConsentId(template)
     setBusySlug(null)
     if (!consentId) return
-    router.push(`/patients/${patientId}/consents/${template.slug}`)
+    router.push(resolveConsentFormHref(patientId, template.slug))
   }
 
   const handlePatientLink = async (template: ConsentCatalogItem) => {
@@ -142,7 +144,12 @@ export function ConsentFormsPanel({
     [catalog, consents]
   )
   const pendingConsents = React.useMemo(
-    () => sortPatientConsentsForDisplay(consents.filter((c) => c.status === "pending")),
+    () =>
+      sortPatientConsentsForDisplay(
+        consents.filter(
+          (c) => c.status === "pending" && !isLegacyMergedConsentSlug(c.template_slug)
+        )
+      ),
     [consents]
   )
   const blockingSlug = findCheckInBlockingConsentSlug(consents)
@@ -434,7 +441,7 @@ export function ConsentFormsPanel({
                     </Button>
                     <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" asChild>
                       <Link
-                        href={`/patients/${patientId}/consents/${c.template_slug}`}
+                        href={resolveConsentFormHref(patientId, c.template_slug)}
                         transitionTypes={NAV_FORWARD_TRANSITION}
                       >
                         Continue

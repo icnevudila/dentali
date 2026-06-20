@@ -757,7 +757,7 @@ function QueuePageContent() {
         kind: "consent",
         message: t(
           "queue.consentNextForm",
-          "One consent signed — open the next required form to continue."
+          "Finish the required intake consent to continue check-in."
         ),
         action,
         reuseEncounterId: pending.reuseEncounterId ?? null,
@@ -776,7 +776,10 @@ function QueuePageContent() {
         setResumeCheckIn(pending)
       }
       notify.info(
-        t("queue.consentPartialSigned", "Consent signed — one more form is still required.")
+        t(
+          "queue.consentPartialSigned",
+          "Intake consent is still incomplete — open the form to finish signing."
+        )
       )
       return
     }
@@ -1374,7 +1377,7 @@ function QueuePageContent() {
                       const href =
                         checkInGate.kind === "consent"
                           ? (checkInGate.consentHref ??
-                              `/patients/${checkInGate.action.patientId}/consents/general-treatment`)
+                              resolveCheckInConsentHref(checkInGate.action.patientId, []))
                           : `/billing?patient=${checkInGate.action.patientId}`
                       if (checkInGate.kind === "consent") {
                         openConsentInNewTab(href.split("?")[0] ?? href, pending)
@@ -1603,7 +1606,7 @@ function QueuePageContent() {
             const path =
               consentHref?.split("?")[0] ??
               walkInConsentHref?.split("?")[0] ??
-              `/patients/${selectedPatientId}/consents/general-treatment`
+              resolveCheckInConsentHref(selectedPatientId, [])
             openConsentInNewTab(
               path,
               pendingFromCheckInAction(
