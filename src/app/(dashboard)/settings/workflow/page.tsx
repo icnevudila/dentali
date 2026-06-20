@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Workflow } from "lucide-react"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
@@ -15,161 +15,40 @@ import {
   type AutomationLogEntry,
 } from "@/lib/analytics/analytics-service"
 import { fetchOwnerDigestReadiness, type OwnerDigestReadiness } from "@/lib/staff/staff-service"
+import { fetchBranchSetting } from "@/lib/org/branch-context-service"
+import { getWorkflowGroups } from "@/lib/settings/workflow-rules-ui"
 import { ATTENTION_RULE_UI } from "@/lib/dashboard/attention-rules"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 
-type WorkflowRule = {
-  key: string
-  label: string
-  description: string
-}
-
-const WORKFLOW_GROUPS: { title: string; items: WorkflowRule[] }[] = [
-  {
-    title: "Queue & Appointments",
-    items: [
-      {
-        key: "auto_checkin_updates_appointment",
-        label: "Check-in updates appointment",
-        description: "When a patient is checked in from the queue, linked appointment moves to checked_in.",
-      },
-      {
-        key: "auto_served_completes_appointment",
-        label: "Served completes appointment",
-        description: "Marking queue entry as served completes the linked appointment.",
-      },
-      {
-        key: "consent_gate_checkin",
-        label: "Consent gate on check-in",
-        description:
-          "Block check-in when intake consents (data privacy and general treatment) are unsigned; staff can override with audit. Procedure consents are collected at the chair.",
-      },
-      {
-        key: "auto_waitlist_on_slot_open",
-        label: "No-show opens waitlist slot",
-        description: "Cancelled or no-show appointments notify matching waitlist entries.",
-      },
-      {
-        key: "auto_no_show_after_grace",
-        label: "Auto no-show after 15 min",
-        description:
-          "Marks scheduled/confirmed appointments as no-show when check-in is missing. Runs on queue page refresh and existing appointment-reminders-cron (no new Vercel cron).",
-      },
-    ],
-  },
-  {
-    title: "Billing & Claims",
-    items: [
-      {
-        key: "auto_approve_creates_invoice",
-        label: "Plan approval automation event",
-        description:
-          "Emit workflow automation when a plan is approved. Invoice draft is always created on approval regardless of this toggle.",
-      },
-      {
-        key: "auto_hmo_claim_on_invoice",
-        label: "Invoice creates HMO claim draft",
-        description: "Issued invoice with HMO coverage spawns a draft HMO claim.",
-      },
-      {
-        key: "auto_payment_reminder",
-        label: "Payment balance reminders",
-        description: "Overdue balances enqueue SMS reminders via payment-reminder-cron.",
-      },
-      {
-        key: "billing_gate_block_services",
-        label: "Billing gate on booking and check-in",
-        description:
-          "At check-in and booking: block only overdue balances or totals ≥ ₱5,000. At checkout and clinical steps: full clearance (open invoices and missing plan invoices). Staff can override with audit.",
-      },
-    ],
-  },
-  {
-    title: "Visits & Clinical",
-    items: [
-      {
-        key: "auto_draft_soap_on_chair",
-        label: "Draft SOAP when in chair",
-        description:
-          "When a patient moves to the chair, create a draft clinical note — optionally pre-filled from the last signed SOAP.",
-      },
-      {
-        key: "auto_served_creates_invoice",
-        label: "Served creates invoice draft",
-        description:
-          "When queue entry is marked served, spawn an invoice draft from the encounter's approved treatment plan.",
-      },
-      {
-        key: "auto_close_encounter_on_payment",
-        label: "Payment closes visit",
-        description:
-          "When an encounter-linked invoice is fully paid, automatically close the open visit.",
-      },
-    ],
-  },
-  {
-    title: "Clinical Inventory",
-    items: [
-      {
-        key: "auto_deduct_procedure_bom",
-        label: "Auto-deduct procedure BOM",
-        description: "When queue entry is served, deduct linked inventory materials from approved treatment plan procedures.",
-      },
-    ],
-  },
-  {
-    title: "Notifications",
-    items: [
-      {
-        key: "auto_sms_reminders",
-        label: "SMS appointment reminders",
-        description: "T-24h and T-2h appointment reminders via appointment-reminders-cron.",
-      },
-      {
-        key: "auto_hygiene_recall",
-        label: "Hygiene recall SMS (6 months)",
-        description: "Patients due for check-up receive SMS with booking link via recall-reminder-cron.",
-      },
-      {
-        key: "auto_owner_digest_sms",
-        label: "Owner daily digest SMS",
-        description: "End-of-day branch summary SMS to owner/admin phones via owner-digest-sms-cron.",
-      },
-      {
-        key: "auto_review_request_sms",
-        label: "Google review SMS after visit",
-        description:
-          "When a queue entry is marked served, send a one-time SMS asking for a Google review (30-day dedupe per patient). Set google_review_url in branch settings.",
-      },
-    ],
-  },
-]
-
 export default function WorkflowSettingsPage() {
   const { activeBranch } = useBranch()
   const { t } = useLocale()
+  const workflowGroups = useMemo(() => getWorkflowGroups(t), [t])
   const [settings, setSettings] = useState<Record<string, boolean> | null>(null)
   const [loading, setLoading] = useState(true)
   const [savingKey, setSavingKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [automationLog, setAutomationLog] = useState<AutomationLogEntry[]>([])
   const [digestReadiness, setDigestReadiness] = useState<OwnerDigestReadiness | null>(null)
+  const [googleReviewUrl, setGoogleReviewUrl] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!activeBranch) return
     setLoading(true)
     setError(null)
-    const [settingsRes, logRes, digestRes] = await Promise.all([
+    const [settingsRes, logRes, digestRes, reviewRes] = await Promise.all([
       fetchWorkflowSettings(activeBranch.id),
       fetchAutomationRunLog(activeBranch.id, 40),
       fetchOwnerDigestReadiness(activeBranch.id),
+      fetchBranchSetting(activeBranch.id, "google_review_url"),
     ])
     setSettings(settingsRes.data)
     setAutomationLog(logRes.data)
     setDigestReadiness(digestRes.data)
-    setError(settingsRes.error ?? logRes.error ?? digestRes.error)
+    setGoogleReviewUrl(reviewRes.value?.trim() || null)
+    setError(settingsRes.error ?? logRes.error ?? digestRes.error ?? reviewRes.error)
     setLoading(false)
   }, [activeBranch])
 
@@ -216,20 +95,51 @@ export default function WorkflowSettingsPage() {
           <div className="space-y-6">
             {digestReadiness?.workflow_enabled && !digestReadiness.ready ? (
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-                <p className="font-medium">Owner digest SMS needs a phone number</p>
+                <p className="font-medium">
+                  {t("settings.wfDigestPhoneTitle", "Owner digest SMS needs a phone number")}
+                </p>
                 <p className="mt-1 text-xs text-amber-900/90">
-                  {digestReadiness.missing_phone_count} owner/admin at this branch ha{" "}
-                  {digestReadiness.missing_phone_count === 1 ? "s" : "ve"} no mobile on file.
-                  Add numbers under{" "}
+                  {t(
+                    "settings.wfDigestPhoneBody",
+                    "{count} owner/admin at this branch {verb} no mobile on file. Add numbers under Settings → Staff."
+                  )
+                    .replace("{count}", String(digestReadiness.missing_phone_count))
+                    .replace(
+                      "{verb}",
+                      digestReadiness.missing_phone_count === 1 ? "has" : "have"
+                    )}{" "}
                   <Link href="/settings/staff" className="font-medium underline">
-                    Settings → Staff
+                    {t("settings.staffLink", "Settings → Staff")}
                   </Link>
                   .
                 </p>
               </div>
             ) : null}
 
-            {WORKFLOW_GROUPS.map((group) => (
+            {settings?.auto_review_request_sms !== false && !googleReviewUrl ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                <p className="font-medium">
+                  {t("settings.wfReviewUrlTitle", "Google review SMS needs a review URL")}
+                </p>
+                <p className="mt-1 text-xs text-amber-900/90">
+                  {t(
+                    "settings.wfReviewUrlBody",
+                    "Add your Google review link in branch settings so post-visit SMS can include it."
+                  )}{" "}
+                  {activeBranch ? (
+                    <Link
+                      href={`/settings/branches/${activeBranch.id}`}
+                      className="font-medium underline"
+                    >
+                      {t("settings.branchSettingsLink", "Branch settings")}
+                    </Link>
+                  ) : null}
+                  .
+                </p>
+              </div>
+            ) : null}
+
+            {workflowGroups.map((group) => (
               <section key={group.title} className="space-y-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                   {group.title}

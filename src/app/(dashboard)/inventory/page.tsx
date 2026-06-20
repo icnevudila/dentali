@@ -78,7 +78,7 @@ function InventoryPageContent() {
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image file size should be less than 2MB")
+      toast.error(t("inventory.imageTooLarge", "Image file size should be less than 2MB"))
       return
     }
     const reader = new FileReader()
@@ -156,7 +156,11 @@ function InventoryPageContent() {
     if (!user || !activeBranch || !name.trim()) return
     setSaving(true)
     const org = await fetchOrganization()
-    if (!org) { setError("Organization not found"); setSaving(false); return }
+    if (!org) {
+      setError(t("inventory.orgNotFound", "Organization not found"))
+      setSaving(false)
+      return
+    }
 
     if (editingItem) {
       const { error: err } = await updateInventoryItem(editingItem.id, {
@@ -175,7 +179,7 @@ function InventoryPageContent() {
         toast.error(err)
         setError(err)
       } else {
-        toast.success("Item updated successfully")
+        toast.success(t("inventory.itemUpdated", "Item updated successfully"))
         setEditingItem(null)
         resetForm()
         load()
@@ -201,7 +205,7 @@ function InventoryPageContent() {
         toast.error(err)
         setError(err)
       } else {
-        toast.success("Item added successfully")
+        toast.success(t("inventory.itemAdded", "Item added successfully"))
         setShowAdd(false)
         resetForm()
         load()
@@ -220,7 +224,9 @@ function InventoryPageContent() {
       toast.error(err)
       setError(err)
     } else {
-      toast.success(`Stock increased by ${qty}`)
+      toast.success(
+        t("inventory.stockIncreased", "Stock increased by {qty}").replace("{qty}", String(qty))
+      )
       load()
     }
   }
@@ -331,12 +337,16 @@ function InventoryPageContent() {
               <div className="p-6 overflow-y-auto">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-lg font-semibold text-neutral-900">
-                    {editingItem ? "Edit inventory item" : t("inventory.newItem", "New inventory item")}
+                    {editingItem
+                      ? t("inventory.editItem", "Edit inventory item")
+                      : t("inventory.newItem", "New inventory item")}
                   </h2>
                 </div>
                 <form onSubmit={handleSave} className="grid gap-3 sm:grid-cols-2">
                   <div className="sm:col-span-2 space-y-2">
-                    <label className="text-xs text-neutral-500 font-medium">Product Image</label>
+                    <label className="text-xs text-neutral-500 font-medium">
+                      {t("inventory.productImage", "Product image")}
+                    </label>
                     <div className="flex items-center gap-3">
                       {brand && (brand.startsWith("http") || brand.startsWith("data:image/")) ? (
                         <div className="relative w-16 h-16 rounded-md border overflow-hidden shrink-0 group">
@@ -346,7 +356,7 @@ function InventoryPageContent() {
                             className="absolute inset-0 bg-black/50 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                             onClick={() => setBrand("")}
                           >
-                            Remove
+                            {t("inventory.removeImage", "Remove")}
                           </button>
                         </div>
                       ) : (
@@ -366,31 +376,75 @@ function InventoryPageContent() {
                           htmlFor="image-file-input"
                           className="inline-flex items-center justify-center rounded-md text-xs font-medium border border-neutral-200 bg-white px-3 py-2 text-neutral-700 shadow-sm hover:bg-neutral-50 cursor-pointer w-full text-center"
                         >
-                          Upload File
+                          {t("inventory.uploadFile", "Upload file")}
                         </label>
-                        <div className="text-[10px] text-neutral-400 text-center">or enter image URL below:</div>
+                        <div className="text-[10px] text-neutral-400 text-center">
+                          {t("inventory.orImageUrl", "or enter image URL below:")}
+                        </div>
                       </div>
                     </div>
                     <Input
-                      placeholder="https://..."
+                      placeholder={t("inventory.imageUrlPlaceholder", "https://...")}
                       value={brand && brand.startsWith("data:image/") ? "" : brand}
                       onChange={(e) => setBrand(e.target.value)}
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <Input placeholder="Item name *" required value={name} onChange={(e) => setName(e.target.value)} />
+                    <Input
+                      placeholder={t("inventory.namePlaceholder", "Item name *")}
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                    />
                   </div>
-                  <Input placeholder="SKU" value={sku} onChange={(e) => setSku(e.target.value)} />
-                  <Input placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
-                  <Input placeholder="Unit (e.g. pc, box, syringe)" value={unit} onChange={(e) => setUnit(e.target.value)} />
-                  <Input placeholder="Supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} />
-                  <Input type="number" step="0.01" placeholder="Unit Cost (₱)" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} />
-                  <Input type="number" placeholder="Min stock" value={minStock} onChange={(e) => setMinStock(e.target.value)} />
+                  <Input
+                    placeholder={t("inventory.skuPlaceholder", "SKU")}
+                    value={sku}
+                    onChange={(e) => setSku(e.target.value)}
+                  />
+                  <Input
+                    placeholder={t("inventory.categoryPlaceholder", "Category")}
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                  />
+                  <Input
+                    placeholder={t("inventory.unitPlaceholder", "Unit (e.g. pc, box, syringe)")}
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
+                  />
+                  <Input
+                    placeholder={t("inventory.supplierPlaceholder", "Supplier")}
+                    value={supplier}
+                    onChange={(e) => setSupplier(e.target.value)}
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder={t("inventory.unitCostPlaceholder", "Unit cost (₱)")}
+                    value={unitCost}
+                    onChange={(e) => setUnitCost(e.target.value)}
+                  />
+                  <Input
+                    type="number"
+                    placeholder={t("inventory.minStockPlaceholder", "Min stock")}
+                    value={minStock}
+                    onChange={(e) => setMinStock(e.target.value)}
+                  />
                   {!editingItem && (
-                    <Input type="number" placeholder="Initial qty" value={initialQty} onChange={(e) => setInitialQty(e.target.value)} />
+                    <Input
+                      type="number"
+                      placeholder={t("inventory.initialQtyPlaceholder", "Initial qty")}
+                      value={initialQty}
+                      onChange={(e) => setInitialQty(e.target.value)}
+                    />
                   )}
                   <div className={editingItem ? "sm:col-span-2" : ""}>
-                    <Input type="date" placeholder="Expiry" value={expiry} onChange={(e) => setExpiry(e.target.value)} />
+                    <Input
+                      type="date"
+                      placeholder={t("inventory.expiryPlaceholder", "Expiry")}
+                      value={expiry}
+                      onChange={(e) => setExpiry(e.target.value)}
+                    />
                   </div>
                   <div className="sm:col-span-2 flex justify-end gap-2 mt-2 pt-2 border-t">
                     <Button
@@ -499,7 +553,14 @@ function InventoryPageContent() {
                           </td>
                           <td className="py-2 text-right">
                             <div className="flex justify-end gap-1">
-                              <Input className="w-16 h-8 text-xs" type="number" placeholder="Qty" value={adjustId === item.id ? adjustQty : ""} onFocus={() => setAdjustId(item.id)} onChange={(e) => setAdjustQty(e.target.value)} />
+                              <Input
+                                className="w-16 h-8 text-xs"
+                                type="number"
+                                placeholder={t("inventory.qtyPlaceholder", "Qty")}
+                                value={adjustId === item.id ? adjustQty : ""}
+                                onFocus={() => setAdjustId(item.id)}
+                                onChange={(e) => setAdjustQty(e.target.value)}
+                              />
                               <Button size="sm" variant="outline" disabled={adjustId === item.id && !adjustQty} onClick={() => handleStockIn(item.id)}>+</Button>
                             </div>
                           </td>
