@@ -7,6 +7,11 @@ export const TOASTER_OPTIONS = {
   duration: 4500,
 }
 
+type ToastExtras = {
+  description?: string
+  duration?: number
+}
+
 type ConfirmOptions = {
   confirmLabel?: string
   cancelLabel?: string
@@ -15,8 +20,11 @@ type ConfirmOptions = {
 
 /** App-wide user feedback — use instead of alert(), confirm(), or inline error banners. */
 export const notify = {
-  success(message: string) {
-    return toast.success(message)
+  success(message: string, extras?: ToastExtras) {
+    return toast.success(message, {
+      description: extras?.description,
+      duration: extras?.duration ?? TOASTER_OPTIONS.duration,
+    })
   },
 
   error(message: string, retry?: () => void) {
@@ -32,12 +40,23 @@ export const notify = {
     })
   },
 
-  info(message: string) {
-    return toast.info(message)
+  info(message: string, extras?: ToastExtras) {
+    return toast.info(message, {
+      description: extras?.description,
+      duration: extras?.duration ?? TOASTER_OPTIONS.duration,
+    })
   },
 
   warning(message: string) {
     return toast.warning(message)
+  },
+
+  loading(message: string) {
+    return toast.loading(message, { duration: Infinity })
+  },
+
+  dismiss(id?: string | number) {
+    toast.dismiss(id)
   },
 
   /** Promise-based replacement for window.confirm(). */

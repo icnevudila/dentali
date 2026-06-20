@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 import { dispatchOperationalRefresh } from "@/lib/operational/operational-events"
+import { shouldShowOperationalQueueToast } from "@/lib/operational/operational-toast-guard"
 import { useLocale } from "@/hooks/use-locale"
 
 const OPERATIONAL_TABLES = ["patient_intakes", "queue_entries", "appointments"] as const
@@ -52,6 +53,8 @@ export function useOperationalRealtime(branchId: string | undefined) {
 
   const showDebouncedToast = React.useCallback(
     (table: OperationalTable) => {
+      if (table === "queue_entries" && !shouldShowOperationalQueueToast()) return
+
       const now = Date.now()
       const last = lastToastRef.current[table] ?? 0
       if (now - last < TOAST_DEBOUNCE_MS) return

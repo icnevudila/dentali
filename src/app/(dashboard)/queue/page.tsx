@@ -43,7 +43,7 @@ import { OpenEncounterCheckInDialog } from "@/components/queue/OpenEncounterChec
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, Megaphone, Plus, ShieldCheck, Users, MapPin, Clock, UserCheck } from "lucide-react"
+import { AlertTriangle, CheckCircle2, Loader2, Megaphone, Plus, ShieldCheck, Users, MapPin, Clock, UserCheck } from "lucide-react"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { OpsStatusRow } from "@/components/layout/OpsStatusRow"
 import { StickyActionBar } from "@/components/layout/StickyActionBar"
@@ -83,6 +83,8 @@ import {
   type PendingQueueCheckInInput,
 } from "@/lib/queue/queue-check-in-return"
 import { subscribeQueueConsentSigned } from "@/lib/queue/queue-consent-channel"
+import { suppressOperationalQueueToast } from "@/lib/operational/operational-toast-guard"
+import { cn } from "@/lib/utils"
 
 type Tab = "board" | "history"
 
@@ -204,9 +206,33 @@ function QueuePageContent() {
   const [encounterResolving, setEncounterResolving] = React.useState(false)
   const [checkInGate, setCheckInGate] = React.useState<CheckInGate | null>(null)
   const [resumeCheckIn, setResumeCheckIn] = React.useState<PendingQueueCheckIn | null>(null)
+  const [autoCheckInBanner, setAutoCheckInBanner] = React.useState<{
+    phase: "checking" | "done"
+    patientName: string
+    displayCode?: string
+  } | null>(null)
   const seededWalkInRef = React.useRef(false)
   const resumeHandledRef = React.useRef(false)
+  const autoCheckInBannerTimerRef = React.useRef<number | null>(null)
   const queueBoardRef = React.useRef<HTMLDivElement>(null)
+
+  const scheduleAutoCheckInBannerClear = React.useCallback((ms: number) => {
+    if (autoCheckInBannerTimerRef.current) {
+      window.clearTimeout(autoCheckInBannerTimerRef.current)
+    }
+    autoCheckInBannerTimerRef.current = window.setTimeout(() => {
+      setAutoCheckInBanner(null)
+      autoCheckInBannerTimerRef.current = null
+    }, ms)
+  }, [])
+
+  React.useEffect(() => {
+    return () => {
+      if (autoCheckInBannerTimerRef.current) {
+        window.clearTimeout(autoCheckInBannerTimerRef.current)
+      }
+    }
+  }, [])
 
   const today = clinicDay
 
@@ -659,7 +685,12 @@ function QueuePageContent() {
 
   const executeCheckIn = async (
     action: PendingCheckInAction,
-    reuseEncounterId?: string | null
+    reuseEncounterId?: string | null,
+    meta?: {
+      afterConsent?: boolean
+      patientDisplayName?: string
+      notes?: string
+    }
   ) => {
     if (!activeBranch) return
 
@@ -668,17 +699,29 @@ function QueuePageContent() {
       forceBillingOverride: action.forceBillingOverride,
       reuseEncounterId: reuseEncounterId ?? undefined,
     }
+    const visitNotes = (meta?.notes ?? checkInNotes).trim() || undefined
+    const displayName = meta?.patientDisplayName?.trim() || selectedPatientName.trim() || t("queue.patientFallback", "Patient")
+    let loadingToastId: string | number | undefined
+
+    if (meta?.afterConsent) {
+      suppressOperationalQueueToast(10_000)
+      loadingToastId = notify.loading(
+        t("queue.consentAutoCheckInProgress", "Checking {name} in to Waiting…").replace("{name}", displayName)
+      )
+    }
 
     if (action.mode === "walk_in") {
       setCheckingIn(true)
       const { data, error: err } = await checkInPatient({
         branchId: activeBranch.id,
         patientId: action.patientId,
-        notes: checkInNotes || undefined,
+        notes: visitNotes,
         ...options,
       })
       setCheckingIn(false)
+      if (loadingToastId !== undefined) notify.dismiss(loadingToastId)
       if (err) {
+        if (meta?.afterConsent) setAutoCheckInBanner(null)
         if (handleCheckInGateError(err, action, reuseEncounterId)) return
         setError(err)
         notify.error(err)
@@ -687,22 +730,49 @@ function QueuePageContent() {
         setResumeCheckIn(null)
         clearPendingQueueCheckIn()
         closeCheckInModal()
-        notify.success(
-          data?.alreadyQueued && data.display_code
-            ? t("queue.alreadyInWaiting", "Patient is already in Waiting — queue #{code}").replace(
-                "{code}",
-                data.display_code
+        if (meta?.afterConsent) {
+          setAutoCheckInBanner({
+            phase: "done",
+            patientName: displayName,
+            displayCode: data?.display_code,
+          })
+          scheduleAutoCheckInBannerClear(12_000)
+          const message = data?.display_code
+            ? t(
+                "queue.consentAutoCheckInSuccess",
+                "{name} — consent signed and checked in to Waiting · #{code}"
               )
-            : data?.display_code
-              ? t("queue.checkInSuccess", "Checked in — queue #{code}").replace(
+                .replace("{name}", displayName)
+                .replace("{code}", data.display_code)
+            : t(
+                "queue.consentAutoCheckInSuccessNoCode",
+                "{name} — consent signed and checked in to Waiting."
+              ).replace("{name}", displayName)
+          notify.success(message, {
+            description: t(
+              "queue.consentAutoCheckInDescription",
+              "Look for the patient card on the queue board below."
+            ),
+            duration: 10_000,
+          })
+        } else {
+          notify.success(
+            data?.alreadyQueued && data.display_code
+              ? t("queue.alreadyInWaiting", "Patient is already in Waiting — queue #{code}").replace(
                   "{code}",
                   data.display_code
                 )
-            : t(
-                "queue.walkInCheckInSuccess",
-                "Walk-in checked in — patient is in Waiting."
-              )
-        )
+              : data?.display_code
+                ? t("queue.checkInSuccess", "Checked in — queue #{code}").replace(
+                    "{code}",
+                    data.display_code
+                  )
+                : t(
+                    "queue.walkInCheckInSuccess",
+                    "Walk-in checked in — patient is in Waiting."
+                  )
+          )
+        }
         void load(true)
       }
       return
@@ -714,7 +784,9 @@ function QueuePageContent() {
       setError(null)
       const { data, error: err } = await checkInAppointment(action.appointmentId, options)
       setApptCheckInId(null)
+      if (loadingToastId !== undefined) notify.dismiss(loadingToastId)
       if (err) {
+        if (meta?.afterConsent) setAutoCheckInBanner(null)
         if (handleCheckInGateError(err, action, reuseEncounterId)) return
         setError(err)
         notify.error(err)
@@ -722,17 +794,44 @@ function QueuePageContent() {
         setCheckInGate(null)
         setResumeCheckIn(null)
         clearPendingQueueCheckIn()
-        notify.success(
-          data.alreadyQueued
-            ? t("queue.alreadyInWaiting", "Patient is already in Waiting — queue #{code}").replace(
-                "{code}",
-                data.display_code
+        if (meta?.afterConsent) {
+          setAutoCheckInBanner({
+            phase: "done",
+            patientName: displayName,
+            displayCode: data.display_code,
+          })
+          scheduleAutoCheckInBannerClear(12_000)
+          const message = data.display_code
+            ? t(
+                "queue.consentAutoCheckInSuccess",
+                "{name} — consent signed and checked in to Waiting · #{code}"
               )
-            : t("queue.checkInSuccess", "Checked in — queue #{code}").replace(
-                "{code}",
-                data.display_code
-              )
-        )
+                .replace("{name}", displayName)
+                .replace("{code}", data.display_code)
+            : t(
+                "queue.consentAutoCheckInSuccessNoCode",
+                "{name} — consent signed and checked in to Waiting."
+              ).replace("{name}", displayName)
+          notify.success(message, {
+            description: t(
+              "queue.consentAutoCheckInDescription",
+              "Look for the patient card on the queue board below."
+            ),
+            duration: 10_000,
+          })
+        } else {
+          notify.success(
+            data.alreadyQueued
+              ? t("queue.alreadyInWaiting", "Patient is already in Waiting — queue #{code}").replace(
+                  "{code}",
+                  data.display_code
+                )
+              : t("queue.checkInSuccess", "Checked in — queue #{code}").replace(
+                  "{code}",
+                  data.display_code
+                )
+          )
+        }
         void load(true)
       }
       return
@@ -789,17 +888,15 @@ function QueuePageContent() {
     setWalkInConsentHref(null)
     setWalkInConsentLabel(null)
 
-    if (pending.mode === "walk_in") {
-      setSelectedPatientId(pending.patientId)
-      setSelectedPatientName(pending.patientName ?? "")
-      setCheckInNotes(pending.notes ?? "")
-      setShowCheckIn(true)
-    }
+    const displayName =
+      pending.patientName?.trim() || t("queue.patientFallback", "Patient")
+    setAutoCheckInBanner({ phase: "checking", patientName: displayName })
 
-    notify.success(
-      t("queue.consentReturnReady", "Consent saved — continue check-in for the same patient.")
-    )
-    await executeCheckIn(action, pending.reuseEncounterId ?? null)
+    await executeCheckIn(action, pending.reuseEncounterId ?? null, {
+      afterConsent: true,
+      patientDisplayName: displayName,
+      notes: pending.notes,
+    })
   }
 
   const applyConsentSignedRef = React.useRef(applyConsentSignedFromQueue)
@@ -1282,6 +1379,69 @@ function QueuePageContent() {
               <Button variant="outline" size="sm" className="mt-3" onClick={() => load()}>
                 {t("common.retry", "Retry")}
               </Button>
+            </div>
+          ) : null}
+
+          {autoCheckInBanner ? (
+            <div
+              className={cn(
+                "rounded-xl border p-4 animate-fade-rise",
+                autoCheckInBanner.phase === "checking"
+                  ? "border-primary-200 bg-primary-50/90 text-primary-950"
+                  : "border-success-200 bg-success-50/90 text-success-950"
+              )}
+              role="status"
+              aria-live="polite"
+            >
+              <div className="flex items-start gap-3">
+                <span
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white",
+                    autoCheckInBanner.phase === "checking" ? "text-primary-700" : "text-success-700"
+                  )}
+                >
+                  {autoCheckInBanner.phase === "checking" ? (
+                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                  ) : (
+                    <CheckCircle2 className="h-5 w-5" aria-hidden />
+                  )}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">
+                    {autoCheckInBanner.phase === "checking"
+                      ? t("queue.consentAutoCheckInBannerChecking", "Finishing check-in…")
+                      : t("queue.consentAutoCheckInBannerDone", "Checked in to Waiting")}
+                  </p>
+                  <p className="mt-1 text-sm opacity-90">
+                    {autoCheckInBanner.phase === "checking"
+                      ? t(
+                          "queue.consentAutoCheckInBannerCheckingBody",
+                          "Consent signed for {name}. Adding them to the queue board now."
+                        ).replace("{name}", autoCheckInBanner.patientName)
+                      : autoCheckInBanner.displayCode
+                        ? t(
+                            "queue.consentAutoCheckInBannerDoneBody",
+                            "{name} is in Waiting · queue #{code}"
+                          )
+                            .replace("{name}", autoCheckInBanner.patientName)
+                            .replace("{code}", autoCheckInBanner.displayCode)
+                        : t(
+                            "queue.consentAutoCheckInBannerDoneBodyNoCode",
+                            "{name} is now in Waiting."
+                          ).replace("{name}", autoCheckInBanner.patientName)}
+                  </p>
+                </div>
+                {autoCheckInBanner.phase === "done" ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto shrink-0"
+                    onClick={() => setAutoCheckInBanner(null)}
+                  >
+                    {t("common.dismiss", "Dismiss")}
+                  </Button>
+                ) : null}
+              </div>
             </div>
           ) : null}
 

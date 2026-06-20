@@ -257,7 +257,7 @@ function ConsentFormPageContent() {
         if (isQueuePopup) {
           window.setTimeout(() => {
             window.close()
-          }, 800)
+          }, 2800)
           return
         }
         const pending = loadPendingQueueCheckIn()
@@ -265,7 +265,7 @@ function ConsentFormPageContent() {
         return
       }
       router.push(`/patients/${patientId}/consents/${formId}/view`)
-    }, 1200)
+    }, isQueuePopup ? 2200 : 1200)
   }
 
   if (loading) {
@@ -345,7 +345,7 @@ function ConsentFormPageContent() {
                   <p className="text-center text-sm text-success-800/90">
                     {t(
                       "consent.signedQueuePopupHint",
-                      "You can close this tab — the queue screen will finish check-in automatically."
+                      "Return to the queue tab — the patient will be checked in to Waiting automatically."
                     )}
                   </p>
                 ) : null}
