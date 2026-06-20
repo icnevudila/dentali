@@ -3,22 +3,30 @@
 import * as React from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import type { PdaYesNo } from "@/lib/pda/pda-intake-schema"
 import {
-  PDA_ALLERGY_LABELS,
-  PDA_MEDICAL_QUESTION_LABELS,
-  type PdaYesNo,
-} from "@/lib/pda/pda-intake-schema"
+  getPdaAllergyLabels,
+  getPdaMedicalQuestionLabels,
+  getPdaYesNoLabels,
+  pdaFieldLabel,
+  PDA_FIELD_KEYS,
+} from "@/lib/pda/pda-intake-i18n"
 import type { PatientIntakeProfile } from "@/lib/patients/patient-intake-profile"
+import { useLocale } from "@/hooks/use-locale"
 import { cn } from "@/lib/utils"
 
 function YesNoSelect({
   value,
   onChange,
   label,
+  yesLabel,
+  noLabel,
 }: {
   value: PdaYesNo
   onChange: (v: PdaYesNo) => void
   label: string
+  yesLabel: string
+  noLabel: string
 }) {
   return (
     <div className="space-y-1">
@@ -29,8 +37,8 @@ function YesNoSelect({
         className="flex h-9 w-full rounded-md border border-neutral-300 bg-white px-2 text-sm"
       >
         <option value="">—</option>
-        <option value="yes">Yes</option>
-        <option value="no">No</option>
+        <option value="yes">{yesLabel}</option>
+        <option value="no">{noLabel}</option>
       </select>
     </div>
   )
@@ -60,6 +68,12 @@ export function PatientIntakeProfilePanel({
   value: PatientIntakeProfile
   onChange: (next: PatientIntakeProfile) => void
 }) {
+  const { t } = useLocale()
+  const yn = React.useMemo(() => getPdaYesNoLabels(t), [t])
+  const medicalQuestions = React.useMemo(() => getPdaMedicalQuestionLabels(t), [t])
+  const allergyLabels = React.useMemo(() => getPdaAllergyLabels(t), [t])
+  const fl = (key: keyof typeof PDA_FIELD_KEYS) => pdaFieldLabel(t, key, PDA_FIELD_KEYS[key])
+
   const patch = (patch: Partial<PatientIntakeProfile>) => onChange({ ...value, ...patch })
 
   const patchQuestion = (key: string, v: PdaYesNo | string, isDetail = false) => {
@@ -84,49 +98,54 @@ export function PatientIntakeProfilePanel({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>PDA intake details</CardTitle>
+        <CardTitle>{t("pda.intakeTitle", "PDA intake details")}</CardTitle>
         <CardDescription>
-          Extra fields for the official PDA dental chart. These auto-fill when you open or print the PDA form.
+          {t(
+            "pda.intakeDesc",
+            "Extra fields for the official PDA dental chart. These auto-fill when you open or print the PDA form."
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
         <section className="space-y-4">
-          <h3 className="text-sm font-semibold text-neutral-900">Demographics & contact</h3>
+          <h3 className="text-sm font-semibold text-neutral-900">
+            {t("pda.demoSection", "Demographics & contact")}
+          </h3>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Middle name">
+            <Field label={fl("middleName")}>
               <Input value={value.middleName ?? ""} onChange={(e) => patch({ middleName: e.target.value })} />
             </Field>
-            <Field label="Nickname">
+            <Field label={fl("nickname")}>
               <Input value={value.nickname ?? ""} onChange={(e) => patch({ nickname: e.target.value })} />
             </Field>
-            <Field label="Religion">
+            <Field label={fl("religion")}>
               <Input value={value.religion ?? ""} onChange={(e) => patch({ religion: e.target.value })} />
             </Field>
-            <Field label="Nationality">
+            <Field label={fl("nationality")}>
               <Input value={value.nationality ?? ""} onChange={(e) => patch({ nationality: e.target.value })} />
             </Field>
-            <Field label="Occupation">
+            <Field label={fl("occupation")}>
               <Input value={value.occupation ?? ""} onChange={(e) => patch({ occupation: e.target.value })} />
             </Field>
-            <Field label="Home phone">
+            <Field label={fl("homePhone")}>
               <Input value={value.homePhone ?? ""} onChange={(e) => patch({ homePhone: e.target.value })} />
             </Field>
-            <Field label="Office phone">
+            <Field label={fl("officePhone")}>
               <Input value={value.officePhone ?? ""} onChange={(e) => patch({ officePhone: e.target.value })} />
             </Field>
-            <Field label="Fax">
+            <Field label={fl("fax")}>
               <Input value={value.fax ?? ""} onChange={(e) => patch({ fax: e.target.value })} />
             </Field>
-            <Field label="Guardian occupation">
+            <Field label={fl("guardianOccupation")}>
               <Input
                 value={value.guardianOccupation ?? ""}
                 onChange={(e) => patch({ guardianOccupation: e.target.value })}
               />
             </Field>
-            <Field label="Referral source" className="md:col-span-2">
+            <Field label={fl("referralSource")} className="md:col-span-2">
               <Input value={value.referralSource ?? ""} onChange={(e) => patch({ referralSource: e.target.value })} />
             </Field>
-            <Field label="Reason for dental consultation" className="md:col-span-2">
+            <Field label={fl("consultationReason")} className="md:col-span-2">
               <textarea
                 value={value.consultationReason ?? ""}
                 onChange={(e) => patch({ consultationReason: e.target.value })}
@@ -138,15 +157,15 @@ export function PatientIntakeProfilePanel({
         </section>
 
         <section className="space-y-4">
-          <h3 className="text-sm font-semibold text-neutral-900">Dental history</h3>
+          <h3 className="text-sm font-semibold text-neutral-900">{t("pda.dentalHistorySection", "Dental history")}</h3>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Previous dentist">
+            <Field label={fl("previousDentist")}>
               <Input
                 value={value.previousDentist ?? ""}
                 onChange={(e) => patch({ previousDentist: e.target.value })}
               />
             </Field>
-            <Field label="Last dental visit">
+            <Field label={fl("lastDentalVisit")}>
               <Input
                 type="date"
                 value={value.lastDentalVisit ?? ""}
@@ -157,54 +176,53 @@ export function PatientIntakeProfilePanel({
         </section>
 
         <section className="space-y-4">
-          <h3 className="text-sm font-semibold text-neutral-900">Physician & vitals</h3>
+          <h3 className="text-sm font-semibold text-neutral-900">{t("pda.physicianSection", "Physician & vitals")}</h3>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Physician name">
+            <Field label={fl("physicianName")}>
               <Input value={value.physicianName ?? ""} onChange={(e) => patch({ physicianName: e.target.value })} />
             </Field>
-            <Field label="Specialty">
+            <Field label={fl("physicianSpecialty")}>
               <Input
                 value={value.physicianSpecialty ?? ""}
                 onChange={(e) => patch({ physicianSpecialty: e.target.value })}
               />
             </Field>
-            <Field label="Office address" className="md:col-span-2">
+            <Field label={fl("physicianAddress")} className="md:col-span-2">
               <Input
                 value={value.physicianAddress ?? ""}
                 onChange={(e) => patch({ physicianAddress: e.target.value })}
               />
             </Field>
-            <Field label="Office phone">
+            <Field label={fl("physicianPhone")}>
               <Input value={value.physicianPhone ?? ""} onChange={(e) => patch({ physicianPhone: e.target.value })} />
             </Field>
-            <Field label="Bleeding time">
+            <Field label={fl("bleedingTime")}>
               <Input value={value.bleedingTime ?? ""} onChange={(e) => patch({ bleedingTime: e.target.value })} />
             </Field>
-            <Field label="Blood type">
+            <Field label={fl("bloodType")}>
               <Input value={value.bloodType ?? ""} onChange={(e) => patch({ bloodType: e.target.value })} />
             </Field>
-            <Field label="Blood pressure">
+            <Field label={fl("bloodPressure")}>
               <Input value={value.bloodPressure ?? ""} onChange={(e) => patch({ bloodPressure: e.target.value })} />
             </Field>
           </div>
         </section>
 
         <section className="space-y-4">
-          <h3 className="text-sm font-semibold text-neutral-900">Medical questionnaire (PDA)</h3>
-          <p className="text-xs text-neutral-500">
-            Allergies, medications, and conditions on the Medical history page also feed the PDA form. Use these for
-            yes/no answers on the official chart.
-          </p>
+          <h3 className="text-sm font-semibold text-neutral-900">{t("pda.medicalSection", "Medical questionnaire (PDA)")}</h3>
+          <p className="text-xs text-neutral-500">{t("pda.medicalHint", "Allergies, medications, and conditions on the Medical history page also feed the PDA form.")}</p>
           <div className="grid gap-3 sm:grid-cols-2">
-            {PDA_MEDICAL_QUESTION_LABELS.map((item) => (
+            {medicalQuestions.map((item) => (
               <React.Fragment key={item.key}>
                 <YesNoSelect
                   label={item.label}
+                  yesLabel={yn.yes}
+                  noLabel={yn.no}
                   value={(q[item.key] as PdaYesNo) ?? ""}
                   onChange={(v) => patchQuestion(item.key, v)}
                 />
                 {item.detailKey && q[item.key] === "yes" ? (
-                  <Field label="Details" className="sm:col-span-2">
+                  <Field label={t("pda.details", "Details")} className="sm:col-span-2">
                     <Input
                       value={String(q[item.detailKey] ?? "")}
                       onChange={(e) => patchQuestion(item.detailKey!, e.target.value, true)}
@@ -215,16 +233,18 @@ export function PatientIntakeProfilePanel({
             ))}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            {PDA_ALLERGY_LABELS.map((item) => (
+            {allergyLabels.map((item) => (
               <YesNoSelect
                 key={item.key}
                 label={item.label}
+                yesLabel={yn.yes}
+                noLabel={yn.no}
                 value={value.allergyFlags?.[item.key] ?? ""}
                 onChange={(v) => patchAllergy(item.key, v)}
               />
             ))}
           </div>
-          <Field label="Other allergies">
+          <Field label={yn.otherAllergies}>
             <Input value={value.allergyOther ?? ""} onChange={(e) => patch({ allergyOther: e.target.value })} />
           </Field>
         </section>

@@ -23,6 +23,8 @@ export const PERMISSIONS = {
   COMPLIANCE_WRITE: "compliance.write",
   PRESCRIPTIONS_READ: "prescriptions.read",
   PRESCRIPTIONS_WRITE: "prescriptions.write",
+  INVENTORY_READ: "inventory.read",
+  INVENTORY_WRITE: "inventory.write",
 } as const
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS]

@@ -1,5 +1,17 @@
 # Roadmap and TODOs
 
+## Sprint status (June 2026)
+
+Recent polish shipped on `main`:
+
+- Intake consent slug RPC + queue retry UX
+- Google review URL in branch settings + workflow readiness banners
+- Inventory i18n + dedicated `inventory.read` / `inventory.write` permissions
+- PDA intake form i18n (EN/TR) + marketing static pages i18n
+- Procedure catalog localStorage limited to showcase mode only
+
+Next focus areas: PhilHealth live integration, PayMongo production keys, E2E against staging with credentials, full legal copy for privacy/terms.
+
 ## Phase 0 — Discovery and hard decisions
 
 Goal: Sis perdesini kaldırmak.

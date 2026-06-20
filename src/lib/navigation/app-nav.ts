@@ -193,7 +193,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         fallback: "Inventory",
         href: "/inventory",
         icon: Package,
-        permission: PERMISSIONS.SETTINGS_MANAGE,
+        permission: PERMISSIONS.INVENTORY_READ,
       },
       {
         nameKey: "nav.notifications",

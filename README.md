@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# dentQL
 
-## Getting Started
+Philippines-focused, multi-branch dental clinic operating system — patients, charting, queue, billing, HMO, inventory, and workflow automation on **Next.js 16 + Supabase**.
 
-First, run the development server:
+## Quick start
 
 ```bash
+npm install
+cp .env.example .env.local   # Supabase URL, anon key, etc.
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). Full setup: [README_INSTALL.md](./README_INSTALL.md).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Local dev server |
+| `npm run build` | Production build |
+| `npm run typecheck` | TypeScript check |
+| `npm run quality:ci` | Lint + typecheck + i18n audit + build |
+| `npm run test:e2e` | Playwright smoke / journey specs |
+| `supabase db push` | Apply pending migrations to linked project |
 
-## Learn More
+## Documentation
 
-To learn more about Next.js, take a look at the following resources:
+| Doc | Contents |
+|-----|----------|
+| [docs/00_README_START_HERE.md](./docs/00_README_START_HERE.md) | Doc index |
+| [docs/15_ROADMAP_AND_TODOS.md](./docs/15_ROADMAP_AND_TODOS.md) | Sprint roadmap |
+| [docs/README.md](./docs/README.md) | 24-module A–Z product pack |
+| [tasks/POLISH_QUEUE.md](./tasks/POLISH_QUEUE.md) | Polish / hardening backlog |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Recent platform notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Permissions:** `inventory.read` / `inventory.write` (migration `20260620120000_inventory_permissions.sql`); legacy `settings.manage` still grants full inventory access.
+- **Workflow:** Branch Google review URL + intake consent slugs; see migrations `20260620100000_*` and `20260620110000_*`.
+- **i18n:** App UI (EN / TR / FIL), marketing pages, and PDA intake forms use `src/lib/i18n/`.
 
-## Deploy on Vercel
+## Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Vercel + Supabase. See [README_INSTALL.md](./README_INSTALL.md) and `docs/SUPABASE_CRON_SETUP.md` for cron jobs (SMS reminders, owner digest, etc.).

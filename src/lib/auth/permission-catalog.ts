@@ -40,6 +40,8 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   [PERMISSIONS.COMPLIANCE_WRITE]: "Manage compliance records",
   [PERMISSIONS.PRESCRIPTIONS_READ]: "View prescriptions",
   [PERMISSIONS.PRESCRIPTIONS_WRITE]: "Create and sign prescriptions",
+  [PERMISSIONS.INVENTORY_READ]: "View inventory and stock levels",
+  [PERMISSIONS.INVENTORY_WRITE]: "Manage inventory items and stock adjustments",
 }
 
 export const PERMISSION_GROUPS: { id: string; labelKey: string; labelFallback: string; permissions: PermissionKey[] }[] =
@@ -87,6 +89,12 @@ export const PERMISSION_GROUPS: { id: string; labelKey: string; labelFallback: s
         PERMISSIONS.HMO_READ,
         PERMISSIONS.HMO_WRITE,
       ],
+    },
+    {
+      id: "operations",
+      labelKey: "settings.permGroupOperations",
+      labelFallback: "Operations",
+      permissions: [PERMISSIONS.INVENTORY_READ, PERMISSIONS.INVENTORY_WRITE],
     },
     {
       id: "admin",

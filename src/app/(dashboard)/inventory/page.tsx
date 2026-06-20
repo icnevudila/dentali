@@ -8,6 +8,7 @@ import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
 import { useAuth } from "@/hooks/use-auth"
+import { usePermission } from "@/hooks/use-permission"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { toast } from "sonner"
 import {
@@ -47,6 +48,9 @@ const LEVEL_VARIANT: Record<string, "default" | "success" | "warning" | "danger"
 function InventoryPageContent() {
   const { activeBranch } = useBranch()
   const { user } = useAuth()
+  const { hasPermission } = usePermission()
+  const canWrite =
+    hasPermission(PERMISSIONS.INVENTORY_WRITE) || hasPermission(PERMISSIONS.SETTINGS_MANAGE)
   const { t } = useLocale()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -257,7 +261,13 @@ function InventoryPageContent() {
   ]
 
   return (
-    <PermissionGate permission={PERMISSIONS.SETTINGS_MANAGE}>
+    <PermissionGate
+      anyOf={[
+        PERMISSIONS.INVENTORY_READ,
+        PERMISSIONS.INVENTORY_WRITE,
+        PERMISSIONS.SETTINGS_MANAGE,
+      ]}
+    >
       <DirectionalTransition className="mx-auto w-full max-w-7xl">
         <ContentPanel padding="lg" className="space-y-6">
           <SectionEyebrow icon={Package}>
@@ -272,18 +282,22 @@ function InventoryPageContent() {
               "Track stock levels, expiry dates, and low-stock alerts."
             )}
             actions={
-              <Button className="hidden gap-2 shadow-sm md:inline-flex" onClick={() => setShowAdd(true)}>
-                <Plus className="h-4 w-4" /> {t("inventory.addItem", "Add item")}
-              </Button>
+              canWrite ? (
+                <Button className="hidden gap-2 shadow-sm md:inline-flex" onClick={() => setShowAdd(true)}>
+                  <Plus className="h-4 w-4" /> {t("inventory.addItem", "Add item")}
+                </Button>
+              ) : undefined
             }
           />
 
-          <StickyActionBar>
-            <Button className="h-11 w-full gap-2" onClick={() => setShowAdd(true)}>
-              <Plus className="h-4 w-4 shrink-0" />
-              {t("inventory.addItem", "Add item")}
-            </Button>
-          </StickyActionBar>
+          {canWrite ? (
+            <StickyActionBar>
+              <Button className="h-11 w-full gap-2" onClick={() => setShowAdd(true)}>
+                <Plus className="h-4 w-4 shrink-0" />
+                {t("inventory.addItem", "Add item")}
+              </Button>
+            </StickyActionBar>
+          ) : null}
 
           {activeBranch ? (
             <div className="flex flex-wrap items-center gap-2 animate-fade-rise">
@@ -552,22 +566,40 @@ function InventoryPageContent() {
                             )}
                           </td>
                           <td className="py-2 text-right">
-                            <div className="flex justify-end gap-1">
-                              <Input
-                                className="w-16 h-8 text-xs"
-                                type="number"
-                                placeholder={t("inventory.qtyPlaceholder", "Qty")}
-                                value={adjustId === item.id ? adjustQty : ""}
-                                onFocus={() => setAdjustId(item.id)}
-                                onChange={(e) => setAdjustQty(e.target.value)}
-                              />
-                              <Button size="sm" variant="outline" disabled={adjustId === item.id && !adjustQty} onClick={() => handleStockIn(item.id)}>+</Button>
-                            </div>
+                            {canWrite ? (
+                              <div className="flex justify-end gap-1">
+                                <Input
+                                  className="w-16 h-8 text-xs"
+                                  type="number"
+                                  placeholder={t("inventory.qtyPlaceholder", "Qty")}
+                                  value={adjustId === item.id ? adjustQty : ""}
+                                  onFocus={() => setAdjustId(item.id)}
+                                  onChange={(e) => setAdjustQty(e.target.value)}
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={adjustId === item.id && !adjustQty}
+                                  onClick={() => handleStockIn(item.id)}
+                                >
+                                  +
+                                </Button>
+                              </div>
+                            ) : (
+                              "—"
+                            )}
                           </td>
                           <td className="py-2 text-right">
-                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleEditClick(item)}>
-                              <Edit className="h-4 w-4 text-neutral-500 hover:text-neutral-700" />
-                            </Button>
+                            {canWrite ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                                onClick={() => handleEditClick(item)}
+                              >
+                                <Edit className="h-4 w-4 text-neutral-500 hover:text-neutral-700" />
+                              </Button>
+                            ) : null}
                           </td>
                         </tr>
                       )

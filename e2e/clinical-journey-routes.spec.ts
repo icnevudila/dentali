@@ -11,6 +11,11 @@ test.describe("Clinical journey routes", () => {
     "/pricing",
     "/quote",
     "/welcome",
+    "/about",
+    "/security",
+    "/contact",
+    "/privacy",
+    "/terms",
     "/kiosk",
     "/display",
   ]
@@ -30,6 +35,7 @@ test.describe("Clinical journey routes", () => {
       "/queue",
       "/dentist",
       "/billing",
+      "/inventory",
       "/settings/workflow",
       "/reports/closeout",
     ]

@@ -4,12 +4,20 @@ import * as React from "react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { useLocale } from "@/hooks/use-locale"
 import {
-  PDA_ALLERGY_LABELS,
-  PDA_MEDICAL_QUESTION_LABELS,
   type PdaIntakeResponses,
   type PdaYesNo,
 } from "@/lib/pda/pda-intake-schema"
+import {
+  getPdaAllergyLabels,
+  getPdaMedicalQuestionLabels,
+  getPdaSections,
+  getPdaYesNoLabels,
+  pdaFieldLabel,
+  PDA_FIELD_KEYS,
+  type PdaSectionId,
+} from "@/lib/pda/pda-intake-i18n"
 import type { ToothFinding } from "@/lib/types/dental"
 import type { TreatmentTimelineEntry } from "@/lib/clinical/treatment-plan-service"
 import {
@@ -17,14 +25,7 @@ import {
   formatTreatmentTimelineLine,
 } from "@/lib/odontogram/clinical-display"
 
-type SectionId = "patient" | "dental" | "medical" | "chart"
-
-const SECTIONS: { id: SectionId; label: string }[] = [
-  { id: "patient", label: "Patient info" },
-  { id: "dental", label: "Dental history" },
-  { id: "medical", label: "Medical history" },
-  { id: "chart", label: "Chart preview" },
-]
+type SectionId = PdaSectionId
 
 function YesNoField({
   value,
@@ -33,6 +34,9 @@ function YesNoField({
   detail,
   detailValue,
   onDetailChange,
+  yesLabel,
+  noLabel,
+  specifyPlaceholder,
 }: {
   value: PdaYesNo
   onChange: (v: PdaYesNo) => void
@@ -40,24 +44,32 @@ function YesNoField({
   detail?: boolean
   detailValue?: string
   onDetailChange?: (v: string) => void
+  yesLabel: string
+  noLabel: string
+  specifyPlaceholder: string
 }) {
   return (
     <div className="space-y-2 rounded-lg border border-neutral-100 bg-neutral-50/50 p-3">
       <p className="text-sm text-neutral-800">{label}</p>
       <div className="flex gap-2">
-        {(["yes", "no"] as const).map((opt) => (
+        {(
+          [
+            { opt: "yes" as const, text: yesLabel },
+            { opt: "no" as const, text: noLabel },
+          ] as const
+        ).map(({ opt, text }) => (
           <button
             key={opt}
             type="button"
             onClick={() => onChange(opt)}
             className={cn(
-              "rounded-md border px-3 py-1.5 text-xs font-medium capitalize transition-colors",
+              "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
               value === opt
                 ? "border-primary-500 bg-primary-50 text-primary-800"
                 : "border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300"
             )}
           >
-            {opt}
+            {text}
           </button>
         ))}
       </div>
@@ -65,7 +77,7 @@ function YesNoField({
         <Input
           value={detailValue ?? ""}
           onChange={(e) => onDetailChange?.(e.target.value)}
-          placeholder="If yes, please specify"
+          placeholder={specifyPlaceholder}
           className="text-sm"
         />
       ) : null}
@@ -77,10 +89,12 @@ function Field({
   label,
   children,
   fromSystem,
+  fromSystemLabel,
 }: {
   label: string
   children: React.ReactNode
   fromSystem?: boolean
+  fromSystemLabel: string
 }) {
   return (
     <div className="space-y-1.5">
@@ -88,7 +102,7 @@ function Field({
         <label className="text-xs font-medium text-neutral-700">{label}</label>
         {fromSystem ? (
           <Badge variant="outline" className="h-5 text-[10px] text-primary-700">
-            From record
+            {fromSystemLabel}
           </Badge>
         ) : null}
       </div>
@@ -112,6 +126,13 @@ export function PdaIntakeForm({
   treatmentRows?: TreatmentTimelineEntry[]
   readOnlySections?: SectionId[]
 }) {
+  const { t } = useLocale()
+  const sections = React.useMemo(() => getPdaSections(t), [t])
+  const medicalQuestions = React.useMemo(() => getPdaMedicalQuestionLabels(t), [t])
+  const allergyLabels = React.useMemo(() => getPdaAllergyLabels(t), [t])
+  const yn = React.useMemo(() => getPdaYesNoLabels(t), [t])
+  const fl = (key: keyof typeof PDA_FIELD_KEYS) => pdaFieldLabel(t, key, PDA_FIELD_KEYS[key])
+
   const [section, setSection] = React.useState<SectionId>("patient")
   const isReadOnly = (id: SectionId) => readOnlySections.includes(id)
 
@@ -129,7 +150,7 @@ export function PdaIntakeForm({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        {SECTIONS.filter((s) => !readOnlySections.includes(s.id) || s.id === "chart").map((s) => (
+        {sections.filter((s) => !readOnlySections.includes(s.id) || s.id === "chart").map((s) => (
           <button
             key={s.id}
             type="button"
@@ -148,19 +169,19 @@ export function PdaIntakeForm({
 
       {section === "patient" && !isReadOnly("patient") ? (
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Last name" fromSystem={sys("patient.lastName")}>
+          <Field label={fl("lastName")} fromSystem={sys("patient.lastName")} fromSystemLabel={yn.fromRecord}>
             <Input value={value.patient.lastName} onChange={(e) => patchPatient({ lastName: e.target.value })} />
           </Field>
-          <Field label="First name" fromSystem={sys("patient.firstName")}>
+          <Field label={fl("firstName")} fromSystem={sys("patient.firstName")} fromSystemLabel={yn.fromRecord}>
             <Input value={value.patient.firstName} onChange={(e) => patchPatient({ firstName: e.target.value })} />
           </Field>
-          <Field label="Middle name">
+          <Field label={fl("middleName")} fromSystemLabel={yn.fromRecord}>
             <Input value={value.patient.middleName} onChange={(e) => patchPatient({ middleName: e.target.value })} />
           </Field>
-          <Field label="Birthdate" fromSystem={sys("patient.dateOfBirth")}>
+          <Field label={fl("dateOfBirth")} fromSystem={sys("patient.dateOfBirth")} fromSystemLabel={yn.fromRecord}>
             <Input type="date" value={value.patient.dateOfBirth} onChange={(e) => patchPatient({ dateOfBirth: e.target.value })} />
           </Field>
-          <Field label="Sex (M/F)" fromSystem={sys("patient.sex")}>
+          <Field label={fl("sex")} fromSystem={sys("patient.sex")} fromSystemLabel={yn.fromRecord}>
             <select
               value={value.patient.sex}
               onChange={(e) => patchPatient({ sex: e.target.value })}
@@ -171,46 +192,46 @@ export function PdaIntakeForm({
               <option value="F">F</option>
             </select>
           </Field>
-          <Field label="Religion">
+          <Field label={fl("religion")} fromSystemLabel={yn.fromRecord}>
             <Input value={value.patient.religion} onChange={(e) => patchPatient({ religion: e.target.value })} />
           </Field>
-          <Field label="Nationality">
+          <Field label={fl("nationality")} fromSystemLabel={yn.fromRecord}>
             <Input value={value.patient.nationality} onChange={(e) => patchPatient({ nationality: e.target.value })} />
           </Field>
-          <Field label="Nickname">
+          <Field label={fl("nickname")} fromSystemLabel={yn.fromRecord}>
             <Input value={value.patient.nickname} onChange={(e) => patchPatient({ nickname: e.target.value })} />
           </Field>
-          <Field label="Home address" fromSystem={sys("patient.address")}>
+          <Field label={fl("address")} fromSystem={sys("patient.address")} fromSystemLabel={yn.fromRecord}>
             <Input value={value.patient.address} onChange={(e) => patchPatient({ address: e.target.value })} className="sm:col-span-2" />
           </Field>
-          <Field label="Mobile" fromSystem={sys("patient.mobile")}>
+          <Field label={fl("mobile")} fromSystem={sys("patient.mobile")} fromSystemLabel={yn.fromRecord}>
             <Input value={value.patient.mobile} onChange={(e) => patchPatient({ mobile: e.target.value })} />
           </Field>
-          <Field label="Email" fromSystem={sys("patient.email")}>
+          <Field label={fl("email")} fromSystem={sys("patient.email")} fromSystemLabel={yn.fromRecord}>
             <Input type="email" value={value.patient.email} onChange={(e) => patchPatient({ email: e.target.value })} />
           </Field>
-          <Field label="Home phone">
+          <Field label={fl("homePhone")} fromSystemLabel={yn.fromRecord}>
             <Input value={value.patient.homePhone} onChange={(e) => patchPatient({ homePhone: e.target.value })} />
           </Field>
-          <Field label="Office phone">
+          <Field label={fl("officePhone")} fromSystemLabel={yn.fromRecord}>
             <Input value={value.patient.officePhone} onChange={(e) => patchPatient({ officePhone: e.target.value })} />
           </Field>
-          <Field label="Occupation">
+          <Field label={fl("occupation")} fromSystemLabel={yn.fromRecord}>
             <Input value={value.patient.occupation} onChange={(e) => patchPatient({ occupation: e.target.value })} />
           </Field>
-          <Field label="Parent / guardian name" fromSystem={sys("patient.guardianName")}>
+          <Field label={fl("guardianName")} fromSystem={sys("patient.guardianName")} fromSystemLabel={yn.fromRecord}>
             <Input value={value.patient.guardianName} onChange={(e) => patchPatient({ guardianName: e.target.value })} />
           </Field>
-          <Field label="Guardian occupation">
+          <Field label={fl("guardianOccupation")} fromSystemLabel={yn.fromRecord}>
             <Input value={value.patient.guardianOccupation} onChange={(e) => patchPatient({ guardianOccupation: e.target.value })} />
           </Field>
           <div className="sm:col-span-2">
-            <Field label="Referral source">
+            <Field label={fl("referralSource")} fromSystemLabel={yn.fromRecord}>
               <Input value={value.patient.referralSource} onChange={(e) => patchPatient({ referralSource: e.target.value })} />
             </Field>
           </div>
           <div className="sm:col-span-2">
-            <Field label="Reason for dental consultation">
+            <Field label={fl("consultationReason")} fromSystemLabel={yn.fromRecord}>
               <textarea
                 value={value.patient.consultationReason}
                 onChange={(e) => patchPatient({ consultationReason: e.target.value })}
@@ -224,10 +245,10 @@ export function PdaIntakeForm({
 
       {section === "dental" && !isReadOnly("dental") ? (
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Previous dentist">
+          <Field label={fl("previousDentist")} fromSystemLabel={yn.fromRecord}>
             <Input value={value.dental.previousDentist} onChange={(e) => patchDental({ previousDentist: e.target.value })} />
           </Field>
-          <Field label="Last dental visit">
+          <Field label={fl("lastDentalVisit")} fromSystemLabel={yn.fromRecord}>
             <Input type="date" value={value.dental.lastDentalVisit} onChange={(e) => patchDental({ lastDentalVisit: e.target.value })} />
           </Field>
         </div>
@@ -236,33 +257,36 @@ export function PdaIntakeForm({
       {section === "medical" && !isReadOnly("medical") ? (
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Physician name">
+            <Field label={fl("physicianName")} fromSystemLabel={yn.fromRecord}>
               <Input value={value.medical.physicianName} onChange={(e) => patchMedical({ physicianName: e.target.value })} />
             </Field>
-            <Field label="Specialty">
+            <Field label={fl("physicianSpecialty")} fromSystemLabel={yn.fromRecord}>
               <Input value={value.medical.physicianSpecialty} onChange={(e) => patchMedical({ physicianSpecialty: e.target.value })} />
             </Field>
-            <Field label="Office address">
+            <Field label={fl("physicianAddress")} fromSystemLabel={yn.fromRecord}>
               <Input value={value.medical.physicianAddress} onChange={(e) => patchMedical({ physicianAddress: e.target.value })} />
             </Field>
-            <Field label="Office number">
+            <Field label={fl("physicianPhone")} fromSystemLabel={yn.fromRecord}>
               <Input value={value.medical.physicianPhone} onChange={(e) => patchMedical({ physicianPhone: e.target.value })} />
             </Field>
-            <Field label="Bleeding time">
+            <Field label={fl("bleedingTime")} fromSystemLabel={yn.fromRecord}>
               <Input value={value.medical.bleedingTime} onChange={(e) => patchMedical({ bleedingTime: e.target.value })} />
             </Field>
-            <Field label="Blood type">
+            <Field label={fl("bloodType")} fromSystemLabel={yn.fromRecord}>
               <Input value={value.medical.bloodType} onChange={(e) => patchMedical({ bloodType: e.target.value })} />
             </Field>
-            <Field label="Blood pressure">
+            <Field label={fl("bloodPressure")} fromSystemLabel={yn.fromRecord}>
               <Input value={value.medical.bloodPressure} onChange={(e) => patchMedical({ bloodPressure: e.target.value })} />
             </Field>
           </div>
           <div className="space-y-3">
-            {PDA_MEDICAL_QUESTION_LABELS.map((q) => (
+            {medicalQuestions.map((q) => (
               <YesNoField
                 key={q.key}
                 label={q.label}
+                yesLabel={yn.yes}
+                noLabel={yn.no}
+                specifyPlaceholder={yn.specify}
                 value={value.medical.questions[q.key] as PdaYesNo}
                 onChange={(v) =>
                   patchMedical({
@@ -283,12 +307,15 @@ export function PdaIntakeForm({
             ))}
           </div>
           <div className="space-y-2">
-            <p className="text-xs font-medium text-neutral-700">Allergies</p>
+            <p className="text-xs font-medium text-neutral-700">{yn.allergies}</p>
             <div className="grid gap-2 sm:grid-cols-2">
-              {PDA_ALLERGY_LABELS.map((a) => (
+              {allergyLabels.map((a) => (
                 <YesNoField
                   key={a.key}
                   label={a.label}
+                  yesLabel={yn.yes}
+                  noLabel={yn.no}
+                  specifyPlaceholder={yn.specify}
                   value={value.medical.allergies[a.key]}
                   onChange={(v) =>
                     patchMedical({
@@ -299,12 +326,12 @@ export function PdaIntakeForm({
               ))}
             </div>
             <Input
-              placeholder="Other allergies"
+              placeholder={yn.otherAllergies}
               value={value.medical.allergyOther}
               onChange={(e) => patchMedical({ allergyOther: e.target.value })}
             />
           </div>
-          <Field label="Medications" fromSystem={sys("medical.medications")}>
+          <Field label={fl("medications")} fromSystem={sys("medical.medications")} fromSystemLabel={yn.fromRecord}>
             <textarea
               value={value.medical.medications}
               onChange={(e) => patchMedical({ medications: e.target.value })}
@@ -312,7 +339,7 @@ export function PdaIntakeForm({
               className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
             />
           </Field>
-          <Field label="Additional notes" fromSystem={sys("medical.notes")}>
+          <Field label={fl("notes")} fromSystem={sys("medical.notes")} fromSystemLabel={yn.fromRecord}>
             <textarea
               value={value.medical.notes}
               onChange={(e) => patchMedical({ notes: e.target.value })}
@@ -325,13 +352,11 @@ export function PdaIntakeForm({
 
       {section === "chart" ? (
         <div className="space-y-4 rounded-xl border border-neutral-200 bg-neutral-50/80 p-4">
-          <p className="text-sm text-neutral-600">
-            Chart findings and treatment rows sync from the digital odontogram and treatment plan. They appear on the printed PDA form automatically.
-          </p>
+          <p className="text-sm text-neutral-600">{yn.chartIntro}</p>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Active findings</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{yn.activeFindings}</p>
             {activeFindings.length === 0 ? (
-              <p className="mt-1 text-sm text-neutral-500">No active tooth findings recorded.</p>
+              <p className="mt-1 text-sm text-neutral-500">{yn.noFindings}</p>
             ) : (
               <ul className="mt-2 space-y-1 text-sm">
                 {activeFindings.map((f) => (
@@ -343,9 +368,9 @@ export function PdaIntakeForm({
             )}
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Treatment rows</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{yn.treatmentRows}</p>
             {treatmentRows.length === 0 ? (
-              <p className="mt-1 text-sm text-neutral-500">No treatment timeline entries.</p>
+              <p className="mt-1 text-sm text-neutral-500">{yn.noTreatmentRows}</p>
             ) : (
               <ul className="mt-2 space-y-1 text-sm">
                 {treatmentRows
