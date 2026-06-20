@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import {
   Upload,
   Download,
@@ -63,6 +64,28 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
   const [panOffset, setPanOffset] = React.useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = React.useState(false)
   const dragStart = React.useRef({ x: 0, y: 0 })
+  const [viewerMounted, setViewerMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setViewerMounted(true)
+  }, [])
+
+  React.useEffect(() => {
+    if (!selectedImage) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedImage(null)
+    }
+    window.addEventListener("keydown", onKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener("keydown", onKeyDown)
+    }
+  }, [selectedImage])
 
   const dateLocale = locale === "tr" ? "tr-PH" : locale === "fil" ? "fil-PH" : "en-PH"
 
@@ -211,6 +234,221 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
   const handleMouseUp = () => {
     setIsDragging(false)
   }
+
+  const viewerOverlay =
+    selectedImage && viewerMounted
+      ? createPortal(
+          <div className="fixed inset-0 z-[100] flex h-[100dvh] flex-col select-none overflow-hidden bg-neutral-950 text-white animate-in fade-in duration-200">
+            {/* Header */}
+            <header className="flex shrink-0 flex-col gap-3 border-b border-neutral-800 bg-neutral-900 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <Images className="h-4 w-4 shrink-0 text-primary-300" aria-hidden />
+                  <h3 className="truncate text-lg font-bold">
+                    {selectedImage.notes || selectedImage.file_name}
+                  </h3>
+                </div>
+                <p className="mt-0.5 text-xs text-neutral-400">
+                  {t("patients.imagingDate", "Imaged on")}:{" "}
+                  {new Date(selectedImage.created_at).toLocaleString(dateLocale)}
+                  {selectedImage.uploader_name
+                    ? ` · ${t("patients.uploadedBy", "By")}: ${selectedImage.uploader_name}`
+                    : ""}
+                </p>
+              </div>
+              <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800"
+                  onClick={() => handleDownload(selectedImage)}
+                >
+                  <Download className="mr-1.5 h-4 w-4" />
+                  {t("patients.docDownload", "Download")}
+                </Button>
+                <PermissionGate permission={PERMISSIONS.PATIENTS_WRITE}>
+                  <Button variant="destructive" size="sm" onClick={() => handleDelete(selectedImage)}>
+                    <Trash2 className="mr-1.5 h-4 w-4" />
+                    {t("patients.docDelete", "Delete")}
+                  </Button>
+                </PermissionGate>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="px-3 text-lg font-bold text-neutral-400 hover:bg-neutral-800 hover:text-white"
+                  aria-label={t("common.close", "Close")}
+                  onClick={() => setSelectedImage(null)}
+                >
+                  ×
+                </Button>
+              </div>
+            </header>
+
+            {/* Main workspace — min-h-0 lets the canvas fill remaining viewport height */}
+            <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+              <div
+                className={`relative flex min-h-[55vh] min-w-0 flex-1 items-center justify-center overflow-hidden bg-neutral-950 p-3 md:min-h-0 md:p-6 ${
+                  zoom > 1 ? "cursor-grab" : ""
+                } ${isDragging ? "cursor-grabbing" : ""}`}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+              >
+                {selectedImage.url ? (
+                  <div
+                    className="flex max-h-full max-w-full items-center justify-center transition-transform duration-100 ease-out"
+                    style={{
+                      transform: `translate(${panOffset.x}px, ${panOffset.y}px) rotate(${rotation}deg) scale(${zoom})`,
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={selectedImage.url}
+                      alt={selectedImage.file_name}
+                      className="pointer-events-none max-h-[calc(100dvh-11rem)] max-w-[calc(100vw-1.5rem)] object-contain md:max-h-[calc(100dvh-7rem)] md:max-w-[calc(100vw-22rem)]"
+                      style={{
+                        filter: `brightness(${brightness}%) contrast(${contrast}%) invert(${invert ? 100 : 0}%)`,
+                      }}
+                    />
+                  </div>
+                ) : null}
+
+                <div className="absolute bottom-4 left-4 rounded-full border border-neutral-800 bg-black/60 px-3 py-1.5 font-mono text-xs text-neutral-300">
+                  Zoom: {Math.round(zoom * 100)}%
+                </div>
+              </div>
+
+              <div className="flex max-h-[min(45vh,28rem)] w-full shrink-0 flex-col justify-between overflow-y-auto border-t border-neutral-800 bg-neutral-900 p-4 md:max-h-none md:w-80 md:border-l md:border-t-0 md:p-6">
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="mb-4 text-sm font-bold uppercase tracking-wider text-neutral-300">
+                      {t("patients.diagnosticTools", "Diagnostic Tools")}
+                    </h4>
+                    <p className="text-xs text-neutral-400">
+                      {t(
+                        "patients.radiologyToolsDesc",
+                        "Adjust sliders to enhance contrast, brightness, or invert colors to inspect root tips and caries."
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-1.5 text-neutral-300">
+                        <Sun className="h-4 w-4 text-neutral-400" />
+                        {t("patients.brightness", "Brightness")}
+                      </span>
+                      <span className="font-mono text-xs text-neutral-400">{brightness}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="50"
+                      max="200"
+                      value={brightness}
+                      onChange={(e) => setBrightness(Number(e.target.value))}
+                      className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-neutral-800 accent-primary-500"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-1.5 text-neutral-300">
+                        <ContrastIcon className="h-4 w-4 text-neutral-400" />
+                        {t("patients.contrast", "Contrast")}
+                      </span>
+                      <span className="font-mono text-xs text-neutral-400">{contrast}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="50"
+                      max="200"
+                      value={contrast}
+                      onChange={(e) => setContrast(Number(e.target.value))}
+                      className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-neutral-800 accent-primary-500"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-1.5 text-neutral-300">
+                        <ZoomIn className="h-4 w-4 text-neutral-400" />
+                        {t("patients.zoom", "Zoom")}
+                      </span>
+                      <span className="font-mono text-xs text-neutral-400">{Math.round(zoom * 100)}%</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 border-neutral-700 bg-transparent text-white hover:bg-neutral-800"
+                        onClick={() => setZoom(Math.max(0.5, zoom - 0.25))}
+                      >
+                        <ZoomOut className="h-4 w-4" />
+                      </Button>
+                      <input
+                        type="range"
+                        min="1"
+                        max="4"
+                        step="0.1"
+                        value={zoom}
+                        onChange={(e) => setZoom(Number(e.target.value))}
+                        className="h-1.5 flex-1 cursor-pointer appearance-none rounded-lg bg-neutral-800 accent-primary-500"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 border-neutral-700 bg-transparent text-white hover:bg-neutral-800"
+                        onClick={() => setZoom(Math.min(4, zoom + 0.25))}
+                      >
+                        <ZoomIn className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <Button
+                      variant="outline"
+                      className="h-9 gap-1.5 border-neutral-700 bg-transparent text-xs text-white hover:bg-neutral-800"
+                      onClick={() => setRotation((prev) => (prev + 90) % 360)}
+                    >
+                      <RotateCw className="h-3.5 w-3.5" />
+                      {t("patients.rotate", "Rotate 90°")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className={`h-9 gap-1.5 border-neutral-700 text-xs text-white hover:bg-neutral-800 ${
+                        invert ? "border-primary-600 bg-primary-600 hover:bg-primary-700" : "bg-transparent"
+                      }`}
+                      onClick={() => setInvert((prev) => !prev)}
+                    >
+                      {invert ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      {t("patients.invertColors", "Invert Colors")}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-4 border-t border-neutral-800 pt-6">
+                  {zoom > 1 ? (
+                    <p className="text-center text-xs italic text-neutral-400">
+                      {t("patients.panHint", "Drag the image to pan around")}
+                    </p>
+                  ) : null}
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-neutral-700 bg-transparent text-white hover:bg-neutral-800"
+                    onClick={resetFilters}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    {t("patients.resetFilters", "Reset View")}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      : null
 
   return (
     <div className="space-y-6">
@@ -425,225 +663,7 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
         </CardContent>
       </Card>
 
-      {/* INTERACTIVE RADIOLOGY LIGHTBOX / DIAGNOSTIC VIEWER */}
-      {selectedImage && (
-        <div className="fixed inset-0 z-[70] flex flex-col select-none overflow-hidden bg-black/95 text-white animate-in fade-in duration-200">
-          {/* Header */}
-          <header className="flex flex-col gap-3 border-b border-neutral-800 bg-neutral-900 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <Images className="h-4 w-4 shrink-0 text-primary-300" aria-hidden />
-                <h3 className="font-bold text-lg truncate">{selectedImage.notes || selectedImage.file_name}</h3>
-              </div>
-              <p className="text-xs text-neutral-400 mt-0.5">
-                {t("patients.imagingDate", "Imaged on")}: {new Date(selectedImage.created_at).toLocaleString(dateLocale)}
-                {selectedImage.uploader_name ? ` · ${t("patients.uploadedBy", "By")}: ${selectedImage.uploader_name}` : ""}
-              </p>
-            </div>
-            <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-neutral-700 hover:bg-neutral-800 text-white bg-transparent"
-                onClick={() => handleDownload(selectedImage)}
-              >
-                <Download className="h-4 w-4 mr-1.5" />
-                {t("patients.docDownload", "Download")}
-              </Button>
-              <PermissionGate permission={PERMISSIONS.PATIENTS_WRITE}>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleDelete(selectedImage)}
-                >
-                  <Trash2 className="h-4 w-4 mr-1.5" />
-                  {t("patients.docDelete", "Delete")}
-                </Button>
-              </PermissionGate>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-neutral-400 hover:text-white hover:bg-neutral-800 text-lg font-bold px-3"
-                aria-label={t("common.close", "Close")}
-                onClick={() => setSelectedImage(null)}
-              >
-                ×
-              </Button>
-            </div>
-          </header>
-
-          {/* Main Workspace */}
-          <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-            {/* Image Canvas Panel */}
-            <div
-              className={`flex-1 relative flex items-center justify-center overflow-hidden bg-neutral-950 p-4 ${
-                zoom > 1 ? "cursor-grab" : ""
-              } ${isDragging ? "cursor-grabbing" : ""}`}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-            >
-              {selectedImage.url && (
-                <div
-                  className="transition-transform duration-100 ease-out"
-                  style={{
-                    transform: `translate(${panOffset.x}px, ${panOffset.y}px) rotate(${rotation}deg) scale(${zoom})`,
-                  }}
-                >
-                  {/* Private signed clinical images need pan/zoom/filter transforms without Next image rewriting. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={selectedImage.url}
-                    alt={selectedImage.file_name}
-                    className="max-h-[42vh] max-w-full object-contain pointer-events-none md:max-h-[70vh]"
-                    style={{
-                      filter: `brightness(${brightness}%) contrast(${contrast}%) invert(${invert ? 100 : 0}%)`,
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* Zoom Indicator */}
-              <div className="absolute bottom-4 left-4 bg-black/60 px-3 py-1.5 rounded-full text-xs font-mono text-neutral-300 border border-neutral-800">
-                Zoom: {Math.round(zoom * 100)}%
-              </div>
-            </div>
-
-            {/* Diagnostic Control Panel (Right Sidebar) */}
-            <div className="w-full flex-1 overflow-y-auto border-t border-neutral-800 bg-neutral-900 p-4 md:w-80 md:flex-none md:border-l md:border-t-0 md:p-6 flex flex-col justify-between">
-              <div className="space-y-6">
-                <div>
-                  <h4 className="text-sm font-bold text-neutral-300 uppercase tracking-wider mb-4">
-                    {t("patients.diagnosticTools", "Diagnostic Tools")}
-                  </h4>
-                  <p className="text-xs text-neutral-400">
-                    {t(
-                      "patients.radiologyToolsDesc",
-                      "Adjust sliders to enhance contrast, brightness, or invert colors to inspect root tips and caries."
-                    )}
-                  </p>
-                </div>
-
-                {/* Brightness Control */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-1.5 text-neutral-300">
-                      <Sun className="h-4 w-4 text-neutral-400" />
-                      {t("patients.brightness", "Brightness")}
-                    </span>
-                    <span className="font-mono text-xs text-neutral-400">{brightness}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="50"
-                    max="200"
-                    value={brightness}
-                    onChange={(e) => setBrightness(Number(e.target.value))}
-                    className="w-full h-1.5 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-primary-500"
-                  />
-                </div>
-
-                {/* Contrast Control */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-1.5 text-neutral-300">
-                      <ContrastIcon className="h-4 w-4 text-neutral-400" />
-                      {t("patients.contrast", "Contrast")}
-                    </span>
-                    <span className="font-mono text-xs text-neutral-400">{contrast}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="50"
-                    max="200"
-                    value={contrast}
-                    onChange={(e) => setContrast(Number(e.target.value))}
-                    className="w-full h-1.5 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-primary-500"
-                  />
-                </div>
-
-                {/* Zoom Control */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-1.5 text-neutral-300">
-                      <ZoomIn className="h-4 w-4 text-neutral-400" />
-                      {t("patients.zoom", "Zoom")}
-                    </span>
-                    <span className="font-mono text-xs text-neutral-400">{Math.round(zoom * 100)}%</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8 border-neutral-700 bg-transparent text-white hover:bg-neutral-800"
-                      onClick={() => setZoom(Math.max(0.5, zoom - 0.25))}
-                    >
-                      <ZoomOut className="h-4 w-4" />
-                    </Button>
-                    <input
-                      type="range"
-                      min="1"
-                      max="4"
-                      step="0.1"
-                      value={zoom}
-                      onChange={(e) => setZoom(Number(e.target.value))}
-                      className="flex-1 h-1.5 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-primary-500"
-                    />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8 border-neutral-700 bg-transparent text-white hover:bg-neutral-800"
-                      onClick={() => setZoom(Math.min(4, zoom + 0.25))}
-                    >
-                      <ZoomIn className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Rotation & Color Inversion */}
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <Button
-                    variant="outline"
-                    className="border-neutral-700 bg-transparent text-white hover:bg-neutral-800 gap-1.5 text-xs h-9"
-                    onClick={() => setRotation((prev) => (prev + 90) % 360)}
-                  >
-                    <RotateCw className="h-3.5 w-3.5" />
-                    {t("patients.rotate", "Rotate 90°")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className={`border-neutral-700 text-white hover:bg-neutral-800 gap-1.5 text-xs h-9 ${
-                      invert ? "bg-primary-600 border-primary-600 hover:bg-primary-700" : "bg-transparent"
-                    }`}
-                    onClick={() => setInvert((prev) => !prev)}
-                  >
-                    {invert ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                    {t("patients.invertColors", "Invert Colors")}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Reset & Instructions */}
-              <div className="space-y-4 pt-6 border-t border-neutral-800">
-                {zoom > 1 && (
-                  <p className="text-xs text-neutral-400 text-center italic">
-                    {t("patients.panHint", "Drag the image to pan around")}
-                  </p>
-                )}
-                <Button
-                  variant="outline"
-                  className="w-full border-neutral-700 bg-transparent text-white hover:bg-neutral-800 gap-2"
-                  onClick={resetFilters}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  {t("patients.resetFilters", "Reset View")}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {viewerOverlay}
     </div>
   )
 }
