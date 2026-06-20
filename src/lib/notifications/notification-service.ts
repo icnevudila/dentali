@@ -212,15 +212,13 @@ export async function sendTestNotification(
 
 export async function upsertDryRunMode(
   branchId: string,
-  organizationId: string,
+  _organizationId: string,
   dryRun: boolean
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
-  const { error } = await supabase.from("notification_branch_settings").upsert({
-    branch_id: branchId,
-    organization_id: organizationId,
-    dry_run_mode: dryRun,
-    updated_at: new Date().toISOString(),
+  const { error } = await supabase.rpc("set_notification_dry_run_guarded", {
+    p_branch_id: branchId,
+    p_dry_run: dryRun,
   })
 
   return { error: error?.message ?? null }

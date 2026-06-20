@@ -2059,7 +2059,7 @@ export const messagesTr: MessageTree = {
     channelProviderStatus: "Sağlayıcı durumu",
     channelClinicIdentity: "Klinik kimliği",
     channelDisplayName: "Görünen ad",
-    channelDisplayNameHint: "SMS gönderen adı ve e-posta From alanında görünür.",
+    channelDisplayNameHint: "SMS gönderen adı ve e-posta Gönderen alanında görünür.",
     channelDefaultRoute: "Varsayılan hasta kanalı",
     channelDefaultRouteHint: "Personelin hastaya ulaşırken önce denemesi gereken kanal.",
     channelWhatsApp: "WhatsApp (manuel, ücretsiz)",

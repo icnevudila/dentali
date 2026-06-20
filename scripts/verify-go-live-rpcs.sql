@@ -35,6 +35,18 @@ WITH expected(name) AS (
     ('upsert_patient_periodontal'),
     ('get_public_queue_display'),
     ('_mask_patient_display_name')
+    ,('add_staff_member_directly')
+    ,('update_staff_profile_contact')
+    ,('remove_staff_branch_assignment')
+    ,('set_staff_active_status')
+    ,('update_clinic_hour_guarded')
+    ,('create_lab_case_guarded')
+    ,('update_lab_case_status_guarded')
+    ,('set_notification_dry_run_guarded')
+    ,('upsert_procedure_bom_line_guarded')
+    ,('delete_procedure_bom_line_guarded')
+    ,('create_plan_invoice_guarded')
+    ,('resync_draft_invoice_from_plan_guarded')
 )
 SELECT
   e.name,

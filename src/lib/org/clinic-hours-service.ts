@@ -35,6 +35,11 @@ export async function updateClinicHour(
   payload: Partial<Pick<ClinicHourRow, "open_time" | "close_time" | "is_closed">>
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
-  const { error } = await supabase.from("clinic_hours").update(payload).eq("id", hourId)
+  const { error } = await supabase.rpc("update_clinic_hour_guarded", {
+    p_hour_id: hourId,
+    p_open_time: payload.open_time ?? null,
+    p_close_time: payload.close_time ?? null,
+    p_is_closed: payload.is_closed ?? false,
+  })
   return { error: error?.message ?? null }
 }

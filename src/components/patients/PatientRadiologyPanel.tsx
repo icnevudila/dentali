@@ -427,9 +427,9 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
 
       {/* INTERACTIVE RADIOLOGY LIGHTBOX / DIAGNOSTIC VIEWER */}
       {selectedImage && (
-        <div className="fixed inset-0 z-50 bg-black/95 flex flex-col select-none text-white animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[70] flex flex-col select-none overflow-hidden bg-black/95 text-white animate-in fade-in duration-200">
           {/* Header */}
-          <header className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-neutral-900">
+          <header className="flex flex-col gap-3 border-b border-neutral-800 bg-neutral-900 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <Images className="h-4 w-4 shrink-0 text-primary-300" aria-hidden />
@@ -440,7 +440,7 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
                 {selectedImage.uploader_name ? ` · ${t("patients.uploadedBy", "By")}: ${selectedImage.uploader_name}` : ""}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
               <Button
                 variant="outline"
                 size="sm"
@@ -496,7 +496,7 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
                   <img
                     src={selectedImage.url}
                     alt={selectedImage.file_name}
-                    className="max-h-[70vh] max-w-full object-contain pointer-events-none"
+                    className="max-h-[42vh] max-w-full object-contain pointer-events-none md:max-h-[70vh]"
                     style={{
                       filter: `brightness(${brightness}%) contrast(${contrast}%) invert(${invert ? 100 : 0}%)`,
                     }}
@@ -511,7 +511,7 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
             </div>
 
             {/* Diagnostic Control Panel (Right Sidebar) */}
-            <div className="w-full md:w-80 border-t md:border-t-0 md:border-l border-neutral-800 bg-neutral-900 p-6 flex flex-col justify-between overflow-y-auto">
+            <div className="w-full flex-1 overflow-y-auto border-t border-neutral-800 bg-neutral-900 p-4 md:w-80 md:flex-none md:border-l md:border-t-0 md:p-6 flex flex-col justify-between">
               <div className="space-y-6">
                 <div>
                   <h4 className="text-sm font-bold text-neutral-300 uppercase tracking-wider mb-4">

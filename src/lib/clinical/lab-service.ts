@@ -76,34 +76,16 @@ export async function createLabCase(
   payload: Omit<LabCase, "id" | "created_at" | "updated_at" | "organization_id" | "branch_id" | "status"> & { branch_id: string }
 ): Promise<{ data: PatientWithLabCase | null; error: string | null }> {
   const supabase = createClient()
-  const { data: orgData, error: orgError } = await supabase
-    .from("branches")
-    .select("organization_id")
-    .eq("id", payload.branch_id)
-    .single()
-
-  if (orgError || !orgData?.organization_id) {
-    return { data: null, error: orgError?.message ?? "Branch organization not found" }
-  }
-
-  const { data, error } = await supabase
-    .from("lab_cases")
-    .insert({
-      ...payload,
-      organization_id: orgData.organization_id,
-      status: "pending",
-    })
-    .select(`
-      *,
-      patients (
-        id,
-        first_name,
-        last_name
-      )
-    `)
-    .single()
-
+  const { data: created, error } = await supabase.rpc("create_lab_case_guarded", {
+    p_payload: payload,
+  })
   if (error) return { data: null, error: error.message }
+  const createdId = (created as { id: string }).id
+  const { data } = await supabase
+    .from("lab_cases")
+    .select("*, patients(id, first_name, last_name)")
+    .eq("id", createdId)
+    .single()
   return { data: data as unknown as PatientWithLabCase, error: null }
 }
 
@@ -112,11 +94,9 @@ export async function updateLabCaseStatus(
   status: "pending" | "received" | "cancelled"
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
-  const updates: any = { status, updated_at: new Date().toISOString() }
-  if (status === "received") {
-    updates.received_date = new Date().toISOString().split('T')[0]
-  }
-
-  const { error } = await supabase.from("lab_cases").update(updates).eq("id", id)
+  const { error } = await supabase.rpc("update_lab_case_status_guarded", {
+    p_case_id: id,
+    p_status: status,
+  })
   return { error: error?.message ?? null }
 }

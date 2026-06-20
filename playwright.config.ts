@@ -4,6 +4,7 @@ const port = process.env.PLAYWRIGHT_PORT ?? "3001"
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`
 
 export default defineConfig({
+  globalSetup: "./e2e/global.setup.ts",
   testDir: "./e2e",
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
@@ -15,11 +16,26 @@ export default defineConfig({
     baseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    video: "retain-on-failure",
   },
   projects: [
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "tablet",
+      testMatch: /responsive-critical\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1024, height: 1366 },
+        hasTouch: true,
+      },
+    },
+    {
+      name: "mobile",
+      testMatch: /responsive-critical\.spec\.ts/,
+      use: { ...devices["Pixel 7"] },
     },
   ],
   webServer: process.env.PLAYWRIGHT_BASE_URL

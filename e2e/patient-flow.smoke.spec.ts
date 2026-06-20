@@ -18,6 +18,9 @@ test.describe("@smoke Patient flow chain", () => {
       await checkInButton.click()
       await page.waitForTimeout(600)
     } else {
+      if (process.env.E2E_STRICT === "true") {
+        throw new Error("Strict staging fixture did not provide an appointment ready for check-in")
+      }
       test.skip(true, "No arrivals waiting for check-in in this environment")
       return
     }
@@ -38,5 +41,7 @@ test.describe("@smoke Patient flow chain", () => {
       timeout: 15_000,
     })
     await expect(page.getByText(/visit marked complete/i)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByRole("link", { name: /note|clinical/i }).first()).toBeVisible()
+    await expect(page.getByRole("link", { name: /billing|invoice/i }).first()).toBeVisible()
   })
 })

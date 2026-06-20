@@ -69,6 +69,9 @@ Suggested schedule — full setup guide: [SUPABASE_CRON_SETUP.md](./SUPABASE_CRO
 
 ## Go-live verification
 
+- [ ] Production backup/PITR is enabled and a staging restore has been tested
+- [ ] Consent, privacy, retention, and clinical output text has clinic/legal sign-off
+
 - [ ] Branch workflow toggles configured under Settings → Workflow
 - [ ] Notification templates reviewed; dry-run disabled per branch when SMS is live
 - [ ] Owner dashboard shows attention items and charts

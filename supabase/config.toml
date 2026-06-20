@@ -66,3 +66,9 @@ verify_jwt = true
 
 [functions.notification-channel-health]
 verify_jwt = true
+
+[functions.recall-reminder-cron]
+verify_jwt = false
+
+[functions.owner-digest-sms-cron]
+verify_jwt = false

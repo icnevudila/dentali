@@ -68,6 +68,11 @@ $files = Get-ChildItem -Path $migrationsDir -Filter "*.sql" |
   Where-Object { $_.Name -notlike "_*" -and ($exclude -notcontains $_.Name) } |
   Sort-Object Name
 
+$manifest = ($files | ForEach-Object {
+  $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash.ToLowerInvariant()
+  "--   $($_.Name) $hash"
+}) -join "`n"
+
 $preflightFile = Join-Path $PSScriptRoot "bundle-preflight-drops.sql"
 $preflight = if (Test-Path $preflightFile) { Get-Content -Path $preflightFile -Raw } else { "" }
 
@@ -76,6 +81,8 @@ $header = @"
 -- Supabase Dashboard > SQL Editor > Run (TEK SEFERDE — ayri repair script gerekmez)
 -- Tekrar calistirmak guvenli: preflight drops + policy/index/column cakismalari onlenir.
 -- Tercih: npm run db:push
+-- SOURCE MANIFEST (SHA256):
+$manifest
 
 SET client_min_messages TO WARNING;
 

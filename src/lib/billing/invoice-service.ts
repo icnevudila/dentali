@@ -141,30 +141,12 @@ export async function createInvoiceFromPlan(params: {
 
   const supabase = createClient()
   const series = params.series || "INV"
-  const invoiceNumber = `${series}-${Date.now().toString(36).toUpperCase()}`
-
-  const { data, error } = await supabase
-    .from("invoices")
-    .insert({
-      organization_id: params.organizationId,
-      branch_id: params.branchId,
-      patient_id: params.patientId,
-      treatment_plan_id: params.treatmentPlanId,
-      invoice_number: invoiceNumber,
-      series: series,
-      total_amount: 0,
-      status: "draft",
-      created_by: params.userId,
-    })
-    .select("id")
-    .single()
-
+  const { data, error } = await supabase.rpc("create_plan_invoice_guarded", {
+    p_plan_id: params.treatmentPlanId,
+    p_series: series,
+  })
   if (error || !data) return { data: null, error: error?.message ?? "Failed" }
-
-  const lineErr = await seedLineItemsFromTreatmentPlan(data.id, params.treatmentPlanId)
-  if (lineErr.error) return { data: null, error: lineErr.error }
-
-  return { data: { id: data.id }, error: null }
+  return { data: { id: (data as { id: string }).id }, error: null }
 }
 
 export interface InvoiceDetail extends InvoiceRecord {
@@ -301,19 +283,11 @@ export async function resyncDraftInvoiceFromPlan(
   treatmentPlanId: string
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
-  const { data: inv, error: invErr } = await supabase
-    .from("invoices")
-    .select("status")
-    .eq("id", invoiceId)
-    .maybeSingle()
-
-  if (invErr) return { error: invErr.message }
-  if (!inv || inv.status !== "draft") return { error: null }
-
-  const { error: delErr } = await supabase.from("invoice_line_items").delete().eq("invoice_id", invoiceId)
-  if (delErr) return { error: delErr.message }
-
-  return seedLineItemsFromTreatmentPlan(invoiceId, treatmentPlanId)
+  const { error } = await supabase.rpc("resync_draft_invoice_from_plan_guarded", {
+    p_invoice_id: invoiceId,
+    p_plan_id: treatmentPlanId,
+  })
+  return { error: error?.message ?? null }
 }
 
 export async function getInvoice(

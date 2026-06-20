@@ -187,21 +187,19 @@ export async function upsertProcedureBomLine(params: {
   quantity: number
 }): Promise<{ error: string | null }> {
   const supabase = createClient()
-  const { error } = await supabase.from("procedure_bom_lines").upsert(
-    {
-      organization_id: params.organizationId,
-      procedure_id: params.procedureId,
-      inventory_item_id: params.inventoryItemId,
-      quantity: params.quantity,
-    },
-    { onConflict: "procedure_id,inventory_item_id" }
-  )
+  const { error } = await supabase.rpc("upsert_procedure_bom_line_guarded", {
+    p_procedure_id: params.procedureId,
+    p_inventory_item_id: params.inventoryItemId,
+    p_quantity: params.quantity,
+  })
   return { error: error?.message ?? null }
 }
 
 export async function deleteProcedureBomLine(lineId: string): Promise<{ error: string | null }> {
   const supabase = createClient()
-  const { error } = await supabase.from("procedure_bom_lines").delete().eq("id", lineId)
+  const { error } = await supabase.rpc("delete_procedure_bom_line_guarded", {
+    p_line_id: lineId,
+  })
   return { error: error?.message ?? null }
 }
 
@@ -272,4 +270,3 @@ export async function updateInventoryItem(
     .eq("id", itemId)
   return { error: error?.message ?? null }
 }
-

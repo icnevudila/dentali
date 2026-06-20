@@ -104,6 +104,18 @@ with expected(name) as (
     ('seed_demo_showcase_data'),
     ('seed_notification_templates'),
     ('get_owner_digest_readiness')
+    ,('add_staff_member_directly')
+    ,('update_staff_profile_contact')
+    ,('remove_staff_branch_assignment')
+    ,('set_staff_active_status')
+    ,('update_clinic_hour_guarded')
+    ,('create_lab_case_guarded')
+    ,('update_lab_case_status_guarded')
+    ,('set_notification_dry_run_guarded')
+    ,('upsert_procedure_bom_line_guarded')
+    ,('delete_procedure_bom_line_guarded')
+    ,('create_plan_invoice_guarded')
+    ,('resync_draft_invoice_from_plan_guarded')
 )
 select
   e.name,
@@ -158,3 +170,34 @@ select
          || ', eksik tablo: ' || (select n from table_missing)::text
          || ' → _APPLY_ALL_IDEMPOTENT.sql tekrar çalıştırın'
   end as overall;
+
+-- ---------------------------------------------------------------------------
+-- D) Go-live security checks. Each result set must return zero rows.
+-- ---------------------------------------------------------------------------
+select schemaname, tablename, policyname
+from pg_policies
+where schemaname = 'public'
+  and (
+    coalesce(qual, '') ~ 'auth\.role\(\)'
+    or coalesce(with_check, '') ~ 'auth\.role\(\)'
+  );
+
+select routine_schema, routine_name
+from information_schema.routine_privileges
+where routine_schema = 'public'
+  and grantee = 'PUBLIC'
+  and routine_name in (
+    'seed_demo_showcase_data',
+    'add_staff_member_directly',
+    'update_staff_profile_contact',
+    'remove_staff_branch_assignment',
+    'set_staff_active_status',
+    'update_clinic_hour_guarded',
+    'create_lab_case_guarded',
+    'update_lab_case_status_guarded',
+    'set_notification_dry_run_guarded',
+    'upsert_procedure_bom_line_guarded',
+    'delete_procedure_bom_line_guarded',
+    'create_plan_invoice_guarded',
+    'resync_draft_invoice_from_plan_guarded'
+  );

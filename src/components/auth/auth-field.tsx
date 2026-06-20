@@ -142,7 +142,7 @@ export function AuthMarketingLinks() {
         {t("marketing.navQuote", "Get a quote")}
       </Link>
       <Link href="/welcome" className="transition hover:text-primary-600">
-        {t("marketing.navHome", "Home")}
+        {t("login.learnMore", "See what the clinic OS includes")}
       </Link>
     </div>
   )

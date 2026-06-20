@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit --pretty false",
     "pretest:e2e": "npm run build",
     "pretest:e2e:smoke": "npm run build",
     "pretest:e2e:public": "npm run build",
@@ -14,6 +15,8 @@
     "test:e2e:smoke": "powershell -NoProfile -Command \"$env:PLAYWRIGHT_BASE_URL=$null; npx playwright test --grep @smoke\"",
     "test:e2e:public": "powershell -NoProfile -Command \"$env:PLAYWRIGHT_BASE_URL=$null; npx playwright test e2e/public.smoke.spec.ts\"",
     "test:e2e:patient-flow": "powershell -NoProfile -Command \"$env:PLAYWRIGHT_BASE_URL=$null; npx playwright test e2e/patient-flow.smoke.spec.ts\"",
+    "test:e2e:staging": "powershell -NoProfile -Command \"$env:E2E_STRICT='true'; $env:TEMP=(Join-Path (Get-Location) '.tmp'); $env:TMP=$env:TEMP; npx playwright test e2e/patient-flow.smoke.spec.ts e2e/queue-checkin-arrival.smoke.spec.ts e2e/responsive-critical.spec.ts\"",
+    "quality:ci": "npm run lint && npm run typecheck && npm run i18n:audit-tr && npm run i18n:audit-quality && npm run build",
     "db:push": "npx supabase db push",
     "db:link": "npx supabase link --project-ref ahipxdlxyuvqikcybjpm",
     "db:bundle": "powershell -ExecutionPolicy Bypass -File scripts/bundle-migrations-idempotent.ps1",
@@ -37,8 +40,8 @@
     "i18n:sync": "npx tsx scripts/sync-code-messages.mjs",
     "i18n:apply-batch": "node scripts/apply-phrase-tr-batch.mjs",
     "i18n:full": "node scripts/fetch-tr-api.mjs && npm run i18n:build-tr && npm run i18n:sync",
-    "i18n:audit-tr": "npx tsx scripts/audit-i18n-tr.mjs",
-    "i18n:audit-quality": "npx tsx scripts/audit-tr-quality.mjs"
+    "i18n:audit-tr": "tsx scripts/audit-i18n-tr.ts",
+    "i18n:audit-quality": "tsx scripts/audit-tr-quality.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
@@ -68,6 +71,7 @@
     "eslint-config-next": "16.2.7",
     "sharp": "^0.34.5",
     "tailwindcss": "^4",
+    "tsx": "4.20.6",
     "typescript": "^5"
   }
 }

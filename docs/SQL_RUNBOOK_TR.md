@@ -4,7 +4,7 @@ Supabase **SQL Editor**'da bu sırayla çalıştırın. Her adımın sonunda bek
 
 | Proje ref (örnek) | `ahipxdlxyuvqikcybjpm` |
 |-------------------|-------------------------|
-| Migration sayısı | **90** (bundle) |
+| Migration sayısı | Bundle başlığındaki manifest belirleyicidir |
 | Son güncelleme | 2026-06-12 |
 
 ---
@@ -13,7 +13,7 @@ Supabase **SQL Editor**'da bu sırayla çalıştırın. Her adımın sonunda bek
 
 | Adım | Dosya | Zorunlu | Süre | Başarı kriteri |
 |------|-------|---------|------|----------------|
-| 0 | Yerel bundle | Evet | ~30 sn | `87 files` yazısı |
+| 0 | Yerel bundle | Evet | ~30 sn | migration sayısı + SHA256 manifest |
 | 1 | `scripts/runbook/01-extensions.sql` | Evet | ~5 sn | 3 uzantı OK |
 | 1b | `scripts/runbook/01b-repair-rpc-drops.sql` | **Artık gerekmez** | — | Preflight bundle içinde |
 | 2 | `supabase/migrations/_APPLY_ALL_IDEMPOTENT.sql` | **Evet** | 2–8 dk | Hata yok |
@@ -36,7 +36,7 @@ cd "c:\Users\TP2\Documents\2026 yeni dişçi"
 npm run db:bundle:idempotent
 ```
 
-Çıktı: `Wrote ... _APPLY_ALL_IDEMPOTENT.sql (90 files, idempotent)`
+Çıktı: `Wrote ... _APPLY_ALL_IDEMPOTENT.sql (... files, idempotent)`. Dosyanın başında kaynak migration SHA256 manifesti bulunur.
 
 > Bundle'ı her migration değişikliğinden sonra yenileyin. SQL Editor'a yapıştırmadan önce güncel bundle kullanın.
 
