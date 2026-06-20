@@ -6,6 +6,8 @@ import type { TimelineEvent } from "@/lib/clinical/clinical-notes-service"
 import type { AppointmentRecord } from "@/lib/appointments/types"
 import type { PatientEncounterDetail } from "@/lib/clinical/encounter-service"
 import { buildPatientRecordChecklist } from "@/lib/patients/patient-record-completeness"
+import { findCheckInBlockingConsentSlug } from "@/lib/patients/checkin-consent"
+import { normalizeIntakeConsentSlugs } from "@/lib/patients/intake-consent-slugs-service"
 
 export type EncounterVisitStepId =
   | "file"
@@ -61,8 +63,9 @@ export function encounterClinicalWorkHref(patientId: string, encounterId?: strin
   return `/patients/${patientId}?${params.toString()}`
 }
 
-function hasSignedConsent(consents: PatientConsent[], slug: string) {
-  return consents.some((c) => c.template_slug === slug && c.status === "signed")
+
+function intakeConsentsComplete(consents: PatientConsent[], intakeConsentSlugs?: readonly string[]) {
+  return findCheckInBlockingConsentSlug(consents, normalizeIntakeConsentSlugs(intakeConsentSlugs)) === null
 }
 
 function appointmentProgress(appointments: AppointmentRecord[]) {
@@ -125,6 +128,7 @@ export function buildClinicalVisitJourney(params: {
   billingGate?: PatientBillingGate | null
   timeline: TimelineEvent[]
   hasChartFindings: boolean
+  intakeConsentSlugs?: readonly string[]
 }): ClinicalVisitJourney {
   const {
     patientId,
@@ -137,6 +141,7 @@ export function buildClinicalVisitJourney(params: {
     billingGate,
     timeline,
     hasChartFindings,
+    intakeConsentSlugs,
   } = params
 
   const { items: intakeItems } = buildPatientRecordChecklist({
@@ -144,12 +149,12 @@ export function buildClinicalVisitJourney(params: {
     medicalHistory,
     consents,
     patientId,
+    intakeConsentSlugs,
   })
 
   const profileDone = intakeItems.find((i) => i.id === "profile")?.done ?? false
   const medicalDone = intakeItems.find((i) => i.id === "medical")?.done ?? false
-  const consentsDone =
-    hasSignedConsent(consents, "general-treatment")
+  const consentsDone = intakeConsentsComplete(consents, intakeConsentSlugs)
 
   const { hasBooked, hasCheckedIn, hasCompletedVisit } = appointmentProgress(appointments)
   const hasClinicalNote = timeline.some((e) => e.event_type === "clinical_note")

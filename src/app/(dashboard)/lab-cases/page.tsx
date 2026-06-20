@@ -16,6 +16,8 @@ import { FlaskConical, Plus, CheckCircle2, Clock, XCircle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { PermissionGate } from "@/components/auth/PermissionGate"
+import { PERMISSIONS } from "@/lib/auth/permissions"
 import { NewLabCaseDialog } from "@/components/clinical/lab/NewLabCaseDialog"
 import { formatCurrency } from "@/lib/i18n/translate"
 import { toast } from "sonner"
@@ -105,6 +107,7 @@ export default function LabCasesPage() {
   }
 
   return (
+    <PermissionGate permission={PERMISSIONS.PATIENTS_READ}>
     <DirectionalTransition className="mx-auto w-full max-w-7xl">
       <ContentPanel padding="lg" className="space-y-6">
         <SectionEyebrow icon={FlaskConical}>
@@ -267,5 +270,6 @@ export default function LabCasesPage() {
         onSuccess={handleLabCaseCreated}
       />
     </DirectionalTransition>
+    </PermissionGate>
   )
 }

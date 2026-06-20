@@ -168,9 +168,17 @@ function PhilHealthPageContent() {
     if (err) setError(err)
     else {
       setSyncNote(
-        data?.dry_run
-          ? t("billing.philhealthDryRun", "Dry-run sync recorded — configure PhilHealth API secrets for live submission.")
-          : `${t("billing.philhealthLiveOk", "Claim submitted to PhilHealth eClaims.")}${data?.provider_ref ? ` Ref: ${data.provider_ref}` : ""}`
+        data?.stub_fallback
+          ? t(
+              "billing.philhealthStubFallback",
+              "PhilHealth API is not configured — a local dry-run log was recorded only. Configure PHILHEALTH_ECLAIMS_API_URL for live submission."
+            )
+          : data?.dry_run
+            ? t(
+                "billing.philhealthDryRun",
+                "Dry-run sync recorded — configure PhilHealth API secrets for live submission."
+              )
+            : `${t("billing.philhealthLiveOk", "Claim submitted to PhilHealth eClaims.")}${data?.provider_ref ? ` Ref: ${data.provider_ref}` : ""}`
       )
       load()
       fetchPhilHealthSyncLogs(selected.id).then(({ data: logs }) => setSyncLogs(logs))

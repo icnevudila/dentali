@@ -63,6 +63,14 @@ import { BranchBenchmarkPanel } from "@/components/analytics/BranchBenchmarkPane
 import { FinanceSummaryPanel } from "@/components/analytics/FinanceSummaryPanel"
 import { ChairTimeAnalyticsPanel } from "@/components/analytics/ChairTimeAnalyticsPanel"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
+import { PermissionGate } from "@/components/auth/PermissionGate"
+import { PERMISSIONS } from "@/lib/auth/permissions"
+
+const REPORTS_ACCESS_PERMISSIONS = [
+  PERMISSIONS.AUDIT_READ,
+  PERMISSIONS.BILLING_READ,
+  PERMISSIONS.COMPLIANCE_READ,
+] as const
 
 const PERIOD_OPTIONS = [7, 30, 90] as const
 type PeriodDays = (typeof PERIOD_OPTIONS)[number]
@@ -491,6 +499,7 @@ export default function ReportsHubPage() {
   )
 
   return (
+    <PermissionGate anyOf={[...REPORTS_ACCESS_PERMISSIONS]}>
     <ModulePageShell
       maxWidth="max-w-[1600px]"
       eyebrow={t("reports.eyebrow", "Analytics") + " · " + t("reports.title", "Reports Hub")}
@@ -995,5 +1004,6 @@ export default function ReportsHubPage() {
       </ReportsSectionBlock>
       ) : null}
     </ModulePageShell>
+    </PermissionGate>
   )
 }

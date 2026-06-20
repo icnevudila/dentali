@@ -144,7 +144,11 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
     <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-3">
       {APP_NAV_GROUPS.map((group) => {
         const visibleItems = group.items.filter((item) => {
-          if (loading || !item.permission) return true
+          if (loading) return false
+          if (item.anyOf?.length) {
+            return item.anyOf.some((key) => hasPermission(key))
+          }
+          if (!item.permission) return true
           return hasPermission(item.permission)
         })
         if (visibleItems.length === 0) return null

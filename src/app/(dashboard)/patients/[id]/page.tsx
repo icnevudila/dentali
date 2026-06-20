@@ -37,6 +37,7 @@ import { fetchPatientTimeline, type TimelineEvent } from "@/lib/clinical/clinica
 import { createClient } from "@/lib/supabase/client"
 import { useRouteParams } from "@/hooks/use-route-params"
 import { useBranch } from "@/hooks/use-branch"
+import { useIntakeConsentSlugs } from "@/hooks/use-intake-consent-slugs"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { NAV_BACK_TRANSITION, NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
@@ -95,6 +96,7 @@ const PATIENT_TAB_DEFS: { id: PatientTabId; labelKey: string; fallback: string; 
 export default function PatientProfilePage() {
   const { id: patientId } = useRouteParams<{ id: string }>()
   const { activeBranch } = useBranch()
+  const intakeConsentSlugs = useIntakeConsentSlugs(activeBranch?.organization_id)
   const { t } = useLocale()
   const realtimeInstanceId = React.useId().replace(/:/g, "")
   const router = useRouter()
@@ -458,6 +460,7 @@ export default function PatientProfilePage() {
     billingGate,
     timeline,
     hasChartFindings,
+    intakeConsentSlugs,
   })
 
   const visitJourney = activeEncounter

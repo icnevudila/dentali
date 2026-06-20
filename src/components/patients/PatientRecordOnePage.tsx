@@ -39,6 +39,7 @@ import { PatientEncountersWorkspace } from "@/components/patients/PatientEncount
 import { fetchOrthoCase, type OrthoCase } from "@/lib/clinical/ortho-service"
 import { AuditHistoryPanel } from "@/components/audit/AuditHistoryPanel"
 import { useBranch } from "@/hooks/use-branch"
+import { useIntakeConsentSlugs } from "@/hooks/use-intake-consent-slugs"
 import { useLocale } from "@/hooks/use-locale"
 import { cn } from "@/lib/utils"
 
@@ -190,6 +191,7 @@ export function PatientRecordOnePage({
   const { t } = useLocale()
   const recordSections = useRecordSections()
   const { activeBranch } = useBranch()
+  const intakeConsentSlugs = useIntakeConsentSlugs(activeBranch?.organization_id)
   const [activeSection, setActiveSection] = React.useState<string | null>(recordSections[0]?.id ?? null)
   const [orthoCase, setOrthoCase] = React.useState<OrthoCase | null>(null)
 
@@ -220,6 +222,7 @@ export function PatientRecordOnePage({
     medicalHistory,
     consents,
     patientId,
+    intakeConsentSlugs,
   })
 
   const noteEvents = timeline.filter((e) => e.event_type === "clinical_note").slice(0, 4)

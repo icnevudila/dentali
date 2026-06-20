@@ -952,6 +952,9 @@ export const codeMessagesEn: MessageTree = {
     automationLog: "Recent automation events",
     branchSettings: "Branch settings",
     branchSettingsHint: "Configure this clinic location.",
+    googleReviewUrlTitle: "Google review link",
+    googleReviewUrlHint:
+      "Used when auto review-request SMS is enabled in Workflow settings. Paste your Google Business review URL (g.page/r/…).",
     branchesEyebrow: "Locations",
     consentEmptyHint: "Run the paper consent migration in Supabase, then refresh. Global templates will appear here for org overrides.",
     consentEmptyTitle: "No consent templates yet",
@@ -2058,6 +2061,9 @@ export const codeMessagesTr: MessageTree = {
     automationLog: "Son otomasyon etkinlikleri",
     branchSettings: "Şube ayarları",
     branchSettingsHint: "Bu klinik lokasyonunu yapılandırın.",
+    googleReviewUrlTitle: "Google yorum linki",
+    googleReviewUrlHint:
+      "Workflow ayarlarında otomatik yorum SMS'i açıkken kullanılır. Google Business yorum URL'nizi yapıştırın (g.page/r/…).",
     branchesEyebrow: "Mekanlar",
     consentEmptyHint: "Supabase'de kağıt izni geçişini çalıştırın, ardından yenileyin. Kuruluş geçersiz kılmaları için genel şablonlar burada görünecektir.",
     consentEmptyTitle: "Henüz onam şablonu yok",

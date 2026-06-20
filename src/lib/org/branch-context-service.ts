@@ -94,3 +94,33 @@ export async function saveBranchRegionalOverrides(
 
   return { error: null }
 }
+
+export async function saveBranchGoogleReviewUrl(
+  branchId: string,
+  url: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const trimmed = url.trim()
+  const { error } = await supabase.rpc("set_branch_setting", {
+    p_branch_id: branchId,
+    p_key: "google_review_url",
+    p_value: trimmed,
+  })
+  return { error: error?.message ?? null }
+}
+
+export async function fetchBranchSetting(
+  branchId: string,
+  key: string
+): Promise<{ value: string | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("branch_settings")
+    .select("value")
+    .eq("branch_id", branchId)
+    .eq("key", key)
+    .maybeSingle()
+
+  if (error) return { value: null, error: error.message }
+  return { value: data?.value ?? null, error: null }
+}

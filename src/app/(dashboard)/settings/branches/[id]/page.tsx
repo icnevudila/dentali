@@ -16,6 +16,8 @@ import { PERMISSIONS } from "@/lib/auth/permissions"
 import { deactivateBranch, updateBranch } from "@/lib/org/branch-service"
 import {
   fetchBranchContext,
+  fetchBranchSetting,
+  saveBranchGoogleReviewUrl,
   saveBranchRegionalOverrides,
 } from "@/lib/org/branch-context-service"
 import {
@@ -49,6 +51,7 @@ export default function BranchDetailPage() {
   const [orgTimezone, setOrgTimezone] = useState("Asia/Manila")
   const [orgCurrency, setOrgCurrency] = useState("PHP")
   const [deactivateReason, setDeactivateReason] = useState("")
+  const [googleReviewUrl, setGoogleReviewUrl] = useState("")
   const { activeBranch, setActiveBranch, setAvailableBranches, bumpBranchRevision } = useBranch()
   const { t } = useLocale()
 
@@ -62,7 +65,8 @@ export default function BranchDetailPage() {
         .maybeSingle(),
       fetchClinicHours(branchId),
       fetchBranchContext(branchId),
-    ]).then(([branchResult, hoursResult, contextResult]) => {
+      fetchBranchSetting(branchId, "google_review_url"),
+    ]).then(([branchResult, hoursResult, contextResult, reviewUrlResult]) => {
       const { data, error: fetchError } = branchResult
       if (fetchError || !data) {
         setError(fetchError?.message ?? "Branch not found")
@@ -84,6 +88,7 @@ export default function BranchDetailPage() {
         else setOrgCurrency(contextResult.data.currency_code)
       }
       if (contextResult.error) setError(contextResult.error)
+      setGoogleReviewUrl(reviewUrlResult.value ?? "")
       setLoading(false)
     })
   }, [branchId])
@@ -111,6 +116,13 @@ export default function BranchDetailPage() {
       timezone,
       currencyCode,
     })
+
+    const { error: reviewUrlError } = await saveBranchGoogleReviewUrl(branchId, googleReviewUrl)
+    if (reviewUrlError) {
+      setSaving(false)
+      setError(reviewUrlError)
+      return
+    }
 
     const org = await fetchOrganization()
     if (org && !saveError) {
@@ -301,6 +313,28 @@ export default function BranchDetailPage() {
                 maxLength={3}
               />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              {t("settings.googleReviewUrlTitle", "Google review link")}
+            </CardTitle>
+            <p className="text-sm text-neutral-500 mt-1">
+              {t(
+                "settings.googleReviewUrlHint",
+                "Used when auto review-request SMS is enabled in Workflow settings. Paste your Google Business review URL (g.page/r/…)."
+              )}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Input
+              type="url"
+              value={googleReviewUrl}
+              onChange={(e) => setGoogleReviewUrl(e.target.value)}
+              placeholder="https://g.page/r/your-clinic/review"
+            />
           </CardContent>
         </Card>
 

@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation"
 import { getPatient } from "@/lib/patients/patient-service"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { useBranch } from "@/hooks/use-branch"
+import { useLocale } from "@/hooks/use-locale"
 import { ConsentExportActions } from "@/components/consent/ConsentExportActions"
 import { ConsentSignedDocument } from "@/components/consent/ConsentSignedDocument"
 import { parseConsentFields, type ConsentFieldResponses } from "@/lib/consent/consent-field-types"
@@ -32,6 +33,7 @@ export default function ConsentViewPage() {
   const { id: patientId, formId: templateSlug } = useRouteParams<{ id: string; formId: string }>()
   const router = useRouter()
   const { activeBranch } = useBranch()
+  const { t } = useLocale()
   const [consentId, setConsentId] = React.useState("")
   const [patientName, setPatientName] = React.useState("")
   const [patientDob, setPatientDob] = React.useState("")
@@ -222,16 +224,21 @@ export default function ConsentViewPage() {
 
         <Card className="print:hidden border-amber-200">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-amber-900">Admin: void consent</CardTitle>
+            <CardTitle className="text-sm text-amber-900">
+              {t("consent.voidAdminTitle", "Admin: void consent")}
+            </CardTitle>
             <CardDescription>
-              Org admin only. Voids this record; patient must re-sign to obtain a new agreement.
+              {t(
+                "consent.voidAdminDescription",
+                "Org admin only. Voids this record; patient must re-sign to obtain a new agreement."
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <Input
               value={voidReason}
               onChange={(e) => setVoidReason(e.target.value)}
-              placeholder="Reason for voiding (required)"
+              placeholder={t("consent.voidReasonPlaceholder", "Reason for voiding (required)")}
             />
             <Button
               variant="destructive"
@@ -239,7 +246,9 @@ export default function ConsentViewPage() {
               disabled={voiding || !voidReason.trim()}
               onClick={handleVoid}
             >
-              {voiding ? "Voiding…" : "Void consent"}
+              {voiding
+                ? t("consent.voiding", "Voiding…")
+                : t("consent.voidConsent", "Void consent")}
             </Button>
           </CardContent>
         </Card>

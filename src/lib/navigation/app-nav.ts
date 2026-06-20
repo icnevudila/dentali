@@ -29,6 +29,8 @@ export type AppNavItem = {
   href: string
   icon: LucideIcon
   permission?: PermissionKey
+  /** Visible when the user has any of these permissions (overrides single permission). */
+  anyOf?: PermissionKey[]
   openInNewTab?: boolean
   /** Staff sidebar: generate branch token and open patient-facing device URL */
   publicDevice?: "kiosk" | "display" | "portal"
@@ -66,7 +68,13 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
     labelFallback: "Overview",
     items: [
       { nameKey: "nav.dashboard", fallback: "Dashboard", href: "/", icon: Home },
-      { nameKey: "nav.reports", fallback: "Reports", href: "/reports", icon: PieChart },
+      {
+        nameKey: "nav.reports",
+        fallback: "Reports",
+        href: "/reports",
+        icon: PieChart,
+        anyOf: [PERMISSIONS.AUDIT_READ, PERMISSIONS.BILLING_READ, PERMISSIONS.COMPLIANCE_READ],
+      },
       {
         nameKey: "nav.audit",
         fallback: "Audit Log",

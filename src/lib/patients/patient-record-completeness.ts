@@ -1,5 +1,7 @@
 import type { PatientWithContacts } from "@/lib/patients/patient-service"
 import type { PatientConsent } from "@/lib/patients/consent-service"
+import { findCheckInBlockingConsentSlug } from "@/lib/patients/checkin-consent"
+import { normalizeIntakeConsentSlugs } from "@/lib/patients/intake-consent-slugs-service"
 
 export type RecordChecklistItem = {
   id: string
@@ -8,16 +10,23 @@ export type RecordChecklistItem = {
   href?: string
 }
 
+const DEFAULT_CONSENT_LABELS: Record<string, string> = {
+  "general-treatment": "DPA & General Treatment Consent",
+}
+
 export function buildPatientRecordChecklist(params: {
   patient: PatientWithContacts
   medicalHistory: { allergies: string[]; medications: string[]; conditions: string[] } | null
   consents: PatientConsent[]
   patientId: string
+  intakeConsentSlugs?: readonly string[]
 }): { items: RecordChecklistItem[]; percent: number } {
-  const { patient, medicalHistory, consents, patientId } = params
-
-  const hasSigned = (slug: string) =>
-    consents.some((c) => c.template_slug === slug && c.status === "signed")
+  const { patient, medicalHistory, consents, patientId, intakeConsentSlugs } = params
+  const slugs = normalizeIntakeConsentSlugs(intakeConsentSlugs)
+  const consentLabel =
+    slugs.length === 1
+      ? (DEFAULT_CONSENT_LABELS[slugs[0] ?? ""] ?? slugs[0] ?? "Intake consent")
+      : "Intake consent forms"
 
   const items: RecordChecklistItem[] = [
     {
@@ -44,9 +53,9 @@ export function buildPatientRecordChecklist(params: {
       href: `/patients/${patientId}/medical-history`,
     },
     {
-      id: "general",
-      label: "DPA & General Treatment Consent",
-      done: hasSigned("general-treatment"),
+      id: "consents",
+      label: consentLabel,
+      done: findCheckInBlockingConsentSlug(consents, slugs) === null,
       href: `/patients/${patientId}?tab=consents`,
     },
   ]

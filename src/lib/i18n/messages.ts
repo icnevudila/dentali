@@ -1098,6 +1098,8 @@ export const messagesEnPh: MessageTree = {
     philhealthBanner:
       "Sync uses the sync-philhealth-claim edge function. Without PHILHEALTH_ECLAIMS_API_URL secrets, submissions run in dry-run mode.",
     philhealthDryRun: "Dry-run sync recorded — configure PhilHealth API secrets for live submission.",
+    philhealthStubFallback:
+      "PhilHealth API is not configured — a local dry-run log was recorded only. Configure PHILHEALTH_ECLAIMS_API_URL for live submission.",
     philhealthLiveOk: "Claim submitted to PhilHealth eClaims.",
     submitPhilhealth: "Submit to eClaims",
     newClaimPrep: "New claim prep",
@@ -2441,6 +2443,8 @@ export const messagesTr: MessageTree = {
     philhealthBanner:
       "Senkronizasyon sync-philhealth-claim edge fonksiyonunu kullanır. PHILHEALTH_ECLAIMS_API_URL olmadan gönderimler dry-run modunda çalışır.",
     philhealthDryRun: "Dry-run senkron kaydedildi — canlı gönderim için PhilHealth API secret'larını yapılandırın.",
+    philhealthStubFallback:
+      "PhilHealth API yapılandırılmamış — yalnızca yerel dry-run kaydı oluşturuldu. Canlı gönderim için PHILHEALTH_ECLAIMS_API_URL ayarlayın.",
     philhealthLiveOk: "Talep PhilHealth eClaims'e gönderildi.",
     submitPhilhealth: "eClaims'e gönder",
     newClaimPrep: "Yeni talep hazırlığı",
@@ -3284,6 +3288,8 @@ export const messagesFil: MessageTree = {
     philhealthBanner:
       "Gumagamit ang sync ng sync-philhealth-claim edge function. Kung walang PHILHEALTH_ECLAIMS_API_URL secrets, dry-run mode ang submission.",
     philhealthDryRun: "Na-record ang dry-run sync — i-configure ang PhilHealth API secrets para sa live submission.",
+    philhealthStubFallback:
+      "Hindi naka-configure ang PhilHealth API — local dry-run log lang ang na-record. I-set ang PHILHEALTH_ECLAIMS_API_URL para sa live submission.",
     philhealthLiveOk: "Na-submit ang claim sa PhilHealth eClaims.",
     submitPhilhealth: "I-submit sa eClaims",
     newClaimPrep: "Bagong claim prep",
