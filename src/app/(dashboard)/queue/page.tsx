@@ -1587,7 +1587,6 @@ function QueuePageContent() {
           checkingIn={checkingIn}
           billingOverridePending={billingOverridePending}
           consentOverridePending={consentOverridePending}
-          consentFormHref={walkInConsentHref}
           consentFormLabel={walkInConsentLabel}
           onSubmit={handleCheckIn}
           onBillingOverride={() => void handleCheckIn({ preventDefault: () => {} } as React.FormEvent, false, true)}
