@@ -37,6 +37,7 @@ type ClinicalVisitJourneyPanelProps = {
   }
   onContinue?: (step: ClinicalVisitStep) => void | Promise<void>
   continueLoading?: boolean
+  onStepClick?: (step: ClinicalVisitStep) => void
 }
 
 export function ClinicalVisitJourneyPanel({
@@ -48,6 +49,7 @@ export function ClinicalVisitJourneyPanel({
   finishAction,
   onContinue,
   continueLoading = false,
+  onStepClick,
 }: ClinicalVisitJourneyPanelProps) {
   const { t } = useLocale()
   const { steps, percentComplete, nextStep, phaseLabel, readyToClose } = journey
@@ -255,8 +257,16 @@ export function ClinicalVisitJourneyPanel({
             )}
           >
             <StepIcon status={step.status} />
-            <div className="min-w-0 flex-1">
-              {step.href && step.status !== "done" ? (
+            <div className="min-w-0 flex-1 text-left">
+              {onStepClick ? (
+                <button
+                  type="button"
+                  onClick={() => onStepClick(step)}
+                  className="font-medium text-primary-700 hover:underline cursor-pointer block text-left"
+                >
+                  {step.label}
+                </button>
+              ) : step.href && step.status !== "done" ? (
                 <Link href={step.href} className="font-medium text-primary-700 hover:underline">
                   {step.label}
                 </Link>

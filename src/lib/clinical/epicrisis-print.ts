@@ -345,6 +345,7 @@ export function buildEpicrisisPrintHtml(data: EpicrisisData): string {
       orthoCase
         ? `<div class="summary-strip">
       <div class="summary-pill"><strong>Appliance</strong><span>${escapeHtml(orthoCase.appliance_type ?? "—")}</span></div>
+      ${orthoCase.diagnosis ? `<div class="summary-pill"><strong>Diagnosis</strong><span>${escapeHtml(orthoCase.diagnosis)}</span></div>` : ""}
       <div class="summary-pill"><strong>Started</strong><span>${fmtDate(orthoCase.start_date)}</span></div>
       <div class="summary-pill"><strong>Contract</strong><span>₱${Number(orthoCase.contract_amount).toLocaleString()}</span></div>
       <div class="summary-pill${orthoBalance && orthoBalance.balance > 0 ? " warn" : ""}"><strong>Balance</strong><span>₱${Number(orthoBalance?.balance ?? 0).toLocaleString()}</span></div>

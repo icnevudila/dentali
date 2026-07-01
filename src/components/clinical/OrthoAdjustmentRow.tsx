@@ -121,25 +121,32 @@ export function OrthoAdjustmentRow({
     )
   }
 
+  const hasPayment = adjustment.payment_amount > 0
+  const rowBgClass = hasPayment
+    ? "bg-emerald-50/30 hover:bg-emerald-50/55 transition-colors"
+    : "odd:bg-neutral-50/50 hover:bg-neutral-50/90 transition-colors"
+
   return (
-    <tr>
-      <td className="py-2 whitespace-nowrap">{adjustment.adjustment_date}</td>
-      <td className="py-2 align-top max-w-xs">
+    <tr className={rowBgClass}>
+      <td className="py-2.5 px-3 whitespace-nowrap font-medium text-neutral-700">{adjustment.adjustment_date}</td>
+      <td className="py-2.5 px-3 align-top max-w-xs">
         <BulletTextList text={adjustment.procedure} />
       </td>
-      <td className="py-2 align-top text-neutral-600 max-w-xs">
+      <td className="py-2.5 px-3 align-top text-neutral-600 max-w-xs">
         <BulletTextList text={adjustment.next_procedure} />
       </td>
-      <td className="py-2 text-neutral-600">{adjustment.next_visit_date ?? "—"}</td>
-      <td className="py-2 text-right">₱{Number(adjustment.payment_amount).toLocaleString()}</td>
+      <td className="py-2.5 px-3 text-neutral-600">{adjustment.next_visit_date ?? "—"}</td>
+      <td className="py-2.5 px-3 text-right font-semibold text-neutral-900">
+        {hasPayment ? `₱${Number(adjustment.payment_amount).toLocaleString()}` : "—"}
+      </td>
       {canEdit ? (
-        <td className="py-2 text-right">
+        <td className="py-2.5 px-3 text-right">
           <div className="flex items-center justify-end gap-1">
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="h-7 gap-1 text-xs"
+              className="h-7 gap-1 text-xs hover:bg-white border border-transparent hover:border-neutral-200"
               onClick={() => setEditing(true)}
               disabled={saving}
               title="Edit this row"
@@ -151,7 +158,7 @@ export function OrthoAdjustmentRow({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-7 gap-1 text-xs text-amber-700"
+              className="h-7 gap-1 text-xs text-amber-700 hover:bg-amber-50 hover:text-amber-900"
               onClick={() => void onRevert()}
               disabled={saving}
               title="Return / undo this row"

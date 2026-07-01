@@ -264,6 +264,14 @@ function ConsentFormPageContent() {
         window.location.assign(queueResumeHref(pending))
         return
       }
+      if (returnTo === "ortho") {
+        router.push(`/patients/${patientId}/ortho`)
+        return
+      }
+      if (returnTo === "patient") {
+        router.push(`/patients/${patientId}`)
+        return
+      }
       router.push(`/patients/${patientId}/consents/${formId}/view`)
     }, isQueuePopup ? 2200 : 1200)
   }

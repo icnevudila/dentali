@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { AlertTriangle, CalendarDays, Plus, Lock, Receipt } from "lucide-react"
+import { AlertTriangle, CalendarDays, Plus, Lock, Receipt, FileSignature } from "lucide-react"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Button } from "@/components/ui/button"
@@ -20,6 +20,7 @@ import { useLocale } from "@/hooks/use-locale"
 import { usePermission } from "@/hooks/use-permission"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { getPatient } from "@/lib/patients/patient-service"
+import { fetchPatientConsents } from "@/lib/patients/consent-service"
 import {
   closeOrthoCase,
   createOrthoCase,
@@ -38,6 +39,7 @@ import { OrthoCaseTimelinePanel } from "@/components/clinical/OrthoCaseTimelineP
 import { OrthoAdjustmentRow } from "@/components/clinical/OrthoAdjustmentRow"
 import { notify } from "@/lib/ui/notify"
 import { toStoredBulletText } from "@/lib/text/bullet-text"
+import { cn } from "@/lib/utils"
 
 export default function OrthoRecordPage() {
   const { id: patientId } = useRouteParams<{ id: string }>()
@@ -57,11 +59,13 @@ export default function OrthoRecordPage() {
   const [showNewCase, setShowNewCase] = React.useState(false)
   const [showAddRow, setShowAddRow] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
+  const [orthoConsentSigned, setOrthoConsentSigned] = React.useState<boolean | null>(null)
 
   const [applianceType, setApplianceType] = React.useState("Metal braces")
   const [startDate, setStartDate] = React.useState("")
   const [contractAmount, setContractAmount] = React.useState("")
   const [caseNotes, setCaseNotes] = React.useState("")
+  const [diagnosis, setDiagnosis] = React.useState("")
 
   const [adjDate, setAdjDate] = React.useState("")
   const [procedure, setProcedure] = React.useState("")
@@ -89,6 +93,15 @@ export default function OrthoRecordPage() {
     setOrthoCase(c)
     setLinkedInvoiceId(c?.linked_invoice_id ?? null)
     setError(caseErr)
+
+    // Check ortho consent forms
+    const { data: consentList } = await fetchPatientConsents(patientId)
+    const hasOrthoConsent = consentList.some(
+      (form) =>
+        (form.template_slug === "informed-consent-ortho" || form.template_slug === "orthodontic-consent") &&
+        form.status === "signed"
+    )
+    setOrthoConsentSigned(hasOrthoConsent)
 
     if (c) {
       const [adjRes, balRes] = await Promise.all([
@@ -132,12 +145,14 @@ export default function OrthoRecordPage() {
       startDate,
       contractAmount: parseFloat(contractAmount) || 0,
       notes: caseNotes || undefined,
+      diagnosis: diagnosis || undefined,
       userId: user.id,
     })
     setSaving(false)
     if (err) setError(err)
     else {
       setShowNewCase(false)
+      setDiagnosis("")
       load()
     }
   }
@@ -346,6 +361,35 @@ export default function OrthoRecordPage() {
                       : t("ortho.ready", "Ready")}
                   </p>
                 </div>
+                {orthoConsentSigned !== null && (
+                  <div
+                    className={cn(
+                      "flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-2.5 sm:col-span-2 lg:col-span-4",
+                      orthoConsentSigned
+                        ? "border-emerald-200 bg-emerald-50/20 text-emerald-950"
+                        : "border-amber-200 bg-amber-50/20 text-amber-950"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileSignature className={cn("h-5 w-5 shrink-0", orthoConsentSigned ? "text-emerald-600" : "text-amber-600")} />
+                      <div className="text-sm">
+                        <span className="font-semibold">Ortho Informed Consent:</span>{" "}
+                        {orthoConsentSigned ? (
+                          <span className="text-emerald-700 font-medium">Signed and active</span>
+                        ) : (
+                          <span className="text-amber-700 font-medium">Awaiting signature</span>
+                        )}
+                      </div>
+                    </div>
+                    {!orthoConsentSigned && (
+                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs gap-1 border-amber-300 bg-white text-amber-800 hover:bg-amber-50" asChild>
+                        <Link href={`/patients/${patientId}/consents/informed-consent-ortho?returnTo=ortho`}>
+                          Sign Consent Form
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                )}
                 {closeWarnings.length > 0 ? (
                   <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 sm:col-span-2 lg:col-span-4">
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -355,12 +399,20 @@ export default function OrthoRecordPage() {
               </CardContent>
             </Card>
 
-            <div className="grid gap-4 sm:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <Card>
                 <CardContent className="pt-4">
                   <p className="text-xs text-neutral-500">Appliance</p>
                   <p className="font-semibold">{orthoCase.appliance_type ?? "—"}</p>
                   <Badge className="mt-1">{orthoCase.status}</Badge>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4">
+                  <p className="text-xs text-neutral-500">Diagnosis / Case Summary</p>
+                  <p className="font-semibold text-neutral-800 line-clamp-2" title={orthoCase.diagnosis ?? "No diagnosis recorded"}>
+                    {orthoCase.diagnosis ?? "—"}
+                  </p>
                 </CardContent>
               </Card>
               <Card>
@@ -440,14 +492,14 @@ export default function OrthoRecordPage() {
                 ) : (
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b text-neutral-500">
-                        <th className="pb-2 text-left font-medium">Date</th>
-                        <th className="pb-2 text-left font-medium">Procedure</th>
-                        <th className="pb-2 text-left font-medium">Next procedure</th>
-                        <th className="pb-2 text-left font-medium">Next date</th>
-                        <th className="pb-2 text-right font-medium">Payment</th>
+                      <tr className="border-b text-neutral-500 bg-neutral-50/50">
+                        <th className="py-2 px-3 text-left font-semibold text-xs text-neutral-500 uppercase tracking-wider">Date</th>
+                        <th className="py-2 px-3 text-left font-semibold text-xs text-neutral-500 uppercase tracking-wider">Procedure</th>
+                        <th className="py-2 px-3 text-left font-semibold text-xs text-neutral-500 uppercase tracking-wider">Next procedure</th>
+                        <th className="py-2 px-3 text-left font-semibold text-xs text-neutral-500 uppercase tracking-wider">Next date</th>
+                        <th className="py-2 px-3 text-right font-semibold text-xs text-neutral-500 uppercase tracking-wider">Payment</th>
                         {canWrite && orthoCase.status === "active" ? (
-                          <th className="pb-2 text-right font-medium w-32" />
+                          <th className="py-2 px-3 text-right font-medium w-32" />
                         ) : null}
                       </tr>
                     </thead>
@@ -498,6 +550,31 @@ export default function OrthoRecordPage() {
                 <div className="space-y-1">
                   <label className="text-xs font-medium">Contract amount (₱)</label>
                   <Input type="number" min="0" step="0.01" value={contractAmount} onChange={(e) => setContractAmount(e.target.value)} />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-xs font-medium">Diagnosis / Case Summary</label>
+                  <select
+                    className="w-full h-9 rounded-md border border-neutral-200 px-3 text-sm mb-2"
+                    value={diagnosis}
+                    onChange={(e) => setDiagnosis(e.target.value)}
+                  >
+                    <option value="">-- Select or Type Below --</option>
+                    <option value="Class I Malocclusion">Class I Malocclusion</option>
+                    <option value="Class II Malocclusion Division 1">Class II Malocclusion Division 1</option>
+                    <option value="Class II Malocclusion Division 2">Class II Malocclusion Division 2</option>
+                    <option value="Class III Malocclusion">Class III Malocclusion</option>
+                    <option value="Severe Crowding">Severe Crowding</option>
+                    <option value="Spacing / Diastema">Spacing / Diastema</option>
+                    <option value="Anterior Crossbite">Anterior Crossbite</option>
+                    <option value="Deep Bite">Deep Bite</option>
+                    <option value="Open Bite">Open Bite</option>
+                    <option value="Bimaxillary Protrusion">Bimaxillary Protrusion</option>
+                  </select>
+                  <Input 
+                    placeholder="Or type custom diagnosis here..." 
+                    value={diagnosis} 
+                    onChange={(e) => setDiagnosis(e.target.value)} 
+                  />
                 </div>
                 <div className="space-y-1 sm:col-span-2">
                   <label className="text-xs font-medium">Notes</label>

@@ -672,6 +672,25 @@ export default function PatientProfilePage() {
         }
         onContinue={activeEncounter ? handleJourneyContinue : undefined}
         continueLoading={journeyContinueLoading}
+        onStepClick={(step) => {
+          const tabMapping: Record<string, PatientTabId> = {
+            "patient-registration": "record",
+            "medical-history": "medical-history",
+            "consents-signed": "consents",
+            "appointment-booked": "appointments",
+            "check-in": "visits",
+            "clinical-note": "clinical-notes",
+            "dental-chart": "dental-chart",
+            "treatment-plan": "treatment-plans",
+            "plan-approved": "treatment-plans",
+            "invoice-issued": "record", // Points to billing summary/ledger card on patient record
+            "payment-collected": "record",
+          }
+          const targetTab = tabMapping[step.id]
+          if (targetTab) {
+            handleTabChangeAndScroll(targetTab)
+          }
+        }}
         finishAction={
           activeEncounter && activeEncounter.encounter.status === "open" && visitJourney.readyToClose
             ? {

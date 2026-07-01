@@ -9,6 +9,7 @@ export interface OrthoCase {
   start_date: string | null
   contract_amount: number
   notes: string | null
+  diagnosis: string | null
   linked_invoice_id: string | null
   created_at: string
 }
@@ -37,7 +38,7 @@ export async function fetchOrthoCase(
   const supabase = createClient()
   const { data, error } = await supabase
     .from("ortho_cases")
-    .select("id, patient_id, branch_id, status, appliance_type, start_date, contract_amount, notes, linked_invoice_id, created_at")
+    .select("id, patient_id, branch_id, status, appliance_type, start_date, contract_amount, notes, diagnosis, linked_invoice_id, created_at")
     .eq("patient_id", patientId)
     .eq("branch_id", branchId)
     .eq("status", "active")
@@ -57,6 +58,7 @@ export async function createOrthoCase(params: {
   startDate: string
   contractAmount: number
   notes?: string
+  diagnosis?: string
   userId: string
 }): Promise<{ data: { id: string } | null; error: string | null }> {
   const supabase = createClient()
@@ -70,6 +72,7 @@ export async function createOrthoCase(params: {
       start_date: params.startDate,
       contract_amount: params.contractAmount,
       notes: params.notes ?? null,
+      diagnosis: params.diagnosis ?? null,
       created_by: params.userId,
     })
     .select("id")

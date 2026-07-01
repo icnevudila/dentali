@@ -90,6 +90,12 @@ export function OrthoRecordSummary({ patientId }: { patientId: string }) {
             <p className="font-medium">{orthoCase.appliance_type}</p>
           </div>
         ) : null}
+        {orthoCase.diagnosis ? (
+          <div>
+            <p className="text-xs text-neutral-500">Diagnosis</p>
+            <p className="font-medium text-neutral-800">{orthoCase.diagnosis}</p>
+          </div>
+        ) : null}
         <div>
           <p className="text-xs text-neutral-500">Contract</p>
           <p className="font-medium">₱{Number(orthoCase.contract_amount).toLocaleString()}</p>
