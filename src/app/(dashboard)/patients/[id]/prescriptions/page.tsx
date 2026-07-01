@@ -10,6 +10,7 @@ import {
   Pill,
   AlertTriangle,
   ChevronRight,
+  MessageCircle,
 } from "lucide-react"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
@@ -85,6 +86,9 @@ export default function PrescriptionsPage() {
   const [viewRxId, setViewRxId] = React.useState<string | null>(null)
   const [viewRx, setViewRx] = React.useState<PrescriptionRecord | null>(null)
   const [viewLoading, setViewLoading] = React.useState(false)
+  const [patientPhone, setPatientPhone] = React.useState<string | null>(null)
+  const [qrDialogOpen, setQrDialogOpen] = React.useState(false)
+  const [qrDialogRx, setQrDialogRx] = React.useState<PrescriptionRecord | null>(null)
 
   const loadHistory = React.useCallback(async () => {
     if (!activeBranch) return
@@ -100,6 +104,7 @@ export default function PrescriptionsPage() {
         setPatientName(`${data.first_name} ${data.last_name}`)
         setPatientDob(data.date_of_birth)
         setPatientSex(formatPatientGender(data.gender))
+        setPatientPhone(data.phone || null)
       }
     })
     getLatestMedicalHistory(patientId).then(({ data }) => setMedicalHistory(data))
@@ -591,9 +596,22 @@ export default function PrescriptionsPage() {
 
                       <div className="flex flex-wrap gap-2 pt-2">
                         {viewRx.status === "signed" ? (
-                          <Button size="sm" className="gap-1.5" onClick={() => void handlePrint(viewRx)}>
-                            <Printer className="h-4 w-4" /> Print Rx
-                          </Button>
+                          <>
+                            <Button size="sm" className="gap-1.5" onClick={() => void handlePrint(viewRx)}>
+                              <Printer className="h-4 w-4" /> Print Rx
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1.5 text-emerald-700 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800"
+                              onClick={() => {
+                                setQrDialogRx(viewRx)
+                                setQrDialogOpen(true)
+                              }}
+                            >
+                              <MessageCircle className="h-4 w-4" /> Share via QR
+                            </Button>
+                          </>
                         ) : null}
                         {viewRx.status === "signed" && canWrite ? (
                           <Button
@@ -624,6 +642,42 @@ export default function PrescriptionsPage() {
           </div>
         )}
       </PatientPageShell>
+
+      {qrDialogOpen && qrDialogRx && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setQrDialogOpen(false)}
+          />
+          <Card className="relative z-10 w-full max-w-sm border-neutral-200/80 shadow-2xl animate-fade-rise bg-white p-6 rounded-2xl text-center">
+            <CardHeader className="p-0 mb-4">
+              <CardTitle className="text-base">Share Prescription via QR</CardTitle>
+              <CardDescription>
+                Scan with clinic phone to open patient's WhatsApp chat with ready message and link.
+              </CardDescription>
+            </CardHeader>
+            <div className="flex justify-center p-3 bg-neutral-50 rounded-xl border border-neutral-100 mb-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`https://chart.googleapis.com/chart?chs=220x220&cht=qr&chl=${encodeURIComponent(
+                  `https://wa.me/${patientPhone || ""}?text=${encodeURIComponent(
+                    `Hello ${patientName}, here is the link to view your prescription: ${window.location.origin}/patients/${patientId}/prescriptions/view/${qrDialogRx.id}`
+                  )}`
+                )}`}
+                alt="WhatsApp QR Code"
+                className="w-48 h-48"
+              />
+            </div>
+            <div className="text-xs text-neutral-500 mb-4 break-all bg-neutral-50 rounded-lg p-2.5 border">
+              <strong>Target phone:</strong> {patientPhone || "No phone number available"}
+            </div>
+            <Button className="w-full animate-fade-in" onClick={() => setQrDialogOpen(false)}>
+              Close
+            </Button>
+          </Card>
+        </div>
+      )}
     </PermissionGate>
   )
 }
