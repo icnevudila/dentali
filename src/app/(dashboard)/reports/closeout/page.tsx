@@ -169,11 +169,11 @@ function DailyCloseoutContent() {
         },
         {
           label: t("closeout.lowStock", "Low stock"),
-          value: loading ? "â€”" : data.lowStock,
+          value: loading ? "—" : data.lowStock,
           hint: t("closeout.lowStockHint", "Review reorder list"),
           icon: PackageX,
           variant: data.lowStock > 0 ? "warning" : "default",
-          href: "/inventory?filter=low-stock",
+          href: "/inventory?alerts=1",
         },
       ]
     : []
@@ -243,7 +243,7 @@ function DailyCloseoutContent() {
       {
         key: "open-billing",
         label: t("closeout.readyOpenBilling", "Open billing"),
-        value: `â‚±${data.openBalance.toLocaleString()} Â· ${data.openInvoiceCount} ${t(
+        value: `₱${data.openBalance.toLocaleString()} · ${data.openInvoiceCount} ${t(
           "closeout.readyInvoices",
           "invoice(s)"
         )}`,
@@ -260,6 +260,7 @@ function DailyCloseoutContent() {
         href: "/patients?attention=consents",
         ok: data.pendingConsents === 0,
         tone: "warning",
+        
       },
       {
         key: "hmo",
@@ -275,7 +276,7 @@ function DailyCloseoutContent() {
         label: t("closeout.readyLowStock", "Low stock"),
         value: String(data.lowStock),
         action: t("closeout.readyLowStockAction", "Review stock"),
-        href: "/inventory?filter=low-stock",
+        href: "/inventory?alerts=1",
         ok: data.lowStock === 0,
         tone: "warning",
       },

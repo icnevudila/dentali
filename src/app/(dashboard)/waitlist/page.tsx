@@ -40,6 +40,7 @@ import { StickyActionBar } from "@/components/layout/StickyActionBar"
 import { OpsStatusRow } from "@/components/layout/OpsStatusRow"
 import { logManualWhatsAppNotification } from "@/lib/notifications/notification-service"
 import { buildWhatsAppSendUrl } from "@/lib/notifications/whatsapp"
+import { WaitlistContactDrawer } from "@/components/waitlist/WaitlistContactDrawer"
 
 type TabFilter = "active" | "history"
 
@@ -64,9 +65,6 @@ export default function WaitlistPage() {
   const [notes, setNotes] = React.useState("")
   const [saving, setSaving] = React.useState(false)
   const [contactEntry, setContactEntry] = React.useState<WaitlistEntry | null>(null)
-  const [contactNote, setContactNote] = React.useState("")
-  const [contactOutcome, setContactOutcome] = React.useState<ContactOutcome>("reached")
-  const [contactHistory, setContactHistory] = React.useState<ContactAttempt[]>([])
   const [bookEntry, setBookEntry] = React.useState<WaitlistEntry | null>(null)
   const [actionLoading, setActionLoading] = React.useState<string | null>(null)
 
@@ -98,16 +96,7 @@ export default function WaitlistPage() {
     return () => clearTimeout(timer)
   }, [patientQuery, activeBranch])
 
-  React.useEffect(() => {
-    if (!contactEntry) {
-      const id = window.setTimeout(() => setContactHistory([]), 0)
-      return () => window.clearTimeout(id)
-    }
-    const id = window.setTimeout(() => {
-      fetchContactAttempts(contactEntry.id).then(({ data }) => setContactHistory(data))
-    }, 0)
-    return () => window.clearTimeout(id)
-  }, [contactEntry])
+
 
   const waitingCount = entries.filter((e) => e.status === "waiting").length
   const contactedCount = entries.filter((e) => e.status === "contacted").length
@@ -148,22 +137,7 @@ export default function WaitlistPage() {
     }
   }
 
-  const handleContact = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!contactEntry) return
-    setActionLoading(contactEntry.id)
-    const { error: err } = await markWaitlistContacted(contactEntry.id, contactNote, contactOutcome)
-    setActionLoading(null)
-    if (err) {
-      setError(err)
-      notify.error(err)
-    } else {
-      setContactEntry(null)
-      setContactNote("")
-      notify.success(t("waitlist.contactLogged", "Contact attempt recorded"))
-      load()
-    }
-  }
+
 
   const handleCancel = async (entryId: string) => {
     setActionLoading(entryId)
@@ -410,8 +384,6 @@ export default function WaitlistPage() {
                 canWrite={canWriteAppointments}
                 onContact={(entry) => {
                   setContactEntry(entry)
-                  setContactOutcome("reached")
-                  setContactNote("")
                 }}
                 onWhatsAppContact={handleWhatsAppContact}
                 onBook={(entry) => setBookEntry(entry)}
@@ -421,78 +393,7 @@ export default function WaitlistPage() {
           </div>
         </div>
 
-        {contactEntry && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
-            <button
-              type="button"
-              className="absolute inset-0 bg-black/40"
-              aria-label={t("common.close", "Close")}
-              onClick={() => setContactEntry(null)}
-            />
-            <Card className="relative z-[1] flex max-h-[min(88vh,100dvh)] w-full max-w-md animate-fade-rise flex-col overflow-hidden rounded-t-3xl border-primary-200/60 pb-safe shadow-2xl sm:max-h-[min(80vh,720px)] sm:rounded-2xl">
-              <CardHeader className="shrink-0 border-b border-neutral-100 px-4 pb-4 pt-3 sm:px-6 sm:pt-6">
-                <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-200 sm:hidden" />
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <CardTitle className="text-base">
-                      {t("waitlist.contactTitle", "Contact")} - {contactEntry.patient_name}
-                    </CardTitle>
-                    <p className="mt-1 text-xs text-neutral-500">
-                      {t("waitlist.previousAttempts", "Previous attempts")} and call outcome log
-                    </p>
-                  </div>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setContactEntry(null)}>
-                    {t("common.close", "Close")}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1 overflow-y-auto px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-6">
-                {contactHistory.length > 0 && (
-                  <div className="mb-4 space-y-2 max-h-32 overflow-y-auto">
-                    <p className="text-xs font-medium text-neutral-500">{t("waitlist.previousAttempts", "Previous attempts")}</p>
-                    {contactHistory.map((a) => (
-                      <div key={a.id} className="text-xs border rounded px-2 py-1">
-                        <span className="font-medium">{a.outcome}</span>
-                        {a.note && ` - ${a.note}`}
-                        <span className="text-neutral-400 ml-2">
-                          {new Date(a.created_at).toLocaleString("en-PH")}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <form onSubmit={handleContact} className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t("waitlist.outcome", "Outcome")}</label>
-                    <select
-                      className="w-full h-9 rounded-md border border-neutral-200 px-3 text-sm"
-                      value={contactOutcome}
-                      onChange={(e) => setContactOutcome(e.target.value as ContactOutcome)}
-                    >
-                      <option value="reached">Reached</option>
-                      <option value="no_answer">No answer</option>
-                      <option value="voicemail">Voicemail</option>
-                      <option value="declined">Declined - remove</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t("waitlist.note", "Note")}</label>
-                    <Input value={contactNote} onChange={(e) => setContactNote(e.target.value)} placeholder="Call summary..." />
-                  </div>
-                  <div className="sticky bottom-0 -mx-4 mt-4 flex gap-2 border-t border-neutral-100 bg-white px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-1">
-                    <Button type="submit" className="flex-1 sm:flex-none" disabled={actionLoading === contactEntry.id}>
-                      {actionLoading === contactEntry.id ? t("common.saving", "Saving...") : t("waitlist.logContact", "Log contact")}
-                    </Button>
-                    <Button type="button" variant="outline" className="flex-1 sm:flex-none" onClick={() => setContactEntry(null)}>
-                      {t("common.close", "Close")}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+
 
         <WaitlistBookDialog
           entry={bookEntry}
@@ -502,6 +403,17 @@ export default function WaitlistPage() {
           onActionLoading={setActionLoading}
         />
       </ModulePageShell>
+      <WaitlistContactDrawer
+        open={Boolean(contactEntry)}
+        onOpenChange={(open) => {
+          if (!open) setContactEntry(null)
+        }}
+        entry={contactEntry}
+        onCreated={() => {
+          notify.success(t("waitlist.contactLogged", "Contact attempt recorded"))
+          load()
+        }}
+      />
     </PermissionGate>
   )
 }
