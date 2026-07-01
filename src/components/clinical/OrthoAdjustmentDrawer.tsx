@@ -144,10 +144,9 @@ export function OrthoAdjustmentDrawer({
                 {t("ortho.procedurePerformed", "Procedure performed")} *
               </label>
               <BulletTextarea
-                placeholder={t("ortho.procedurePlaceholder", "e.g. Upper arch wire change to 0.016 Niti...")}
+                placeholder={t("ortho.procedurePerformed", "e.g. Upper arch wire change to 0.016 Niti...")}
                 value={procedure}
                 onChange={setProcedure}
-                required
               />
             </div>
 

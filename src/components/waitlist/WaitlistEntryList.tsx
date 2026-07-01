@@ -1,13 +1,18 @@
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
-import { Calendar, MessageCircle, Phone, Trash2 } from "lucide-react"
+import { Calendar, MessageCircle, Phone, Trash2, Edit2, Check, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { RecordRow, patientInitials } from "@/components/layout/RecordRow"
 import { StatusPipeline, waitlistPipelineSteps } from "@/components/visual/StatusPipeline"
 import type { WaitlistEntry, WaitlistUrgency } from "@/lib/waitlist/waitlist-service"
+import { updatePatientPhone } from "@/lib/patients/patient-service"
+import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 const URGENCY_LABEL: Record<WaitlistUrgency, string> = {
   normal: "Normal",
@@ -39,6 +44,7 @@ export function WaitlistEntryList({
   onWhatsAppContact,
   onBook,
   onCancel,
+  onPhoneUpdated,
 }: {
   entries: WaitlistEntry[]
   tab: "active" | "history"
@@ -49,7 +55,37 @@ export function WaitlistEntryList({
   onWhatsAppContact?: (entry: WaitlistEntry) => void
   onBook: (entry: WaitlistEntry) => void
   onCancel: (entryId: string) => void
+  onPhoneUpdated: () => void
 }) {
+  const { user } = useAuth()
+  const [editingPhoneId, setEditingPhoneId] = React.useState<string | null>(null)
+  const [tempPhoneValue, setTempPhoneValue] = React.useState("")
+  const [updatingPhone, setUpdatingPhone] = React.useState(false)
+
+  const startEditing = (entryId: string, currentPhone: string) => {
+    setEditingPhoneId(entryId)
+    setTempPhoneValue(currentPhone || "")
+  }
+
+  const cancelEditing = () => {
+    setEditingPhoneId(null)
+    setTempPhoneValue("")
+  }
+
+  const savePhone = async (patientId: string, entryId: string) => {
+    if (!user) return
+    setUpdatingPhone(true)
+    const { error } = await updatePatientPhone(patientId, tempPhoneValue, user.id)
+    setUpdatingPhone(false)
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success("Phone number updated successfully!")
+      setEditingPhoneId(null)
+      onPhoneUpdated()
+    }
+  }
+
   return (
     <div className="space-y-2">
       {entries.map((entry) => {
@@ -58,6 +94,8 @@ export function WaitlistEntryList({
         const preference = entry.preferred_date
           ? `${entry.preferred_date}${entry.preferred_time_start ? ` · ${entry.preferred_time_start.slice(0, 5)}` : ""}`
           : "Any available slot"
+
+        const isEditingThis = editingPhoneId === entry.id
 
         return (
           <RecordRow
@@ -78,7 +116,57 @@ export function WaitlistEntryList({
                 name
               )
             }
-            secondary={[entry.patient_phone, preference].filter(Boolean).join(" · ")}
+            secondary={
+              isEditingThis ? (
+                <div className="flex items-center gap-1.5 mt-1" onClick={(e) => e.stopPropagation()}>
+                  <Input
+                    className="h-7 w-36 px-2 text-xs"
+                    value={tempPhoneValue}
+                    onChange={(e) => setTempPhoneValue(e.target.value)}
+                    disabled={updatingPhone}
+                    autoFocus
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className="h-7 w-7 text-emerald-600 hover:bg-emerald-50"
+                    onClick={() => void savePhone(entry.patient_id, entry.id)}
+                    disabled={updatingPhone}
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className="h-7 w-7 text-red-600 hover:bg-red-50"
+                    onClick={cancelEditing}
+                    disabled={updatingPhone}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <span className="font-medium text-neutral-700">{entry.patient_phone || "No phone"}</span>
+                  {tab === "active" && canWrite && (
+                    <button
+                      type="button"
+                      className="text-neutral-400 hover:text-primary-600 transition-colors p-0.5"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        startEditing(entry.id, entry.patient_phone ?? "")
+                      }}
+                    >
+                      <Edit2 className="h-3 w-3" />
+                    </button>
+                  )}
+                  <span className="text-neutral-300">·</span>
+                  <span className="text-neutral-500">{preference}</span>
+                </span>
+              )
+            }
             meta={
               <>
                 <Badge variant={STATUS_VARIANT[entry.status] ?? "default"}>{entry.status}</Badge>

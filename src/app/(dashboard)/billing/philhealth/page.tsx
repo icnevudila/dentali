@@ -289,7 +289,7 @@ function PhilHealthPageContent() {
                     )}
                   </p>
                   {statusFilter !== "pending" ? (
-                    <Button className="mt-4 gap-2" onClick={() => setShowForm(true)}>
+                    <Button className="mt-4 gap-2" onClick={() => setDrawerOpen(true)}>
                       <Plus className="h-4 w-4" />
                       {t("billing.newClaimPrep", "New claim prep")}
                     </Button>

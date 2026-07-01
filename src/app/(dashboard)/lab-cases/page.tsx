@@ -12,7 +12,7 @@ import { DirectionalTransition } from "@/components/layout/DirectionalTransition
 import { CollapsibleBelowFold } from "@/components/layout/CollapsibleBelowFold"
 import { StickyActionBar } from "@/components/layout/StickyActionBar"
 import { MetricStrip } from "@/components/layout/MetricStrip"
-import { FlaskConical, Plus, CheckCircle2, Clock, XCircle } from "lucide-react"
+import { FlaskConical, Plus, CheckCircle2, Clock, XCircle, AlertCircle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -90,6 +90,11 @@ export default function LabCasesPage() {
     [cases]
   )
 
+  const overdueCases = React.useMemo(
+    () => sortedCases.filter((c) => c.status === "pending" && labCaseUrgency(c) === "overdue"),
+    [sortedCases]
+  )
+
   const handleMarkReceived = async (id: string) => {
     const { error } = await updateLabCaseStatus(id, "received")
     if (error) {
@@ -125,6 +130,33 @@ export default function LabCasesPage() {
             </Button>
           }
         />
+
+        {overdueCases.length > 0 && (
+          <div className="rounded-xl border border-red-200 bg-red-50/50 p-4 text-sm text-red-950 flex items-start gap-3 shadow-sm animate-fade-in">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-red-900">{t("labcases.delayedAlertTitle", "Delayed Lab Work Alert")}</p>
+              <p className="mt-0.5 text-xs text-red-800/80">
+                {t("labcases.delayedAlertHint", "{count} lab cases are past their expected delivery date. Follow up with labs immediately to prevent patient appointment delays.").replace("{count}", String(overdueCases.length))}
+              </p>
+              <ul className="mt-3 space-y-1.5 divide-y divide-red-100/20">
+                {overdueCases.slice(0, 3).map((c) => (
+                  <li key={c.id} className="pt-1.5 first:pt-0 text-xs flex flex-wrap justify-between items-center gap-2">
+                    <span className="font-medium text-red-950">{c.patients?.first_name} {c.patients?.last_name} ({c.case_type})</span>
+                    <span className="text-[11px] text-red-700 bg-red-100/60 px-2 py-0.5 rounded font-medium">
+                      {c.lab_name} · Expected: {c.expected_date}
+                    </span>
+                  </li>
+                ))}
+                {overdueCases.length > 3 && (
+                  <li className="pt-2 text-[11px] text-red-700/80 italic font-medium">
+                    + {overdueCases.length - 3} more delayed case(s)...
+                  </li>
+                )}
+              </ul>
+            </div>
+          </div>
+        )}
 
         <StickyActionBar>
           <Button className="h-11 w-full gap-2" onClick={() => setDialogOpen(true)}>

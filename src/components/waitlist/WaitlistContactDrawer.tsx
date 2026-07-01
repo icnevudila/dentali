@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { X, Clock, AlertTriangle } from "lucide-react"
+import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useLocale } from "@/hooks/use-locale"
 import {
@@ -12,13 +12,30 @@ import {
   type ContactOutcome,
   type WaitlistEntry,
 } from "@/lib/waitlist/waitlist-service"
-import { formatDistanceToNow } from "date-fns"
 
 interface WaitlistContactDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   entry: WaitlistEntry | null
   onCreated: () => void
+}
+
+function formatRelativeTime(dateString: string) {
+  try {
+    const date = new Date(dateString)
+    const diffMs = new Date().getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+
+    if (diffMins < 1) return "just now"
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays === 1) return "yesterday"
+    return date.toLocaleDateString("en-PH", { month: "short", day: "numeric" })
+  } catch {
+    return dateString
+  }
 }
 
 export function WaitlistContactDrawer({
@@ -49,7 +66,8 @@ export function WaitlistContactDrawer({
     setSaving(true)
     setError(null)
 
-    const { error: err } = await markWaitlistContacted(entry.id, contactOutcome, contactNote.trim() || undefined)
+    // Parameter order: entryId, note, outcome
+    const { error: err } = await markWaitlistContacted(entry.id, contactNote.trim(), contactOutcome)
     setSaving(false)
     if (err) {
       setError(err)
@@ -106,11 +124,11 @@ export function WaitlistContactDrawer({
                 {contactHistory.map((attempt) => (
                   <li key={attempt.id} className="py-2 first:pt-1 last:pb-1 px-1">
                     <div className="flex items-center justify-between gap-2 text-xs">
-                      <span className="font-medium text-neutral-800">
+                      <span className="font-medium text-neutral-800 animate-fade-in">
                         {attempt.outcome}
                       </span>
                       <time className="text-neutral-400">
-                        {attempt.created_at ? formatDistanceToNow(new Date(attempt.created_at), { addSuffix: true }) : ""}
+                        {attempt.created_at ? formatRelativeTime(attempt.created_at) : ""}
                       </time>
                     </div>
                     {attempt.note && (
@@ -141,8 +159,9 @@ export function WaitlistContactDrawer({
               >
                 <option value="reached">{t("waitlist.reached", "Reached & interested")}</option>
                 <option value="no_answer">{t("waitlist.noAnswer", "No answer")}</option>
+                <option value="voicemail">{t("waitlist.voicemail", "Voicemail")}</option>
                 <option value="declined">{t("waitlist.declined", "Declined / Not interested")}</option>
-                <option value="busy">{t("waitlist.busy", "Line busy")}</option>
+                <option value="other">{t("waitlist.otherOutcome", "Other")}</option>
               </select>
             </div>
 

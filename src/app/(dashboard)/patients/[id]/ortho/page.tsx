@@ -443,8 +443,8 @@ export default function OrthoRecordPage() {
                   </table>
                 )}
               </CardContent>
-            </Card>  </CardContent>
-          </Card>
+            </Card>
+          </>
         )}
       </PatientPageShell>
       <OrthoCaseDrawer

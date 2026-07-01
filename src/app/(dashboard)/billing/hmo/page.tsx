@@ -31,7 +31,6 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
-import { HmoClaimDrawer } from "@/components/billing/HmoClaimDrawer"
 
 const STATUS_VARIANT: Record<
   string,

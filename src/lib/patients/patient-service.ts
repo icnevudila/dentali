@@ -513,3 +513,22 @@ export function patientToFormValues(patient: PatientWithContacts): PatientFormVa
     medicalAlerts: "",
   }
 }
+
+export async function updatePatientPhone(
+  patientId: string,
+  phone: string,
+  userId: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from("patients")
+    .update({
+      phone: phone.trim() || null,
+      updated_by: userId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", patientId)
+
+  if (error) return { error: error.message }
+  return { error: null }
+}

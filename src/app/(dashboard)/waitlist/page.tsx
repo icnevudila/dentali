@@ -388,6 +388,7 @@ export default function WaitlistPage() {
                 onWhatsAppContact={handleWhatsAppContact}
                 onBook={(entry) => setBookEntry(entry)}
                 onCancel={handleCancel}
+                onPhoneUpdated={load}
               />
             )}
           </div>
