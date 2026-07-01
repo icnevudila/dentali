@@ -21,6 +21,7 @@ import {
   Settings,
   User,
 } from "lucide-react"
+import { usePermission } from "@/hooks/use-permission"
 import { cn } from "@/lib/utils"
 
 const MENU_WIDTH = 320
@@ -180,6 +181,9 @@ export function UserAccountMenu() {
   const lastLogin = sessionLogs.find((log) => log.event_type === "login")
   const close = () => setOpen(false)
 
+  const { hasPermission } = usePermission()
+  const isManager = roleName === "owner" || roleName === "admin" || hasPermission("settings.write")
+
   const menuPortal =
     open && mounted ? (
       <>
@@ -255,15 +259,19 @@ export function UserAccountMenu() {
                 {t("userMenu.myProfile", "My profile")}
               </MenuLink>
             ) : null}
-            <MenuLink href="/settings/organization" icon={Settings} onNavigate={close}>
-              {t("userMenu.settings", "Settings")}
-            </MenuLink>
+            {isManager && (
+              <MenuLink href="/settings/organization" icon={Settings} onNavigate={close}>
+                {t("userMenu.settings", "Settings")}
+              </MenuLink>
+            )}
             <MenuLink href="/settings/notifications" icon={Bell} onNavigate={close}>
               {t("userMenu.notifications", "Notifications")}
             </MenuLink>
-            <MenuLink href="/settings/audit?source=session" icon={ScrollText} onNavigate={close}>
-              {t("userMenu.activityLog", "Activity log")}
-            </MenuLink>
+            {isManager && (
+              <MenuLink href="/settings/audit?source=session" icon={ScrollText} onNavigate={close}>
+                {t("userMenu.activityLog", "Activity log")}
+              </MenuLink>
+            )}
           </div>
 
           <div className="border-t border-neutral-200/80 bg-white px-1.5 py-2">

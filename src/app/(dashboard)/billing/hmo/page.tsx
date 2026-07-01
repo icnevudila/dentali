@@ -10,11 +10,8 @@ import { useLocale } from "@/hooks/use-locale"
 import { useAuth } from "@/hooks/use-auth"
 import { usePermission } from "@/hooks/use-permission"
 import { fetchOrganization } from "@/lib/auth/auth-service"
-import { searchPatients } from "@/lib/patients/patient-service"
-import { fetchPatientInsuranceProfiles } from "@/lib/patients/insurance-service"
 import {
   approveHmoClaim,
-  createHmoClaim,
   fetchHmoClaims,
   fetchHmoProviders,
   markHmoClaimPaid,
@@ -28,11 +25,13 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Building2, Plus, RotateCcw } from "lucide-react"
+import { HmoClaimDrawer } from "@/components/billing/HmoClaimDrawer"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
+import { HmoClaimDrawer } from "@/components/billing/HmoClaimDrawer"
 
 const STATUS_VARIANT: Record<
   string,
@@ -70,16 +69,8 @@ function HmoClaimsPageContent() {
   >([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
-  const [showForm, setShowForm] = React.useState(false)
-  const [patientQuery, setPatientQuery] = React.useState("")
-  const [patients, setPatients] = React.useState<
-    Awaited<ReturnType<typeof searchPatients>>["data"]
-  >([])
-  const [selectedPatientId, setSelectedPatientId] = React.useState("")
-  const [providerId, setProviderId] = React.useState("")
-  const [memberId, setMemberId] = React.useState("")
-  const [amount, setAmount] = React.useState("")
-  const [saving, setSaving] = React.useState(false)
+  const [drawerOpen, setDrawerOpen] = React.useState(false)
+  const [payRef, setPayRef] = React.useState<Record<string, string>>({})
   const [actionId, setActionId] = React.useState<string | null>(null)
   const [submitNote, setSubmitNote] = React.useState<string | null>(null)
   const [rejectingClaimId, setRejectingClaimId] = React.useState<string | null>(null)
@@ -106,64 +97,6 @@ function HmoClaimsPageContent() {
     }, 0)
     return () => window.clearTimeout(id)
   }, [load])
-
-  React.useEffect(() => {
-    if (!activeBranch || patientQuery.length < 2) {
-      const id = window.setTimeout(() => setPatients([]), 0)
-      return () => window.clearTimeout(id)
-    }
-    const t = setTimeout(
-      () => searchPatients(patientQuery, activeBranch.id).then(({ data }) => setPatients(data)),
-      300
-    )
-    return () => clearTimeout(t)
-  }, [patientQuery, activeBranch])
-
-  const pickPatient = async (patientId: string, displayName: string) => {
-    setSelectedPatientId(patientId)
-    setPatientQuery(displayName)
-    setPatients([])
-    const { data: profiles } = await fetchPatientInsuranceProfiles(patientId)
-    const hmo = profiles.find((p) => p.payer_type === "hmo")
-    if (hmo?.member_id) setMemberId(hmo.member_id)
-    if (hmo?.payer_name && providers.length > 0) {
-      const match = providers.find((p) => p.name.toLowerCase() === hmo.payer_name!.toLowerCase())
-      if (match) setProviderId(match.id)
-    }
-  }
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user || !activeBranch || !selectedPatientId || !providerId) return
-    setSaving(true)
-    const org = await fetchOrganization()
-    if (!org) {
-      setError("Organization not found")
-      setSaving(false)
-      return
-    }
-    const { error: err } = await createHmoClaim({
-      organizationId: org.id,
-      branchId: activeBranch.id,
-      patientId: selectedPatientId,
-      providerId,
-      memberId: memberId || undefined,
-      claimedAmount: parseFloat(amount) || 0,
-      userId: user.id,
-    })
-    setSaving(false)
-    if (err) {
-      setError(err)
-    } else {
-      setShowForm(false)
-      setPatientQuery("")
-      setSelectedPatientId("")
-      setProviderId("")
-      setMemberId("")
-      setAmount("")
-      void load()
-    }
-  }
 
   const runAction = async (id: string, fn: () => Promise<{ error: string | null }>) => {
     setActionId(id)
@@ -267,7 +200,7 @@ function HmoClaimsPageContent() {
           <div className="flex flex-wrap items-center gap-2">
             <WorkflowSettingsLink />
             {canWrite ? (
-              <Button className="gap-2 shadow-sm" onClick={() => setShowForm(true)}>
+              <Button className="gap-2 shadow-sm" onClick={() => setDrawerOpen(true)}>
                 <Plus className="h-4 w-4" /> {t("billing.newClaim", "New claim")}
               </Button>
             ) : null}
@@ -306,75 +239,6 @@ function HmoClaimsPageContent() {
             </p>
           ) : null}
 
-          {showForm ? (
-            <Card className="border-primary-200">
-              <CardHeader>
-                <CardTitle className="text-base">
-                  {t("billing.draftClaim", "Draft HMO claim")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleCreate} className="grid max-w-2xl gap-3 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <Input
-                      placeholder="Search patient…"
-                      value={patientQuery}
-                      onChange={(e) => setPatientQuery(e.target.value)}
-                    />
-                    {patients.length > 0 ? (
-                      <ul className="mt-1 max-h-32 divide-y overflow-y-auto rounded-md border">
-                        {patients.map((p) => (
-                          <li key={p.id}>
-                            <button
-                              type="button"
-                              className="w-full px-3 py-2 text-left text-sm hover:bg-neutral-50"
-                              onClick={() => pickPatient(p.id, `${p.first_name} ${p.last_name}`)}
-                            >
-                              {p.first_name} {p.last_name}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-                  <select
-                    className="h-9 rounded-md border px-3 text-sm"
-                    required
-                    value={providerId}
-                    onChange={(e) => setProviderId(e.target.value)}
-                  >
-                    <option value="">Select HMO provider</option>
-                    {providers.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                  <Input
-                    placeholder="Member ID"
-                    value={memberId}
-                    onChange={(e) => setMemberId(e.target.value)}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Claimed amount ₱"
-                    required
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                  />
-                  <div className="flex gap-2 sm:col-span-2">
-                    <Button type="submit" disabled={saving || !selectedPatientId}>
-                      {saving ? "Saving…" : "Create draft"}
-                    </Button>
-                    <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-                      {t("common.cancel", "Cancel")}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          ) : null}
-
           <ContentPanel padding="lg">
             <h3 className="text-base font-semibold text-neutral-950">
               {t("billing.claims", "Claims")}
@@ -409,7 +273,7 @@ function HmoClaimsPageContent() {
                     )}
                   </p>
                   {canWrite ? (
-                    <Button className="mt-4 gap-2" onClick={() => setShowForm(true)}>
+                    <Button className="mt-4 gap-2" onClick={() => setDrawerOpen(true)}>
                       <Plus className="h-4 w-4" />
                       {t("billing.newClaim", "New claim")}
                     </Button>
@@ -492,15 +356,25 @@ function HmoClaimsPageContent() {
                                   </>
                                 ) : null}
                                 {c.status === "approved" ? (
-                                  <Button
-                                    size="sm"
-                                    disabled={actionId === c.id}
-                                    onClick={() =>
-                                      runAction(c.id, () => markHmoClaimPaid(c.id, `REF-${Date.now()}`))
-                                    }
-                                  >
-                                    {t("billing.markPaid", "Mark paid")}
-                                  </Button>
+                                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                    <Input
+                                      className="h-7 w-28 text-xs"
+                                      placeholder={t("billing.refPlaceholder", "Ref #")}
+                                      value={payRef[c.id] ?? ""}
+                                      onChange={(e) =>
+                                        setPayRef((prev) => ({ ...prev, [c.id]: e.target.value }))
+                                      }
+                                    />
+                                    <Button
+                                      size="sm"
+                                      disabled={actionId === c.id || !(payRef[c.id]?.trim())}
+                                      onClick={() =>
+                                        runAction(c.id, () => markHmoClaimPaid(c.id, payRef[c.id]?.trim() ?? ""))
+                                      }
+                                    >
+                                      {t("billing.markPaid", "Mark paid")}
+                                    </Button>
+                                  </div>
                                 ) : null}
                                 {c.status === "rejected" ? (
                                   <Button
@@ -604,6 +478,12 @@ function HmoClaimsPageContent() {
           ) : null}
         </div>
       </ModulePageShell>
+      <HmoClaimDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        providers={providers ?? []}
+        onCreated={() => void load()}
+      />
     </PermissionGate>
   )
 }

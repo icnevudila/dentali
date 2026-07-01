@@ -33,6 +33,7 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
+import { PhilHealthClaimDrawer } from "@/components/billing/PhilHealthClaimDrawer"
 
 const STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "danger" | "info" | "outline"> = {
   checklist_incomplete: "warning",
@@ -70,13 +71,7 @@ function PhilHealthPageContent() {
   const [loading, setLoading] = React.useState(true)
   const [logsLoading, setLogsLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
-  const [showForm, setShowForm] = React.useState(false)
-  const [patientQuery, setPatientQuery] = React.useState("")
-  const [patients, setPatients] = React.useState<Awaited<ReturnType<typeof searchPatients>>["data"]>([])
-  const [selectedPatientId, setSelectedPatientId] = React.useState("")
-  const [philhealthId, setPhilhealthId] = React.useState("")
-  const [caseRate, setCaseRate] = React.useState("")
-  const [saving, setSaving] = React.useState(false)
+  const [drawerOpen, setDrawerOpen] = React.useState(false)
   const [syncing, setSyncing] = React.useState(false)
   const [retrying, setRetrying] = React.useState(false)
   const [syncNote, setSyncNote] = React.useState<string | null>(null)
@@ -114,38 +109,7 @@ function PhilHealthPageContent() {
     return () => window.clearTimeout(id)
   }, [selected])
 
-  React.useEffect(() => {
-    if (!activeBranch || patientQuery.length < 2) {
-      const id = window.setTimeout(() => setPatients([]), 0)
-      return () => window.clearTimeout(id)
-    }
-    const timer = setTimeout(() => searchPatients(patientQuery, activeBranch.id).then(({ data }) => setPatients(data)), 300)
-    return () => clearTimeout(timer)
-  }, [patientQuery, activeBranch])
 
-  const pickPatient = async (patientId: string, displayName: string) => {
-    setSelectedPatientId(patientId)
-    setPatientQuery(displayName)
-    setPatients([])
-    const { data: profiles } = await fetchPatientInsuranceProfiles(patientId)
-    const ph = profiles.find((p) => p.payer_type === "philhealth" && p.member_id)
-    if (ph?.member_id) setPhilhealthId(ph.member_id)
-  }
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user || !activeBranch || !selectedPatientId) return
-    setSaving(true)
-    const org = await fetchOrganization()
-    if (!org) { setError("Organization not found"); setSaving(false); return }
-    const { error: err } = await createPhilHealthClaim({
-      organizationId: org.id, branchId: activeBranch.id, patientId: selectedPatientId,
-      philhealthId, caseRateCode: caseRate, userId: user.id,
-    })
-    setSaving(false)
-    if (err) setError(err)
-    else { setShowForm(false); setPhilhealthId(""); setCaseRate(""); load() }
-  }
 
   const toggleCheck = async (key: string, checked: boolean) => {
     if (!selected) return
@@ -225,7 +189,7 @@ function PhilHealthPageContent() {
       label: t("billing.phReady", "Ready"),
       value: loading ? "—" : String(phStats.ready),
       hint: t("billing.phReadyHint", "Checklist complete"),
-      variant: phStats.ready > 0 ? ("default" as const) : ("default" as const),
+      variant: phStats.ready > 0 ? ("success" as const) : ("default" as const),
     },
     {
       label: t("billing.phIncomplete", "Incomplete"),
@@ -256,7 +220,7 @@ function PhilHealthPageContent() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <WorkflowSettingsLink />
-            <Button className="gap-2 shadow-sm" onClick={() => setShowForm(true)}>
+            <Button className="gap-2 shadow-sm" onClick={() => setDrawerOpen(true)}>
               <Plus className="h-4 w-4" /> {t("billing.newClaimPrep", "New claim prep")}
             </Button>
           </div>
@@ -296,34 +260,7 @@ function PhilHealthPageContent() {
           />
         ) : null}
 
-        {showForm && (
-          <Card>
-            <CardContent className="pt-6">
-              <form onSubmit={handleCreate} className="grid gap-3 sm:grid-cols-2 max-w-xl">
-                <div className="sm:col-span-2">
-                  <Input placeholder={t("billing.searchPatient", "Search patient…")} value={patientQuery} onChange={(e) => setPatientQuery(e.target.value)} />
-                  {patients.length > 0 && (
-                    <ul className="border rounded-md divide-y mt-1 max-h-32 overflow-y-auto">
-                      {patients.map((p) => (
-                        <li key={p.id}>
-                          <button type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-50" onClick={() => pickPatient(p.id, `${p.first_name} ${p.last_name}`)}>
-                            {p.first_name} {p.last_name}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <Input placeholder={t("billing.philhealthId", "PhilHealth ID")} required value={philhealthId} onChange={(e) => setPhilhealthId(e.target.value)} />
-                <Input placeholder={t("billing.caseRateCode", "Case rate code")} required value={caseRate} onChange={(e) => setCaseRate(e.target.value)} />
-                <div className="sm:col-span-2 flex gap-2">
-                  <Button type="submit" disabled={saving || !selectedPatientId}>{t("common.save", "Save")}</Button>
-                  <Button type="button" variant="outline" onClick={() => setShowForm(false)}>{t("common.cancel", "Cancel")}</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
+
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
@@ -449,6 +386,11 @@ function PhilHealthPageContent() {
         </div>
         </div>
       </ModulePageShell>
+      <PhilHealthClaimDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        onCreated={() => load()}
+      />
     </PermissionGate>
   )
 }

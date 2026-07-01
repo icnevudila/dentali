@@ -30,7 +30,7 @@ import { PatientChartFindingsPanel } from "@/components/analytics/PatientChartFi
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { Users } from "lucide-react"
+import { ArrowLeft, Users } from "lucide-react"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
@@ -275,15 +275,18 @@ export default function DentalChartPage() {
       />
 
       <DirectionalTransition className="space-y-6 max-w-7xl mx-auto print:hidden">
-        <SectionEyebrow icon={Users}>Clinical · Dental chart</SectionEyebrow>
-
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" asChild className="text-neutral-500 hover:text-neutral-900">
-            <Link href={`/patients/${patientId}`} transitionTypes={NAV_BACK_TRANSITION}>
-              ← Back to profile
-            </Link>
-          </Button>
+        <div className="animate-fade-in">
+          <Link
+            href={`/patients/${patientId}`}
+            transitionTypes={NAV_BACK_TRANSITION}
+            className="inline-flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-primary-600 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Patient Profile</span>
+          </Link>
         </div>
+
+        <SectionEyebrow icon={Users}>Clinical · Dental chart</SectionEyebrow>
 
         {saveError && (
           <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">

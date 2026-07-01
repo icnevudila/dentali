@@ -37,6 +37,8 @@ import {
 } from "@/lib/clinical/ortho-service"
 import { OrthoCaseTimelinePanel } from "@/components/clinical/OrthoCaseTimelinePanel"
 import { OrthoAdjustmentRow } from "@/components/clinical/OrthoAdjustmentRow"
+import { OrthoCaseDrawer } from "@/components/clinical/OrthoCaseDrawer"
+import { OrthoAdjustmentDrawer } from "@/components/clinical/OrthoAdjustmentDrawer"
 import { notify } from "@/lib/ui/notify"
 import { toStoredBulletText } from "@/lib/text/bullet-text"
 import { cn } from "@/lib/utils"
@@ -60,31 +62,7 @@ export default function OrthoRecordPage() {
   const [showAddRow, setShowAddRow] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
   const [orthoConsentSigned, setOrthoConsentSigned] = React.useState<boolean | null>(null)
-
-  const [applianceType, setApplianceType] = React.useState("Metal braces")
-  const [startDate, setStartDate] = React.useState("")
-  const [contractAmount, setContractAmount] = React.useState("")
-  const [caseNotes, setCaseNotes] = React.useState("")
-  const [diagnosis, setDiagnosis] = React.useState("")
-
-  const [adjDate, setAdjDate] = React.useState("")
-  const [procedure, setProcedure] = React.useState("")
-  const [nextProcedure, setNextProcedure] = React.useState("")
-  const [nextVisitDate, setNextVisitDate] = React.useState("")
-  const [paymentAmount, setPaymentAmount] = React.useState("")
-  const [adjNotes, setAdjNotes] = React.useState("")
   const [linkedInvoiceId, setLinkedInvoiceId] = React.useState<string | null>(null)
-  const [bookNextAfterSave, setBookNextAfterSave] = React.useState(false)
-
-  const resetAdjustmentForm = React.useCallback(() => {
-    setAdjDate("")
-    setProcedure("")
-    setNextProcedure("")
-    setNextVisitDate("")
-    setPaymentAmount("")
-    setAdjNotes("")
-    setBookNextAfterSave(false)
-  }, [])
 
   const load = React.useCallback(async () => {
     if (!activeBranch || !patientId) return
@@ -127,60 +105,7 @@ export default function OrthoRecordPage() {
     })
   }, [patientId, load])
 
-  const handleCreateCase = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user || !activeBranch) return
-    setSaving(true)
-    const org = await fetchOrganization()
-    if (!org) {
-      setError("Organization not found")
-      setSaving(false)
-      return
-    }
-    const { error: err } = await createOrthoCase({
-      organizationId: org.id,
-      branchId: activeBranch.id,
-      patientId,
-      applianceType,
-      startDate,
-      contractAmount: parseFloat(contractAmount) || 0,
-      notes: caseNotes || undefined,
-      diagnosis: diagnosis || undefined,
-      userId: user.id,
-    })
-    setSaving(false)
-    if (err) setError(err)
-    else {
-      setShowNewCase(false)
-      setDiagnosis("")
-      load()
-    }
-  }
 
-  const handleLogAdjustment = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!orthoCase || !procedure.trim()) return
-    setSaving(true)
-    const { error: err } = await logOrthoAdjustment({
-      caseId: orthoCase.id,
-      adjustmentDate: adjDate || new Date().toISOString().slice(0, 10),
-      procedure: toStoredBulletText(procedure),
-      nextProcedure: nextProcedure.trim() ? toStoredBulletText(nextProcedure) : undefined,
-      nextVisitDate: nextVisitDate || undefined,
-      paymentAmount: parseFloat(paymentAmount) || 0,
-      notes: adjNotes.trim() || undefined,
-    })
-    setSaving(false)
-    if (err) setError(err)
-    else {
-      setShowAddRow(false)
-      resetAdjustmentForm()
-      await load()
-      if (bookNextAfterSave && nextVisitDate) {
-        router.push(buildAppointmentHref(nextVisitDate))
-      }
-    }
-  }
 
   const handleUpdateAdjustment = async (
     adjustmentId: string,
@@ -461,7 +386,6 @@ export default function OrthoRecordPage() {
                       variant="outline"
                       className="gap-2"
                       onClick={() => {
-                        resetAdjustmentForm()
                         setShowAddRow(true)
                       }}
                     >
@@ -519,146 +443,27 @@ export default function OrthoRecordPage() {
                   </table>
                 )}
               </CardContent>
-            </Card>
-          </>
-        )}
-
-        {showNewCase && (
-          <Card className="border-primary-200">
-            <CardHeader>
-              <CardTitle className="text-base">New orthodontic case</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleCreateCase} className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">Appliance type</label>
-                  <select
-                    className="w-full h-9 rounded-md border border-neutral-200 px-3 text-sm"
-                    value={applianceType}
-                    onChange={(e) => setApplianceType(e.target.value)}
-                  >
-                    <option>Metal braces</option>
-                    <option>Ceramic braces</option>
-                    <option>Clear aligners</option>
-                    <option>Retainer</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">Start date</label>
-                  <Input type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">Contract amount (₱)</label>
-                  <Input type="number" min="0" step="0.01" value={contractAmount} onChange={(e) => setContractAmount(e.target.value)} />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-xs font-medium">Diagnosis / Case Summary</label>
-                  <select
-                    className="w-full h-9 rounded-md border border-neutral-200 px-3 text-sm mb-2"
-                    value={diagnosis}
-                    onChange={(e) => setDiagnosis(e.target.value)}
-                  >
-                    <option value="">-- Select or Type Below --</option>
-                    <option value="Class I Malocclusion">Class I Malocclusion</option>
-                    <option value="Class II Malocclusion Division 1">Class II Malocclusion Division 1</option>
-                    <option value="Class II Malocclusion Division 2">Class II Malocclusion Division 2</option>
-                    <option value="Class III Malocclusion">Class III Malocclusion</option>
-                    <option value="Severe Crowding">Severe Crowding</option>
-                    <option value="Spacing / Diastema">Spacing / Diastema</option>
-                    <option value="Anterior Crossbite">Anterior Crossbite</option>
-                    <option value="Deep Bite">Deep Bite</option>
-                    <option value="Open Bite">Open Bite</option>
-                    <option value="Bimaxillary Protrusion">Bimaxillary Protrusion</option>
-                  </select>
-                  <Input 
-                    placeholder="Or type custom diagnosis here..." 
-                    value={diagnosis} 
-                    onChange={(e) => setDiagnosis(e.target.value)} 
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-xs font-medium">Notes</label>
-                  <Input value={caseNotes} onChange={(e) => setCaseNotes(e.target.value)} />
-                </div>
-                <div className="sm:col-span-2 flex gap-2">
-                  <Button type="submit" disabled={saving}>{saving ? "Creating…" : "Create case"}</Button>
-                  <Button type="button" variant="outline" onClick={() => setShowNewCase(false)}>Cancel</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-        {showAddRow && orthoCase && (
-          <Card className="border-primary-200">
-            <CardHeader>
-              <CardTitle className="text-base">Log adjustment visit</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleLogAdjustment} className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">Date</label>
-                  <Input type="date" value={adjDate} onChange={(e) => setAdjDate(e.target.value)} />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-xs font-medium">Procedure *</label>
-                  <BulletTextarea
-                    value={procedure}
-                    onChange={setProcedure}
-                    rows={5}
-                    placeholder={`e.g.\n• 2nd Adjustment\n• Change ligaties\n• Recement #17 buccal tube`}
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-xs font-medium">Next procedure</label>
-                  <BulletTextarea
-                    value={nextProcedure}
-                    onChange={setNextProcedure}
-                    rows={3}
-                    placeholder={`e.g.\n• Still for alignment\n• 14/15 for exo`}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">Next visit date</label>
-                  <Input type="date" value={nextVisitDate} onChange={(e) => setNextVisitDate(e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">Payment (₱)</label>
-                  <Input type="number" min="0" step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-xs font-medium">Notes</label>
-                  <BulletTextarea value={adjNotes} onChange={setAdjNotes} rows={2} placeholder="Optional visit notes" />
-                </div>
-                <label className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm sm:col-span-2">
-                  <input
-                    type="checkbox"
-                    checked={bookNextAfterSave}
-                    onChange={(e) => setBookNextAfterSave(e.target.checked)}
-                    disabled={!nextVisitDate || saving}
-                  />
-                  {t("ortho.openBookingAfterSave", "Open appointment booking after saving this visit")}
-                </label>
-                <div className="sm:col-span-2 flex gap-2">
-                  <Button type="submit" disabled={saving}>
-                    {saving ? "Saving…" : "Save entry"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setShowAddRow(false)
-                      resetAdjustmentForm()
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
+            </Card>  </CardContent>
           </Card>
         )}
       </PatientPageShell>
+      <OrthoCaseDrawer
+        open={showNewCase}
+        onOpenChange={setShowNewCase}
+        patientId={patientId}
+        onCreated={() => void load()}
+      />
+      <OrthoAdjustmentDrawer
+        open={showAddRow}
+        onOpenChange={setShowAddRow}
+        caseId={orthoCase?.id ?? ""}
+        onCreated={async (nextDate, bookNext) => {
+          await load()
+          if (bookNext && nextDate) {
+            router.push(buildAppointmentHref(nextDate))
+          }
+        }}
+      />
     </PermissionGate>
   )
 }

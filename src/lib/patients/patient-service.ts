@@ -28,6 +28,7 @@ export interface PatientRecord {
   last_visit_at?: string | null
   intake_pct?: number
   profile_photo_url?: string | null
+  branches?: string[]
 }
 
 export type PatientSearchOptions = {
@@ -55,6 +56,34 @@ function mapSearchPatientsRows(rows: SearchPatientsRow[]) {
   const total = rows.length > 0 ? Number(rows[0].total_count ?? rows.length) : 0
   const patients = rows.map(({ total_count: _tc, ...patient }) => patient)
   return { data: patients, total }
+}
+
+async function attachPatientBranches(patients: PatientRecord[]): Promise<PatientRecord[]> {
+  if (patients.length === 0) return patients
+  const supabase = createClient()
+  const patientIds = patients.map((p) => p.id)
+
+  const { data, error } = await supabase
+    .from("patient_branch_links")
+    .select("patient_id, branch:branches(name)")
+    .in("patient_id", patientIds)
+
+  if (error || !data) return patients
+
+  const branchMap: Record<string, string[]> = {}
+  data.forEach((row: any) => {
+    const pId = row.patient_id
+    const bName = row.branch?.name
+    if (bName) {
+      if (!branchMap[pId]) branchMap[pId] = []
+      branchMap[pId].push(bName)
+    }
+  })
+
+  return patients.map((p) => ({
+    ...p,
+    branches: branchMap[p.id] ?? [],
+  }))
 }
 
 async function attachProfilePhotoUrls(patients: PatientRecord[]): Promise<PatientRecord[]> {
@@ -104,7 +133,8 @@ export async function searchPatients(
   if (!error) {
     const mapped = mapSearchPatientsRows((data ?? []) as SearchPatientsRow[])
     const dataWithPhotos = await attachProfilePhotoUrls(mapped.data)
-    return { data: dataWithPhotos, total: mapped.total, error: null }
+    const dataWithBranches = await attachPatientBranches(dataWithPhotos)
+    return { data: dataWithBranches, total: mapped.total, error: null }
   }
 
   if (!isMissingSearchPatientsRpc(error.message)) {
@@ -128,7 +158,8 @@ export async function searchPatients(
 
   const mapped = mapSearchPatientsRows((legacy.data ?? []) as SearchPatientsRow[])
   const dataWithPhotos = await attachProfilePhotoUrls(mapped.data)
-  return { data: dataWithPhotos, total: mapped.total, error: null }
+  const dataWithBranches = await attachPatientBranches(dataWithPhotos)
+  return { data: dataWithBranches, total: mapped.total, error: null }
 }
 
 function computeIntakePct(patient: {

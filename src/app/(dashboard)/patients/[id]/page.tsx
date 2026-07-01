@@ -674,17 +674,31 @@ export default function PatientProfilePage() {
         continueLoading={journeyContinueLoading}
         onStepClick={(step) => {
           const tabMapping: Record<string, PatientTabId> = {
+            // Intake steps
+            "register": "record",
             "patient-registration": "record",
+            "medical": "medical-history",
             "medical-history": "medical-history",
+            "consents": "consents",
             "consents-signed": "consents",
+            "appointment": "appointments",
             "appointment-booked": "appointments",
+            
+            // Encounter steps
+            "file": "record",
+            "checkin": "visits",
             "check-in": "visits",
+            "chair": "clinical-notes", // or active treatment area
             "clinical-note": "clinical-notes",
+            "chart": "dental-chart",
             "dental-chart": "dental-chart",
             "treatment-plan": "treatment-plans",
             "plan-approved": "treatment-plans",
-            "invoice-issued": "record", // Points to billing summary/ledger card on patient record
+            "invoice": "record", // Points to billing/ledger on record
+            "invoice-issued": "record",
+            "payment": "record",
             "payment-collected": "record",
+            "discharge": "visits",
           }
           const targetTab = tabMapping[step.id]
           if (targetTab) {

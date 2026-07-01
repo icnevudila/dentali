@@ -294,6 +294,15 @@ export function PatientTable({
                         {t("queue.priorDayOpen", "Prior day open")}
                       </Badge>
                     ) : null}
+                    {patient.branches?.map((bName) => (
+                      <Badge
+                        key={bName}
+                        variant="outline"
+                        className="text-[10px] border-neutral-200 bg-neutral-50/80 text-neutral-600 font-normal shrink-0"
+                      >
+                        {bName}
+                      </Badge>
+                    ))}
                   </span>
                 }
                 secondary={
