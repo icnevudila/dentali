@@ -45,6 +45,7 @@ import { fetchOrgStaff, type StaffMember } from "@/lib/staff/staff-service"
 import { AppointmentWeekCalendar } from "@/components/appointments/AppointmentWeekCalendar"
 import { AppointmentEditDialog } from "@/components/appointments/AppointmentEditDialog"
 import { AppointmentSlotButtons } from "@/components/appointments/AppointmentSlotButtons"
+import { AppointmentRemindersDrawer } from "@/components/appointments/AppointmentRemindersDrawer"
 import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
 import { PatientBillingGateBanner } from "@/components/billing/PatientBillingGateBanner"
 import {
@@ -59,7 +60,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Calendar, Plus, UserCheck, MapPin, Globe, X } from "lucide-react"
+import { Calendar, Plus, UserCheck, MapPin, Globe, X, Clock } from "lucide-react"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
@@ -157,6 +158,7 @@ function AppointmentsPageContent() {
   const [bookingBillingGate, setBookingBillingGate] = React.useState<PatientBillingGate | null>(null)
   const [forceBillingOverride, setForceBillingOverride] = React.useState(false)
   const [todayQueueEntries, setTodayQueueEntries] = React.useState<QueueEntry[]>([])
+  const [remindersOpen, setRemindersOpen] = React.useState(false)
 
   const today = toDateKey(new Date())
 
@@ -627,7 +629,8 @@ function AppointmentsPageContent() {
 
   return (
     <PermissionGate permission={PERMISSIONS.APPOINTMENTS_READ}>
-      <DirectionalTransition className="mx-auto w-full max-w-7xl">
+      <>
+        <DirectionalTransition className="mx-auto w-full max-w-7xl">
         <ContentPanel padding="lg" className="space-y-6">
           <SectionEyebrow icon={Calendar} hideOnMobile>
             {t("appointments.eyebrow", "Scheduling")} · {t("appointments.title", "Appointments")}
@@ -641,14 +644,18 @@ function AppointmentsPageContent() {
               "Week calendar for booking and status — check-in happens on the Queue board."
             )}
             actions={
-            <div className="hidden md:flex md:flex-wrap md:items-center md:gap-2">
-              <WorkflowSettingsLink />
-              <Button className="gap-2" onClick={openBookModal}>
-                <Plus className="h-4 w-4" />
-                {t("appointments.book", "Book")}
-              </Button>
-            </div>
-          }
+              <div className="hidden md:flex md:flex-wrap md:items-center md:gap-2">
+                <WorkflowSettingsLink />
+                <Button variant="outline" className="gap-2" onClick={() => setRemindersOpen(true)}>
+                  <Clock className="h-4 w-4" />
+                  {t("appointments.reminders", "Reminders")}
+                </Button>
+                <Button className="gap-2" onClick={openBookModal}>
+                  <Plus className="h-4 w-4" />
+                  {t("appointments.book", "Book")}
+                </Button>
+              </div>
+            }
           />
 
           <StickyActionBar>
@@ -656,6 +663,10 @@ function AppointmentsPageContent() {
               <Button className="h-11 flex-1 gap-2" onClick={openBookModal}>
                 <Plus className="h-4 w-4 shrink-0" />
                 {t("appointments.book", "Book")}
+              </Button>
+              <Button variant="outline" className="h-11 flex-1 gap-2" onClick={() => setRemindersOpen(true)}>
+                <Clock className="h-4 w-4 shrink-0" />
+                {t("appointments.reminders", "Reminders")}
               </Button>
               {canCheckIn ? (
                 <Button variant="outline" className="h-11 flex-1 gap-2" asChild>
@@ -888,6 +899,13 @@ function AppointmentsPageContent() {
           ) : null}
         </ContentPanel>
       </DirectionalTransition>
+      <AppointmentRemindersDrawer
+        open={remindersOpen}
+        onOpenChange={setRemindersOpen}
+        appointments={weekAppointments}
+        staffMembers={providers}
+        onActionComplete={() => loadWeek({ silent: true })}
+      />
       {portalReady && showBook
         ? createPortal(
             <div className="fixed inset-0 z-[200] flex items-end justify-center p-0 sm:items-center sm:p-4">
@@ -1158,6 +1176,7 @@ function AppointmentsPageContent() {
             document.body
           )
         : null}
+      </>
     </PermissionGate>
   )
 }
