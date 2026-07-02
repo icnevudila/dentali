@@ -77,7 +77,9 @@ export default function OrthoRecordPage() {
     const { data: consentList } = await fetchPatientConsents(patientId)
     const hasOrthoConsent = consentList.some(
       (form) =>
-        (form.template_slug === "informed-consent-ortho" || form.template_slug === "orthodontic-consent") &&
+        (form.template_slug === "informed-consent-ortho" ||
+          form.template_slug === "orthodontic-consent" ||
+          form.template_slug === "ortho-agreement") &&
         form.status === "signed"
     )
     setOrthoConsentSigned(hasOrthoConsent)
@@ -319,7 +321,7 @@ export default function OrthoRecordPage() {
                     </div>
                     {!orthoConsentSigned && (
                       <Button size="sm" variant="outline" className="h-7 px-2 text-xs gap-1 border-amber-300 bg-white text-amber-800 hover:bg-amber-50" asChild>
-                        <Link href={`/patients/${patientId}/consents/informed-consent-ortho?returnTo=ortho`}>
+                        <Link href={`/patients/${patientId}/consents/ortho-agreement?returnTo=ortho`}>
                           Sign Consent Form
                         </Link>
                       </Button>
