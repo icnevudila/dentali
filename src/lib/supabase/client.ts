@@ -11,13 +11,14 @@ export function createClient() {
     return new Proxy({} as any, {
       get(_, prop) {
         if (prop === "auth") {
-          return new Proxy({} as any, {
-            get() {
-              return () => {}
-            },
-          })
+          return {
+            getSession: async () => ({ data: { session: null }, error: null }),
+            onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+            signOut: async () => ({ error: null }),
+            signInWithPassword: async () => ({ data: { user: null, session: null }, error: null }),
+          }
         }
-        return () => {}
+        return () => ({ data: null, error: null })
       },
     })
   }
@@ -32,10 +33,22 @@ export function createClient() {
   }
 
   if (!browserClient) {
+    let safeStorage: any = undefined
+    try {
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        window.sessionStorage.setItem("sb-test", "test")
+        window.sessionStorage.removeItem("sb-test")
+        safeStorage = window.sessionStorage
+      }
+    } catch {
+      // sessionStorage is blocked (e.g. Opera/Safari private mode or security settings)
+      safeStorage = undefined
+    }
+
     browserClient = createBrowserClient(url, key, {
       auth: {
         persistSession: true,
-        storage: window.sessionStorage,
+        storage: safeStorage,
       },
     })
   }

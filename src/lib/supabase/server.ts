@@ -10,11 +10,12 @@ export async function createClient() {
     return new Proxy({} as any, {
       get(_, prop) {
         if (prop === 'auth') {
-          return new Proxy({} as any, {
-            get() { return () => {} }
-          })
+          return {
+            getSession: async () => ({ data: { session: null }, error: null }),
+            getUser: async () => ({ data: { user: null }, error: null }),
+          }
         }
-        return () => {}
+        return () => ({ data: null, error: null })
       }
     })
   }
