@@ -654,7 +654,7 @@ export default function PrescriptionsPage() {
             <CardHeader className="p-0 mb-4">
               <CardTitle className="text-base">Share Prescription via QR</CardTitle>
               <CardDescription>
-                Scan with clinic phone to open patient's WhatsApp chat with ready message and link.
+                Scan with clinic phone to open patient&apos;s WhatsApp chat with ready message and link.
               </CardDescription>
             </CardHeader>
             <div className="flex justify-center p-3 bg-neutral-50 rounded-xl border border-neutral-100 mb-4">

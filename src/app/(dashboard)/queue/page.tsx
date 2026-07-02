@@ -937,7 +937,10 @@ function QueuePageContent() {
   }
 
   const applyConsentSignedRef = React.useRef(applyConsentSignedFromQueue)
-  applyConsentSignedRef.current = applyConsentSignedFromQueue
+
+  React.useEffect(() => {
+    applyConsentSignedRef.current = applyConsentSignedFromQueue
+  }, [applyConsentSignedFromQueue])
 
   React.useEffect(() => {
     return subscribeQueueConsentSigned((message) => {

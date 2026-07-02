@@ -78,6 +78,7 @@ function MenuLink({
 
 export function UserAccountMenu() {
   const { user, signOut } = useAuth()
+  const { hasPermission } = usePermission()
   const { t } = useLocale()
   const [open, setOpen] = React.useState(false)
   const [mounted, setMounted] = React.useState(false)
@@ -181,7 +182,6 @@ export function UserAccountMenu() {
   const lastLogin = sessionLogs.find((log) => log.event_type === "login")
   const close = () => setOpen(false)
 
-  const { hasPermission } = usePermission()
   const isManager = roleName === "owner" || roleName === "admin" || hasPermission("settings.write")
 
   const menuPortal =
