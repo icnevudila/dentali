@@ -1,10 +1,11 @@
 "use client"
 
 import { create } from "zustand"
-import { persist } from "zustand/middleware"
+import { persist, createJSONStorage } from "zustand/middleware"
 import { DEFAULT_LOCALE, getLocaleDefinition, normalizeLocale, LOCALE_STORAGE_KEY, type AppLocale } from "@/lib/i18n/config"
 import { createTranslator } from "@/lib/i18n/translate"
 import { writeLocaleCookie } from "@/lib/i18n/locale-cookie"
+import { safeLocalStorage } from "@/lib/safe-storage"
 
 interface LocaleState {
   locale: AppLocale
@@ -28,6 +29,7 @@ export const useLocaleStore = create<LocaleState>()(
     }),
     {
       name: LOCALE_STORAGE_KEY,
+      storage: createJSONStorage(() => safeLocalStorage),
       partialize: (state) => ({ locale: state.locale }),
       onRehydrateStorage: () => (state) => {
         if (!state) return

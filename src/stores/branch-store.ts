@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { safeLocalStorage } from '@/lib/safe-storage'
 
 interface Branch {
   id: string
@@ -31,6 +32,7 @@ export const useBranchStore = create<BranchState>()(
     }),
     {
       name: 'dentali-branch-storage',
+      storage: createJSONStorage(() => safeLocalStorage),
       partialize: (state) => ({
         activeBranch: state.activeBranch,
         availableBranches: state.availableBranches,
