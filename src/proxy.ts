@@ -1,7 +1,14 @@
-import { type NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 export default async function proxy(request: NextRequest) {
+  // Root "/" → redirect to /welcome (landing page)
+  if (request.nextUrl.pathname === '/') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/welcome'
+    return NextResponse.redirect(url)
+  }
+
   return await updateSession(request)
 }
 
