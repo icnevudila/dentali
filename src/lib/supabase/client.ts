@@ -25,12 +25,17 @@ function createDummyClient(): any {
     exchangeCodeForSession: noopAsync,
   }
 
+  const mockChannel: any = {
+    on: () => mockChannel,
+    subscribe: () => mockChannel,
+  }
+
   return new Proxy({} as any, {
     get(_, prop) {
       if (prop === "auth") return authMethods
       if (prop === "from") return () => ({ select: noopAsync, insert: noopAsync, update: noopAsync, delete: noopAsync, upsert: noopAsync })
       if (prop === "rpc") return noopAsync
-      if (prop === "channel") return () => ({ on: () => ({ subscribe: () => {} }), subscribe: () => {} })
+      if (prop === "channel") return () => mockChannel
       if (prop === "removeChannel") return () => {}
       return noopAsync
     },
