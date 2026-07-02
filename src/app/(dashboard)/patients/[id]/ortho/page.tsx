@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { AlertTriangle, CalendarDays, Plus, Lock, Receipt, FileSignature } from "lucide-react"
+import { AlertTriangle, CalendarDays, Plus, Lock, Receipt, FileSignature, Pencil } from "lucide-react"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Button } from "@/components/ui/button"
@@ -59,6 +59,7 @@ export default function OrthoRecordPage() {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [showNewCase, setShowNewCase] = React.useState(false)
+  const [showEditCase, setShowEditCase] = React.useState(false)
   const [showAddRow, setShowAddRow] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
   const [orthoConsentSigned, setOrthoConsentSigned] = React.useState<boolean | null>(null)
@@ -248,6 +249,16 @@ export default function OrthoRecordPage() {
                     </CardDescription>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {canWrite && orthoCase.status === "active" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => setShowEditCase(true)}
+                      >
+                        <Pencil className="h-4 w-4" /> Edit case details
+                      </Button>
+                    )}
                     {nextVisit ? (
                       <Button size="sm" variant="outline" className="gap-2" asChild>
                         <Link href={buildAppointmentHref(nextVisit)}>
@@ -451,6 +462,13 @@ export default function OrthoRecordPage() {
         open={showNewCase}
         onOpenChange={setShowNewCase}
         patientId={patientId}
+        onCreated={() => void load()}
+      />
+      <OrthoCaseDrawer
+        open={showEditCase}
+        onOpenChange={setShowEditCase}
+        patientId={patientId}
+        initialCase={orthoCase}
         onCreated={() => void load()}
       />
       <OrthoAdjustmentDrawer

@@ -82,6 +82,30 @@ export async function createOrthoCase(params: {
   return { data: { id: data.id }, error: null }
 }
 
+export async function updateOrthoCase(params: {
+  caseId: string
+  applianceType: string
+  startDate: string
+  contractAmount: number
+  notes?: string
+  diagnosis?: string
+}): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from("ortho_cases")
+    .update({
+      appliance_type: params.applianceType,
+      start_date: params.startDate,
+      contract_amount: params.contractAmount,
+      notes: params.notes ?? null,
+      diagnosis: params.diagnosis ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.caseId)
+
+  return { error: error?.message ?? null }
+}
+
 export async function closeOrthoCase(caseId: string): Promise<{ error: string | null }> {
   const supabase = createClient()
   const { error } = await supabase

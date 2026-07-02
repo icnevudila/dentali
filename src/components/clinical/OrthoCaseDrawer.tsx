@@ -9,13 +9,14 @@ import { useAuth } from "@/hooks/use-auth"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
 import { fetchOrganization } from "@/lib/auth/auth-service"
-import { createOrthoCase } from "@/lib/clinical/ortho-service"
+import { createOrthoCase, updateOrthoCase, type OrthoCase } from "@/lib/clinical/ortho-service"
 
 interface OrthoCaseDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   patientId: string
   onCreated: () => void
+  initialCase?: OrthoCase | null
 }
 
 const APPLIANCE_PRESETS = [
@@ -44,6 +45,7 @@ export function OrthoCaseDrawer({
   onOpenChange,
   patientId,
   onCreated,
+  initialCase,
 }: OrthoCaseDrawerProps) {
   const { activeBranch } = useBranch()
   const { user } = useAuth()
@@ -67,6 +69,21 @@ export function OrthoCaseDrawer({
     setError(null)
   }, [])
 
+  // Sync state with initialCase when drawer opens or initialCase changes
+  React.useEffect(() => {
+    if (open) {
+      if (initialCase) {
+        setApplianceType(initialCase.appliance_type ?? APPLIANCE_PRESETS[0])
+        setStartDate(initialCase.start_date ?? "")
+        setContractAmount(String(initialCase.contract_amount))
+        setCaseNotes(initialCase.notes ?? "")
+        setDiagnosis(initialCase.diagnosis ?? "")
+      } else {
+        resetForm()
+      }
+    }
+  }, [initialCase, open, resetForm])
+
   // Close on Escape
   React.useEffect(() => {
     if (!open) return
@@ -87,31 +104,50 @@ export function OrthoCaseDrawer({
     if (!user || !activeBranch) return
     setSaving(true)
     setError(null)
-    const org = await fetchOrganization()
-    if (!org) {
-      setError("Organization not found")
+
+    if (initialCase) {
+      const { error: err } = await updateOrthoCase({
+        caseId: initialCase.id,
+        applianceType,
+        startDate: startDate || new Date().toISOString().slice(0, 10),
+        contractAmount: parseFloat(contractAmount) || 0,
+        notes: caseNotes || undefined,
+        diagnosis: diagnosis || undefined,
+      })
       setSaving(false)
-      return
-    }
-
-    const { error: err } = await createOrthoCase({
-      organizationId: org.id,
-      branchId: activeBranch.id,
-      patientId,
-      applianceType,
-      startDate: startDate || new Date().toISOString().slice(0, 10),
-      contractAmount: parseFloat(contractAmount) || 0,
-      notes: caseNotes || undefined,
-      diagnosis: diagnosis || undefined,
-      userId: user.id,
-    })
-
-    setSaving(false)
-    if (err) {
-      setError(err)
+      if (err) {
+        setError(err)
+      } else {
+        onOpenChange(false)
+        onCreated()
+      }
     } else {
-      onOpenChange(false)
-      onCreated()
+      const org = await fetchOrganization()
+      if (!org) {
+        setError("Organization not found")
+        setSaving(false)
+        return
+      }
+
+      const { error: err } = await createOrthoCase({
+        organizationId: org.id,
+        branchId: activeBranch.id,
+        patientId,
+        applianceType,
+        startDate: startDate || new Date().toISOString().slice(0, 10),
+        contractAmount: parseFloat(contractAmount) || 0,
+        notes: caseNotes || undefined,
+        diagnosis: diagnosis || undefined,
+        userId: user.id,
+      })
+
+      setSaving(false)
+      if (err) {
+        setError(err)
+      } else {
+        onOpenChange(false)
+        onCreated()
+      }
     }
   }
 
@@ -133,10 +169,14 @@ export function OrthoCaseDrawer({
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div>
             <h2 className="text-base font-semibold text-neutral-900">
-              {t("ortho.newCase", "New Ortho Case")}
+              {initialCase
+                ? t("ortho.editCase", "Edit Ortho Case")
+                : t("ortho.newCase", "New Ortho Case")}
             </h2>
             <p className="mt-0.5 text-xs text-neutral-500">
-              {t("ortho.newCaseHint", "Start a new orthodontic record and define the treatment plan contract.")}
+              {initialCase
+                ? t("ortho.editCaseHint", "Modify orthodontic record parameters and diagnosis.")
+                : t("ortho.newCaseHint", "Start a new orthodontic record and define the treatment plan contract.")}
             </p>
           </div>
           <Button
@@ -257,6 +297,8 @@ export function OrthoCaseDrawer({
             >
               {saving
                 ? t("common.saving", "Saving…")
+                : initialCase
+                ? t("ortho.saveCase", "Save changes")
                 : t("ortho.startCase", "Start case")}
             </Button>
             <Button
