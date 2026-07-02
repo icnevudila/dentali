@@ -68,17 +68,23 @@ export function createClient() {
         window.sessionStorage.removeItem("sb-test")
         safeStorage = window.sessionStorage
       } catch {
-        // Storage blocked — Supabase will use in-memory storage
+        // Storage blocked
+      }
+
+      const memoryStorage = {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
       }
 
       browserClient = createBrowserClient(url, key, {
         auth: {
           persistSession: !!safeStorage,
-          storage: safeStorage,
+          storage: safeStorage || memoryStorage,
         },
       })
     } catch {
-      // createBrowserClient itself threw (e.g. internal localStorage access)
+      // createBrowserClient itself threw
       return createDummyClient()
     }
   }
