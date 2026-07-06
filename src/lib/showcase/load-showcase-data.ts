@@ -26,6 +26,7 @@ const EMPTY_STATS: DashboardStats = {
   pending_intake_drafts: 0,
   appointments_awaiting_checkin: 0,
   open_encounters_stale: 0,
+  hmo_pending_claims: 0,
 }
 
 async function resolveBranch(
@@ -77,6 +78,7 @@ function mapDashboardStats(raw: Record<string, number>): DashboardStats {
     pending_intake_drafts: Number(raw.pending_intake_drafts ?? 0),
     appointments_awaiting_checkin: Number(raw.appointments_awaiting_checkin ?? 0),
     open_encounters_stale: Number(raw.open_encounters_stale ?? 0),
+    hmo_pending_claims: Number(raw.hmo_pending_claims ?? 0),
   }
 }
 
@@ -114,6 +116,7 @@ async function loadStatsDirect(
     hmoRes,
     phRes,
     staleEncountersRes,
+    hmoPendingRes,
   ] = await Promise.all([
     supabase.from("patients").select("id", { count: "exact", head: true }).eq("organization_id", orgId).eq("status", "active"),
     supabase
@@ -179,6 +182,12 @@ async function loadStatsDirect(
       .eq("branch_id", branchId)
       .eq("status", "open")
       .lt("opened_at", `${manilaToday}T00:00:00+08:00`),
+    supabase
+      .from("hmo_claims")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("branch_id", branchId)
+      .in("status", ["submitted", "under_review"]),
   ])
 
   let todayCollected = 0
@@ -257,6 +266,7 @@ async function loadStatsDirect(
     pending_intake_drafts: intakeDraftsRes.count ?? 0,
     appointments_awaiting_checkin: awaitingCheckinRes.count ?? 0,
     open_encounters_stale: staleEncountersRes.count ?? 0,
+    hmo_pending_claims: hmoPendingRes.count ?? 0,
   })
 }
 

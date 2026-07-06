@@ -62,6 +62,7 @@ import { OrthoAnalyticsPanel } from "@/components/analytics/OrthoAnalyticsPanel"
 import { BranchBenchmarkPanel } from "@/components/analytics/BranchBenchmarkPanel"
 import { FinanceSummaryPanel } from "@/components/analytics/FinanceSummaryPanel"
 import { ChairTimeAnalyticsPanel } from "@/components/analytics/ChairTimeAnalyticsPanel"
+import { DentistProductivityPanel } from "@/components/analytics/DentistProductivityPanel"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
@@ -734,6 +735,15 @@ export default function ReportsHubPage() {
               )}
             >
               <AppointmentsAnalyticsPanel branchId={activeBranch.id} periodDays={periodDays} compact />
+            </ReportPanelCaption>
+            <ReportPanelCaption
+              title={t("reports.panelDentistTitle", "Dentist productivity")}
+              description={t(
+                "reports.panelDentistDescription",
+                "Clinician workload breakdown showing total bookings, completion percentage, no-show ratios, and estimated value generated."
+              )}
+            >
+              <DentistProductivityPanel />
             </ReportPanelCaption>
             <ReportPanelCaption
               title={t("reports.panelQueueTitle", "Queue pressure")}

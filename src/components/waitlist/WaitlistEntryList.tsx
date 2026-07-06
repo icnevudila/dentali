@@ -170,7 +170,7 @@ export function WaitlistEntryList({
             meta={
               <>
                 <Badge variant={STATUS_VARIANT[entry.status] ?? "default"}>{entry.status}</Badge>
-                <Badge variant="outline" className="font-normal">
+                <Badge variant={entry.urgency === "urgent" ? "danger" : entry.urgency === "high" ? "warning" : "outline"} className="font-semibold">
                   {URGENCY_LABEL[entry.urgency]}
                 </Badge>
                 {entry.slot_alert_sent_at ? (

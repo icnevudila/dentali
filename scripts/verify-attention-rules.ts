@@ -44,6 +44,7 @@ const baseStats: DashboardStats = {
   pending_intake_drafts: 0,
   appointments_awaiting_checkin: 0,
   open_encounters_stale: 0,
+  hmo_pending_claims: 0,
 }
 
 const allPermissions = new Set<string>([

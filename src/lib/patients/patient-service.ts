@@ -132,9 +132,36 @@ export async function searchPatients(
 
   if (!error) {
     const mapped = mapSearchPatientsRows((data ?? []) as SearchPatientsRow[])
-    const dataWithPhotos = await attachProfilePhotoUrls(mapped.data)
+    let finalPatients = mapped.data
+
+    // If query looks like an invoice or receipt search, or we want comprehensive search:
+    if (trimmedQuery && trimmedQuery.length >= 3 && branchId) {
+      // Search invoices for invoice_number matching the query
+      const { data: matchedInvoices } = await supabase
+        .from("invoices")
+        .select("patient_id")
+        .eq("branch_id", branchId)
+        .ilike("invoice_number", `%${trimmedQuery}%`)
+        .limit(5)
+
+      if (matchedInvoices && matchedInvoices.length > 0) {
+        const extraPatientIds = matchedInvoices.map((inv) => inv.patient_id)
+        const { data: extraPatients } = await fetchPatientRecordsByIds(extraPatientIds, branchId)
+        if (extraPatients) {
+          // Merge avoiding duplicates
+          const existingIds = new Set(finalPatients.map((p) => p.id))
+          extraPatients.forEach((p) => {
+            if (!existingIds.has(p.id)) {
+              finalPatients.push(p)
+            }
+          })
+        }
+      }
+    }
+
+    const dataWithPhotos = await attachProfilePhotoUrls(finalPatients)
     const dataWithBranches = await attachPatientBranches(dataWithPhotos)
-    return { data: dataWithBranches, total: mapped.total, error: null }
+    return { data: dataWithBranches, total: Math.max(mapped.total, finalPatients.length), error: null }
   }
 
   if (!isMissingSearchPatientsRpc(error.message)) {

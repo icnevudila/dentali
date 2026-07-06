@@ -9,6 +9,7 @@ import { fetchAppointments } from "@/lib/appointments/appointment-service"
 import { fetchQueueEntriesForDay } from "@/lib/queue/queue-service"
 import { filterPendingCheckInAppointments } from "@/lib/queue/pending-arrivals"
 import { toDateKey } from "@/lib/appointments/week-calendar"
+import { createClient } from "@/lib/supabase/client"
 
 const EMPTY_STATS: DashboardStats = {
   active_patients: 0,
@@ -26,6 +27,7 @@ const EMPTY_STATS: DashboardStats = {
   pending_intake_drafts: 0,
   appointments_awaiting_checkin: 0,
   open_encounters_stale: 0,
+  hmo_pending_claims: 0,
 }
 
 export function useDashboardStats() {
@@ -43,10 +45,16 @@ export function useDashboardStats() {
       if (!branchId) return
       if (!opts?.silent) setLoading(true)
       const today = toDateKey(new Date())
-      const [statsRes, appointmentsRes, queueRes] = await Promise.all([
+      const supabase = createClient()
+      const [statsRes, appointmentsRes, queueRes, hmoRes] = await Promise.all([
         fetchDashboardStats(branchId),
         fetchAppointments(branchId, today),
         fetchQueueEntriesForDay(branchId, today),
+        supabase
+          .from("hmo_claims")
+          .select("*", { count: "exact", head: true })
+          .eq("branch_id", branchId)
+          .in("status", ["submitted", "under_review"]),
       ])
       const { data, error: err } = statsRes
       if (data) {
@@ -61,10 +69,11 @@ export function useDashboardStats() {
           ...data,
           appointments_awaiting_checkin: normalizedAwaiting,
           queue_waiting: normalizedQueueWaiting,
+          hmo_pending_claims: hmoRes.count ?? 0,
         })
         setLastUpdated(new Date())
       }
-      setError(err ?? appointmentsRes.error ?? queueRes.error)
+      setError(err ?? appointmentsRes.error ?? queueRes.error ?? hmoRes.error?.message)
       setLoading(false)
     },
     [branchId]

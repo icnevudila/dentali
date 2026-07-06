@@ -16,6 +16,7 @@ import {
 } from "@/lib/queue/queue-service"
 import { isPriorClinicDay } from "@/lib/queue/queue-day"
 import { cn } from "@/lib/utils"
+import { createClient } from "@/lib/supabase/client"
 
 type BoardColumn = {
   id: "arrivals" | "waiting" | "serving" | "chair"
@@ -153,6 +154,7 @@ function QueueCard({
   onDragEnd,
   isDragging,
   readOnly = false,
+  staffMap = {},
 }: {
   entry: QueueEntry
   onAction: (status: QueueStatus | "announce", chair?: string) => void
@@ -162,6 +164,7 @@ function QueueCard({
   onDragEnd: () => void
   isDragging: boolean
   readOnly?: boolean
+  staffMap?: Record<string, string>
 }) {
   const mins = waitMinutes(entry.checked_in_at)
   const { t } = useLocale()
@@ -241,7 +244,15 @@ function QueueCard({
           )}
         </p>
       ) : null}
-      {entry.chair_label ? <p className="text-xs text-neutral-600">Chair: {entry.chair_label}</p> : null}
+      {(entry.chair_label || (entry.provider_id && staffMap[entry.provider_id])) ? (
+        <p className="text-xs text-neutral-600 mt-1 font-medium bg-neutral-50 border border-neutral-100 rounded px-2 py-1 flex items-center gap-1.5 w-fit">
+          {entry.chair_label ? <span>Chair: <span className="text-neutral-900 font-semibold">{entry.chair_label}</span></span> : null}
+          {entry.chair_label && entry.provider_id && staffMap[entry.provider_id] ? <span className="text-neutral-300">·</span> : null}
+          {entry.provider_id && staffMap[entry.provider_id] ? (
+            <span>Dentist: <span className="text-neutral-900 font-semibold">{staffMap[entry.provider_id]}</span></span>
+          ) : null}
+        </p>
+      ) : null}
       {entry.notes ? <p className="text-xs text-neutral-400 mt-1 truncate">{entry.notes}</p> : null}
       {!readOnly ? (
       <div className="flex flex-wrap gap-1 mt-2">
@@ -331,6 +342,23 @@ export function QueueBoard({
   const [dragEntryId, setDragEntryId] = React.useState<string | null>(null)
   const [dropColumnId, setDropColumnId] = React.useState<BoardColumn["id"] | null>(null)
   const [reordering, setReordering] = React.useState(false)
+  const [staffMap, setStaffMap] = React.useState<Record<string, string>>({})
+
+  React.useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from("profiles")
+      .select("id, full_name")
+      .then(({ data }) => {
+        if (data) {
+          const map: Record<string, string> = {}
+          data.forEach((p) => {
+            if (p.full_name) map[p.id] = p.full_name
+          })
+          setStaffMap(map)
+        }
+      })
+  }, [])
 
   const handleDrop = async (
     column: BoardColumn,
@@ -478,6 +506,7 @@ export function QueueBoard({
                             }}
                             onAction={(status) => onAction(entry.id, status)}
                             readOnly={readOnly}
+                            staffMap={staffMap}
                           />
                         </div>
                       ))}

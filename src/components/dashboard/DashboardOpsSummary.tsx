@@ -88,6 +88,13 @@ export function DashboardOpsSummary({ stats, loading, className }: DashboardOpsS
       href: "/billing/hmo?status=draft",
     },
     {
+      label: t("dashboard.hmoPending", "Pending HMO"),
+      value: val(stats.hmo_pending_claims),
+      sub: t("dashboard.hmoPendingHint", "Awaiting provider payout"),
+      emphasis: emphasisForCount(stats.hmo_pending_claims, 0),
+      href: "/billing/hmo?status=submitted",
+    },
+    {
       label: t("dashboard.philhealthPending", "PhilHealth"),
       value: val(stats.philhealth_pending),
       sub: t("dashboard.philhealthPendingHint", "Pending claims"),
@@ -147,7 +154,7 @@ export function DashboardOpsSummary({ stats, loading, className }: DashboardOpsS
         title={t("dashboard.opsFinanceTitle", "Finance & claims")}
         items={finance}
         snapOnMobile={false}
-        columnsClassName="grid-cols-2 md:grid-cols-3 xl:grid-cols-5"
+        columnsClassName="grid-cols-2 md:grid-cols-3 xl:grid-cols-6"
       />
       <OpsSummaryGrid
         title={t("dashboard.opsRecordsTitle", "Records & stock")}

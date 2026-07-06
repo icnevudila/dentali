@@ -17,6 +17,7 @@ export interface DashboardStats {
   pending_intake_drafts: number
   appointments_awaiting_checkin: number
   open_encounters_stale: number
+  hmo_pending_claims: number
 }
 
 export async function fetchDashboardStats(
@@ -52,6 +53,7 @@ export async function fetchDashboardStats(
       pending_intake_drafts: Number(raw.pending_intake_drafts ?? 0),
       appointments_awaiting_checkin: Number(raw.appointments_awaiting_checkin ?? 0),
       open_encounters_stale: Number(raw.open_encounters_stale ?? 0),
+      hmo_pending_claims: Number(raw.hmo_pending_claims ?? 0),
     },
     error: null,
   }
