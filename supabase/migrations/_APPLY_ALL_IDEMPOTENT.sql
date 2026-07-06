@@ -1,4 +1,4 @@
-﻿-- AUTO-GENERATED IDEMPOTENT BUNDLE: 176 migration dosyasi
+﻿-- AUTO-GENERATED IDEMPOTENT BUNDLE: 178 migration dosyasi
 -- Supabase Dashboard > SQL Editor > Run (TEK SEFERDE â€” ayri repair script gerekmez)
 -- Tekrar calistirmak guvenli: preflight drops + policy/index/column cakismalari onlenir.
 -- Tercih: npm run db:push
@@ -179,6 +179,8 @@
 --   20260620100000_intake_consent_hardening.sql ca9f6fe794a396d430dce3528f53caff45e00790565d19ba33b3f4714e7fca92
 --   20260620110000_branch_google_review_setting.sql 72d4d2eda210666da94fb50085af64ba8540a1226c67fda07a837475b9700400
 --   20260620120000_inventory_permissions.sql a6db3b97ebe4326a37702e6bb4e4c5811ff5ace25449da10d4eddf8a44568e07
+--   20260701172100_ortho_case_diagnosis.sql 35babf3554c5470fad5d30bb3c6c23daf6432b469ab8599f25e67c345ad1a720
+--   20260701180000_ortho_agreement_body_fix.sql 317a0055717f8e3c30d1c51f4219f5203bdf7b06dc355e7b0be51a0a8af65fcb
 
 SET client_min_messages TO WARNING;
 
@@ -31694,4 +31696,164 @@ begin
 end; $$;
 
 grant execute on function public.adjust_inventory_stock(uuid, text, numeric, text) to authenticated;
+
+
+-- ===== 20260701172100_ortho_case_diagnosis.sql =====
+
+-- Add diagnosis column to ortho_cases
+alter table public.ortho_cases 
+  add column if not exists diagnosis text;
+
+-- Update verify/calculated functions if any to ensure compatibility
+-- (The existing calculate_ortho_balance and log_ortho_adjustment RPCs use table%rowtype or specific JSON inserts, 
+--  adding a column to ortho_cases does not break them since we insert/select specific fields or handle them safely.)
+
+
+-- ===== 20260701180000_ortho_agreement_body_fix.sql =====
+
+-- Fix: ortho-agreement consent template had an insufficient one-line body.
+-- The signing page was showing "No document text configured for this form."
+-- This migration replaces it with a full, professional orthodontic agreement.
+
+update public.consent_templates
+set
+  name    = 'Orthodontic Treatment Agreement',
+  version = '2.0',
+  body    = 'ORTHODONTIC TREATMENT AGREEMENT
+
+Clinic: {{clinic_name}}
+Patient: {{patient_name}}
+Date of Birth: {{patient_dob}}
+Date: {{today_date}}
+
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+SCOPE OF TREATMENT
+
+I, the undersigned patient (or parent/guardian of a minor patient), hereby agree to undergo orthodontic treatment as recommended and explained by my orthodontist at {{clinic_name}}. I understand that treatment may involve fixed appliances (braces), removable aligners, retainers, space maintainers, or other orthodontic devices as deemed necessary.
+
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+TREATMENT DURATION
+
+I understand that orthodontic treatment typically takes 12 to 36 months depending on the complexity of my case and my cooperation. The estimated duration provided at the start of treatment is an approximation and is subject to change based on biological response, growth, and compliance.
+
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+PATIENT COOPERATION
+
+I understand that the success of my treatment depends significantly on my cooperation, including:
+â€¢ Wearing appliances or aligners as instructed
+â€¢ Keeping all scheduled adjustment appointments
+â€¢ Maintaining good oral hygiene throughout treatment
+â€¢ Following dietary restrictions (no hard, sticky, or chewy foods for braces patients)
+â€¢ Wearing retainers as prescribed after active treatment
+
+Failure to cooperate may extend treatment duration, compromise results, or require termination of treatment.
+
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+RISKS AND LIMITATIONS
+
+I understand that orthodontic treatment involves the following potential risks and limitations, which have been explained to me:
+
+1. Tooth decay and gum disease â€” plaque accumulates more easily around appliances. Excellent oral hygiene is essential to prevent white spot lesions, cavities, and gingivitis.
+
+2. Root resorption â€” orthodontic tooth movement may shorten root length. Severe root resorption is rare but may affect long-term tooth stability.
+
+3. Relapse â€” teeth may shift after treatment if retainers are not worn as prescribed. Lifelong retainer use is recommended.
+
+4. Temporomandibular joint (TMJ) discomfort â€” mild jaw discomfort may occur during treatment; this is usually temporary.
+
+5. Allergic reactions â€” some patients may have sensitivities to metals or latex used in orthodontic materials. I will inform the clinic of any known allergies.
+
+6. Treatment limitations â€” orthodontics cannot correct all skeletal discrepancies without combined surgical intervention.
+
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+FINANCIAL AGREEMENT
+
+I agree to pay the contracted treatment fee as discussed with the clinic. I understand that:
+â€¢ A down payment is due at banding/appliance placement.
+â€¢ Monthly adjustment fees are due at each visit.
+â€¢ Broken appliances, missed appointments, or extended treatment may incur additional charges.
+â€¢ Fees are non-refundable once active treatment has commenced.
+
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+CONSENT
+
+By proceeding with signing, I confirm that:
+â€¢ I have read and understood the above agreement.
+â€¢ The nature, risks, benefits, and alternatives of orthodontic treatment have been explained to me.
+â€¢ I have had the opportunity to ask questions and all questions were answered to my satisfaction.
+â€¢ I voluntarily consent to the recommended treatment.
+
+Patient: {{patient_name}} Â· Date: {{today_date}} Â· Clinic: {{clinic_name}}'
+where organization_id is null
+  and slug = 'ortho-agreement';
+
+-- Fix upsert_staff_branch_assignment argument ordering matching client postgrest schema cache
+create or replace function public.upsert_staff_branch_assignment(
+  p_branch_id uuid,
+  p_profile_id uuid,
+  p_role_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org uuid := public.current_user_org_id();
+  v_target_org uuid;
+  v_branch_org uuid;
+  v_role_name text;
+  v_is_bootstrap_self boolean := false;
+begin
+  if v_org is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  select organization_id into v_target_org
+  from public.profiles
+  where id = p_profile_id;
+
+  select organization_id into v_branch_org
+  from public.branches
+  where id = p_branch_id;
+
+  select name into v_role_name
+  from public.roles
+  where id = p_role_id;
+
+  if v_target_org is distinct from v_org or v_branch_org is distinct from v_org or v_role_name is null then
+    raise exception 'Invalid staff, branch, or role';
+  end if;
+
+  v_is_bootstrap_self :=
+    p_profile_id = auth.uid()
+    and not exists (
+      select 1
+      from public.staff_branch_assignments sba
+      where sba.branch_id = p_branch_id
+    );
+
+  if not v_is_bootstrap_self and not public.has_permission('staff.write', p_branch_id) then
+    raise exception 'Unauthorized';
+  end if;
+
+  insert into public.staff_branch_assignments (profile_id, branch_id, role_id)
+  values (p_profile_id, p_branch_id, p_role_id)
+  on conflict (profile_id, branch_id)
+  do update set role_id = excluded.role_id;
+
+  return jsonb_build_object('success', true);
+end;
+$$;
+
+grant execute on function public.upsert_staff_branch_assignment(uuid, uuid, uuid) to authenticated;
+
+-- Reload postgrest schema cache
+notify pgrst, 'reload schema';
 

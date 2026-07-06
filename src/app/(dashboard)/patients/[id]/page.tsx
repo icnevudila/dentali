@@ -4,7 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { addTransitionType, startTransition } from "react"
-import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users, Plus, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen, ScrollText } from "lucide-react"
+import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users, Plus, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen, ScrollText, Shield } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
@@ -33,6 +33,8 @@ import { PatientDocumentsPanel } from "@/components/patients/PatientDocumentsPan
 import { PatientRadiologyPanel } from "@/components/patients/PatientRadiologyPanel"
 import { PatientRecordOnePage } from "@/components/patients/PatientRecordOnePage"
 import { OrthoRecordSummary } from "@/components/patients/OrthoRecordSummary"
+import { PrescriptionsSummary } from "@/components/patients/PrescriptionsSummary"
+import { PatientAuditPanel } from "@/components/patients/PatientAuditPanel"
 import { fetchPatientTimeline, type TimelineEvent } from "@/lib/clinical/clinical-notes-service"
 import { createClient } from "@/lib/supabase/client"
 import { useRouteParams } from "@/hooks/use-route-params"
@@ -61,6 +63,7 @@ import { ManualInvoiceDrawer } from "@/components/billing/ManualInvoiceDrawer"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/hooks/use-locale"
 import { notify } from "@/lib/ui/notify"
+import { fetchUnifiedAuditTrail, type AuditLogRecord } from "@/lib/audit/audit-log-service"
 
 type PatientTabId =
   | "record"
@@ -76,6 +79,7 @@ type PatientTabId =
   | "consents"
   | "radiology"
   | "documents"
+  | "audit"
 
 const PATIENT_TAB_DEFS: { id: PatientTabId; labelKey: string; fallback: string; icon: LucideIcon }[] = [
   { id: "record", labelKey: "patients.tabRecord", fallback: "Patient Record", icon: ClipboardList },
@@ -91,6 +95,7 @@ const PATIENT_TAB_DEFS: { id: PatientTabId; labelKey: string; fallback: string; 
   { id: "consents", labelKey: "patients.tabConsents", fallback: "Consents & Forms", icon: ShieldCheck },
   { id: "radiology", labelKey: "patients.tabRadiology", fallback: "Radiology & Imaging", icon: ScanLine },
   { id: "documents", labelKey: "patients.tabDocuments", fallback: "Documents", icon: FolderOpen },
+  { id: "audit", labelKey: "patients.tabAudit", fallback: "Audit Log", icon: Shield },
 ]
 
 export default function PatientProfilePage() {
@@ -603,13 +608,20 @@ export default function PatientProfilePage() {
               <Activity className="h-4 w-4" /> Chart
             </Link>
           </Button>
+          <PermissionGate permission={PERMISSIONS.DENTAL_CHART_WRITE}>
+            <Button variant="outline" size="sm" className="gap-2" asChild>
+              <Link href={`/patients/${patientId}/treatment-plan`} transitionTypes={NAV_FORWARD_TRANSITION}>
+                <ListOrdered className="h-4 w-4" /> Add Treatment
+              </Link>
+            </Button>
+          </PermissionGate>
           <Button 
             variant="outline" 
             size="sm" 
             className="gap-2" 
             onClick={() => handleTabChangeAndScroll("consents")}
           >
-            <FileText className="h-4 w-4" /> Consents
+            <ShieldCheck className="h-4 w-4" /> Consents
           </Button>
           <PermissionGate permission={PERMISSIONS.BILLING_WRITE}>
             <Button
@@ -934,6 +946,7 @@ export default function PatientProfilePage() {
 
           {activeTab === "documents" && <PatientDocumentsPanel patientId={patientId} />}
           {activeTab === "radiology" && <PatientRadiologyPanel patientId={patientId} />}
+          {activeTab === "audit" && <PatientAuditPanel patientId={patientId} />}
 
           {/* MEDICAL HISTORY TAB */}
           {activeTab === "medical-history" && (
@@ -1057,14 +1070,12 @@ export default function PatientProfilePage() {
                 </div>
                 <Button size="sm" className="gap-2" asChild>
                   <Link href={`/patients/${patientId}/prescriptions`} transitionTypes={NAV_FORWARD_TRANSITION}>
-                    <Pill className="h-4 w-4" /> Open prescriptions
+                    <Pill className="h-4 w-4" /> Open full prescriptions
                   </Link>
                 </Button>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-neutral-600">
-                  Create signed prescriptions with dental formulary shortcuts. Medical history allergies appear on the Rx printout.
-                </p>
+                <PrescriptionsSummary patientId={patientId} />
               </CardContent>
             </Card>
           )}
@@ -1106,7 +1117,7 @@ export default function PatientProfilePage() {
                             <td className="px-4 py-3 font-medium text-neutral-900">{plan.title}</td>
                             <td className="px-4 py-3 text-neutral-600">{new Date(plan.created_at).toLocaleDateString("en-PH")}</td>
                             <td className="px-4 py-3 text-neutral-900">₱{Number(plan.total_estimated).toLocaleString()}</td>
-                            <td className="px-4 py-3"><Badge variant={plan.status === "completed" ? "success" : "warning"}>{plan.status}</Badge></td>
+                            <td className="px-4 py-3"><Badge variant={plan.status === "completed" ? "success" : plan.status === "accepted" ? "info" : plan.status === "cancelled" || plan.status === "rejected" ? "danger" : plan.status === "in_progress" ? "warning" : "outline"}>{plan.status.replace("_", " ")}</Badge></td>
                             <td className="px-4 py-3 text-right">
                               <Button variant="ghost" size="sm" asChild>
                                 <Link
@@ -1212,45 +1223,63 @@ export default function PatientProfilePage() {
           {/* APPOINTMENTS TAB */}
           {activeTab === "appointments" && (
             <div className="space-y-4">
-            <Card>
-              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <CardTitle>Appointment History</CardTitle>
-                  <CardDescription>Past and upcoming visits.</CardDescription>
-                </div>
-                <BookAppointmentDialog patientId={patientId} onBooked={refreshAppointments} />
-              </CardHeader>
-              <CardContent>
-                <div className="border border-neutral-200 rounded-lg overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-neutral-50 border-b border-neutral-200">
-                      <tr>
-                        <th className="px-4 py-3 font-medium text-neutral-700">Date & Time</th>
-                        <th className="px-4 py-3 font-medium text-neutral-700">Purpose</th>
-                        <th className="px-4 py-3 font-medium text-neutral-700">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-200">
-                      {appointments.length === 0 ? (
+              <Card>
+                <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle>Appointment History</CardTitle>
+                    <CardDescription>Past and upcoming visits.</CardDescription>
+                  </div>
+                  <BookAppointmentDialog patientId={patientId} onBooked={refreshAppointments} />
+                </CardHeader>
+                <CardContent>
+                  <div className="border border-neutral-200 rounded-lg overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-neutral-50 border-b border-neutral-200">
                         <tr>
-                          <td colSpan={3} className="px-4 py-8 text-center text-neutral-500">No appointments scheduled.</td>
+                          <th className="px-4 py-3 font-medium text-neutral-700">Date & Time</th>
+                          <th className="px-4 py-3 font-medium text-neutral-700">Purpose</th>
+                          <th className="px-4 py-3 font-medium text-neutral-700">Source</th>
+                          <th className="px-4 py-3 font-medium text-neutral-700">Status</th>
                         </tr>
-                      ) : (
-                        appointments.map((appt) => (
-                          <tr key={appt.id} className="hover:bg-neutral-50">
-                            <td className="px-4 py-3 font-medium text-neutral-900">
-                              {new Date(appt.scheduled_at).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}
-                            </td>
-                            <td className="px-4 py-3 text-neutral-600">{appt.purpose ?? "—"}</td>
-                            <td className="px-4 py-3"><Badge variant={appt.status === "completed" ? "success" : "info"}>{appt.status}</Badge></td>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-200">
+                        {appointments.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">No appointments scheduled.</td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+                        ) : (
+                          appointments.map((appt) => (
+                            <tr key={appt.id} className="hover:bg-neutral-50">
+                              <td className="px-4 py-3 font-medium text-neutral-900">
+                                {new Date(appt.scheduled_at).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}
+                              </td>
+                              <td className="px-4 py-3 text-neutral-600">{appt.purpose ?? "—"}</td>
+                              <td className="px-4 py-3 text-neutral-500 text-xs capitalize">{appt.booking_source?.replace("_", " ") ?? "—"}</td>
+                              <td className="px-4 py-3">
+                                <Badge variant={
+                                  appt.status === "completed" ? "success" :
+                                  appt.status === "cancelled" ? "danger" :
+                                  appt.status === "no_show" ? "warning" :
+                                  "info"
+                                }>
+                                  {appt.status.replace("_", " ")}
+                                </Badge>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href={`/appointments?patient=${patientId}`} transitionTypes={NAV_FORWARD_TRANSITION}>
+                        View in calendar →
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
         </div>

@@ -300,6 +300,7 @@ export const SETTINGS_NAV_GROUPS = [
     items: [
       { key: "settings.navStaff", fallback: "Staff & Team", href: "/settings/staff" },
       { key: "settings.navRoles", fallback: "Roles & Permissions", href: "/settings/roles" },
+      { key: "settings.navSecurity", fallback: "Security", href: "/settings/security" },
     ],
   },
   {
@@ -310,6 +311,14 @@ export const SETTINGS_NAV_GROUPS = [
       { key: "settings.navConsentTemplates", fallback: "Consent Templates", href: "/settings/consent-templates" },
       { key: "settings.navAudit", fallback: "Audit Log", href: "/settings/audit" },
       { key: "settings.navWorkflow", fallback: "Workflow automation", href: "/settings/workflow" },
+    ],
+  },
+  {
+    labelKey: "settings.groupDevices",
+    labelFallback: "Devices",
+    items: [
+      { key: "settings.navKiosk", fallback: "Kiosk", href: "/settings/kiosk" },
+      { key: "settings.navDisplay", fallback: "Queue Display", href: "/settings/display" },
     ],
   },
 ] as const
