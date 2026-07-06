@@ -292,6 +292,7 @@ export const SETTINGS_NAV_GROUPS = [
       { key: "settings.navOrganization", fallback: "Organization", href: "/settings/organization" },
       { key: "settings.navBranches", fallback: "Branches", href: "/settings/branches" },
       { key: "settings.navProcedures", fallback: "Procedures", href: "/settings/procedures" },
+      { key: "settings.navHmoProviders", fallback: "HMO Providers", href: "/settings/hmo-providers" },
     ],
   },
   {

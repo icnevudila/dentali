@@ -30,8 +30,9 @@ import {
   type PublicIntakeFormState,
 } from "@/lib/patients/public-intake-form"
 import { PublicPatientIntakeFields } from "@/components/patients/PublicPatientIntakeFields"
+import { createClient } from "@/lib/supabase/client"
 
-type Step = "loading" | "welcome" | "form" | "consents" | "mood" | "success" | "error" | "intakeForm" | "intakeSuccess" | "pending_approval"
+type Step = "loading" | "welcome" | "form" | "consents" | "mood" | "success" | "error" | "intakeForm" | "intakeSuccess" | "pending_approval" | "update_history_verify" | "update_history_form"
 
 const AUTO_RESET_MS = 8_000
 const FORM_IDLE_MS = 120_000
@@ -58,6 +59,7 @@ function KioskContent() {
   const [queueCode, setQueueCode] = React.useState("")
   const [entryId, setEntryId] = React.useState("")
   const [intakeId, setIntakeId] = React.useState("")
+  const [updatePatientId, setUpdatePatientId] = React.useState("")
   const [intakeForm, setIntakeForm] = React.useState<PublicIntakeFormState>(emptyPublicIntakeFormState)
   const [submitting, setSubmitting] = React.useState(false)
   const [isScreensaver, setIsScreensaver] = React.useState(false)
@@ -72,6 +74,7 @@ function KioskContent() {
     setQueueCode("")
     setEntryId("")
     setIntakeId("")
+    setUpdatePatientId("")
     setConsentSnapshot(null)
     setIntakeForm(emptyPublicIntakeFormState())
   }, [])
@@ -355,6 +358,98 @@ function KioskContent() {
     playSuccessSound(t("kiosk.speechIntake", "Registration received. Please wait for the front desk."))
   }
 
+  const handleUpdateHistoryVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setErrorMsg("")
+
+    const supabase = createClient()
+    const { data: patient, error } = await supabase
+      .from("patients")
+      .select("id, first_name, last_name, phone")
+      .eq("phone", phone)
+      .ilike("last_name", lastName)
+      .maybeSingle()
+
+    if (error || !patient) {
+      setSubmitting(false)
+      setErrorMsg(t("kiosk.patientNotFound", "No patient record found matching those details. Please check and try again."))
+      return
+    }
+
+    setUpdatePatientId(patient.id)
+
+    // Load active medical history version if exists
+    const { data: history } = await supabase
+      .from("patient_medical_histories")
+      .select("allergies, medications, conditions, notes")
+      .eq("patient_id", patient.id)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (history) {
+      const allergiesText = Array.isArray(history.allergies) ? history.allergies.join(", ") : ""
+      const medsText = Array.isArray(history.medications) ? history.medications.join(", ") : ""
+      const condsText = Array.isArray(history.conditions) ? history.conditions.join(", ") : ""
+      const combinedNotes = [
+        allergiesText ? `Allergies: ${allergiesText}` : null,
+        medsText ? `Medications: ${medsText}` : null,
+        condsText ? `Conditions: ${condsText}` : null,
+        history.notes ? `Notes: ${history.notes}` : null,
+      ].filter(Boolean).join("\n")
+
+      setIntakeForm({
+        ...emptyPublicIntakeFormState(),
+        firstName: patient.first_name,
+        lastName: patient.last_name,
+        phone: patient.phone ?? "",
+        medicalAlerts: combinedNotes,
+      })
+    } else {
+      setIntakeForm({
+        ...emptyPublicIntakeFormState(),
+        firstName: patient.first_name,
+        lastName: patient.last_name,
+        phone: patient.phone ?? "",
+      })
+    }
+
+    setSubmitting(false)
+    setStep("update_history_form")
+  }
+
+  const handleUpdateHistorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setErrorMsg("")
+
+    const payload = {
+      ...publicIntakeToKioskPayload(intakeForm),
+      patient_id: updatePatientId,
+      source: "kiosk_update",
+    }
+
+    const { data, error } = await submitKioskIntake(sessionId, payload)
+    setSubmitting(false)
+
+    if (error) {
+      setErrorMsg(
+        publicChannelSafeError(
+          error,
+          t("kiosk.updateFailed", "Failed to submit medical history update. Please see the front desk.")
+        )
+      )
+      return
+    }
+
+    if (data?.intake_id) {
+      setIntakeId(data.intake_id)
+    }
+    setStep("intakeSuccess")
+    playSuccessSound(t("kiosk.speechIntake", "Update received. Please wait for the front desk to verify."))
+  }
+
   const showSteps = step !== "loading" && step !== "error"
   const flowStep = kioskStepFromFlow(step)
 
@@ -455,6 +550,12 @@ function KioskContent() {
               >
                 {t("kiosk.newPatient", "New patient registration")}
               </button>
+              <button
+                onClick={() => setStep("update_history_verify")}
+                className="w-full h-14 text-lg font-bold text-neutral-600 bg-white/80 border-2 border-transparent hover:border-primary-100 hover:bg-white rounded-xl shadow-sm transition-all duration-200 active:scale-[0.98]"
+              >
+                {t("kiosk.updateHistory", "Update medical history")}
+              </button>
             </div>
           </div>
         )}
@@ -523,6 +624,111 @@ function KioskContent() {
                 >
                   {t("kiosk.back", "Back")}
                 </Button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {step === "update_history_verify" && (
+          <div className={`${kioskPanelClass} animate-in slide-in-from-bottom-4 duration-500`}>
+            <div className="mb-6 text-center sm:mb-8">
+              <h1 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">
+                Update Medical History
+              </h1>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-600 sm:text-base">
+                Enter your mobile number and last name to verify your identity.
+              </p>
+            </div>
+            <form onSubmit={handleUpdateHistoryVerify} className="space-y-5">
+              <div className="space-y-2">
+                <label htmlFor="kiosk-verify-phone" className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  Mobile number
+                </label>
+                <Input
+                  id="kiosk-verify-phone"
+                  type="tel"
+                  inputMode="tel"
+                  required
+                  placeholder="09XX XXX XXXX"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  autoComplete="tel"
+                  autoFocus
+                  className="h-12 text-lg sm:h-14 sm:text-xl"
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="kiosk-verify-last-name" className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  Last name
+                </label>
+                <Input
+                  id="kiosk-verify-last-name"
+                  required
+                  placeholder="Aquino"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  autoComplete="family-name"
+                  className="h-12 text-lg sm:h-14 sm:text-xl"
+                />
+              </div>
+              {errorMsg ? (
+                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-snug text-red-700">
+                  {errorMsg}
+                </div>
+              ) : null}
+              <div className="space-y-3 pt-1">
+                <Button type="submit" disabled={submitting} size="lg" className="h-12 w-full text-base sm:h-14 sm:text-lg">
+                  {submitting ? "Verifying…" : "Next"}
+                </Button>
+                <Button type="button" variant="ghost" onClick={resetToWelcome} className="h-11 w-full text-neutral-600">
+                  Back
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {step === "update_history_form" && (
+          <div className="rounded-[2rem] border border-white bg-white/70 p-10 shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-4 duration-500">
+            <div className="mb-8 text-center">
+              <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight">Update Medical History</h1>
+              <p className="text-base text-neutral-500 mt-2">
+                Please review and update your medical conditions, allergies, or medications.
+              </p>
+            </div>
+            <form onSubmit={handleUpdateHistorySubmit} className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-neutral-700">
+                  Medical Alerts, Allergies, or Conditions
+                </label>
+                <textarea
+                  className="w-full min-h-[160px] rounded-xl border border-neutral-300 p-3 text-sm bg-white"
+                  placeholder="e.g. Penicillin allergy, Hypertension, Asthma"
+                  value={intakeForm.medicalAlerts}
+                  onChange={(e) => setIntakeForm({ ...intakeForm, medicalAlerts: e.target.value })}
+                />
+              </div>
+              {errorMsg ? (
+                <div className="rounded-2xl bg-red-50/80 border border-red-100 p-4 text-center text-sm font-semibold text-red-600 animate-in fade-in">
+                  {errorMsg}
+                </div>
+              ) : null}
+              <div className="pt-2 space-y-4">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="group relative w-full h-16 text-xl font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-2xl shadow-lg shadow-primary-500/30 transition-all duration-300 active:scale-[0.98] overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-white/20 translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-700 ease-in-out" />
+                  {submitting ? "Submitting…" : "Submit Update"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStep("update_history_verify")}
+                  className="w-full h-12 text-base font-bold text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100/50 rounded-xl transition-all"
+                >
+                  Back
+                </button>
               </div>
             </form>
           </div>

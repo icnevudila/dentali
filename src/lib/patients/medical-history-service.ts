@@ -125,3 +125,88 @@ export async function getMedicalRiskFlags(
     error: null,
   }
 }
+
+export async function fetchPendingHistoryUpdate(
+  patientId: string
+): Promise<{ data: { id: string; medical_alerts: string } | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("patient_intakes")
+    .select("id, payload")
+    .eq("status", "draft")
+
+  if (error) return { data: null, error: error.message }
+
+  const match = (data ?? []).find(
+    (row) =>
+      row.payload &&
+      typeof row.payload === "object" &&
+      (row.payload as any).patient_id === patientId &&
+      (row.payload as any).source === "kiosk_update"
+  )
+
+  if (!match) return { data: null, error: null }
+
+  return {
+    data: {
+      id: match.id,
+      medical_alerts: String((match.payload as any).medical_alerts ?? ""),
+    },
+    error: null,
+  }
+}
+
+export async function approveKioskHistoryUpdate(
+  intakeId: string,
+  patientId: string,
+  organizationId: string,
+  userId: string,
+  medicalAlerts: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+
+  // Parse text guidelines like "Allergies: Penicillin, Medications: Aspirin"
+  // or put everything inside the notes/allergies list.
+  // For safety, parse by keywords or place it directly inside notes/allergies:
+  const allergies: string[] = []
+  const medications: string[] = []
+  const conditions: string[] = []
+
+  const lowerAlerts = medicalAlerts.toLowerCase()
+  if (lowerAlerts.includes("allergy") || lowerAlerts.includes("allergies")) {
+    allergies.push(medicalAlerts)
+  }
+
+  // 1. Create new medical history version
+  const { error: historyErr } = await saveMedicalHistory({
+    patientId,
+    organizationId,
+    userId,
+    allergies,
+    medications,
+    conditions,
+    notes: medicalAlerts,
+  })
+
+  if (historyErr) return { error: historyErr }
+
+  // 2. Mark draft as completed/processed
+  const { error: intakeErr } = await supabase
+    .from("patient_intakes")
+    .update({ status: "completed" })
+    .eq("id", intakeId)
+
+  return { error: intakeErr?.message ?? null }
+}
+
+export async function rejectKioskHistoryUpdate(
+  intakeId: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from("patient_intakes")
+    .update({ status: "cancelled" })
+    .eq("id", intakeId)
+
+  return { error: error?.message ?? null }
+}

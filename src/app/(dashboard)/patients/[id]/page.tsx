@@ -24,7 +24,12 @@ import { getPatientBalance, getPatientBillingGate, type PatientBalance, type Pat
 import { PatientBillingGateBanner } from "@/components/billing/PatientBillingGateBanner"
 import { ConsentFormsPanel } from "@/components/consent/ConsentFormsPanel"
 import { fetchPatientConsents, type PatientConsent } from "@/lib/patients/consent-service"
-import { getLatestMedicalHistory } from "@/lib/patients/medical-history-service"
+import {
+  getLatestMedicalHistory,
+  fetchPendingHistoryUpdate,
+  approveKioskHistoryUpdate,
+  rejectKioskHistoryUpdate,
+} from "@/lib/patients/medical-history-service"
 import { fetchPatientAppointments } from "@/lib/appointments/appointment-service"
 import { fetchPatientTreatmentPlans, type TreatmentPlanSummary } from "@/lib/clinical/treatment-plan-service"
 import { BookAppointmentDialog } from "@/components/appointments/BookAppointmentDialog"
@@ -39,6 +44,7 @@ import { fetchPatientTimeline, type TimelineEvent } from "@/lib/clinical/clinica
 import { createClient } from "@/lib/supabase/client"
 import { useRouteParams } from "@/hooks/use-route-params"
 import { useBranch } from "@/hooks/use-branch"
+import { useAuth } from "@/hooks/use-auth"
 import { useIntakeConsentSlugs } from "@/hooks/use-intake-consent-slugs"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
@@ -101,6 +107,7 @@ const PATIENT_TAB_DEFS: { id: PatientTabId; labelKey: string; fallback: string; 
 export default function PatientProfilePage() {
   const { id: patientId } = useRouteParams<{ id: string }>()
   const { activeBranch } = useBranch()
+  const { user } = useAuth()
   const intakeConsentSlugs = useIntakeConsentSlugs(activeBranch?.organization_id)
   const { t } = useLocale()
   const realtimeInstanceId = React.useId().replace(/:/g, "")
@@ -144,6 +151,7 @@ export default function PatientProfilePage() {
     medications: string[]
     conditions: string[]
   } | null>(null)
+  const [pendingHistoryUpdate, setPendingHistoryUpdate] = React.useState<{ id: string; medical_alerts: string } | null>(null)
   const [balance, setBalance] = React.useState<PatientBalance | null>(null)
   const [billingGate, setBillingGate] = React.useState<PatientBillingGate | null>(null)
   const [balanceError, setBalanceError] = React.useState<string | null>(null)
@@ -220,6 +228,52 @@ export default function PatientProfilePage() {
     })
   }, [patientId])
 
+  const handleApproveHistory = async () => {
+    if (!pendingHistoryUpdate || !patient || !user) return
+    const ok = await notify.confirm(
+      "Approve this medical history update? It will create a new version of the patient's medical history."
+    )
+    if (!ok) return
+
+    const { error } = await approveKioskHistoryUpdate(
+      pendingHistoryUpdate.id,
+      patientId,
+      activeBranch?.organization_id ?? "",
+      user.id,
+      pendingHistoryUpdate.medical_alerts
+    )
+
+    if (error) {
+      notify.error(error)
+    } else {
+      notify.success("Medical history updated and approved!")
+      setPendingHistoryUpdate(null)
+      getLatestMedicalHistory(patientId).then(({ data }) => {
+        if (data) {
+          setMedicalHistory({
+            allergies: data.allergies,
+            medications: data.medications,
+            conditions: data.conditions,
+          })
+        }
+      })
+    }
+  }
+
+  const handleRejectHistory = async () => {
+    if (!pendingHistoryUpdate) return
+    const ok = await notify.confirm("Dismiss and reject this update?")
+    if (!ok) return
+
+    const { error } = await rejectKioskHistoryUpdate(pendingHistoryUpdate.id)
+    if (error) {
+      notify.error(error)
+    } else {
+      notify.success("Update dismissed")
+      setPendingHistoryUpdate(null)
+    }
+  }
+
   const refreshActiveEncounter = React.useCallback(() => {
     if (!activeBranchId) {
       setActiveEncounter(null)
@@ -243,8 +297,9 @@ export default function PatientProfilePage() {
         getPatientBalance(patientId),
         getPatientBillingGate(patientId),
         fetchPatientTimeline(patientId),
+        fetchPendingHistoryUpdate(patientId),
       ])
-        .then(([patientRes, consentsRes, apptsRes, plansRes, medRes, balanceRes, gateRes, timelineRes]) => {
+        .then(([patientRes, consentsRes, apptsRes, plansRes, medRes, balanceRes, gateRes, timelineRes, pendingRes]) => {
           setPatient(patientRes.data)
           setLoadError(patientRes.error)
           setConsents(consentsRes.data)
@@ -259,6 +314,7 @@ export default function PatientProfilePage() {
           } else {
             setMedicalHistory(null)
           }
+          setPendingHistoryUpdate(pendingRes.data)
           setBalance(balanceRes.data)
           setBalanceError(balanceRes.error)
           setBillingGate(gateRes.data)
@@ -565,6 +621,38 @@ export default function PatientProfilePage() {
   return (
     <PermissionGate permission={PERMISSIONS.PATIENTS_READ}>
     <DirectionalTransition className="space-y-6 pb-10 flex flex-col h-full max-w-7xl mx-auto">
+      {pendingHistoryUpdate && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+            <div>
+              <h3 className="font-semibold text-amber-900">Pending Medical History Update</h3>
+              <p className="text-sm text-amber-700 mt-0.5">
+                The patient updated their medical history via Kiosk:{" "}
+                <span className="font-medium">"{pendingHistoryUpdate.medical_alerts}"</span>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleRejectHistory}
+              className="text-amber-800 border-amber-300 bg-white hover:bg-amber-100/50"
+            >
+              Dismiss
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleApproveHistory}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              Approve & Apply
+            </Button>
+          </div>
+        </div>
+      )}
+
       <SectionEyebrow icon={Users}>Clinical · Patient profile</SectionEyebrow>
 
       {/* HEADER */}

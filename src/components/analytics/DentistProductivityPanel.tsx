@@ -22,6 +22,11 @@ export function DentistProductivityPanel() {
   const [stats, setStats] = React.useState<DentistStat[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
+  
+  // Filter States
+  const [timeRange, setTimeRange] = React.useState<"all" | "today" | "7days" | "30days">("all")
+  const [selectedDentist, setSelectedDentist] = React.useState<string>("all")
+  const [availableDentists, setAvailableDentists] = React.useState<{ id: string; name: string }[]>([])
 
   const loadStats = React.useCallback(async () => {
     if (!activeBranch?.id) return
@@ -30,20 +35,51 @@ export function DentistProductivityPanel() {
     const supabase = createClient()
 
     try {
-      // 1. Fetch appointments with profiles to associate provider names
       const { data: appts, error: apptErr } = await supabase
         .from("appointments")
-        .select("id, status, provider_id, profiles!provider_id(full_name)")
+        .select("id, status, provider_id, scheduled_at, profiles!provider_id(full_name)")
         .eq("branch_id", activeBranch.id)
 
       if (apptErr) throw apptErr
 
-      // 2. Fetch invoice line items to associate provider and paid revenue if available,
-      // otherwise estimate from completed appointments.
-      // For simplicity and correctness, we aggregate from local appointments database:
+      // Extract unique dentists from appointments to populate filter dropdown
+      const dentistSet = new Map<string, string>()
+      appts?.forEach((appt) => {
+        if (appt.provider_id) {
+          const name = (appt.profiles as { full_name: string } | null)?.full_name ?? "Unknown Dentist"
+          dentistSet.set(appt.provider_id, name)
+        }
+      })
+      setAvailableDentists(Array.from(dentistSet.entries()).map(([id, name]) => ({ id, name })))
+
+      let filteredAppts = appts ?? []
+
+      // Apply Time Filter
+      if (timeRange !== "all") {
+        const now = new Date()
+        let cutoff = new Date()
+        if (timeRange === "today") {
+          cutoff.setHours(0, 0, 0, 0)
+        } else if (timeRange === "7days") {
+          cutoff.setDate(now.getDate() - 7)
+        } else if (timeRange === "30days") {
+          cutoff.setDate(now.getDate() - 30)
+        }
+        filteredAppts = filteredAppts.filter((appt) => {
+          if (!appt.scheduled_at) return false
+          const apptDate = new Date(appt.scheduled_at)
+          return apptDate >= cutoff
+        })
+      }
+
+      // Apply Dentist Filter
+      if (selectedDentist !== "all") {
+        filteredAppts = filteredAppts.filter((appt) => appt.provider_id === selectedDentist)
+      }
+
       const dentistMap: Record<string, DentistStat> = {}
 
-      appts?.forEach((appt) => {
+      filteredAppts.forEach((appt) => {
         if (!appt.provider_id) return
         const providerName = (appt.profiles as { full_name: string } | null)?.full_name ?? "Unknown Dentist"
         
@@ -74,7 +110,7 @@ export function DentistProductivityPanel() {
     } finally {
       setLoading(false)
     }
-  }, [activeBranch?.id])
+  }, [activeBranch?.id, timeRange, selectedDentist])
 
   React.useEffect(() => {
     loadStats()
@@ -98,6 +134,40 @@ export function DentistProductivityPanel() {
           <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} /> Refresh
         </Button>
       </CardHeader>
+      
+      {/* FILTERS */}
+      <div className="flex flex-wrap items-center gap-4 px-6 pb-4 border-b border-neutral-100">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400">Date Range:</span>
+          <select
+            value={timeRange}
+            onChange={(e) => setTimeRange(e.target.value as any)}
+            className="text-xs font-medium bg-white border border-neutral-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          >
+            <option value="all">All time</option>
+            <option value="today">Today</option>
+            <option value="7days">Last 7 days</option>
+            <option value="30days">Last 30 days</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400">Dentist:</span>
+          <select
+            value={selectedDentist}
+            onChange={(e) => setSelectedDentist(e.target.value)}
+            className="text-xs font-medium bg-white border border-neutral-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          >
+            <option value="all">All dentists</option>
+            {availableDentists.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <CardContent>
         {loading ? (
           <div className="space-y-3">
