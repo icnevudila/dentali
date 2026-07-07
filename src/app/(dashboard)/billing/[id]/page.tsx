@@ -732,22 +732,44 @@ export default function InvoiceDetailPage() {
         {balance > 0 && invoice.status !== "void" && canWriteBilling && (
           <Card>
             <CardHeader><CardTitle className="text-base">{t("billing.recordPayment", "Record Payment")}</CardTitle></CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap gap-2 mb-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-7 border-emerald-200 bg-emerald-50 text-emerald-950 hover:bg-emerald-100"
+                  onClick={() => setAmount(String(balance))}
+                >
+                  Pay Full (₱{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })})
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-7 border-neutral-200 bg-neutral-50 hover:bg-neutral-100"
+                  onClick={() => setAmount(String(balance / 2))}
+                >
+                  Pay Half (₱{(balance / 2).toLocaleString(undefined, { minimumFractionDigits: 2 })})
+                </Button>
+              </div>
               <form onSubmit={handlePayment} className="grid gap-3 sm:grid-cols-3">
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  max={balance}
-                  placeholder="Amount (PHP)"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={balance}
+                    placeholder="Amount (PHP)"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    required
+                  />
+                </div>
                 <select
                   value={method}
                   onChange={(e) => setMethod(e.target.value)}
-                  className="h-10 rounded-md border border-neutral-300 px-3 text-sm"
+                  className="h-10 rounded-md border border-neutral-300 px-3 text-sm focus:border-primary-500 focus:outline-none"
                 >
                   <option value="cash">Cash</option>
                   <option value="card">Card</option>

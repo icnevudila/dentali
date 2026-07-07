@@ -77,6 +77,53 @@ function KioskContent() {
   const [isScreensaver, setIsScreensaver] = React.useState(false)
   const [liveQueue, setLiveQueue] = React.useState<{ serving: string[]; waitCount: number } | null>(null)
   const [consentSnapshot, setConsentSnapshot] = React.useState<PortalSnapshot | null>(null)
+  const canvasRef = React.useRef<HTMLCanvasElement | null>(null)
+  const [isDrawing, setIsDrawing] = React.useState(false)
+  const [hasSigned, setHasSigned] = React.useState(false)
+  const [consentAccepted, setConsentAccepted] = React.useState(false)
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+    ctx.strokeStyle = "#0f766e"
+    ctx.lineWidth = 3
+    ctx.lineCap = "round"
+    const rect = canvas.getBoundingClientRect()
+    const x = ('touches' in e) ? e.touches[0].clientX - rect.left : e.clientX - rect.left
+    const y = ('touches' in e) ? e.touches[0].clientY - rect.top : e.clientY - rect.top
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    setIsDrawing(true)
+  }
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+    const rect = canvas.getBoundingClientRect()
+    const x = ('touches' in e) ? e.touches[0].clientX - rect.left : e.clientX - rect.left
+    const y = ('touches' in e) ? e.touches[0].clientY - rect.top : e.clientY - rect.top
+    ctx.lineTo(x, y)
+    ctx.stroke()
+    setHasSigned(true)
+  }
+
+  const stopDrawing = () => {
+    setIsDrawing(false)
+  }
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    setHasSigned(false)
+  }
 
   const resetToWelcome = React.useCallback(() => {
     setStep("welcome")
@@ -89,6 +136,8 @@ function KioskContent() {
     setUpdatePatientId("")
     setConsentSnapshot(null)
     setIntakeForm(emptyPublicIntakeFormState())
+    setHasSigned(false)
+    setConsentAccepted(false)
   }, [])
 
   React.useEffect(() => {
@@ -800,6 +849,56 @@ function KioskContent() {
             </div>
             <form onSubmit={handleIntakeSubmit} className="space-y-5">
               <PublicPatientIntakeFields value={intakeForm} onChange={setIntakeForm} />
+              
+              {/* KVKK / Privacy Consent & Signature Board */}
+              <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4 space-y-3">
+                <label className="flex items-start gap-2.5 cursor-pointer text-xs text-neutral-600 select-none">
+                  <input
+                    type="checkbox"
+                    checked={consentAccepted}
+                    onChange={(e) => setConsentAccepted(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span>
+                    I confirm that the medical history information provided is accurate, and I consent to the collection and processing of my personal and health data in compliance with clinical safety laws.
+                  </span>
+                </label>
+
+                {consentAccepted && (
+                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
+                        Draw your signature below:
+                      </span>
+                      {hasSigned && (
+                        <button
+                          type="button"
+                          onClick={clearCanvas}
+                          className="text-[10px] text-red-500 hover:text-red-700 font-bold"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative border border-neutral-300 bg-white rounded-lg overflow-hidden h-32 w-full">
+                      <canvas
+                        ref={canvasRef}
+                        width={400}
+                        height={128}
+                        onMouseDown={startDrawing}
+                        onMouseMove={draw}
+                        onMouseUp={stopDrawing}
+                        onMouseLeave={stopDrawing}
+                        onTouchStart={startDrawing}
+                        onTouchMove={draw}
+                        onTouchEnd={stopDrawing}
+                        className="absolute inset-0 w-full h-full touch-none cursor-crosshair"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {errorMsg ? (
                 <div className="rounded-2xl bg-red-50/80 border border-red-100 p-4 text-center text-sm font-semibold text-red-600 animate-in fade-in slide-in-from-top-2">
                   {errorMsg}
@@ -808,7 +907,7 @@ function KioskContent() {
               <div className="pt-2 space-y-4">
                 <button 
                   type="submit" 
-                  disabled={submitting}
+                  disabled={submitting || !consentAccepted || !hasSigned}
                   className="group relative w-full h-16 text-xl font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-2xl shadow-lg shadow-primary-500/30 transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-white/20 translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-700 ease-in-out" />
