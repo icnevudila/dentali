@@ -43,6 +43,18 @@ type WindowWithWebkitAudio = Window & {
   webkitAudioContext?: typeof AudioContext
 }
 
+function formatPhoneNumber(value: string): string {
+  const clean = value.replace(/\D/g, "")
+  if (clean.length === 0) return ""
+  if (clean.length <= 4) {
+    return clean
+  }
+  if (clean.length <= 7) {
+    return `${clean.slice(0, 4)}-${clean.slice(4)}`
+  }
+  return `${clean.slice(0, 4)}-${clean.slice(4, 7)}-${clean.slice(7, 11)}`
+}
+
 function KioskContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get("token") ?? ""
@@ -118,16 +130,34 @@ function KioskContent() {
     })
   }, [token, resume, t])
 
+  // Dynamic Reset Idle Timer that resets on any user interaction (mouse, touch, keypress)
   React.useEffect(() => {
-    if (step !== "success" && step !== "intakeSuccess" && step !== "pending_approval") return
-    const id = setTimeout(resetToWelcome, AUTO_RESET_MS)
-    return () => clearTimeout(id)
-  }, [step, resetToWelcome])
+    if (step === "welcome" || step === "error" || step === "loading") return
+    
+    const timeoutDuration = (step === "success" || step === "intakeSuccess" || step === "pending_approval") 
+      ? AUTO_RESET_MS 
+      : FORM_IDLE_MS
+      
+    let timerId = setTimeout(resetToWelcome, timeoutDuration)
+    
+    const resetTimer = () => {
+      clearTimeout(timerId)
+      timerId = setTimeout(resetToWelcome, timeoutDuration)
+    }
 
-  React.useEffect(() => {
-    if (step !== "form" && step !== "intakeForm" && step !== "consents") return
-    const id = setTimeout(resetToWelcome, FORM_IDLE_MS)
-    return () => clearTimeout(id)
+    // Add listeners for active actions
+    window.addEventListener("mousemove", resetTimer)
+    window.addEventListener("keypress", resetTimer)
+    window.addEventListener("touchstart", resetTimer)
+    window.addEventListener("scroll", resetTimer)
+
+    return () => {
+      clearTimeout(timerId)
+      window.removeEventListener("mousemove", resetTimer)
+      window.removeEventListener("keypress", resetTimer)
+      window.removeEventListener("touchstart", resetTimer)
+      window.removeEventListener("scroll", resetTimer)
+    }
   }, [step, phone, lastName, intakeForm, resetToWelcome])
 
   // Idle timer for screensaver
@@ -599,7 +629,7 @@ function KioskContent() {
                   required
                   placeholder="09XX XXX XXXX"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => setPhone(formatPhoneNumber(e.target.value))}
                   autoComplete="tel"
                   autoFocus
                   className="h-12 text-lg sm:h-14 sm:text-xl"
@@ -668,7 +698,7 @@ function KioskContent() {
                   required
                   placeholder="09XX XXX XXXX"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => setPhone(formatPhoneNumber(e.target.value))}
                   autoComplete="tel"
                   autoFocus
                   className="h-12 text-lg sm:h-14 sm:text-xl"
