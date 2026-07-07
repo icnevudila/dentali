@@ -408,6 +408,34 @@ function AppointmentsPageContent() {
       notify.error(t("billing.gateBlocked", "Resolve billing before booking or use override."))
       return
     }
+
+    // 1. Overbooking & Provider Collision Guard
+    const isProviderBusy = weekAppointments.some(
+      (a) =>
+        a.provider_id === selectedProviderId &&
+        a.scheduled_at.startsWith(`${date}T${time}`) &&
+        a.status !== "cancelled"
+    )
+    if (isProviderBusy) {
+      const confirmProviderBusy = await notify.confirm(
+        t("appointments.providerBusyWarning", "Warning: This dentist already has an appointment booked at this exact time. Overbook anyway?")
+      )
+      if (!confirmProviderBusy) return
+    }
+
+    // 2. Chair Capacity Overbooking Check
+    const activeApptsAtTime = weekAppointments.filter(
+      (a) => a.scheduled_at.startsWith(`${date}T${time}`) && a.status !== "cancelled"
+    )
+    const CHAIR_LIMIT = 3
+    if (activeApptsAtTime.length >= CHAIR_LIMIT) {
+      const confirmChairLimit = await notify.confirm(
+        t("appointments.chairLimitWarning", "Warning: All dental chairs (max {limit}) are currently occupied at this slot. Book anyway?")
+          .replace("{limit}", String(CHAIR_LIMIT))
+      )
+      if (!confirmChairLimit) return
+    }
+
     setBooking(true)
     setError(null)
     const org = await fetchOrganization()

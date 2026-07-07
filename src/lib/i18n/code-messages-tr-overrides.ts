@@ -42,6 +42,8 @@ export const codeMessagesTrOverrides: MessageTree = {
     workflowWaitlist: "Bekleme listesi slot uyarıları",
     whatsAppReminderBody:
       "Merhaba {patient}, {clinic} kliniğindeki diş randevunuz için hatırlatma: {date} {time}.",
+    providerBusyWarning: "Uyarı: Bu diş hekiminin aynı saatte zaten bir randevusu var. Yine de kaydetmek istiyor musunuz?",
+    chairLimitWarning: "Uyarı: Bu saatte klinikteki tüm diş koltukları (maksimum {limit}) doludur. Yine de kaydetmek istiyor musunuz?",
   },
   billing: {
     approveClaim: "Onayla",
@@ -77,6 +79,8 @@ export const codeMessagesTrOverrides: MessageTree = {
     submitClaim: "Gönder",
     checkInOverride: "Faturalama geçersiz kılmayla check-in yap",
     caseRateCode: "Vaka tarifesi kodu",
+    duplicateWarning: "Bu açıklamaya sahip bir kalem bu faturada zaten mevcut. Yine de eklemek istiyor musunuz?",
+    belowBasePriceWarning: "Uyarı: Girilen birim fiyatı (₱{price}), bu işlem için belirlenen standart taban fiyatın (₱{basePrice}) altındadır. Bu indirimi onaylıyor musunuz?",
   },
   patients: {
     actionDentalChart: "Diş chartı",
@@ -114,5 +118,18 @@ export const codeMessagesTrOverrides: MessageTree = {
     wfKioskTitle: "Kiosk girişi",
     workflowDescription:
       "Klinik ekibinizin günlük kullandığı modülleri gezin — vitrin seed yapılandırıldığında canlı veriyle.",
+  },
+  kiosk: {
+    currentlyServing: "Şu An Hizmet Verilen",
+    waitCount: "{count} bekleyen",
+    estWaitTime: "Tahmini Bekleme Süresi: ~{time} dk",
+    progressLabel: "Kayıt İlerleme Durumu",
+    progressComplete: "%{n} Tamamlandı",
+    consentText: "Sağlık geçmişi bilgilerimin doğru olduğunu onaylıyorum ve kişisel verilerimin klinik güvenlik yasalarına uygun olarak işlenmesine izin veriyorum.",
+    drawSignature: "İmzanızı aşağıya çizin:",
+  },
+  common: {
+    none: "Yok",
+    clear: "Temizle",
   },
 }

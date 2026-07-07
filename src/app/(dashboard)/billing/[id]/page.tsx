@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { ArrowLeft, Download, ExternalLink, MessageCircle, Printer, Receipt, X, Edit } from "lucide-react"
+import { ArrowLeft, Download, ExternalLink, MessageCircle, Printer, Receipt, X, Edit, AlertCircle } from "lucide-react"
 import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
@@ -12,6 +12,7 @@ import { PERMISSIONS } from "@/lib/auth/permissions"
 import { getInvoice, recordInvoicePayment, voidInvoice, deleteInvoicePayment, updateInvoiceLineItem, addInvoiceLineItem, updateInvoiceDiscount } from "@/lib/billing/invoice-service"
 import { printInvoice } from "@/lib/billing/invoice-print"
 import { downloadInvoicePdf } from "@/lib/billing/invoice-pdf"
+import { fetchProcedures } from "@/lib/billing/procedure-service"
 import {
   completePaymentIntent,
   createPaymentIntent,
@@ -70,12 +71,41 @@ export default function InvoiceDetailPage() {
   const [newPrice, setNewPrice] = React.useState("")
   const [newQty, setNewQty] = React.useState("1")
   const [addingLine, setAddingLine] = React.useState(false)
+  const [procedures, setProcedures] = React.useState<any[]>([])
 
   const handleAddLineItem = async (e: React.FormEvent) => {
     e.preventDefault()
     const price = parseFloat(newPrice)
     const qty = parseInt(newQty, 10)
     if (!newDesc.trim() || isNaN(price) || isNaN(qty) || qty <= 0) return
+
+    // 1. Duplicate Line Item Prevention
+    const isDuplicate = lineItems.some(
+      (item) => item.description.toLowerCase().trim() === newDesc.toLowerCase().trim()
+    )
+    if (isDuplicate) {
+      const confirmDuplicate = await notify.confirm(
+        t("billing.duplicateWarning", "An item with this exact description already exists in this invoice. Do you want to add it anyway?")
+      )
+      if (!confirmDuplicate) return
+    }
+
+    // 2. Base Price Deviation Guard
+    const matchedProc = procedures.find(
+      (p) => p.name.toLowerCase().trim() === newDesc.toLowerCase().trim()
+    )
+    if (matchedProc && price < matchedProc.base_price) {
+      const confirmPriceUnder = await notify.confirm(
+        t(
+          "billing.belowBasePriceWarning",
+          "Warning: The entered unit price (₱{price}) is below the standard base price (₱{basePrice}) for this procedure. Do you want to authorize this discount?"
+        )
+          .replace("{price}", price.toLocaleString())
+          .replace("{basePrice}", matchedProc.base_price.toLocaleString())
+      )
+      if (!confirmPriceUnder) return
+    }
+
     setAddingLine(true)
     setError(null)
     const { error: addErr } = await addInvoiceLineItem({
@@ -101,6 +131,34 @@ export default function InvoiceDetailPage() {
     const price = parseFloat(editPrice)
     const qty = parseInt(editQty, 10)
     if (isNaN(price) || isNaN(qty) || qty <= 0 || !editDesc.trim()) return
+
+    // 1. Duplicate Line Item Prevention
+    const isDuplicate = lineItems.some(
+      (item) => item.id !== itemId && item.description.toLowerCase().trim() === editDesc.toLowerCase().trim()
+    )
+    if (isDuplicate) {
+      const confirmDuplicate = await notify.confirm(
+        t("billing.duplicateWarning", "An item with this exact description already exists in this invoice. Do you want to add it anyway?")
+      )
+      if (!confirmDuplicate) return
+    }
+
+    // 2. Base Price Deviation Guard
+    const matchedProc = procedures.find(
+      (p) => p.name.toLowerCase().trim() === editDesc.toLowerCase().trim()
+    )
+    if (matchedProc && price < matchedProc.base_price) {
+      const confirmPriceUnder = await notify.confirm(
+        t(
+          "billing.belowBasePriceWarning",
+          "Warning: The entered unit price (₱{price}) is below the standard base price (₱{basePrice}) for this procedure. Do you want to authorize this discount?"
+        )
+          .replace("{price}", price.toLocaleString())
+          .replace("{basePrice}", matchedProc.base_price.toLocaleString())
+      )
+      if (!confirmPriceUnder) return
+    }
+
     setSaving(true)
     setError(null)
     const { error: updateErr } = await updateInvoiceLineItem({
@@ -136,8 +194,10 @@ export default function InvoiceDetailPage() {
     setPendingIntents(pending.data)
     const org = await fetchOrganization()
     if (org?.name) setClinicName(org.name)
+    const procs = await fetchProcedures(activeBranch?.id)
+    setProcedures(procs.data)
     setLoading(false)
-  }, [invoiceId])
+  }, [invoiceId, activeBranch?.id])
 
   React.useEffect(() => {
     load()
@@ -602,6 +662,11 @@ export default function InvoiceDetailPage() {
                           </tr>
                         )
                       }
+                      const matchedProc = procedures.find(
+                        (p) => p.name.toLowerCase().trim() === item.description.toLowerCase().trim()
+                      )
+                      const isUnderpriced = matchedProc && item.unit_price < matchedProc.base_price
+
                       return (
                         <tr key={item.id} className="group hover:bg-neutral-50/20">
                           <td className="py-2">
@@ -611,7 +676,16 @@ export default function InvoiceDetailPage() {
                             )}
                           </td>
                           <td className="py-2 text-center">{item.quantity}</td>
-                          <td className="py-2 text-right">₱{item.unit_price.toLocaleString()}</td>
+                          <td className="py-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {isUnderpriced && (
+                                <span title={`Standard price is ₱${matchedProc.base_price.toLocaleString()}`}>
+                                  <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                                </span>
+                              )}
+                              <span>₱{item.unit_price.toLocaleString()}</span>
+                            </div>
+                          </td>
                           <td className="py-2 text-right text-amber-700">
                             {item.discount_amount > 0 ? `-₱${item.discount_amount.toLocaleString()}` : "—"}
                           </td>

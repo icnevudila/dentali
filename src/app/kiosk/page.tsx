@@ -140,6 +140,18 @@ function KioskContent() {
     setConsentAccepted(false)
   }, [])
 
+  const getIntakeProgress = () => {
+    let score = 0
+    const total = 6
+    if (intakeForm.firstName.trim()) score++
+    if (intakeForm.lastName.trim()) score++
+    if (intakeForm.phone.trim()) score++
+    if (intakeForm.email.trim()) score++
+    if (consentAccepted) score++
+    if (hasSigned) score++
+    return Math.round((score / total) * 100)
+  }
+
   React.useEffect(() => {
     if (!token) {
       const id = window.setTimeout(() => {
@@ -584,17 +596,17 @@ function KioskContent() {
             </div>
             <div className="flex flex-col text-sm">
               <span className="font-medium text-neutral-800 leading-tight">
-                Currently Serving: {liveQueue.serving.length > 0 ? liveQueue.serving.join(", ") : "None"}
+                {t("kiosk.currentlyServing", "Currently Serving")}: {liveQueue.serving.length > 0 ? liveQueue.serving.join(", ") : t("common.none", "None")}
               </span>
               <span className="text-xs text-neutral-500 font-medium">
-                {liveQueue.waitCount} waiting
+                {t("kiosk.waitCount", "{count} waiting").replace("{count}", String(liveQueue.waitCount))}
               </span>
             </div>
           </div>
           {liveQueue.waitCount > 0 && (
             <div className="rounded-lg border border-teal-100 bg-teal-50/70 px-3 py-1 text-[11px] font-semibold text-teal-800 backdrop-blur-md shadow-sm flex items-center gap-1.5 animate-pulse">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
-              Est. Wait Time: ~{liveQueue.waitCount * 15} mins
+              {t("kiosk.estWaitTime", "Est. Wait Time: ~{time} mins").replace("{time}", String(liveQueue.waitCount * 15))}
             </div>
           )}
         </div>
@@ -838,6 +850,18 @@ function KioskContent() {
 
         {step === "intakeForm" && (
           <div className="rounded-[2rem] border border-white bg-white/70 p-10 shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-4 duration-500">
+            {/* Dynamic Progress Bar */}
+            <div className="mb-6 w-full bg-neutral-200 rounded-full h-1.5 overflow-hidden">
+              <div 
+                className="bg-primary-600 h-1.5 rounded-full transition-all duration-500 ease-out" 
+                style={{ width: `${getIntakeProgress()}%` }}
+              />
+              <div className="flex justify-between items-center mt-2 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                <span>{t("kiosk.progressLabel", "Registration Progress")}</span>
+                <span>{t("kiosk.progressComplete", "{n}% Complete").replace("{n}", String(getIntakeProgress()))}</span>
+              </div>
+            </div>
+
             <div className="mb-8 text-center">
               <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight">{t("kiosk.intakeTitle", "Patient registration")}</h1>
               <p className="text-base text-neutral-500 mt-2">
@@ -860,7 +884,7 @@ function KioskContent() {
                     className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
                   />
                   <span>
-                    I confirm that the medical history information provided is accurate, and I consent to the collection and processing of my personal and health data in compliance with clinical safety laws.
+                    {t("kiosk.consentText", "I confirm that the medical history information provided is accurate, and I consent to the collection and processing of my personal and health data in compliance with clinical safety laws.")}
                   </span>
                 </label>
 
@@ -868,7 +892,7 @@ function KioskContent() {
                   <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
-                        Draw your signature below:
+                        {t("kiosk.drawSignature", "Draw your signature below:")}
                       </span>
                       {hasSigned && (
                         <button
@@ -876,7 +900,7 @@ function KioskContent() {
                           onClick={clearCanvas}
                           className="text-[10px] text-red-500 hover:text-red-700 font-bold"
                         >
-                          Clear
+                          {t("common.clear", "Clear")}
                         </button>
                       )}
                     </div>
