@@ -61,6 +61,36 @@ const EMPTY_ITEM = (): Omit<PrescriptionItem, "id" | "sort_order"> => ({
   instructions: "",
 })
 
+const PRESCRIPTION_PACKS = [
+  {
+    name: "Extraction Post-Op Pack",
+    diagnosis: "Post-extraction management",
+    generalInstructions: "• Take medications as prescribed.\n• Avoid spitting, drinking from a straw, and hot food for 24 hours.",
+    items: [
+      { drug_name: "Amoxicillin", strength: "500mg", dosage: "1 capsule", frequency: "Three times a day", duration: "7 days", quantity: "21 caps", instructions: "Take with food, finish the course." },
+      { drug_name: "Mefenamic Acid", strength: "500mg", dosage: "1 tablet", frequency: "Three times a day as needed", duration: "5 days", quantity: "15 tabs", instructions: "Take after meals for pain relief." },
+      { drug_name: "Chlorhexidine 0.12% Mouthwash", strength: "120ml", dosage: "15ml rinse", frequency: "Twice a day", duration: "7 days", quantity: "1 bottle", instructions: "Gargle for 30 seconds after brushing, do not swallow." }
+    ]
+  },
+  {
+    name: "Orthodontic Pain Pack",
+    diagnosis: "Orthodontic adjustment discomfort",
+    generalInstructions: "• Stick to soft foods for the first 2-3 days.\n• Apply orthodontic wax on brackets if causing ulcers.",
+    items: [
+      { drug_name: "Ibuprofen", strength: "400mg", dosage: "1 tablet", frequency: "Three times a day as needed", duration: "3 days", quantity: "9 tabs", instructions: "Take with milk or food to avoid stomach upset." }
+    ]
+  },
+  {
+    name: "Acute Dental Infection Pack",
+    diagnosis: "Periapical abscess / acute pulpitis",
+    generalInstructions: "• Attend scheduled root canal or extraction appointment.\n• Keep oral hygiene clean.",
+    items: [
+      { drug_name: "Co-Amoxiclav", strength: "625mg", dosage: "1 tablet", frequency: "Twice a day", duration: "7 days", quantity: "14 tabs", instructions: "Must complete 7 days course." },
+      { drug_name: "Paracetamol", strength: "500mg", dosage: "1-2 tablets", frequency: "Every 4-6 hours as needed", duration: "5 days", quantity: "20 tabs", instructions: "Do not exceed 8 tablets in 24 hours." }
+    ]
+  }
+]
+
 export default function PrescriptionsPage() {
   const { id: patientId } = useRouteParams<{ id: string }>()
   const { user } = useAuth()
@@ -156,6 +186,23 @@ export default function PrescriptionsPage() {
 
   const applyTemplate = (index: number, template: (typeof COMMON_DENTAL_MEDS)[number]) => {
     updateItem(index, { ...template })
+  }
+
+  const applyPrescriptionPack = (pack: typeof PRESCRIPTION_PACKS[number]) => {
+    setDiagnosis(pack.diagnosis)
+    setGeneralInstructions(pack.generalInstructions)
+    setItems(
+      pack.items.map((i) => ({
+        drug_name: i.drug_name,
+        strength: i.strength,
+        dosage: i.dosage,
+        frequency: i.frequency,
+        duration: i.duration,
+        quantity: i.quantity,
+        instructions: i.instructions,
+      }))
+    )
+    notify.success(`${pack.name} template applied!`)
   }
 
   const handleSaveDraft = async (andSign = false) => {
@@ -327,6 +374,25 @@ export default function PrescriptionsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* QUICK PRESCRIPTION PACKS */}
+                  <div className="space-y-1.5 pb-2 border-b border-neutral-100">
+                    <label className="text-xs font-semibold text-neutral-600">Quick Prescription Packs</label>
+                    <div className="flex flex-wrap gap-2">
+                      {PRESCRIPTION_PACKS.map((pack) => (
+                        <Button
+                          key={pack.name}
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-8 border-primary-200 bg-primary-50/20 text-primary-900 hover:bg-primary-50"
+                          onClick={() => applyPrescriptionPack(pack)}
+                        >
+                          {pack.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-neutral-600">Diagnosis / indication</label>
                     <Input

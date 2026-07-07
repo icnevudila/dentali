@@ -167,36 +167,49 @@ function KioskContent() {
       const AudioContextCtor = window.AudioContext || (window as WindowWithWebkitAudio).webkitAudioContext
       if (AudioContextCtor) {
         const ctx = new AudioContextCtor()
-        const osc = ctx.createOscillator()
-        const gainNode = ctx.createGain()
-
-        osc.type = "sine"
-        osc.frequency.setValueAtTime(523.25, ctx.currentTime) // C5
-        osc.frequency.exponentialRampToValueAtTime(1046.50, ctx.currentTime + 0.1) // C6
-
-        gainNode.gain.setValueAtTime(0, ctx.currentTime)
-        gainNode.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.05)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5)
-
-        osc.connect(gainNode)
-        gainNode.connect(ctx.destination)
-
-        osc.start()
-        osc.stop(ctx.currentTime + 0.5)
+        // Play double chime: C5 then E5
+        const playTone = (freq: number, start: number, duration: number) => {
+          const osc = ctx.createOscillator()
+          const gainNode = ctx.createGain()
+          osc.type = "sine"
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + start)
+          gainNode.gain.setValueAtTime(0, ctx.currentTime + start)
+          gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + start + 0.05)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + start + duration)
+          osc.connect(gainNode)
+          gainNode.connect(ctx.destination)
+          osc.start(ctx.currentTime + start)
+          osc.stop(ctx.currentTime + start + duration)
+        }
+        playTone(523.25, 0, 0.3) // C5
+        playTone(659.25, 0.15, 0.4) // E5
       }
 
       if (speechText && "speechSynthesis" in window) {
         setTimeout(() => {
-          // Cancel any ongoing speech
           window.speechSynthesis.cancel()
           const utterance = new SpeechSynthesisUtterance(speechText)
-          utterance.lang = "en-US"
-          utterance.rate = 0.95 // Slightly slower and clearer
+          
+          // Try to select a natural voice
+          const voices = window.speechSynthesis.getVoices()
+          const trVoice = voices.find(v => v.lang.startsWith("tr"))
+          const enVoice = voices.find(v => v.lang.startsWith("en"))
+          
+          if (/[a-zA-Z]/.test(speechText) && !/Kaydınız|Sıra/i.test(speechText)) {
+            utterance.lang = "en-US"
+            if (enVoice) utterance.voice = enVoice
+          } else {
+            utterance.lang = "tr-TR"
+            if (trVoice) utterance.voice = trVoice
+          }
+          
+          utterance.rate = 0.9
+          utterance.pitch = 1.05
           window.speechSynthesis.speak(utterance)
-        }, 300)
+        }, 400)
       }
     } catch {
-      // Ignore audio errors
+      // Ignore
     }
   }
 
@@ -330,7 +343,11 @@ function KioskContent() {
       await updateKioskMood(entryId, mood)
     }
     setStep("success")
-    playSuccessSound(t("kiosk.speechCheckIn", `Check-in successful. Your queue number is ${queueCode.split('').join(' ')}`))
+    
+    // Personalized friendly announcement in Turkish with fallback to English
+    const spelledCode = queueCode.split("").join(" ")
+    const announcementText = `Sayın ${lastName}, girişiniz yapıldı. Sıra numaranız: ${spelledCode}. Lütfen bekleme alanına geçiniz.`
+    playSuccessSound(announcementText)
   }
 
   const handleIntakeSubmit = async (e: React.FormEvent) => {
