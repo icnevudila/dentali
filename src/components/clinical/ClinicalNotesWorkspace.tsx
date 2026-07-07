@@ -40,6 +40,7 @@ import {
   type CarryForwardNote,
 } from "@/lib/clinical/encounter-carry-forward"
 import { EncounterCarryForwardPicker } from "@/components/clinical/EncounterCarryForwardPicker"
+import { notify } from "@/lib/ui/notify"
 
 function groupByDate(events: TimelineEvent[]): Map<string, TimelineEvent[]> {
   const map = new Map<string, TimelineEvent[]>()
@@ -55,6 +56,30 @@ function groupByDate(events: TimelineEvent[]): Map<string, TimelineEvent[]> {
   }
   return map
 }
+
+const CLINICAL_TEMPLATES = [
+  {
+    name: "Composite Filling",
+    subjective: "Patient complains of sensitivity in the tooth on cold stimulus.",
+    objective: "Active dental caries noted on tooth. No mobility, pulp test responsive.",
+    assessment: "Dental caries / localized tooth decay.",
+    plan: "1. Administered local infiltration anesthesia.\n2. Removed decay and prepared cavity.\n3. Applied bonding agent and composite restoration.\n4. Adjusted occlusion and polished."
+  },
+  {
+    name: "Root Canal Therapy (RCT)",
+    subjective: "Patient reports severe spontaneous throbbing pain in the jaw, aggravated at night.",
+    objective: "Deep restoration/caries close to pulp chamber. Tenderness to percussion (+).",
+    assessment: "Irreversible pulpitis / symptomatic apical periodontitis.",
+    plan: "1. Anesthesia and rubber dam isolation.\n2. Access cavity prepared, pulp extirpated.\n3. Working length determined, canals shaped and irrigated with NaOCl.\n4. Placed Ca(OH)2 medicament and temporary seal.\n5. Booked next visit for obturation."
+  },
+  {
+    name: "Simple Extraction",
+    subjective: "Patient requests extraction of mobile/non-restorable tooth.",
+    objective: "Severe periodontal bone loss, grade 3 mobility or gross crown fracture.",
+    assessment: "Non-restorable tooth due to chronic periodontitis/fracture.",
+    plan: "1. Disinfected area and administered local anesthesia.\n2. Luxated and extracted tooth successfully with forceps.\n3. Achieved hemostasis using sterile gauze compression.\n4. Post-op instructions given verbally and in writing."
+  }
+]
 
 function NoteEditor({
   note,
@@ -75,6 +100,14 @@ function NoteEditor({
   const [signing, setSigning] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const readOnly = note.status === "signed"
+
+  const applyClinicalTemplate = (tmpl: typeof CLINICAL_TEMPLATES[number]) => {
+    setSubjective(tmpl.subjective)
+    setObjective(tmpl.objective)
+    setAssessment(tmpl.assessment)
+    setPlan(tmpl.plan)
+    notify.success(`${tmpl.name} template loaded!`)
+  }
 
   const save = async () => {
     if (!user || readOnly) return
@@ -159,6 +192,26 @@ function NoteEditor({
         {error ? (
           <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">{error}</p>
         ) : null}
+
+        {!readOnly && (
+          <div className="space-y-1.5 pb-2 border-b border-neutral-100">
+            <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Quick SOAP Templates</div>
+            <div className="flex flex-wrap gap-2">
+              {CLINICAL_TEMPLATES.map((tmpl) => (
+                <Button
+                  key={tmpl.name}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs border-primary-200 bg-primary-50/10 text-primary-950 hover:bg-primary-50"
+                  onClick={() => applyClinicalTemplate(tmpl)}
+                >
+                  {tmpl.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
         {field("Subjective", subjective, setSubjective)}
         {field("Objective", objective, setObjective)}
         {field("Assessment", assessment, setAssessment)}

@@ -37,6 +37,7 @@ import { DirectionalTransition } from "@/components/layout/DirectionalTransition
 import { NAV_BACK_TRANSITION } from "@/lib/navigation/view-transition"
 import { createClient } from "@/lib/supabase/client"
 import { useRouteParams } from "@/hooks/use-route-params"
+import { notify } from "@/lib/ui/notify"
 import {
   exportSvgElementToPng,
   findOdontogramSvg,
@@ -151,6 +152,36 @@ export default function DentalChartPage() {
       cancelled = true
     }
   }, [patientId, activeBranch, loadKey])
+
+  const handleMarkThirdMolarsMissing = () => {
+    const molars = ["18", "28", "38", "48"]
+    const nextFindings = [...findings]
+    const nextUnsaved = [...unsavedChanges]
+
+    for (const m of molars) {
+      const existing = nextFindings.find((f) => f.tooth_number === m)
+      if (existing?.condition === "missing_other") continue
+
+      const newFinding: ToothFinding = {
+        tooth_number: m,
+        condition: "missing_other",
+        status: "active",
+        dentition_type: "permanent",
+        surfaces: [],
+        notes: "Marked missing via quick 3rd molars toggle."
+      }
+
+      const filteredF = nextFindings.filter((f) => f.tooth_number !== m)
+      nextFindings.splice(0, nextFindings.length, ...filteredF, newFinding)
+
+      const filteredU = nextUnsaved.filter((f) => f.tooth_number !== m)
+      nextUnsaved.splice(0, nextUnsaved.length, ...filteredU, newFinding)
+    }
+
+    setFindings(nextFindings)
+    setUnsavedChanges(nextUnsaved)
+    notify.success("All 3rd molars marked as missing locally! Click Save Chart to persist.")
+  }
 
   const handleSaveFindingLocally = (newFinding: Partial<ToothFinding>) => {
     const completeFinding = newFinding as ToothFinding
@@ -312,6 +343,24 @@ export default function DentalChartPage() {
           alertLabel={alertLabel}
           pdaChartHref={`/patients/${patientId}/pda-dental-chart`}
         />
+
+        {canWrite && (
+          <div className="flex flex-wrap justify-between items-center gap-2 p-3 bg-neutral-50 rounded-xl border border-neutral-200/80">
+            <div className="text-xs font-semibold text-neutral-600 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary-600" />
+              Quick Charting Utilities (Hızlı Çizim Araçları)
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs border-neutral-300 hover:bg-neutral-100"
+              onClick={handleMarkThirdMolarsMissing}
+            >
+              Mark All 3rd Molars Missing (Tüm Yirmilikleri Eksik İşaretle)
+            </Button>
+          </div>
+        )}
 
         <ChartHistoryDrawer
           open={historyOpen}

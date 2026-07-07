@@ -163,6 +163,18 @@ export default function PatientProfilePage() {
   const [journeyContinueLoading, setJourneyContinueLoading] = React.useState(false)
   const [checkoutOpen, setCheckoutOpen] = React.useState(false)
   const [showInvoiceDrawer, setShowInvoiceDrawer] = React.useState(false)
+  const [showMedicalAlertConfirm, setShowMedicalAlertConfirm] = React.useState(false)
+  const [onConfirmSuccessAction, setOnConfirmSuccessAction] = React.useState<any>(null)
+  
+  const triggerMedicalSensitiveAction = (action: () => void) => {
+    if (medicalHistory && (medicalHistory.allergies.length > 0 || medicalHistory.conditions.length > 0)) {
+      setOnConfirmSuccessAction(() => action)
+      setShowMedicalAlertConfirm(true)
+    } else {
+      action()
+    }
+  }
+
   const intakeToastShown = React.useRef(false)
   const balanceClearedToastShown = React.useRef(false)
   const prevOpenBalanceRef = React.useRef<number | null>(null)
@@ -697,10 +709,18 @@ export default function PatientProfilePage() {
             </Link>
           </Button>
           <PermissionGate permission={PERMISSIONS.DENTAL_CHART_WRITE}>
-            <Button variant="outline" size="sm" className="gap-2" asChild>
-              <Link href={`/patients/${patientId}/treatment-plan`} transitionTypes={NAV_FORWARD_TRANSITION}>
-                <ListOrdered className="h-4 w-4" /> Add Treatment
-              </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => triggerMedicalSensitiveAction(() => {
+                startTransition(() => {
+                  addTransitionType("nav-forward")
+                  router.push(`/patients/${patientId}/treatment-plan`)
+                })
+              })}
+            >
+              <ListOrdered className="h-4 w-4" /> Add Treatment
             </Button>
           </PermissionGate>
           <Button 
@@ -1381,6 +1401,57 @@ export default function PatientProfilePage() {
           getPatientBalance(patientId).then(({ data }) => data && setBalance(data))
         }}
       />
+
+      {showMedicalAlertConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl border-2 border-red-500 max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-red-600">
+              <AlertTriangle className="h-8 w-8 shrink-0 animate-bounce" />
+              <div>
+                <h3 className="text-lg font-bold">Kritik Tıbbi Uyarı (Medical Warning)</h3>
+                <p className="text-xs text-neutral-500">Bu hastada risk teşkil edebilecek tıbbi alertler mevcut.</p>
+              </div>
+            </div>
+            
+            <div className="rounded-lg bg-red-50 p-4 border border-red-100 text-sm text-red-950 space-y-2">
+              {medicalHistory?.allergies && medicalHistory.allergies.length > 0 && (
+                <p><span className="font-bold">Alerjiler:</span> {medicalHistory.allergies.join(", ")}</p>
+              )}
+              {medicalHistory?.conditions && medicalHistory.conditions.length > 0 && (
+                <p><span className="font-bold">Kronik Rahatsızlıklar:</span> {medicalHistory.conditions.join(", ")}</p>
+              )}
+            </div>
+
+            <p className="text-sm text-neutral-600 leading-relaxed">
+              İşlem yapmaya çalışıyorsunuz. Hastanın tıbbi durumunun farkında olduğunuzu ve bu işlemi onayladığınızı belirtmek için onaylayın.
+            </p>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowMedicalAlertConfirm(false)
+                  setOnConfirmSuccessAction(null)
+                }}
+              >
+                Geri Dön (Cancel)
+              </Button>
+              <Button
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => {
+                  setShowMedicalAlertConfirm(false)
+                  if (onConfirmSuccessAction) {
+                    onConfirmSuccessAction()
+                  }
+                  setOnConfirmSuccessAction(null)
+                }}
+              >
+                Devam Et (Proceed Anyway)
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </DirectionalTransition>
     </PermissionGate>
   )
