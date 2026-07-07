@@ -21,11 +21,13 @@ import { PERMISSIONS } from "@/lib/auth/permissions"
 import { NewLabCaseDialog } from "@/components/clinical/lab/NewLabCaseDialog"
 import { formatCurrency } from "@/lib/i18n/translate"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 const TODAY_KEY = new Date().toISOString().slice(0, 10)
 
 function labCaseUrgency(c: PatientWithLabCase) {
   if (c.status === "received") return "received"
+  if (c.status === "pending" && c.expected_date && c.next_appointment_date && c.expected_date > c.next_appointment_date) return "conflict"
   if (c.expected_date && c.expected_date < TODAY_KEY) return "overdue"
   if (c.expected_date && c.expected_date <= TODAY_KEY) return "due_today"
   return "pending"
@@ -187,13 +189,15 @@ export default function LabCasesPage() {
               <Card
                 key={c.id}
                 className={
-                  urgency === "overdue"
-                    ? "border-red-200 bg-red-50/30"
-                    : urgency === "due_today"
-                      ? "border-amber-200 bg-amber-50/30"
-                      : c.status === "received"
-                        ? "border-emerald-200 bg-emerald-50/30"
-                        : ""
+                  urgency === "conflict"
+                    ? "border-red-300 bg-red-50/20 ring-1 ring-red-400/20"
+                    : urgency === "overdue"
+                      ? "border-red-200 bg-red-50/30"
+                      : urgency === "due_today"
+                        ? "border-amber-200 bg-amber-50/30"
+                        : c.status === "received"
+                          ? "border-emerald-200 bg-emerald-50/30"
+                          : ""
                 }
               >
                 <CardContent className="p-4 space-y-3">
@@ -204,7 +208,11 @@ export default function LabCasesPage() {
                       </Link>
                       <p className="text-xs text-neutral-500">{c.case_type}</p>
                     </div>
-                    {urgency === "overdue" ? (
+                    {urgency === "conflict" ? (
+                      <Badge variant="outline" className="text-red-700 bg-red-100 border-red-300 animate-pulse">
+                        <AlertCircle className="w-3 h-3 mr-1" /> Appointment Conflict
+                      </Badge>
+                    ) : urgency === "overdue" ? (
                       <Badge variant="outline" className="text-red-700 bg-red-50 border-red-200">
                         <Clock className="w-3 h-3 mr-1" /> {t("labcases.overdue", "Overdue")}
                       </Badge>
@@ -239,6 +247,14 @@ export default function LabCasesPage() {
                     <div>
                       <p className="text-neutral-400 font-medium">{t("labcases.expected", "Expected")}</p>
                       <p className="text-neutral-700">{c.expected_date || t("labcases.tbd", "TBD")}</p>
+                      {c.next_appointment_date && (
+                        <p className={cn(
+                          "text-[10px] mt-0.5 font-medium",
+                          urgency === "conflict" ? "text-red-600 font-bold" : "text-neutral-400"
+                        )}>
+                          Appt: {c.next_appointment_date}
+                        </p>
+                      )}
                     </div>
                   </div>
 

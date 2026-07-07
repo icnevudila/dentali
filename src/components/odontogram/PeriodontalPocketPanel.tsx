@@ -222,6 +222,8 @@ export function PeriodontalPocketPanel({
                   {PERIO_SITES.map((site) => (
                     <td key={site} className="px-1 py-1" onClick={(e) => e.stopPropagation()}>
                       <SiteCell
+                        tooth={key}
+                        site={site}
                         reading={row[site]}
                         disabled={!canWrite}
                         onChange={(patch) => updateSite(key, site, patch)}
@@ -252,10 +254,14 @@ export function PeriodontalPocketPanel({
 }
 
 function SiteCell({
+  tooth,
+  site,
   reading,
   disabled,
   onChange,
 }: {
+  tooth: string
+  site: PerioSite
   reading?: PerioSiteReading
   disabled?: boolean
   onChange: (patch: Partial<PerioSiteReading>) => void
@@ -275,6 +281,7 @@ function SiteCell({
         min={0}
         max={15}
         inputMode="numeric"
+        data-perio={`${tooth}-${site}`}
         aria-label="Pocket depth mm"
         disabled={disabled}
         className={cn(
@@ -285,6 +292,58 @@ function SiteCell({
         onChange={(e) => {
           const v = e.target.value
           onChange({ depth: v === "" ? null : Math.min(15, Math.max(0, parseInt(v, 10) || 0)) })
+        }}
+        onKeyDown={(e) => {
+          const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
+          const toothIndex = PERMANENT_TOOTH_ORDER.indexOf(parseInt(tooth, 10))
+          const siteIndex = PERIO_SITES.indexOf(site)
+
+          let nextTooth = tooth
+          let nextSite = site
+
+          if (keys.includes(e.key)) {
+            e.preventDefault()
+            const val = parseInt(e.key, 10)
+            onChange({ depth: val })
+            
+            // Advance to next site
+            if (siteIndex < PERIO_SITES.length - 1) {
+              nextSite = PERIO_SITES[siteIndex + 1]
+            } else if (toothIndex < PERMANENT_TOOTH_ORDER.length - 1) {
+              nextTooth = String(PERMANENT_TOOTH_ORDER[toothIndex + 1])
+              nextSite = PERIO_SITES[0]
+            }
+          } else if (e.key === "ArrowRight") {
+            e.preventDefault()
+            if (siteIndex < PERIO_SITES.length - 1) {
+              nextSite = PERIO_SITES[siteIndex + 1]
+            }
+          } else if (e.key === "ArrowLeft") {
+            e.preventDefault()
+            if (siteIndex > 0) {
+              nextSite = PERIO_SITES[siteIndex - 1]
+            }
+          } else if (e.key === "ArrowDown") {
+            e.preventDefault()
+            if (toothIndex < PERMANENT_TOOTH_ORDER.length - 1) {
+              nextTooth = String(PERMANENT_TOOTH_ORDER[toothIndex + 1])
+            }
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault()
+            if (toothIndex > 0) {
+              nextTooth = String(PERMANENT_TOOTH_ORDER[toothIndex - 1])
+            }
+          }
+
+          if (nextTooth !== tooth || nextSite !== site) {
+            const nextInput = document.querySelector(
+              `input[data-perio="${nextTooth}-${nextSite}"]`
+            ) as HTMLInputElement
+            if (nextInput) {
+              nextInput.focus()
+              nextInput.select()
+            }
+          }
         }}
       />
       <label className="inline-flex items-center gap-0.5 text-[9px] text-neutral-500">

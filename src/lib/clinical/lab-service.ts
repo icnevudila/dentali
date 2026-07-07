@@ -24,10 +24,12 @@ export type PatientWithLabCase = LabCase & {
     last_name: string
     id: string
   }
+  next_appointment_date?: string | null
 }
 
 export async function fetchActiveLabCases(branchId: string): Promise<{ data: PatientWithLabCase[]; error: string | null }> {
   const supabase = createClient()
+  const now = new Date().toISOString()
   const { data, error } = await supabase
     .from("lab_cases")
     .select(`
@@ -35,7 +37,11 @@ export async function fetchActiveLabCases(branchId: string): Promise<{ data: Pat
       patients (
         id,
         first_name,
-        last_name
+        last_name,
+        appointments (
+          scheduled_at,
+          status
+        )
       )
     `)
     .eq("branch_id", branchId)
@@ -43,7 +49,19 @@ export async function fetchActiveLabCases(branchId: string): Promise<{ data: Pat
     .order("expected_date", { ascending: true })
 
   if (error) return { data: [], error: error.message }
-  return { data: (data ?? []) as unknown as PatientWithLabCase[], error: null }
+
+  const enriched = (data ?? []).map((item: any) => {
+    const upcoming = item.patients?.appointments
+      ?.filter((a: any) => a.status === "scheduled" && a.scheduled_at >= now)
+      ?.sort((a: any, b: any) => a.scheduled_at.localeCompare(b.scheduled_at))[0]
+
+    return {
+      ...item,
+      next_appointment_date: upcoming ? upcoming.scheduled_at.slice(0, 10) : null
+    }
+  })
+
+  return { data: enriched as unknown as PatientWithLabCase[], error: null }
 }
 
 export async function fetchPatientLabCases(
