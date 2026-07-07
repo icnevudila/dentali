@@ -38,6 +38,8 @@ export function ManualInvoiceDrawer({
     Awaited<ReturnType<typeof searchPatients>>["data"]
   >([])
   const [amount, setAmount] = React.useState("")
+  const [hmoShare, setHmoShare] = React.useState("")
+  const [philHealthShare, setPhilHealthShare] = React.useState("")
   const [dueDate, setDueDate] = React.useState("")
   const [customInvoiceNumber, setCustomInvoiceNumber] = React.useState("")
   const [series, setSeries] = React.useState("INV")
@@ -55,6 +57,8 @@ export function ManualInvoiceDrawer({
       setPatientSearch("")
     }
     setAmount("")
+    setHmoShare("")
+    setPhilHealthShare("")
     setDueDate("")
     setCustomInvoiceNumber("")
     setSeries("INV")
@@ -250,6 +254,101 @@ export function ManualInvoiceDrawer({
               required
             />
           </div>
+
+          {/* DYNAMIC PAY-SHARE ALLOCATION CALCULATOR */}
+          {parseFloat(amount) > 0 && (
+            <div className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-4 space-y-4 animate-fade-rise">
+              <div className="text-xs font-bold text-neutral-600 uppercase tracking-wide">
+                HMO &amp; PhilHealth Pay-Share Breakdown
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-neutral-500 uppercase">HMO Coverage (₱)</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="₱0.00"
+                    value={hmoShare}
+                    onChange={(e) => setHmoShare(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-neutral-500 uppercase">PhilHealth (₱)</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="₱0.00"
+                    value={philHealthShare}
+                    onChange={(e) => setPhilHealthShare(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Dynamic Stacked Bar */}
+              {(() => {
+                const total = parseFloat(amount) || 0
+                const hmo = parseFloat(hmoShare) || 0
+                const ph = parseFloat(philHealthShare) || 0
+                const patient = Math.max(0, total - hmo - ph)
+                
+                const hmoPct = total > 0 ? (hmo / total) * 100 : 0
+                const phPct = total > 0 ? (ph / total) * 100 : 0
+                const patientPct = total > 0 ? (patient / total) * 100 : 100
+
+                return (
+                  <div className="space-y-2">
+                    <div className="flex h-3 w-full overflow-hidden rounded-full bg-neutral-200 shadow-inner">
+                      {hmoPct > 0 && (
+                        <div
+                          className="bg-teal-500 transition-all duration-300"
+                          style={{ width: `${hmoPct}%` }}
+                          title={`HMO: ₱${hmo.toLocaleString()}`}
+                        />
+                      )}
+                      {phPct > 0 && (
+                        <div
+                          className="bg-amber-500 transition-all duration-300"
+                          style={{ width: `${phPct}%` }}
+                          title={`PhilHealth: ₱${ph.toLocaleString()}`}
+                        />
+                      )}
+                      {patientPct > 0 && (
+                        <div
+                          className="bg-primary-500 transition-all duration-300"
+                          style={{ width: `${patientPct}%` }}
+                          title={`Patient: ₱${patient.toLocaleString()}`}
+                        />
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-wrap justify-between text-[10px] text-neutral-500 font-medium">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-primary-500" />
+                        Patient: ₱{patient.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      {hmo > 0 && (
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-teal-500" />
+                          HMO: ₱{hmo.toLocaleString()}
+                        </span>
+                      )}
+                      {ph > 0 && (
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-amber-500" />
+                          PhilHealth: ₱{ph.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
 
           <div className="space-y-1">
             <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500">

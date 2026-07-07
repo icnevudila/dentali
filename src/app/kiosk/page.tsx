@@ -528,7 +528,7 @@ function KioskContent() {
 
       {/* Live Queue Widget */}
       {step === "welcome" && liveQueue && (
-        <div className="absolute top-6 right-6 z-40 animate-fade-in">
+        <div className="absolute top-6 right-6 z-40 animate-fade-in flex flex-col items-end gap-2">
           <div className="flex items-center gap-3 rounded-full border border-white/60 bg-white/40 p-2 pr-4 shadow-sm backdrop-blur-md">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-500 text-white shadow-inner">
               <Users className="h-5 w-5" />
@@ -542,6 +542,12 @@ function KioskContent() {
               </span>
             </div>
           </div>
+          {liveQueue.waitCount > 0 && (
+            <div className="rounded-lg border border-teal-100 bg-teal-50/70 px-3 py-1 text-[11px] font-semibold text-teal-800 backdrop-blur-md shadow-sm flex items-center gap-1.5 animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
+              Est. Wait Time: ~{liveQueue.waitCount * 15} mins
+            </div>
+          )}
         </div>
       )}
 
