@@ -127,19 +127,40 @@ export function TreatmentPlanItemRow({
   }
 
   return (
-    <li className="py-2 flex items-start justify-between gap-3">
+    <li className="py-2 flex items-start justify-between gap-3 border-b border-neutral-50 last:border-0">
       <span className="min-w-0 flex-1">
         <BulletTextList text={item.description} />
-        <span className="mt-1 flex flex-wrap gap-1.5 text-xs text-neutral-500">
+        <span className="mt-1 flex flex-wrap gap-1.5 text-xs text-neutral-500 items-center">
           {item.tooth_number ? (
-            <span>{t("treatmentPlan.toothNumber", "Tooth #")} {item.tooth_number}</span>
+            <span className="bg-neutral-100 px-1.5 py-0.5 rounded font-mono font-medium">
+              {t("treatmentPlan.toothNumber", "Tooth #")} {item.tooth_number}
+            </span>
           ) : null}
-          <span>{labelForPriority(item.priority)}</span>
+          <span className="text-[10px] text-neutral-400">Phase:</span>
+          <select
+            value={item.priority ?? "phase_1"}
+            onChange={(e) => {
+              void onSave({
+                description: item.description,
+                estimatedPrice: Number(item.estimated_price),
+                toothNumber: item.tooth_number,
+                priority: e.target.value,
+              })
+            }}
+            className="h-6 rounded border border-neutral-200 bg-neutral-50 px-1 text-[11px] text-neutral-600 focus:outline-none"
+            disabled={saving}
+          >
+            {phaseOptions?.map((phase) => (
+              <option key={phase.value} value={phase.value}>
+                {phase.label}
+              </option>
+            ))}
+          </select>
         </span>
       </span>
       <div className="flex items-center gap-2 shrink-0">
-        <span className="font-medium">₱{Number(item.estimated_price).toLocaleString()}</span>
-        <Button type="button" size="icon" variant="ghost" className="h-8 w-8" onClick={beginEditing} disabled={saving}>
+        <span className="font-semibold text-neutral-900">₱{Number(item.estimated_price).toLocaleString()}</span>
+        <Button type="button" size="icon" variant="ghost" className="h-8 w-8 hover:bg-neutral-100" onClick={beginEditing} disabled={saving}>
           <Pencil className="h-3.5 w-3.5" />
           <span className="sr-only">{t("treatmentPlan.editItem", "Edit")}</span>
         </Button>
@@ -147,7 +168,7 @@ export function TreatmentPlanItemRow({
           type="button"
           size="icon"
           variant="ghost"
-          className="h-8 w-8 text-red-600 hover:text-red-700"
+          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
           onClick={() => void onDelete()}
           disabled={saving}
         >

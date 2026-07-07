@@ -526,7 +526,7 @@ function TreatmentPlanContent() {
       ]
     : undefined
 
-  const phaseGroups = PLAN_PHASES.map((phase) => {
+  const baseGroups = PLAN_PHASES.map((phase) => {
     const phaseItems = items.filter((item) => normalizePlanPhase(item.priority) === phase.value)
     return {
       ...phase,
@@ -537,6 +537,18 @@ function TreatmentPlanContent() {
   const otherItems = items.filter(
     (item) => !PLAN_PHASES.some((phase) => phase.value === normalizePlanPhase(item.priority))
   )
+  const phaseGroups = otherItems.length > 0
+    ? [
+        ...baseGroups,
+        {
+          value: "unassigned",
+          label: "Unassigned / Other Phase",
+          hint: "Procedures without a defined stage",
+          items: otherItems,
+          total: otherItems.reduce((sum, item) => sum + Number(item.estimated_price || 0), 0),
+        }
+      ]
+    : baseGroups
   const clinicalChecklist = activePlanId
     ? [
         {
