@@ -701,20 +701,33 @@ function TreatmentPlanContent() {
                         {phase.items.length === 0 ? (
                           <p className="px-3 py-3 text-xs text-neutral-400">No procedure in this phase.</p>
                         ) : (
-                          <ul className="divide-y px-3 text-sm">
-                            {phase.items.map((item) => (
-                              <TreatmentPlanItemRow
-                                key={item.id}
-                                item={item}
-                                editable={planEditable}
-                                saving={saving}
-                                phaseOptions={PLAN_PHASES}
-                                phaseLabel={getPlanPhaseLabel}
-                                onSave={(patch) => handleUpdateItem(item.id, patch)}
-                                onDelete={() => handleDeleteItem(item.id)}
-                              />
-                            ))}
-                          </ul>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left border-collapse">
+                              <thead>
+                                <tr className="border-b border-neutral-100 bg-neutral-50/50 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                                  <th className="py-2 px-3 w-24">Tooth</th>
+                                  <th className="py-2 px-3">Procedure</th>
+                                  <th className="py-2 px-3 w-32">Phase</th>
+                                  <th className="py-2 px-3 w-28 text-right">Price</th>
+                                  <th className="py-2 px-3 w-24 text-right">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {phase.items.map((item) => (
+                                  <TreatmentPlanItemRow
+                                    key={item.id}
+                                    item={item}
+                                    editable={planEditable}
+                                    saving={saving}
+                                    phaseOptions={PLAN_PHASES}
+                                    phaseLabel={getPlanPhaseLabel}
+                                    onSave={(patch) => handleUpdateItem(item.id, patch)}
+                                    onDelete={() => handleDeleteItem(item.id)}
+                                  />
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         )}
                       </section>
                     ))}
@@ -723,20 +736,33 @@ function TreatmentPlanContent() {
                         <div className="border-b border-neutral-100 px-3 py-2">
                           <p className="text-sm font-semibold text-neutral-900">Other</p>
                         </div>
-                        <ul className="divide-y px-3 text-sm">
-                          {otherItems.map((item) => (
-                            <TreatmentPlanItemRow
-                              key={item.id}
-                              item={item}
-                              editable={planEditable}
-                              saving={saving}
-                              phaseOptions={PLAN_PHASES}
-                              phaseLabel={getPlanPhaseLabel}
-                              onSave={(patch) => handleUpdateItem(item.id, patch)}
-                              onDelete={() => handleDeleteItem(item.id)}
-                            />
-                          ))}
-                        </ul>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left border-collapse">
+                              <thead>
+                                <tr className="border-b border-neutral-100 bg-neutral-50/50 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                                  <th className="py-2 px-3 w-24">Tooth</th>
+                                  <th className="py-2 px-3">Procedure</th>
+                                  <th className="py-2 px-3 w-32">Phase</th>
+                                  <th className="py-2 px-3 w-28 text-right">Price</th>
+                                  <th className="py-2 px-3 w-24 text-right">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {otherItems.map((item) => (
+                                  <TreatmentPlanItemRow
+                                    key={item.id}
+                                    item={item}
+                                    editable={planEditable}
+                                    saving={saving}
+                                    phaseOptions={PLAN_PHASES}
+                                    phaseLabel={getPlanPhaseLabel}
+                                    onSave={(patch) => handleUpdateItem(item.id, patch)}
+                                    onDelete={() => handleDeleteItem(item.id)}
+                                  />
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                       </section>
                     ) : null}
                   </div>
