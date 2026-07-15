@@ -96,8 +96,20 @@ export async function runMedicalHistoryOcr(params: {
   })
 
   if (error) {
+    // Non-2xx from the function often still carries { error: "..." } in data.
     if (data && typeof data === "object" && "error" in data && typeof (data as { error: unknown }).error === "string") {
       return { data: null, error: (data as { error: string }).error }
+    }
+    const ctx = (error as { context?: Response }).context
+    if (ctx) {
+      try {
+        const body = (await ctx.json()) as { error?: unknown }
+        if (typeof body?.error === "string" && body.error.trim()) {
+          return { data: null, error: body.error }
+        }
+      } catch {
+        // ignore parse failures
+      }
     }
     return {
       data: null,

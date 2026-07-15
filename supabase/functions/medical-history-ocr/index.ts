@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1"
+import { encode as encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,7 +22,8 @@ const EXTRACTION_PROMPT = [
   "Return ONLY valid JSON with keys: allergies (string[]), medications (string[]), conditions (string[]),",
   "notes (string|null), confidence ({ overall: number 0-1, optional per-field }), warnings (string[]).",
   "Prefer empty arrays over guessing. Do not invent patient names, IDs, or phone numbers.",
-  "Put unclear free text into notes. Typical printed form sections: allergies, current medications, medical conditions / diseases.",
+  "Checked checkboxes and filled lines count. Typical sections: allergies, current medications, medical conditions.",
+  "Put unclear free text into notes.",
 ].join(" ")
 
 type Draft = {
@@ -105,26 +107,31 @@ function extractJsonObject(text: string): unknown {
   }
 }
 
-function bytesToBase64(bytes: Uint8Array): string {
-  // Avoid spread (...chunk) which can blow the call stack on large phone photos.
-  let binary = ""
-  const chunkSize = 0x2000
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.subarray(i, i + chunkSize)
-    for (let j = 0; j < chunk.length; j++) {
-      binary += String.fromCharCode(chunk[j]!)
-    }
-  }
-  return btoa(binary)
-}
-
 function resolveProvider(geminiKey: string, openaiKey: string): ProviderKind | null {
   const forced = (Deno.env.get("MEDICAL_HISTORY_OCR_PROVIDER") ?? "").trim().toLowerCase()
   if (forced === "gemini" && geminiKey) return "gemini"
   if (forced === "openai" && openaiKey) return "openai"
-  // Prefer free Gemini when available
   if (geminiKey) return "gemini"
   if (openaiKey) return "openai"
+  return null
+}
+
+function readGeminiText(json: unknown): string | null {
+  const root = json as {
+    candidates?: Array<{
+      content?: { parts?: Array<{ text?: string }> }
+      finishReason?: string
+    }>
+    promptFeedback?: { blockReason?: string }
+  }
+  if (root.promptFeedback?.blockReason) {
+    console.error("gemini_blocked", root.promptFeedback.blockReason)
+    return null
+  }
+  const parts = root.candidates?.[0]?.content?.parts
+  const text = parts?.map((p) => p.text ?? "").join("")
+  if (typeof text === "string" && text.trim()) return text
+  console.error("gemini_empty", root.candidates?.[0]?.finishReason ?? "no_candidate")
   return null
 }
 
@@ -145,6 +152,7 @@ async function extractWithGemini(params: {
     const url =
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`
 
+    // REST requires camelCase (inlineData / mimeType). Snake_case is silently ignored.
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -152,15 +160,16 @@ async function extractWithGemini(params: {
         "x-goog-api-key": params.apiKey,
       },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: EXTRACTION_PROMPT }] },
         contents: [
           {
             role: "user",
             parts: [
-              { text: "Extract medical history fields from this clinic form photo. JSON only." },
               {
-                inline_data: {
-                  mime_type: params.mime,
+                text: `${EXTRACTION_PROMPT}\n\nExtract medical history fields from this clinic form photo. JSON only.`,
+              },
+              {
+                inlineData: {
+                  mimeType: params.mime,
                   data: params.b64,
                 },
               },
@@ -175,17 +184,14 @@ async function extractWithGemini(params: {
     })
 
     if (!res.ok) {
-      // Try next model (retired / not found / quota on this id).
+      const errText = await res.text().catch(() => "")
+      console.error("gemini_http", model, res.status, errText.slice(0, 300))
       continue
     }
 
     const json = await res.json()
-    const text = json?.candidates?.[0]?.content?.parts
-      ?.map((p: { text?: string }) => p.text ?? "")
-      .join("")
-    if (typeof text === "string" && text.trim()) {
-      return text
-    }
+    const text = readGeminiText(json)
+    if (text) return text
   }
 
   return null
@@ -223,7 +229,11 @@ async function extractWithOpenAI(params: {
     }),
   })
 
-  if (!res.ok) return null
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "")
+    console.error("openai_http", res.status, errText.slice(0, 300))
+    return null
+  }
   const json = await res.json()
   const content = json?.choices?.[0]?.message?.content
   return typeof content === "string" ? content : null
@@ -347,7 +357,7 @@ Deno.serve(async (req) => {
           ? "image/webp"
           : "image/jpeg"
 
-    const b64 = await bytesToBase64(bytes)
+    const b64 = encodeBase64(bytes)
 
     const content =
       provider === "gemini"
@@ -381,7 +391,8 @@ Deno.serve(async (req) => {
     }
 
     return jsonResponse({ data: draft })
-  } catch {
+  } catch (err) {
+    console.error("medical_history_ocr_unhandled", String(err))
     return jsonResponse({ error: STAFF_SAFE.providerFailed }, 500)
   }
 })
