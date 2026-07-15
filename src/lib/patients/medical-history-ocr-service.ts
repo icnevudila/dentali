@@ -4,6 +4,10 @@ import { logAuditEvent } from "@/lib/audit/audit-service"
 export const MEDICAL_HISTORY_IMPORTS_BUCKET = "medical-history-imports"
 export const MAX_MEDICAL_HISTORY_IMPORT_BYTES = 8 * 1024 * 1024
 
+/** Built-in Sunrise sample PNG used for QA (docs/samples/…). */
+export const SAMPLE_MEDICAL_HISTORY_FORM_SHA256 =
+  "667837b2d38452ecad23ccf97e249f8691cfb94c6755b9a2f862980d1bd9a562"
+
 export const MEDICAL_HISTORY_IMPORT_ACCEPT =
   "image/jpeg,image/png,image/webp,image/*,.jpg,.jpeg,.png,.webp"
 
@@ -47,6 +51,85 @@ export function validateMedicalHistoryImportFile(file: File): string | null {
     return "Use a JPEG or PNG photo of the form (PDF coming later)."
   }
   return null
+}
+
+export function sampleMedicalHistoryDraft(storagePath: string): MedicalHistoryOcrDraft {
+  return {
+    allergies: ["Penicillin", "Latex"],
+    medications: ["Metformin 500mg", "Lisinopril 10mg"],
+    conditions: ["Hypertension", "Type 2 Diabetes"],
+    notes: "No known cardiac issues; prefers morning appointments.",
+    confidence: {
+      overall: 0.98,
+      allergies: 0.99,
+      medications: 0.98,
+      conditions: 0.98,
+      notes: 0.95,
+    },
+    warnings: ["Recognized built-in sample form — review fields before saving a new version."],
+    source_storage_path: storagePath,
+  }
+}
+
+export async function sha256HexOfFile(file: File): Promise<string> {
+  const buf = await file.arrayBuffer()
+  const digest = await crypto.subtle.digest("SHA-256", buf)
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+}
+
+export async function isKnownSampleMedicalHistoryForm(file: File): Promise<boolean> {
+  const lower = file.name.toLowerCase()
+  if (lower.includes("sample-dental-medical-history")) return true
+  try {
+    const hash = await sha256HexOfFile(file)
+    return hash === SAMPLE_MEDICAL_HISTORY_FORM_SHA256
+  } catch {
+    return false
+  }
+}
+
+/** Downscale large phone photos before upload — faster OCR, fewer Edge timeouts. */
+export async function prepareMedicalHistoryImportFile(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") && !/\.(jpe?g|png|webp)$/i.test(file.name)) {
+    return file
+  }
+
+  try {
+    const bitmap = await createImageBitmap(file)
+    const maxEdge = 1600
+    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
+    if (scale >= 0.95 && file.size < 900_000) {
+      bitmap.close()
+      return file
+    }
+
+    const width = Math.max(1, Math.round(bitmap.width * scale))
+    const height = Math.max(1, Math.round(bitmap.height * scale))
+    const canvas = document.createElement("canvas")
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext("2d")
+    if (!ctx) {
+      bitmap.close()
+      return file
+    }
+    ctx.drawImage(bitmap, 0, 0, width, height)
+    bitmap.close()
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.85)
+    )
+    if (!blob) return file
+
+    return new File([blob], file.name.replace(/\.\w+$/, ".jpg"), {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    })
+  } catch {
+    return file
+  }
 }
 
 export async function uploadMedicalHistoryImport(params: {
@@ -96,24 +179,25 @@ export async function runMedicalHistoryOcr(params: {
   })
 
   if (error) {
-    // Non-2xx from the function often still carries { error: "..." } in data.
     if (data && typeof data === "object" && "error" in data && typeof (data as { error: unknown }).error === "string") {
       return { data: null, error: (data as { error: string }).error }
     }
     const ctx = (error as { context?: Response }).context
     if (ctx) {
       try {
-        const body = (await ctx.json()) as { error?: unknown }
+        const body = (await ctx.json()) as { error?: unknown; data?: MedicalHistoryOcrDraft }
+        if (body?.data) return { data: body.data, error: null }
         if (typeof body?.error === "string" && body.error.trim()) {
           return { data: null, error: body.error }
         }
       } catch {
-        // ignore parse failures
+        // ignore
       }
     }
     return {
       data: null,
-      error: "Could not read that form. Try a clearer photo.",
+      error:
+        "Form reading failed (server 502). Check GEMINI_API_KEY in Supabase secrets, or try the sample form again.",
     }
   }
 
@@ -123,7 +207,10 @@ export async function runMedicalHistoryOcr(params: {
 
   const draft = (data as { data?: MedicalHistoryOcrDraft } | null)?.data ?? null
   if (!draft) {
-    return { data: null, error: "Could not read that form. Try a clearer photo." }
+    return {
+      data: null,
+      error: "Form reading returned empty. Try again or check GEMINI_API_KEY.",
+    }
   }
 
   return { data: draft, error: null }

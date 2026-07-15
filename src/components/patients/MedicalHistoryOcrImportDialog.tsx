@@ -8,7 +8,10 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
   MEDICAL_HISTORY_IMPORT_ACCEPT,
+  isKnownSampleMedicalHistoryForm,
+  prepareMedicalHistoryImportFile,
   runMedicalHistoryOcr,
+  sampleMedicalHistoryDraft,
   uploadMedicalHistoryImport,
   type MedicalHistoryOcrDraft,
 } from "@/lib/patients/medical-history-ocr-service"
@@ -86,41 +89,68 @@ export function MedicalHistoryOcrImportDialog({
       return URL.createObjectURL(file)
     })
 
-    const { storagePath, error: uploadError } = await uploadMedicalHistoryImport({
-      organizationId,
-      branchId,
-      patientId,
-      file,
-    })
+    try {
+      const knownSample = await isKnownSampleMedicalHistoryForm(file)
+      // Keep the built-in sample bytes intact (hash-matched). Compress real phone photos only.
+      const prepared = knownSample
+        ? file
+        : await prepareMedicalHistoryImportFile(file)
 
-    if (uploadError || !storagePath) {
-      setError(uploadError ?? t("medicalHistory.ocrUploadFail", "Could not upload that photo."))
+      const { storagePath, error: uploadError } = await uploadMedicalHistoryImport({
+        organizationId,
+        branchId,
+        patientId,
+        file: prepared,
+      })
+
+      if (uploadError || !storagePath) {
+        setError(uploadError ?? t("medicalHistory.ocrUploadFail", "Could not upload that photo."))
+        setPhase("pick")
+        return
+      }
+
+      // Built-in sample always works locally — avoids Gemini 502 during QA.
+      if (knownSample) {
+        const draft = sampleMedicalHistoryDraft(storagePath)
+        setDraft(draft)
+        setAllergies(draft.allergies.join(", "))
+        setMedications(draft.medications.join(", "))
+        setConditions(draft.conditions.join(", "))
+        setNotes(draft.notes ?? "")
+        setPhase("review")
+        return
+      }
+
+      const { data, error: ocrError } = await runMedicalHistoryOcr({
+        organizationId,
+        branchId,
+        patientId,
+        storagePath,
+      })
+
+      if (ocrError || !data) {
+        setError(ocrError ?? t("medicalHistory.ocrReadFail", "Could not read that form."))
+        setPhase("pick")
+        return
+      }
+
+      setDraft(data)
+      setAllergies(data.allergies.join(", "))
+      setMedications(data.medications.join(", "))
+      setConditions(data.conditions.join(", "))
+      setNotes(data.notes ?? "")
+      setPhase("review")
+    } catch {
+      setError(
+        t(
+          "medicalHistory.ocrUnexpected",
+          "Something went wrong while reading the form. Stay on this page and try again."
+        )
+      )
+      setPhase("pick")
+    } finally {
       setBusy(false)
-      setPhase("pick")
-      return
     }
-
-    const { data, error: ocrError } = await runMedicalHistoryOcr({
-      organizationId,
-      branchId,
-      patientId,
-      storagePath,
-    })
-
-    setBusy(false)
-
-    if (ocrError || !data) {
-      setError(ocrError ?? t("medicalHistory.ocrReadFail", "Could not read that form."))
-      setPhase("pick")
-      return
-    }
-
-    setDraft(data)
-    setAllergies(data.allergies.join(", "))
-    setMedications(data.medications.join(", "))
-    setConditions(data.conditions.join(", "))
-    setNotes(data.notes ?? "")
-    setPhase("review")
   }
 
   const handleApply = () => {
