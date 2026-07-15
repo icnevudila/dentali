@@ -72,3 +72,6 @@ verify_jwt = false
 
 [functions.owner-digest-sms-cron]
 verify_jwt = false
+
+[functions.medical-history-ocr]
+verify_jwt = true

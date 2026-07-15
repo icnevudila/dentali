@@ -1,7 +1,7 @@
 # Medical History OCR Import (v2) — Design
 
 **Date:** 2026-07-15  
-**Status:** Approved for spec; implementation plan pending user review of this file  
+**Status:** Implemented (MVP) — requires `OPENAI_API_KEY` (and optional `MEDICAL_HISTORY_OCR_MODEL`) on Edge Function secrets  
 **Owner surface:** `src/app/(dashboard)/patients/[id]/medical-history`
 
 ## Problem

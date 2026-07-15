@@ -1,9 +1,8 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Save, AlertTriangle, History } from "lucide-react"
+import { Save, AlertTriangle, History, ScanLine } from "lucide-react"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { ContentPanel } from "@/components/layout/ContentPanel"
@@ -25,7 +24,12 @@ import {
   type MedicalHistoryRecord,
   type MedicalRiskAssessment,
 } from "@/lib/patients/medical-history-service"
+import {
+  logMedicalHistoryOcrImport,
+  type MedicalHistoryOcrDraft,
+} from "@/lib/patients/medical-history-ocr-service"
 import { MedicalHistoryVersionDrawer } from "@/components/patients/MedicalHistoryVersionDrawer"
+import { MedicalHistoryOcrImportDialog } from "@/components/patients/MedicalHistoryOcrImportDialog"
 import { getPatient } from "@/lib/patients/patient-service"
 
 export default function MedicalHistoryPage() {
@@ -43,6 +47,9 @@ export default function MedicalHistoryPage() {
   const [version, setVersion] = React.useState(0)
   const [versions, setVersions] = React.useState<MedicalHistoryRecord[]>([])
   const [historyOpen, setHistoryOpen] = React.useState(false)
+  const [ocrOpen, setOcrOpen] = React.useState(false)
+  const [organizationId, setOrganizationId] = React.useState<string | null>(null)
+  const [pendingOcrImport, setPendingOcrImport] = React.useState<MedicalHistoryOcrDraft | null>(null)
   const [riskFlags, setRiskFlags] = React.useState<MedicalRiskAssessment | null>(null)
   const [error, setError] = React.useState<string | null>(null)
 
@@ -52,7 +59,8 @@ export default function MedicalHistoryPage() {
       getLatestMedicalHistory(patientId),
       fetchMedicalHistoryVersions(patientId),
       getMedicalRiskFlags(patientId),
-    ]).then(([patientResult, historyResult, versionsResult, riskResult]) => {
+      fetchOrganization(),
+    ]).then(([patientResult, historyResult, versionsResult, riskResult, org]) => {
         if (patientResult.data) {
           setPatientName(`${patientResult.data.first_name} ${patientResult.data.last_name}`)
         }
@@ -65,6 +73,7 @@ export default function MedicalHistoryPage() {
         }
         setVersions(versionsResult.data)
         setRiskFlags(riskResult.data)
+        setOrganizationId(org?.id ?? null)
         setLoading(false)
       }
     )
@@ -72,6 +81,15 @@ export default function MedicalHistoryPage() {
 
   const parseList = (s: string) =>
     s.split(",").map((x) => x.trim()).filter(Boolean)
+
+  const handleApplyOcrDraft = (draft: MedicalHistoryOcrDraft) => {
+    setAllergies(draft.allergies.join(", "))
+    setMedications(draft.medications.join(", "))
+    setConditions(draft.conditions.join(", "))
+    setNotes(draft.notes ?? "")
+    setPendingOcrImport(draft)
+    setError(null)
+  }
 
   const handleSave = async () => {
     if (!user) return
@@ -84,29 +102,53 @@ export default function MedicalHistoryPage() {
       return
     }
 
+    const allergyList = parseList(allergies)
+    const medicationList = parseList(medications)
+    const conditionList = parseList(conditions)
+
     const { data: saved, error: saveError } = await saveMedicalHistory({
       patientId,
       organizationId: org.id,
       userId: user.id,
       branchId: activeBranch?.id,
-      allergies: parseList(allergies),
-      medications: parseList(medications),
-      conditions: parseList(conditions),
+      allergies: allergyList,
+      medications: medicationList,
+      conditions: conditionList,
       notes,
     })
 
-    setSaving(false)
-    if (saveError) setError(saveError)
-    else {
-      if (saved) setVersion(saved.version)
-      const [{ data: refreshed }, { data: risk }] = await Promise.all([
-        fetchMedicalHistoryVersions(patientId),
-        getMedicalRiskFlags(patientId),
-      ])
-      setVersions(refreshed)
-      setRiskFlags(risk)
-      router.push(`/patients/${patientId}`)
+    if (saveError) {
+      setSaving(false)
+      setError(saveError)
+      return
     }
+
+    if (saved && pendingOcrImport && activeBranch?.id) {
+      await logMedicalHistoryOcrImport({
+        organizationId: org.id,
+        branchId: activeBranch.id,
+        patientId,
+        version: saved.version,
+        storagePath: pendingOcrImport.source_storage_path,
+        overallConfidence: pendingOcrImport.confidence.overall,
+        fieldCounts: {
+          allergies: allergyList.length,
+          medications: medicationList.length,
+          conditions: conditionList.length,
+        },
+      })
+      setPendingOcrImport(null)
+    }
+
+    setSaving(false)
+    if (saved) setVersion(saved.version)
+    const [{ data: refreshed }, { data: risk }] = await Promise.all([
+      fetchMedicalHistoryVersions(patientId),
+      getMedicalRiskFlags(patientId),
+    ])
+    setVersions(refreshed)
+    setRiskFlags(risk)
+    router.push(`/patients/${patientId}`)
   }
 
   if (loading) {
@@ -130,12 +172,25 @@ export default function MedicalHistoryPage() {
         panel={false}
         error={error}
         actions={
-          versions.length > 0 ? (
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => setHistoryOpen(true)}>
-              <History className="h-4 w-4" />
-              History ({versions.length})
-            </Button>
-          ) : null
+          <div className="flex flex-wrap gap-2">
+            {organizationId && activeBranch?.id ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setOcrOpen(true)}
+              >
+                <ScanLine className="h-4 w-4" />
+                Import from paper
+              </Button>
+            ) : null}
+            {versions.length > 0 ? (
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => setHistoryOpen(true)}>
+                <History className="h-4 w-4" />
+                History ({versions.length})
+              </Button>
+            ) : null}
+          </div>
         }
       >
         <MedicalHistoryVersionDrawer
@@ -144,7 +199,24 @@ export default function MedicalHistoryPage() {
           onClose={() => setHistoryOpen(false)}
         />
 
+        {organizationId && activeBranch?.id ? (
+          <MedicalHistoryOcrImportDialog
+            open={ocrOpen}
+            onClose={() => setOcrOpen(false)}
+            organizationId={organizationId}
+            branchId={activeBranch.id}
+            patientId={patientId}
+            onApplyDraft={handleApplyOcrDraft}
+          />
+        ) : null}
+
         <ContentPanel className="space-y-6">
+
+        {pendingOcrImport ? (
+          <p className="rounded-lg border border-primary-100 bg-primary-50/50 px-3 py-2 text-sm text-primary-900">
+            Paper import applied to the editor. Review the fields, then save a new version.
+          </p>
+        ) : null}
 
         {riskFlags && riskFlags.flags.length > 0 && (
           <Card className="border-amber-200 bg-amber-50/50">
