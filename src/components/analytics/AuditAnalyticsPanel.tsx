@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { fetchAuditAnalytics } from "@/lib/analytics/analytics-service"
 import { ModuleAnalyticsPanel } from "@/components/analytics/ModuleAnalyticsPanel"
 import { useLocale } from "@/hooks/use-locale"
+import { formatAuditActionLabel } from "@/lib/audit/audit-labels"
 
 export function AuditAnalyticsPanel({
   branchId,
@@ -24,10 +25,15 @@ export function AuditAnalyticsPanel({
     if (data) {
       setTotalEvents(data.totalEvents)
       setDaily(data.dailyEvents)
-      setTopActions(data.topActions)
+      setTopActions(
+        data.topActions.map((row) => ({
+          ...row,
+          label: formatAuditActionLabel(row.label, t),
+        }))
+      )
     }
     setLoading(false)
-  }, [branchId, periodDays])
+  }, [branchId, periodDays, t])
 
   const periodLabel = String(periodDays)
 
