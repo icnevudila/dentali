@@ -1,7 +1,7 @@
 # Medical History OCR Import (v2) — Design
 
 **Date:** 2026-07-15  
-**Status:** Implemented (MVP) — requires `OPENAI_API_KEY` (and optional `MEDICAL_HISTORY_OCR_MODEL`) on Edge Function secrets  
+**Status:** Implemented (MVP) — prefers free `GEMINI_API_KEY`; optional `OPENAI_API_KEY` fallback. Secrets on Edge Function.  
 **Owner surface:** `src/app/(dashboard)/patients/[id]/medical-history`
 
 ## Problem
@@ -130,7 +130,7 @@ Optional (if easy without RPC break): append a one-line provenance in `notes` su
 - **Auth:** JWT required; verify `patients.medical_history.write` for `branch_id`.
 - **Input:** `{ patient_id, branch_id, organization_id, storage_path }`
 - **Output:** `MedicalHistoryOcrDraft` or typed error `{ code, message }` where `message` is staff-safe.
-- **Provider:** configurable env (e.g. OpenAI-compatible vision or Anthropic); secret only on Edge.
+- **Provider:** `GEMINI_API_KEY` (preferred, free Google AI Studio) or `OPENAI_API_KEY`. Optional `MEDICAL_HISTORY_OCR_PROVIDER=gemini|openai` and `MEDICAL_HISTORY_OCR_MODEL`.  
 - **Prompt:** instruct extraction into the four fields; include optional clinic form field labels (config/env or small JSON in repo, not PHI).
 - **Limits:** max file size ~8 MB; accept `image/jpeg`, `image/png`, `image/webp`, `application/pdf` (PDF: first 1–2 pages in MVP).
 - **Timeouts / failure:** return friendly error; do not leave half-saved history versions.

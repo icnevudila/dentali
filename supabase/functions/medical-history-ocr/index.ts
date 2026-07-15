@@ -10,11 +10,19 @@ const STAFF_SAFE = {
   forbidden: "You do not have permission to import medical history for this branch.",
   badRequest: "That file could not be processed. Try a clearer photo of the form.",
   notConfigured:
-    "Form reading is not configured yet. Ask an admin to add the OCR API key in Edge Function secrets.",
+    "Form reading is not configured yet. Add a free GEMINI_API_KEY (or OPENAI_API_KEY) in Edge Function secrets.",
   providerFailed: "We could not read that form. Try again with a brighter, flatter photo.",
   pdfUnsupported:
     "PDF reading is limited in this version. Please upload a JPEG or PNG photo of the form.",
 }
+
+const EXTRACTION_PROMPT = [
+  "You extract dental clinic medical history fields from a photograph of a printed form.",
+  "Return ONLY valid JSON with keys: allergies (string[]), medications (string[]), conditions (string[]),",
+  "notes (string|null), confidence ({ overall: number 0-1, optional per-field }), warnings (string[]).",
+  "Prefer empty arrays over guessing. Do not invent patient names, IDs, or phone numbers.",
+  "Put unclear free text into notes. Typical printed form sections: allergies, current medications, medical conditions / diseases.",
+].join(" ")
 
 type Draft = {
   allergies: string[]
@@ -31,6 +39,8 @@ type Draft = {
   warnings: string[]
   source_storage_path: string
 }
+
+type ProviderKind = "gemini" | "openai"
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -104,6 +114,101 @@ async function bytesToBase64(bytes: Uint8Array): Promise<string> {
   return btoa(binary)
 }
 
+function resolveProvider(geminiKey: string, openaiKey: string): ProviderKind | null {
+  const forced = (Deno.env.get("MEDICAL_HISTORY_OCR_PROVIDER") ?? "").trim().toLowerCase()
+  if (forced === "gemini" && geminiKey) return "gemini"
+  if (forced === "openai" && openaiKey) return "openai"
+  // Prefer free Gemini when available
+  if (geminiKey) return "gemini"
+  if (openaiKey) return "openai"
+  return null
+}
+
+async function extractWithGemini(params: {
+  apiKey: string
+  model: string
+  mime: string
+  b64: string
+}): Promise<string | null> {
+  const model = params.model || "gemini-2.0-flash"
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": params.apiKey,
+    },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: EXTRACTION_PROMPT }] },
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: "Extract medical history fields from this clinic form photo. JSON only." },
+            {
+              inline_data: {
+                mime_type: params.mime,
+                data: params.b64,
+              },
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.1,
+        responseMimeType: "application/json",
+      },
+    }),
+  })
+
+  if (!res.ok) return null
+  const json = await res.json()
+  const text = json?.candidates?.[0]?.content?.parts
+    ?.map((p: { text?: string }) => p.text ?? "")
+    .join("")
+  return typeof text === "string" && text.trim() ? text : null
+}
+
+async function extractWithOpenAI(params: {
+  apiKey: string
+  model: string
+  mime: string
+  b64: string
+}): Promise<string | null> {
+  const model = params.model || "gpt-4o-mini"
+  const dataUrl = `data:${params.mime};base64,${params.b64}`
+
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${params.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.1,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: EXTRACTION_PROMPT },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Extract medical history fields from this clinic form photo." },
+            { type: "image_url", image_url: { url: dataUrl } },
+          ],
+        },
+      ],
+    }),
+  })
+
+  if (!res.ok) return null
+  const json = await res.json()
+  const content = json?.choices?.[0]?.message?.content
+  return typeof content === "string" ? content : null
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders })
@@ -118,8 +223,9 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    const geminiKey = Deno.env.get("GEMINI_API_KEY")?.trim() ?? ""
     const openaiKey = Deno.env.get("OPENAI_API_KEY")?.trim() ?? ""
-    const model = Deno.env.get("MEDICAL_HISTORY_OCR_MODEL")?.trim() || "gpt-4o-mini"
+    const modelOverride = Deno.env.get("MEDICAL_HISTORY_OCR_MODEL")?.trim() ?? ""
 
     const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -178,7 +284,8 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: STAFF_SAFE.badRequest }, 400)
     }
 
-    if (!openaiKey) {
+    const provider = resolveProvider(geminiKey, openaiKey)
+    if (!provider) {
       return jsonResponse({ error: STAFF_SAFE.notConfigured }, 503)
     }
 
@@ -196,9 +303,13 @@ Deno.serve(async (req) => {
     }
 
     if (!["image/jpeg", "image/png", "image/webp"].includes(contentType)) {
-      // Some browsers omit type; allow by extension
       const lower = storagePath.toLowerCase()
-      if (!lower.endsWith(".jpg") && !lower.endsWith(".jpeg") && !lower.endsWith(".png") && !lower.endsWith(".webp")) {
+      if (
+        !lower.endsWith(".jpg") &&
+        !lower.endsWith(".jpeg") &&
+        !lower.endsWith(".png") &&
+        !lower.endsWith(".webp")
+      ) {
         return jsonResponse({ error: STAFF_SAFE.badRequest }, 400)
       }
     }
@@ -208,59 +319,32 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: STAFF_SAFE.badRequest }, 400)
     }
 
-    const mime =
-      contentType.startsWith("image/")
-        ? contentType
-        : storagePath.toLowerCase().endsWith(".png")
-          ? "image/png"
-          : storagePath.toLowerCase().endsWith(".webp")
-            ? "image/webp"
-            : "image/jpeg"
+    const mime = contentType.startsWith("image/")
+      ? contentType
+      : storagePath.toLowerCase().endsWith(".png")
+        ? "image/png"
+        : storagePath.toLowerCase().endsWith(".webp")
+          ? "image/webp"
+          : "image/jpeg"
 
     const b64 = await bytesToBase64(bytes)
-    const dataUrl = `data:${mime};base64,${b64}`
 
-    const systemPrompt = [
-      "You extract dental clinic medical history fields from a photograph of a printed form.",
-      "Return ONLY valid JSON with keys: allergies (string[]), medications (string[]), conditions (string[]),",
-      "notes (string|null), confidence ({ overall: number 0-1, optional per-field }), warnings (string[]).",
-      "Prefer empty arrays over guessing. Do not invent patient names, IDs, or phone numbers.",
-      "Put unclear free text into notes. Typical printed form sections: allergies, current medications, medical conditions / diseases.",
-    ].join(" ")
+    const content =
+      provider === "gemini"
+        ? await extractWithGemini({
+            apiKey: geminiKey,
+            model: modelOverride || "gemini-2.0-flash",
+            mime,
+            b64,
+          })
+        : await extractWithOpenAI({
+            apiKey: openaiKey,
+            model: modelOverride || "gpt-4o-mini",
+            mime,
+            b64,
+          })
 
-    const providerRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openaiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.1,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Extract medical history fields from this clinic form photo.",
-              },
-              { type: "image_url", image_url: { url: dataUrl } },
-            ],
-          },
-        ],
-      }),
-    })
-
-    if (!providerRes.ok) {
-      return jsonResponse({ error: STAFF_SAFE.providerFailed }, 502)
-    }
-
-    const providerJson = await providerRes.json()
-    const content = providerJson?.choices?.[0]?.message?.content
-    if (typeof content !== "string") {
+    if (!content) {
       return jsonResponse({ error: STAFF_SAFE.providerFailed }, 502)
     }
 
