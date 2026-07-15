@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, History, ScrollText } from "lucide-react"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { fetchEntityAuditTrail, type AuditLogRecord } from "@/lib/audit/audit-log-service"
+import { formatAuditActionLabel, formatAuditDetailsLabel } from "@/lib/audit/audit-labels"
 import { useLocale } from "@/hooks/use-locale"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -95,7 +96,9 @@ export function AuditHistoryPanel({
                 {logs.map((log) => (
                   <li key={`${log.source}-${log.id}`} className="py-2.5 first:pt-0 last:pb-0">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <p className="text-sm font-medium text-neutral-900">{log.action}</p>
+                      <p className="text-sm font-medium text-neutral-900">
+                        {formatAuditActionLabel(log.action, t)}
+                      </p>
                       <time className="text-xs tabular-nums text-neutral-400">
                         {new Date(log.created_at).toLocaleString()}
                       </time>
@@ -104,11 +107,12 @@ export function AuditHistoryPanel({
                       {log.actor_name ?? "—"}
                       {log.source === "session" && log.ip_address ? ` · ${log.ip_address}` : null}
                     </p>
-                    {Object.keys(log.metadata ?? {}).length > 0 ? (
-                      <p className="mt-1 truncate text-xs text-neutral-400">
-                        {JSON.stringify(log.metadata)}
-                      </p>
-                    ) : null}
+                    {(() => {
+                      const details = formatAuditDetailsLabel(log, t)
+                      return details && details !== "—" ? (
+                        <p className="mt-1 text-xs text-neutral-400">{details}</p>
+                      ) : null
+                    })()}
                   </li>
                 ))}
               </ul>

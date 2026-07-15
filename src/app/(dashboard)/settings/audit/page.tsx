@@ -23,6 +23,10 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
+import {
+  formatAuditActionLabel,
+  formatAuditDetailsLabel,
+} from "@/lib/audit/audit-labels"
 
 const SOURCE_TABS: { key: AuditSource; labelKey: string; fallback: string }[] = [
   { key: "all", labelKey: "settings.auditSourceAll", fallback: "All" },
@@ -36,117 +40,6 @@ const PERIOD_TABS: { key: AuditPeriod; labelKey: string; fallback: string }[] = 
   { key: "30d", labelKey: "settings.auditPeriod30d", fallback: "30 days" },
   { key: "all", labelKey: "settings.auditPeriodAll", fallback: "All time" },
 ]
-
-function formatAuditAction(action: string, t: (key: string, fallback: string) => string): string {
-  const key = action.replace(/\./g, "_")
-  return t(`auditLog.action.${key}`, action)
-}
-
-function formatAuditDetails(log: AuditLogRecord, t: (key: string, fallback: string) => string): string {
-  const meta = log.metadata || {}
-  
-  switch (log.action) {
-    case "staff.invite": {
-      const email = String(meta.email || "")
-      const mode = String(meta.mode || "")
-      if (mode === "direct") {
-        return t("auditLog.details.staff_invite_direct", `E-posta: ${email} (Doğrudan Ekleme)`).replace("{email}", email)
-      }
-      return t("auditLog.details.staff_invite_sent", `E-posta: ${email} (Davet Gönderildi)`).replace("{email}", email)
-    }
-    case "staff.invite.revoke": {
-      const email = String(meta.email || "—")
-      return t("auditLog.details.staff_invite_revoke", `Davet iptal edilen e-posta: ${email}`).replace("{email}", email)
-    }
-    case "staff.deactivate": {
-      return t("auditLog.details.staff_deactivate", "Personel hesabı devre dışı bırakıldı.")
-    }
-    case "staff.reactivate": {
-      return t("auditLog.details.staff_reactivate", "Personel hesabı yeniden etkinleştirildi.")
-    }
-    case "staff.assign": {
-      const branchId = String(meta.branch_id || "—")
-      const roleName = String(meta.role_name || "—")
-      return t("auditLog.details.staff_assign", `Şube ID: ${branchId} (Rol: ${roleName})`)
-        .replace("{branch_id}", branchId)
-        .replace("{role_name}", roleName)
-    }
-    case "staff.unassign": {
-      const branchId = String(meta.branch_id || "—")
-      return t("auditLog.details.staff_unassign", `Şube ID: ${branchId} ataması kaldırıldı.`).replace("{branch_id}", branchId)
-    }
-    case "patient.create": {
-      return t("auditLog.details.patient_create", "Yeni hasta kaydı oluşturuldu.")
-    }
-    case "patient.update": {
-      if (meta.from_plan) {
-        const fromPlan = String(meta.from_plan)
-        return t("auditLog.details.patient_update_invoice", `Tedavi planından otomatik fatura oluşturuldu (Plan ID: ${fromPlan})`).replace("{from_plan}", fromPlan)
-      }
-      if (meta.note_id) {
-        const noteId = String(meta.note_id)
-        return t("auditLog.details.patient_update_note", `Hastaya klinik not eklendi (Not ID: ${noteId})`).replace("{note_id}", noteId)
-      }
-      return t("auditLog.details.patient_update_profile", "Hasta profil bilgileri güncellendi.")
-    }
-    case "invoice.payment": {
-      const amount = Number(meta.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })
-      const method = String(meta.payment_method || "cash").toUpperCase()
-      return t("auditLog.details.invoice_payment", `Ödeme Tutarı: ₱${amount} (Ödeme Yöntemi: ${method})`)
-        .replace("{amount}", amount)
-        .replace("{method}", method)
-    }
-    case "invoice.void": {
-      const reason = String(meta.reason || "—")
-      return t("auditLog.details.invoice_void", `Fatura iptal edildi. Neden: ${reason}`).replace("{reason}", reason)
-    }
-    case "invoice.payment_delete": {
-      const paymentId = String(meta.payment_id || "—")
-      return t("auditLog.details.invoice_payment_delete", `Ödeme kaydı silindi (Ödeme ID: ${paymentId})`).replace("{payment_id}", paymentId)
-    }
-    case "branch.create": {
-      const name = String(meta.name || "—")
-      return t("auditLog.details.branch_create", `Yeni şube oluşturuldu: ${name}`).replace("{name}", name)
-    }
-    case "branch.update": {
-      const name = String(meta.name || "—")
-      return t("auditLog.details.branch_update", `Şube bilgileri güncellendi: ${name}`).replace("{name}", name)
-    }
-    case "organization.update": {
-      return t("auditLog.details.organization_update", "Kurum genel ayarları güncellendi.")
-    }
-    case "session.login": {
-      return t("auditLog.details.session_login", "Oturum başarıyla açıldı.")
-    }
-    case "session.logout": {
-      return t("auditLog.details.session_logout", "Oturum başarıyla kapatıldı.")
-    }
-    case "treatment_plan.create": {
-      const itemCount = String(meta.item_count || "0")
-      const totalEstimated = Number(meta.total_estimated || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })
-      return t("auditLog.details.treatment_plan_create", `Tedavi planı oluşturuldu (Kalem sayısı: ${itemCount}, Tahmini Toplam: ₱${totalEstimated})`)
-        .replace("{item_count}", itemCount)
-        .replace("{total_estimated}", totalEstimated)
-    }
-    case "invoice.create": {
-      const amount = Number(meta.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })
-      return t("auditLog.details.invoice_create", `Fatura oluşturuldu (Tutar: ₱${amount})`).replace("{amount}", amount)
-    }
-    case "appointment.create": {
-      const date = String(meta.to || meta.date || "—")
-      return t("auditLog.details.appointment_create", `Randevu oluşturuldu (Tarih: ${date})`).replace("{date}", date)
-    }
-    default: {
-      if (log.ip_address) {
-        return `IP: ${log.ip_address}`
-      }
-      if (Object.keys(meta).length > 0) {
-        return JSON.stringify(meta)
-      }
-      return "—"
-    }
-  }
-}
 
 export default function AuditLogPage() {
   const { activeBranch } = useBranch()
@@ -213,7 +106,7 @@ export default function AuditLogPage() {
               size="sm"
               className="gap-2"
               disabled={logs.length === 0}
-              onClick={() => downloadAuditCsv(logs)}
+              onClick={() => downloadAuditCsv(logs, "audit-trail.csv", t)}
             >
               <Download className="h-4 w-4" />
               {t("settings.exportCsv", "Export CSV")}
@@ -360,14 +253,14 @@ export default function AuditLogPage() {
                         {new Date(log.created_at).toLocaleString()}
                       </td>
                       <td className="px-4 py-3 capitalize">{log.source}</td>
-                      <td className="px-4 py-3 font-medium text-neutral-800">{formatAuditAction(log.action, t)}</td>
+                      <td className="px-4 py-3 font-medium text-neutral-800">{formatAuditActionLabel(log.action, t)}</td>
                       <td className="px-4 py-3">{log.actor_name ?? "—"}</td>
                       <td className="px-4 py-3 font-mono text-neutral-600">
                         {log.entity_type ?? "—"}
                         {log.entity_id ? ` · ${log.entity_id.slice(0, 8)}` : ""}
                       </td>
-                      <td className="max-w-xs truncate px-4 py-3 text-neutral-500" title={formatAuditDetails(log, t)}>
-                        {formatAuditDetails(log, t)}
+                      <td className="max-w-xs truncate px-4 py-3 text-neutral-500" title={formatAuditDetailsLabel(log, t)}>
+                        {formatAuditDetailsLabel(log, t)}
                       </td>
                     </tr>
                   ))}

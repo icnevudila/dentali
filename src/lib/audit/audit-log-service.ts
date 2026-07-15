@@ -1,4 +1,9 @@
 import { createClient } from "@/lib/supabase/client"
+import {
+  formatAuditActionLabel,
+  formatAuditDetailsLabel,
+  formatAuditEntityLabel,
+} from "@/lib/audit/audit-labels"
 
 export type AuditSource = "all" | "organization" | "session"
 
@@ -65,25 +70,33 @@ export async function fetchAuditLogs(limit = 50): Promise<{ data: AuditLogRecord
   return fetchUnifiedAuditTrail({ limit, source: "organization" })
 }
 
-export function exportAuditLogsCsv(logs: AuditLogRecord[]): string {
+export function exportAuditLogsCsv(
+  logs: AuditLogRecord[],
+  t?: (key: string, fallback: string) => string
+): string {
+  const translate = t ?? ((_: string, fallback: string) => fallback)
   const header = ["Time", "Source", "Action", "Entity", "Entity ID", "Actor", "Branch", "IP", "Details"]
   const rows = logs.map((log) => [
     new Date(log.created_at).toISOString(),
     log.source,
-    log.action,
-    log.entity_type ?? "",
+    formatAuditActionLabel(log.action, translate),
+    formatAuditEntityLabel(log.entity_type, translate),
     log.entity_id ?? "",
     log.actor_name ?? "",
     log.branch_id ?? "",
     log.ip_address ?? "",
-    JSON.stringify(log.metadata ?? {}),
+    formatAuditDetailsLabel(log, translate),
   ])
   const escape = (v: string) => `"${v.replace(/"/g, '""')}"`
   return [header, ...rows].map((row) => row.map(escape).join(",")).join("\n")
 }
 
-export function downloadAuditCsv(logs: AuditLogRecord[], filename = "audit-trail.csv") {
-  const csv = exportAuditLogsCsv(logs)
+export function downloadAuditCsv(
+  logs: AuditLogRecord[],
+  filename = "audit-trail.csv",
+  t?: (key: string, fallback: string) => string
+) {
+  const csv = exportAuditLogsCsv(logs, t)
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
