@@ -90,23 +90,40 @@ export async function isKnownSampleMedicalHistoryForm(file: File): Promise<boole
   }
 }
 
-/** Downscale large phone photos before upload — faster OCR, fewer Edge timeouts. */
+const FIELD_CONFIDENCE_WARN_THRESHOLD = 0.7
+const OVERALL_CONFIDENCE_WARN_THRESHOLD = 0.75
+
+export function isLowFieldConfidence(
+  draft: MedicalHistoryOcrDraft,
+  field: "allergies" | "medications" | "conditions" | "notes"
+): boolean {
+  const overall = draft.confidence.overall
+  const fieldScore = draft.confidence[field]
+  if (typeof fieldScore === "number") return fieldScore < FIELD_CONFIDENCE_WARN_THRESHOLD
+  return overall < OVERALL_CONFIDENCE_WARN_THRESHOLD
+}
+
+export function isLowOverallConfidence(draft: MedicalHistoryOcrDraft): boolean {
+  return draft.confidence.overall < OVERALL_CONFIDENCE_WARN_THRESHOLD
+}
+
+/**
+ * Prep phone photos for OCR: keep readable size, mild contrast, JPEG encode.
+ * Avoid aggressive filters that destroy handwriting.
+ */
 export async function prepareMedicalHistoryImportFile(file: File): Promise<File> {
   if (!file.type.startsWith("image/") && !/\.(jpe?g|png|webp)$/i.test(file.name)) {
     return file
   }
 
   try {
+    // createImageBitmap applies EXIF orientation in modern browsers.
     const bitmap = await createImageBitmap(file)
-    const maxEdge = 1600
+    const maxEdge = 2048
     const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
-    if (scale >= 0.95 && file.size < 900_000) {
-      bitmap.close()
-      return file
-    }
-
     const width = Math.max(1, Math.round(bitmap.width * scale))
     const height = Math.max(1, Math.round(bitmap.height * scale))
+
     const canvas = document.createElement("canvas")
     canvas.width = width
     canvas.height = height
@@ -115,11 +132,15 @@ export async function prepareMedicalHistoryImportFile(file: File): Promise<File>
       bitmap.close()
       return file
     }
+
+    // Mild contrast lift — helps glare/shadow without inventing ink.
+    ctx.filter = "contrast(1.08) brightness(1.02)"
     ctx.drawImage(bitmap, 0, 0, width, height)
+    ctx.filter = "none"
     bitmap.close()
 
     const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.85)
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.88)
     )
     if (!blob) return file
 

@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import {
   MEDICAL_HISTORY_IMPORT_ACCEPT,
   isKnownSampleMedicalHistoryForm,
+  isLowFieldConfidence,
+  isLowOverallConfidence,
   prepareMedicalHistoryImportFile,
   runMedicalHistoryOcr,
   sampleMedicalHistoryDraft,
@@ -16,6 +18,7 @@ import {
   type MedicalHistoryOcrDraft,
 } from "@/lib/patients/medical-history-ocr-service"
 import { useLocale } from "@/hooks/use-locale"
+import { cn } from "@/lib/utils"
 
 type Props = {
   open: boolean
@@ -24,6 +27,34 @@ type Props = {
   branchId: string
   patientId: string
   onApplyDraft: (draft: MedicalHistoryOcrDraft) => void
+}
+
+function FieldBlock({
+  label,
+  value,
+  onChange,
+  warn,
+  verifyHint,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  warn: boolean
+  verifyHint: string
+}) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-xs font-medium text-neutral-600">{label}</label>
+        {warn ? <span className="text-[11px] font-medium text-amber-700">{verifyHint}</span> : null}
+      </div>
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={cn(warn && "border-amber-300 bg-amber-50/60 ring-1 ring-amber-200")}
+      />
+    </div>
+  )
 }
 
 export function MedicalHistoryOcrImportDialog({
@@ -91,10 +122,7 @@ export function MedicalHistoryOcrImportDialog({
 
     try {
       const knownSample = await isKnownSampleMedicalHistoryForm(file)
-      // Keep the built-in sample bytes intact (hash-matched). Compress real phone photos only.
-      const prepared = knownSample
-        ? file
-        : await prepareMedicalHistoryImportFile(file)
+      const prepared = knownSample ? file : await prepareMedicalHistoryImportFile(file)
 
       const { storagePath, error: uploadError } = await uploadMedicalHistoryImport({
         organizationId,
@@ -109,14 +137,13 @@ export function MedicalHistoryOcrImportDialog({
         return
       }
 
-      // Built-in sample always works locally — avoids Gemini 502 during QA.
       if (knownSample) {
-        const draft = sampleMedicalHistoryDraft(storagePath)
-        setDraft(draft)
-        setAllergies(draft.allergies.join(", "))
-        setMedications(draft.medications.join(", "))
-        setConditions(draft.conditions.join(", "))
-        setNotes(draft.notes ?? "")
+        const sample = sampleMedicalHistoryDraft(storagePath)
+        setDraft(sample)
+        setAllergies(sample.allergies.join(", "))
+        setMedications(sample.medications.join(", "))
+        setConditions(sample.conditions.join(", "))
+        setNotes(sample.notes ?? "")
         setPhase("review")
         return
       }
@@ -173,7 +200,8 @@ export function MedicalHistoryOcrImportDialog({
 
   if (!open || typeof document === "undefined") return null
 
-  const lowConfidence = (draft?.confidence.overall ?? 1) < 0.6
+  const lowConfidence = draft ? isLowOverallConfidence(draft) : false
+  const verifyHint = t("medicalHistory.ocrVerifyField", "Please verify")
 
   return createPortal(
     <div
@@ -228,29 +256,66 @@ export function MedicalHistoryOcrImportDialog({
           ) : null}
 
           {(phase === "pick" || phase === "reading") && !previewUrl ? (
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => cameraRef.current?.click()}
-                className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-6 text-center transition hover:border-primary-300 hover:bg-primary-50/40 disabled:opacity-50"
-              >
-                <Camera className="h-6 w-6 text-primary-700" />
-                <span className="text-sm font-medium text-neutral-800">
-                  {t("medicalHistory.ocrTakePhoto", "Take photo")}
-                </span>
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => fileRef.current?.click()}
-                className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-6 text-center transition hover:border-primary-300 hover:bg-primary-50/40 disabled:opacity-50"
-              >
-                <FileImage className="h-6 w-6 text-primary-700" />
-                <span className="text-sm font-medium text-neutral-800">
-                  {t("medicalHistory.ocrUpload", "Upload image")}
-                </span>
-              </button>
+            <div className="space-y-3">
+              {/* Phone capture guide */}
+              <div className="relative overflow-hidden rounded-xl border border-dashed border-primary-200 bg-primary-50/40 px-4 py-5">
+                <div className="pointer-events-none absolute inset-3 rounded-lg border-2 border-primary-300/70" />
+                <div className="pointer-events-none absolute left-3 top-3 h-4 w-4 border-l-2 border-t-2 border-primary-500" />
+                <div className="pointer-events-none absolute right-3 top-3 h-4 w-4 border-r-2 border-t-2 border-primary-500" />
+                <div className="pointer-events-none absolute bottom-3 left-3 h-4 w-4 border-b-2 border-l-2 border-primary-500" />
+                <div className="pointer-events-none absolute bottom-3 right-3 h-4 w-4 border-b-2 border-r-2 border-primary-500" />
+                <p className="relative text-center text-sm font-medium text-primary-900">
+                  {t(
+                    "medicalHistory.ocrGuideTitle",
+                    "Fill the frame with the form"
+                  )}
+                </p>
+                <ul className="relative mt-2 space-y-1 text-center text-xs text-primary-800/80">
+                  <li>
+                    {t(
+                      "medicalHistory.ocrTipCorners",
+                      "All four corners visible"
+                    )}
+                  </li>
+                  <li>
+                    {t(
+                      "medicalHistory.ocrTipLight",
+                      "Bright light, avoid shadows and glare"
+                    )}
+                  </li>
+                  <li>
+                    {t(
+                      "medicalHistory.ocrTipFlat",
+                      "Hold the phone level — flat as possible"
+                    )}
+                  </li>
+                </ul>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => cameraRef.current?.click()}
+                  className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-6 text-center transition hover:border-primary-300 hover:bg-primary-50/40 disabled:opacity-50"
+                >
+                  <Camera className="h-6 w-6 text-primary-700" />
+                  <span className="text-sm font-medium text-neutral-800">
+                    {t("medicalHistory.ocrTakePhoto", "Take photo")}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => fileRef.current?.click()}
+                  className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-6 text-center transition hover:border-primary-300 hover:bg-primary-50/40 disabled:opacity-50"
+                >
+                  <FileImage className="h-6 w-6 text-primary-700" />
+                  <span className="text-sm font-medium text-neutral-800">
+                    {t("medicalHistory.ocrUpload", "Upload image")}
+                  </span>
+                </button>
+              </div>
             </div>
           ) : null}
 
@@ -339,38 +404,47 @@ export function MedicalHistoryOcrImportDialog({
               </div>
 
               {draft.warnings.length > 0 ? (
-                <ul className="list-disc space-y-1 pl-5 text-xs text-neutral-500">
-                  {draft.warnings.map((w) => (
-                    <li key={w}>{w}</li>
-                  ))}
-                </ul>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+                  <p className="text-xs font-medium text-amber-900">
+                    {t("medicalHistory.ocrWarningsTitle", "Read carefully")}
+                  </p>
+                  <ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-amber-800/90">
+                    {draft.warnings.map((w) => (
+                      <li key={w}>{w}</li>
+                    ))}
+                  </ul>
+                </div>
               ) : null}
 
               <div className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-neutral-600">
-                    {t("medicalHistory.allergies", "Allergies")}
-                  </label>
-                  <Input value={allergies} onChange={(e) => setAllergies(e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-neutral-600">
-                    {t("medicalHistory.medications", "Medications")}
-                  </label>
-                  <Input value={medications} onChange={(e) => setMedications(e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-neutral-600">
-                    {t("medicalHistory.conditions", "Chronic conditions")}
-                  </label>
-                  <Input value={conditions} onChange={(e) => setConditions(e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-neutral-600">
-                    {t("medicalHistory.notes", "Notes")}
-                  </label>
-                  <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
-                </div>
+                <FieldBlock
+                  label={t("medicalHistory.allergies", "Allergies")}
+                  value={allergies}
+                  onChange={setAllergies}
+                  warn={isLowFieldConfidence(draft, "allergies")}
+                  verifyHint={verifyHint}
+                />
+                <FieldBlock
+                  label={t("medicalHistory.medications", "Medications")}
+                  value={medications}
+                  onChange={setMedications}
+                  warn={isLowFieldConfidence(draft, "medications")}
+                  verifyHint={verifyHint}
+                />
+                <FieldBlock
+                  label={t("medicalHistory.conditions", "Chronic conditions")}
+                  value={conditions}
+                  onChange={setConditions}
+                  warn={isLowFieldConfidence(draft, "conditions")}
+                  verifyHint={verifyHint}
+                />
+                <FieldBlock
+                  label={t("medicalHistory.notes", "Notes")}
+                  value={notes}
+                  onChange={setNotes}
+                  warn={isLowFieldConfidence(draft, "notes")}
+                  verifyHint={verifyHint}
+                />
               </div>
             </div>
           ) : null}

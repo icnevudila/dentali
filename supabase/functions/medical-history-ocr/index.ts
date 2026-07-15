@@ -19,12 +19,23 @@ const STAFF_SAFE = {
 }
 
 const EXTRACTION_PROMPT = [
-  "You extract dental clinic medical history fields from a photograph of a printed form.",
-  "Return ONLY valid JSON with keys: allergies (string[]), medications (string[]), conditions (string[]),",
-  "notes (string|null), confidence ({ overall: number 0-1, optional per-field }), warnings (string[]).",
-  "Prefer empty arrays over guessing. Do not invent patient names, IDs, or phone numbers.",
-  "Checked checkboxes and filled lines count. Typical sections: allergies, current medications, medical conditions.",
-  "Put unclear free text into notes.",
+  "You extract dental clinic medical history fields from a PHOTOGRAPH of a printed (or handwritten) form.",
+  "Photos are often from a phone: slight skew, glare, shadows, or cropping are normal — still extract what is readable.",
+  "Return ONLY valid JSON with keys:",
+  "allergies (string[]), medications (string[]), conditions (string[]),",
+  "notes (string|null),",
+  "confidence ({ overall: number 0-1, allergies: number 0-1, medications: number 0-1, conditions: number 0-1, notes: number 0-1 }),",
+  "warnings (string[]).",
+  "Rules:",
+  "- Prefer empty arrays over guessing. Never invent allergies, medications, or diagnoses.",
+  "- Do not invent patient names, IDs, phones, or addresses.",
+  "- For checkboxes: include an item ONLY when it is clearly checked/ticked/filled.",
+  "- Unchecked boxes are ignored.",
+  "- Handwritten lines: copy short strings carefully; if unsure, omit and add a warning.",
+  "- Typical sections: allergies / drug allergies, current medications, medical conditions / history.",
+  "- Put vague free text into notes.",
+  "- Per-field confidence must reflect readability of that section; overall should be the mean of the field scores used.",
+  "- If glare/crop hides a section, lower that field confidence and mention it in warnings.",
 ].join(" ")
 
 /** SHA-256 of docs/samples/sample-dental-medical-history-form.png (synthetic QA form). */
@@ -81,17 +92,47 @@ function parseDraft(raw: unknown, storagePath: string): Draft | null {
     ? obj.warnings.map((w) => String(w)).filter(Boolean).slice(0, 10)
     : []
 
+  const allergies = asStringArray(obj.allergies)
+  const medications = asStringArray(obj.medications)
+  const conditions = asStringArray(obj.conditions)
+  const notes =
+    obj.notes == null || obj.notes === "" ? null : String(obj.notes).slice(0, 2000)
+
+  const allergiesC = confidenceRaw.allergies != null ? clamp01(confidenceRaw.allergies) : undefined
+  const medicationsC =
+    confidenceRaw.medications != null ? clamp01(confidenceRaw.medications) : undefined
+  const conditionsC =
+    confidenceRaw.conditions != null ? clamp01(confidenceRaw.conditions) : undefined
+  const notesC = confidenceRaw.notes != null ? clamp01(confidenceRaw.notes) : undefined
+
+  const fieldScores = [allergiesC, medicationsC, conditionsC, notesC].filter(
+    (n): n is number => typeof n === "number"
+  )
+  const derivedOverall =
+    fieldScores.length > 0
+      ? fieldScores.reduce((a, b) => a + b, 0) / fieldScores.length
+      : clamp01(confidenceRaw.overall, 0.5)
+
+  // Empty sections with missing scores → slightly lower overall (phone photo caution).
+  const emptyPenalty =
+    (allergies.length === 0 && medications.length === 0 && conditions.length === 0 ? 0.08 : 0)
+
   return {
-    allergies: asStringArray(obj.allergies),
-    medications: asStringArray(obj.medications),
-    conditions: asStringArray(obj.conditions),
-    notes: obj.notes == null || obj.notes === "" ? null : String(obj.notes).slice(0, 2000),
+    allergies,
+    medications,
+    conditions,
+    notes,
     confidence: {
-      overall: clamp01(confidenceRaw.overall, 0.5),
-      allergies: confidenceRaw.allergies != null ? clamp01(confidenceRaw.allergies) : undefined,
-      medications: confidenceRaw.medications != null ? clamp01(confidenceRaw.medications) : undefined,
-      conditions: confidenceRaw.conditions != null ? clamp01(confidenceRaw.conditions) : undefined,
-      notes: confidenceRaw.notes != null ? clamp01(confidenceRaw.notes) : undefined,
+      overall: clamp01(
+        confidenceRaw.overall != null
+          ? Math.min(clamp01(confidenceRaw.overall), derivedOverall)
+          : derivedOverall - emptyPenalty,
+        0.45
+      ),
+      allergies: allergiesC,
+      medications: medicationsC,
+      conditions: conditionsC,
+      notes: notesC,
     },
     warnings,
     source_storage_path: storagePath,
@@ -202,7 +243,7 @@ async function extractWithGemini(params: {
         role: "user",
         parts: [
           {
-            text: `${EXTRACTION_PROMPT}\n\nExtract medical history fields from this clinic form photo. JSON only.`,
+            text: `${EXTRACTION_PROMPT}\n\nExtract medical history from this clinic form phone photo. JSON only.`,
           },
           {
             inlineData: {
