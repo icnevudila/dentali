@@ -1241,6 +1241,8 @@ export const messagesEnPh: MessageTree = {
     treatmentTimelineHint: "Planned procedures linked to this chart.",
     treatmentTimelineEmpty: "No active treatment plan items for this patient.",
     openTreatmentPlan: "Open plans",
+    quickUtilities: "Quick Charting Utilities",
+    markThirdMolarsMissing: "Mark All 3rd Molars Missing",
   },
   display: {
     invalidLink: "Invalid display link. Please contact the front desk.",
@@ -2607,6 +2609,8 @@ export const messagesTr: MessageTree = {
     treatmentTimelineHint: "Bu chart ile bağlı planlanmış işlemler.",
     treatmentTimelineEmpty: "Bu hasta için aktif tedavi planı kalemi yok.",
     openTreatmentPlan: "Planları aç",
+    quickUtilities: "Hızlı çizim araçları",
+    markThirdMolarsMissing: "Tüm yirmilikleri eksik işaretle",
   },
   display: {
     invalidLink: "Geçersiz ekran bağlantısı. Resepsiyonla iletişime geçin.",
@@ -3532,6 +3536,8 @@ export const messagesFil: MessageTree = {
     treatmentTimelineHint: "Mga planadong procedure na naka-link sa chart na ito.",
     treatmentTimelineEmpty: "Walang aktibong treatment plan items para sa pasyenteng ito.",
     openTreatmentPlan: "Buksan ang plans",
+    quickUtilities: "Quick Charting Utilities",
+    markThirdMolarsMissing: "Mark All 3rd Molars Missing",
   },
   display: {
     invalidLink: "Invalid display link. Makipag-ugnayan sa front desk.",

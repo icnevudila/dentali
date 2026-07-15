@@ -38,6 +38,7 @@ import { NAV_BACK_TRANSITION } from "@/lib/navigation/view-transition"
 import { createClient } from "@/lib/supabase/client"
 import { useRouteParams } from "@/hooks/use-route-params"
 import { notify } from "@/lib/ui/notify"
+import { useLocale } from "@/hooks/use-locale"
 import {
   exportSvgElementToPng,
   findOdontogramSvg,
@@ -48,6 +49,7 @@ export default function DentalChartPage() {
   const { user } = useAuth()
   const { activeBranch } = useBranch()
   const { hasPermission } = usePermission()
+  const { t } = useLocale()
 
   const searchParams = useSearchParams()
   const initialToothParam = searchParams.get("tooth")
@@ -348,7 +350,7 @@ export default function DentalChartPage() {
           <div className="flex flex-wrap justify-between items-center gap-2 p-3 bg-neutral-50 rounded-xl border border-neutral-200/80">
             <div className="text-xs font-semibold text-neutral-600 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-primary-600" />
-              Quick Charting Utilities (Hızlı Çizim Araçları)
+              {t("chart.quickUtilities", "Quick Charting Utilities")}
             </div>
             <Button
               type="button"
@@ -357,7 +359,7 @@ export default function DentalChartPage() {
               className="h-7 text-xs border-neutral-300 hover:bg-neutral-100"
               onClick={handleMarkThirdMolarsMissing}
             >
-              Mark All 3rd Molars Missing (Tüm Yirmilikleri Eksik İşaretle)
+              {t("chart.markThirdMolarsMissing", "Mark All 3rd Molars Missing")}
             </Button>
           </div>
         )}

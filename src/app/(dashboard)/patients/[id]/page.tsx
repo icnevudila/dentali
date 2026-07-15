@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { addTransitionType, startTransition } from "react"
@@ -164,15 +165,30 @@ export default function PatientProfilePage() {
   const [checkoutOpen, setCheckoutOpen] = React.useState(false)
   const [showInvoiceDrawer, setShowInvoiceDrawer] = React.useState(false)
   const [showMedicalAlertConfirm, setShowMedicalAlertConfirm] = React.useState(false)
-  const [onConfirmSuccessAction, setOnConfirmSuccessAction] = React.useState<any>(null)
-  
+  const pendingMedicalActionRef = React.useRef<(() => void) | null>(null)
+
   const triggerMedicalSensitiveAction = (action: () => void) => {
     if (medicalHistory && (medicalHistory.allergies.length > 0 || medicalHistory.conditions.length > 0)) {
-      setOnConfirmSuccessAction(() => action)
+      pendingMedicalActionRef.current = action
       setShowMedicalAlertConfirm(true)
-    } else {
-      action()
+      return
     }
+    action()
+  }
+
+  const closeMedicalAlertConfirm = () => {
+    setShowMedicalAlertConfirm(false)
+    pendingMedicalActionRef.current = null
+  }
+
+  const confirmMedicalAlertAndContinue = () => {
+    const action = pendingMedicalActionRef.current
+    setShowMedicalAlertConfirm(false)
+    pendingMedicalActionRef.current = null
+    // Let the overlay unmount before navigating so view transitions don't leave a blank shell.
+    window.setTimeout(() => {
+      action?.()
+    }, 0)
   }
 
   const intakeToastShown = React.useRef(false)
@@ -1402,56 +1418,79 @@ export default function PatientProfilePage() {
         }}
       />
 
-      {showMedicalAlertConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl border-2 border-red-500 max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 text-red-600">
-              <AlertTriangle className="h-8 w-8 shrink-0 animate-bounce" />
-              <div>
-                <h3 className="text-lg font-bold">Kritik Tıbbi Uyarı (Medical Warning)</h3>
-                <p className="text-xs text-neutral-500">Bu hastada risk teşkil edebilecek tıbbi alertler mevcut.</p>
+      {showMedicalAlertConfirm
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="medical-alert-title"
+              style={{ viewTransitionName: "none" }}
+            >
+              <button
+                type="button"
+                className="absolute inset-0 cursor-default"
+                aria-label={t("common.close", "Close")}
+                onClick={closeMedicalAlertConfirm}
+              />
+              <div className="relative w-full max-w-md space-y-4 rounded-2xl border border-red-200 bg-white p-6 shadow-2xl">
+                <div className="flex items-start gap-3 text-red-700">
+                  <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0" />
+                  <div>
+                    <h3 id="medical-alert-title" className="text-lg font-bold text-red-800">
+                      {t("patient.medicalWarningTitle", "Medical warning")}
+                    </h3>
+                    <p className="mt-0.5 text-xs text-neutral-500">
+                      {t(
+                        "patient.medicalWarningSubtitle",
+                        "This patient has medical alerts that may affect care."
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 rounded-lg border border-red-100 bg-red-50 p-4 text-sm text-red-950">
+                  {medicalHistory?.allergies && medicalHistory.allergies.length > 0 ? (
+                    <p>
+                      <span className="font-semibold">
+                        {t("patient.medicalWarningAllergies", "Allergies:")}
+                      </span>{" "}
+                      {medicalHistory.allergies.join(", ")}
+                    </p>
+                  ) : null}
+                  {medicalHistory?.conditions && medicalHistory.conditions.length > 0 ? (
+                    <p>
+                      <span className="font-semibold">
+                        {t("patient.medicalWarningConditions", "Chronic conditions:")}
+                      </span>{" "}
+                      {medicalHistory.conditions.join(", ")}
+                    </p>
+                  ) : null}
+                </div>
+
+                <p className="text-sm leading-relaxed text-neutral-600">
+                  {t(
+                    "patient.medicalWarningBody",
+                    "Confirm that you have reviewed these alerts before continuing."
+                  )}
+                </p>
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button variant="outline" onClick={closeMedicalAlertConfirm}>
+                    {t("common.cancel", "Cancel")}
+                  </Button>
+                  <Button
+                    className="bg-red-600 text-white hover:bg-red-700"
+                    onClick={confirmMedicalAlertAndContinue}
+                  >
+                    {t("patient.medicalWarningContinue", "Proceed anyway")}
+                  </Button>
+                </div>
               </div>
-            </div>
-            
-            <div className="rounded-lg bg-red-50 p-4 border border-red-100 text-sm text-red-950 space-y-2">
-              {medicalHistory?.allergies && medicalHistory.allergies.length > 0 && (
-                <p><span className="font-bold">Alerjiler:</span> {medicalHistory.allergies.join(", ")}</p>
-              )}
-              {medicalHistory?.conditions && medicalHistory.conditions.length > 0 && (
-                <p><span className="font-bold">Kronik Rahatsızlıklar:</span> {medicalHistory.conditions.join(", ")}</p>
-              )}
-            </div>
-
-            <p className="text-sm text-neutral-600 leading-relaxed">
-              İşlem yapmaya çalışıyorsunuz. Hastanın tıbbi durumunun farkında olduğunuzu ve bu işlemi onayladığınızı belirtmek için onaylayın.
-            </p>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setShowMedicalAlertConfirm(false)
-                  setOnConfirmSuccessAction(null)
-                }}
-              >
-                Geri Dön (Cancel)
-              </Button>
-              <Button
-                className="bg-red-600 hover:bg-red-700 text-white"
-                onClick={() => {
-                  setShowMedicalAlertConfirm(false)
-                  if (onConfirmSuccessAction) {
-                    onConfirmSuccessAction()
-                  }
-                  setOnConfirmSuccessAction(null)
-                }}
-              >
-                Devam Et (Proceed Anyway)
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </div>,
+            document.body
+          )
+        : null}
     </DirectionalTransition>
     </PermissionGate>
   )

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { Camera, FileImage, Loader2, ScanLine, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -140,12 +141,17 @@ export function MedicalHistoryOcrImportDialog({
     onClose()
   }
 
-  if (!open) return null
+  if (!open || typeof document === "undefined") return null
 
   const lowConfidence = (draft?.confidence.overall ?? 1) < 0.6
 
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40" role="dialog" aria-modal="true">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      style={{ viewTransitionName: "none" }}
+    >
       <button
         type="button"
         className="absolute inset-0 cursor-default"
@@ -155,101 +161,136 @@ export function MedicalHistoryOcrImportDialog({
           if (!busy) onClose()
         }}
       />
-      <div className="relative flex h-full w-full max-w-lg flex-col overflow-hidden bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <ScanLine className="h-4 w-4 text-primary-600" />
-            <h2 className="text-sm font-semibold text-neutral-900">
-              {t("medicalHistory.ocrTitle", "Import from paper")}
-            </h2>
+      <div className="relative flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl">
+        <div className="flex items-start justify-between gap-3 border-b border-neutral-100 px-5 py-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <ScanLine className="h-4 w-4 text-primary-600" />
+              <h2 className="text-base font-semibold text-neutral-900">
+                {t("medicalHistory.ocrTitle", "Import from paper")}
+              </h2>
+            </div>
+            <p className="mt-1 text-sm text-neutral-500">
+              {t(
+                "medicalHistory.ocrHintShort",
+                "Photo the printed form, review the draft, then save a new version."
+              )}
+            </p>
           </div>
-          <Button variant="ghost" size="sm" disabled={busy} onClick={onClose}>
+          <Button variant="ghost" size="sm" className="shrink-0" disabled={busy} onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
-          <p className="text-sm text-neutral-600">
-            {t(
-              "medicalHistory.ocrHint",
-              "Photograph your clinic’s printed medical history form. Review the draft, then apply it to the editor and save a new version."
-            )}
-          </p>
-
+        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
           {error ? (
-            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
               {error}
-            </p>
+              <p className="mt-1 text-xs text-amber-700/80">
+                {t(
+                  "medicalHistory.ocrRetryHint",
+                  "Use a brighter, flatter photo of the form and try again."
+                )}
+              </p>
+            </div>
           ) : null}
 
-          {phase === "pick" || phase === "reading" ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => cameraRef.current?.click()}
-                  className="gap-2"
-                >
-                  <Camera className="h-4 w-4" />
+          {(phase === "pick" || phase === "reading") && !previewUrl ? (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => cameraRef.current?.click()}
+                className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-6 text-center transition hover:border-primary-300 hover:bg-primary-50/40 disabled:opacity-50"
+              >
+                <Camera className="h-6 w-6 text-primary-700" />
+                <span className="text-sm font-medium text-neutral-800">
                   {t("medicalHistory.ocrTakePhoto", "Take photo")}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => fileRef.current?.click()}
-                  className="gap-2"
-                >
-                  <FileImage className="h-4 w-4" />
+                </span>
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => fileRef.current?.click()}
+                className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-6 text-center transition hover:border-primary-300 hover:bg-primary-50/40 disabled:opacity-50"
+              >
+                <FileImage className="h-6 w-6 text-primary-700" />
+                <span className="text-sm font-medium text-neutral-800">
                   {t("medicalHistory.ocrUpload", "Upload image")}
-                </Button>
-              </div>
-              <input
-                ref={cameraRef}
-                type="file"
-                accept={MEDICAL_HISTORY_IMPORT_ACCEPT}
-                capture="environment"
-                className="hidden"
-                onChange={(e) => void processFile(e.target.files?.[0])}
-              />
-              <input
-                ref={fileRef}
-                type="file"
-                accept={MEDICAL_HISTORY_IMPORT_ACCEPT}
-                className="hidden"
-                onChange={(e) => void processFile(e.target.files?.[0])}
+                </span>
+              </button>
+            </div>
+          ) : null}
+
+          <input
+            ref={cameraRef}
+            type="file"
+            accept={MEDICAL_HISTORY_IMPORT_ACCEPT}
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              void processFile(e.target.files?.[0])
+              e.target.value = ""
+            }}
+          />
+          <input
+            ref={fileRef}
+            type="file"
+            accept={MEDICAL_HISTORY_IMPORT_ACCEPT}
+            className="hidden"
+            onChange={(e) => {
+              void processFile(e.target.files?.[0])
+              e.target.value = ""
+            }}
+          />
+
+          {previewUrl ? (
+            <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={previewUrl}
+                alt={t("medicalHistory.ocrPreviewAlt", "Uploaded form preview")}
+                className="mx-auto max-h-64 w-auto object-contain"
               />
               {phase === "reading" ? (
-                <div className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-700">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary-600" />
-                  {t("medicalHistory.ocrReading", "Reading form…")}
+                <div className="absolute inset-0 flex items-center justify-center bg-white/75 backdrop-blur-[1px]">
+                  <div className="flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-medium text-neutral-800 shadow-sm">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary-600" />
+                    {t("medicalHistory.ocrReading", "Reading form…")}
+                  </div>
                 </div>
               ) : null}
-              {previewUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- local object URL preview
-                <img
-                  src={previewUrl}
-                  alt={t("medicalHistory.ocrPreviewAlt", "Uploaded form preview")}
-                  className="max-h-56 w-full rounded-lg border border-neutral-200 object-contain bg-neutral-50"
-                />
-              ) : null}
+            </div>
+          ) : null}
+
+          {phase === "pick" && previewUrl ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                disabled={busy}
+                onClick={() => cameraRef.current?.click()}
+                className="gap-2"
+              >
+                <Camera className="h-4 w-4" />
+                {t("medicalHistory.ocrRetake", "Retake")}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                onClick={() => fileRef.current?.click()}
+                className="gap-2"
+              >
+                <FileImage className="h-4 w-4" />
+                {t("medicalHistory.ocrChooseOther", "Choose another")}
+              </Button>
             </div>
           ) : null}
 
           {phase === "review" && draft ? (
             <div className="space-y-4">
-              {previewUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={previewUrl}
-                  alt={t("medicalHistory.ocrPreviewAlt", "Uploaded form preview")}
-                  className="max-h-40 w-full rounded-lg border border-neutral-200 object-contain bg-neutral-50"
-                />
-              ) : null}
-
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={lowConfidence ? "warning" : "success"}>
                   {t("medicalHistory.ocrConfidence", "Confidence")}{" "}
@@ -303,7 +344,7 @@ export function MedicalHistoryOcrImportDialog({
           ) : null}
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-neutral-100 px-4 py-3">
+        <div className="flex justify-end gap-2 border-t border-neutral-100 px-5 py-3">
           <Button variant="outline" size="sm" disabled={busy} onClick={onClose}>
             {t("common.cancel", "Cancel")}
           </Button>
@@ -314,6 +355,7 @@ export function MedicalHistoryOcrImportDialog({
           ) : null}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

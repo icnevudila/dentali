@@ -331,7 +331,7 @@ export default function ProceduresSettingsPage() {
             <CardContent className="pt-6 space-y-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                  Quick Select from Templates / Şablondan Hızlı Seç
+                  {t("settings.proceduresQuickSelect", "Quick select from templates")}
                 </label>
                 <select
                   onChange={(e) => {
