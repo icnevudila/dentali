@@ -1,14 +1,24 @@
 "use client"
 
+import * as React from "react"
 import type { ReactNode } from "react"
 import Link from "next/link"
-import { CheckCircle2, Circle, CircleDot, ChevronRight, PartyPopper } from "lucide-react"
+import {
+  CheckCircle2,
+  Circle,
+  CircleDot,
+  ChevronDown,
+  ChevronRight,
+  PartyPopper,
+} from "lucide-react"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useLocale } from "@/hooks/use-locale"
 import type { ClinicalVisitJourney, ClinicalVisitStep } from "@/lib/clinical/clinical-visit-journey"
 import { cn } from "@/lib/utils"
+
+const EXPANDED_STORAGE_KEY = "dentql.visitProgress.expanded.v1"
 
 function StepIcon({ status }: { status: ClinicalVisitStep["status"] }) {
   if (status === "done") {
@@ -24,6 +34,8 @@ type ClinicalVisitJourneyPanelProps = {
   journey: ClinicalVisitJourney
   compact?: boolean
   celebrate?: boolean
+  /** When false (default), the full step grid starts collapsed to save space. */
+  defaultExpanded?: boolean
   headerBadge?: ReactNode
   completionAction?: {
     href: string
@@ -44,6 +56,7 @@ export function ClinicalVisitJourneyPanel({
   journey,
   compact = false,
   celebrate = false,
+  defaultExpanded = false,
   headerBadge,
   completionAction,
   finishAction,
@@ -56,6 +69,41 @@ export function ClinicalVisitJourneyPanel({
   const isComplete = percentComplete >= 100 || !nextStep
   const showCelebration = isComplete || celebrate
   const closeVisitStep = nextStep?.id === "discharge"
+  const doneCount = steps.filter((s) => s.status === "done").length
+
+  const [expanded, setExpanded] = React.useState(defaultExpanded || showCelebration)
+
+  React.useEffect(() => {
+    if (showCelebration) {
+      const id = window.setTimeout(() => setExpanded(true), 0)
+      return () => window.clearTimeout(id)
+    }
+    try {
+      const stored = localStorage.getItem(EXPANDED_STORAGE_KEY)
+      if (stored === "1") {
+        const id = window.setTimeout(() => setExpanded(true), 0)
+        return () => window.clearTimeout(id)
+      }
+      if (stored === "0") {
+        const id = window.setTimeout(() => setExpanded(false), 0)
+        return () => window.clearTimeout(id)
+      }
+    } catch {
+      // private mode / unavailable
+    }
+  }, [showCelebration])
+
+  const toggleExpanded = () => {
+    setExpanded((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem(EXPANDED_STORAGE_KEY, next ? "1" : "0")
+      } catch {
+        // ignore
+      }
+      return next
+    })
+  }
 
   const renderNextStepAction = (size: "sm" | "lg" = "lg", className?: string) => {
     if (!nextStep) return null
@@ -121,9 +169,9 @@ export function ClinicalVisitJourneyPanel({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-neutral-900">
-              {t("journey.title", "Clinic journey")}
+              {t("journey.title", "Visit progress")}
             </p>
-            <p className="text-xs text-neutral-500 mt-0.5">
+            <p className="mt-0.5 text-xs text-neutral-500">
               {phaseLabel} · {percentComplete}% {t("journey.complete", "complete")}
             </p>
           </div>
@@ -191,26 +239,65 @@ export function ClinicalVisitJourneyPanel({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold text-neutral-950">
-              {t("journey.fullTitle", "A→Z clinic journey")}
-            </p>
-            {headerBadge}
-          </div>
-          <p className="mt-0.5 text-sm text-neutral-600">{phaseLabel}</p>
-        </div>
-        <div className="text-right">
-          <p
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <button
+          type="button"
+          onClick={toggleExpanded}
+          className="group flex min-w-0 flex-1 items-start gap-2 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          aria-expanded={expanded}
+        >
+          <ChevronDown
             className={cn(
-              "text-2xl font-bold tabular-nums",
-              showCelebration ? "text-emerald-700" : "text-primary-700"
+              "mt-0.5 h-4 w-4 shrink-0 text-neutral-500 transition-transform duration-200",
+              !expanded && "-rotate-90"
             )}
+            aria-hidden
+          />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-semibold text-neutral-950 group-hover:text-primary-800">
+                {t("journey.fullTitle", "Visit progress")}
+              </p>
+              {headerBadge}
+              <Badge variant="outline" className="text-[10px] font-normal text-neutral-600">
+                {doneCount}/{steps.length} {t("journey.stepsDone", "done")}
+              </Badge>
+            </div>
+            <p className="mt-0.5 text-sm text-neutral-600">{phaseLabel}</p>
+            {!expanded ? (
+              <p className="mt-1 text-xs text-neutral-500">
+                {t("journey.expandHint", "Show all checklist steps")}
+              </p>
+            ) : null}
+          </div>
+        </button>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p
+              className={cn(
+                "text-xl font-bold tabular-nums sm:text-2xl",
+                showCelebration ? "text-emerald-700" : "text-primary-700"
+              )}
+            >
+              {percentComplete}%
+            </p>
+            <p className="text-xs text-neutral-500">{t("journey.ofVisitPath", "of visit path")}</p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="shrink-0 gap-1 text-neutral-600"
+            onClick={toggleExpanded}
+            aria-expanded={expanded}
           >
-            {percentComplete}%
-          </p>
-          <p className="text-xs text-neutral-500">{t("journey.ofVisitPath", "of visit path")}</p>
+            {expanded
+              ? t("journey.collapse", "Collapse")
+              : t("journey.expand", "Expand")}
+            <ChevronDown
+              className={cn("h-3.5 w-3.5 transition-transform", !expanded && "-rotate-90")}
+            />
+          </Button>
         </div>
       </div>
 
@@ -243,41 +330,43 @@ export function ClinicalVisitJourneyPanel({
         </div>
       ) : null}
 
-      <ol className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {steps.map((step) => (
-          <li
-            key={step.id}
-            className={cn(
-              "flex items-start gap-2 rounded-md border px-3 py-2 text-sm",
-              step.status === "current"
-                ? "border-primary-300 bg-primary-50/50"
-                : step.status === "done"
-                  ? "border-emerald-200/80 bg-emerald-50/30"
-                  : "border-neutral-200/80 bg-white/60"
-            )}
-          >
-            <StepIcon status={step.status} />
-            <div className="min-w-0 flex-1 text-left">
-              {onStepClick ? (
-                <button
-                  type="button"
-                  onClick={() => onStepClick(step)}
-                  className="font-medium text-primary-700 hover:underline cursor-pointer block text-left"
-                >
-                  {step.label}
-                </button>
-              ) : step.href && step.status !== "done" ? (
-                <Link href={step.href} className="font-medium text-primary-700 hover:underline">
-                  {step.label}
-                </Link>
-              ) : (
-                <p className="font-medium text-neutral-900">{step.label}</p>
+      {expanded ? (
+        <ol className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {steps.map((step) => (
+            <li
+              key={step.id}
+              className={cn(
+                "flex items-start gap-2 rounded-md border px-3 py-2 text-sm",
+                step.status === "current"
+                  ? "border-primary-300 bg-primary-50/50"
+                  : step.status === "done"
+                    ? "border-emerald-200/80 bg-emerald-50/30"
+                    : "border-neutral-200/80 bg-white/60"
               )}
-              <p className="text-xs text-neutral-500 line-clamp-2">{step.description}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
+            >
+              <StepIcon status={step.status} />
+              <div className="min-w-0 flex-1 text-left">
+                {onStepClick ? (
+                  <button
+                    type="button"
+                    onClick={() => onStepClick(step)}
+                    className="block cursor-pointer text-left font-medium text-primary-700 hover:underline"
+                  >
+                    {step.label}
+                  </button>
+                ) : step.href && step.status !== "done" ? (
+                  <Link href={step.href} className="font-medium text-primary-700 hover:underline">
+                    {step.label}
+                  </Link>
+                ) : (
+                  <p className="font-medium text-neutral-900">{step.label}</p>
+                )}
+                <p className="line-clamp-2 text-xs text-neutral-500">{step.description}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : null}
     </ContentPanel>
   )
 }

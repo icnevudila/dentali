@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Printer, FileText, CheckCircle2 } from "lucide-react"
+import Link from "next/link"
 import { fetchOrganization, fetchStaffProfile } from "@/lib/auth/auth-service"
 
 function SectionPreview({
@@ -151,8 +152,8 @@ export default function EpicrisisPage() {
     <PatientPageShell
       patientId={patientId}
       section="Epicrisis"
-      title="Discharge & Epicrisis Summary"
-      description={`Full clinical discharge report for ${patientName}`}
+      title="Discharge summary (document)"
+      description={`Printable clinical discharge report for ${patientName}. This does not close the visit.`}
       maxWidth="max-w-5xl"
       error={error}
     >
@@ -160,6 +161,16 @@ export default function EpicrisisPage() {
         <PageLoadingSkeleton variant="detail" />
       ) : data ? (
         <div className="space-y-6">
+          <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-950">
+            <p className="font-medium">Document only — does not check the patient out</p>
+            <p className="mt-1 text-amber-900/80">
+              To finish today&apos;s visit, use{" "}
+              <Link href={`/patients/${patientId}`} className="font-semibold underline underline-offset-2">
+                Checkout / Discharge
+              </Link>{" "}
+              on the patient profile, or the same action on Queue when the patient is In Chair.
+            </p>
+          </div>
           <Card className="border-teal-200/60 bg-teal-50/10">
             <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 pb-4">
               <div>

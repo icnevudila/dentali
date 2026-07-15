@@ -5,7 +5,7 @@ import { createPortal } from "react-dom"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { addTransitionType, startTransition } from "react"
-import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users, Plus, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen, ScrollText, Shield } from "lucide-react"
+import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users, Plus, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen, ScrollText, Shield, DoorClosed } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
@@ -719,6 +719,20 @@ export default function PatientProfilePage() {
 
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <WorkflowSettingsLink className="order-[-1] sm:order-none" />
+          {activeEncounter && activeEncounter.encounter.status === "open" ? (
+            <Button
+              size="sm"
+              className="gap-2"
+              onClick={handleFinishVisit}
+              title={t(
+                "queue.checkoutDischargeHint",
+                "Close today’s visit: note → bill → pay → discharge"
+              )}
+            >
+              <DoorClosed className="h-4 w-4" />
+              {t("queue.checkoutDischargeCta", "Checkout / Discharge")}
+            </Button>
+          ) : null}
           <Button variant="outline" size="sm" className="gap-2" asChild>
             <Link href={`/patients/${patientId}/chart`} transitionTypes={NAV_FORWARD_TRANSITION}>
               <Activity className="h-4 w-4" /> Chart
@@ -842,9 +856,9 @@ export default function PatientProfilePage() {
           }
         }}
         finishAction={
-          activeEncounter && activeEncounter.encounter.status === "open" && visitJourney.readyToClose
+          activeEncounter && activeEncounter.encounter.status === "open"
             ? {
-                label: t("visits.closeVisit", "Close visit"),
+                label: t("visits.closeVisit", "Checkout / Discharge"),
                 onClick: handleFinishVisit,
               }
             : undefined
@@ -992,13 +1006,14 @@ export default function PatientProfilePage() {
                   className="group rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors hover:border-primary-200 hover:bg-primary-50/30"
                 >
                   <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                    Discharge
+                    Discharge summary
                   </p>
                   <p className="mt-1 text-sm font-semibold text-neutral-950">
-                    Open epicrisis summary
+                    Open epicrisis document
                   </p>
                   <p className="mt-2 text-xs text-neutral-500">
-                    Full discharge handover with visits, prescriptions, billing, and notes.
+                    Printable clinical summary only — does not close today&apos;s visit. Use Checkout /
+                    Discharge to finish the visit.
                   </p>
                 </Link>
                 <Link
@@ -1292,9 +1307,10 @@ export default function PatientProfilePage() {
             <div className="grid gap-4 xl:grid-cols-3">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Epicrisis & Discharge</CardTitle>
+                  <CardTitle className="text-base">Discharge summary (document)</CardTitle>
                   <CardDescription>
-                    Full discharge summary with visits, treatment, prescriptions, and billing.
+                    Printable epicrisis for referral or records. This does not check the patient out —
+                    use Checkout / Discharge on the profile header or Queue when treatment ends.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

@@ -97,7 +97,7 @@ export const codeMessagesTrOverrides: MessageTree = {
   visits: {
     activeVisit: "Aktif ziyaret",
     checkInCta: "Hasta gelişini aç",
-    closeVisit: "Ziyareti kapat",
+    closeVisit: "Çıkış / Taburcu",
     noActiveVisit: "Aktif ziyaret yok",
     openVisitsLog: "Ziyaret günlüğünü aç",
     viewAllVisits: "Ziyaret geçmişini görüntüle",

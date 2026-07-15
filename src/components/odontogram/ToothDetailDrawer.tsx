@@ -262,7 +262,7 @@ export function ToothDetailDrawer({
       <CardFooter className="shrink-0 border-t border-neutral-200 bg-neutral-50 p-4">
         <Button variant="outline" className="w-full gap-2" onClick={onClose}>
           <Check className="h-4 w-4" />
-          Done / Close Panel
+          Done
         </Button>
       </CardFooter>
     </Card>

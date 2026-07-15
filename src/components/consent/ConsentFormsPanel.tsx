@@ -326,7 +326,7 @@ export function ConsentFormsPanel({
                         transitionTypes={NAV_FORWARD_TRANSITION}
                       >
                         <ShieldCheck className="h-3.5 w-3.5" />
-                        View & export (PDF / Word)
+                        View & export
                       </Link>
                     </Button>
                   ) : (

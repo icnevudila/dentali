@@ -168,8 +168,11 @@ export function PatientDocumentsPanel({ patientId }: { patientId: string }) {
       icon: FileText,
     },
     {
-      label: t("patients.outputEpicrisis", "Epicrisis / discharge"),
-      hint: t("patients.outputEpicrisisHint", "Full visit, ortho, Rx, billing handover"),
+      label: t("patients.outputEpicrisis", "Discharge summary (document)"),
+      hint: t(
+        "patients.outputEpicrisisHint",
+        "Printable handover — does not close today’s visit"
+      ),
       href: `/patients/${patientId}/epicrisis`,
       icon: FileCheck2,
     },

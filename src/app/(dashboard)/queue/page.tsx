@@ -633,7 +633,7 @@ function QueuePageContent() {
           ? t("queue.statusRevertedCall", "Returned to call area")
           : t("queue.statusServing", "Now serving"),
         in_chair: t("queue.statusInChair", "In chair"),
-        served: t("queue.statusServed", "Marked as served"),
+        served: t("queue.statusServed", "Moved to checkout / discharge"),
         cancelled: t("queue.statusCancelled", "Entry cancelled"),
         announce: t("queue.statusAnnounced", "Patient recalled"),
       }
@@ -1206,9 +1206,9 @@ function QueuePageContent() {
               ]
             : []),
           {
-            label: t("queue.summaryServed", "Served today"),
+            label: t("queue.summaryServed", "Checked out today"),
             value: loading ? "—" : dayStats.served,
-            hint: t("queue.metricServedHint", "Completed this clinic day"),
+            hint: t("queue.metricServedHint", "Completed checkout / discharge this clinic day"),
             variant: dayStats.served > 0 ? ("success" as const) : ("default" as const),
             active: boardFilter === "served",
             onClick: () => handleBoardFilterChange("served", { scroll: false }),
@@ -1217,7 +1217,7 @@ function QueuePageContent() {
       : tab === "history" || !isToday
         ? [
             {
-              label: t("queue.summaryServed", "Served"),
+              label: t("queue.summaryServed", "Checked out"),
               value: loading ? "—" : dayStats.served,
               hint: formattedDay,
               variant: dayStats.served > 0 ? ("success" as const) : ("default" as const),

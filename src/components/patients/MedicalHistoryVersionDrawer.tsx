@@ -1,10 +1,11 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { History, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { useLocale } from "@/hooks/use-locale"
 import type { MedicalHistoryRecord } from "@/lib/patients/medical-history-service"
 
 function diffField(
@@ -22,6 +23,11 @@ function diffField(
   }
 }
 
+function listPreview(items: string[]): string {
+  if (items.length === 0) return "—"
+  return items.join(", ")
+}
+
 interface MedicalHistoryVersionDrawerProps {
   versions: MedicalHistoryRecord[]
   open: boolean
@@ -33,17 +39,23 @@ export function MedicalHistoryVersionDrawer({
   open,
   onClose,
 }: MedicalHistoryVersionDrawerProps) {
+  const { t, locale } = useLocale()
+  const [selectedVersion, setSelectedVersion] = React.useState<number | null>(null)
   const [compareA, setCompareA] = React.useState<number | "">("")
   const [compareB, setCompareB] = React.useState<number | "">("")
 
+  const dateLocale = locale === "tr" ? "tr-TR" : locale === "fil" ? "fil-PH" : "en-PH"
+
   React.useEffect(() => {
-    if (open && versions.length >= 2) {
-      const id = window.setTimeout(() => {
-        setCompareA(versions[1]?.version ?? "")
-        setCompareB(versions[0]?.version ?? "")
-      }, 0)
-      return () => window.clearTimeout(id)
-    }
+    if (!open) return
+    const latest = versions[0]?.version ?? null
+    const previous = versions[1]?.version ?? null
+    const id = window.setTimeout(() => {
+      setSelectedVersion(latest)
+      setCompareA(previous ?? "")
+      setCompareB(latest ?? "")
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [open, versions])
 
   React.useEffect(() => {
@@ -60,153 +72,268 @@ export function MedicalHistoryVersionDrawer({
     }
   }, [open, onClose])
 
-  if (!open) return null
+  if (!open || typeof document === "undefined") return null
 
+  const selected = versions.find((v) => v.version === selectedVersion) ?? versions[0] ?? null
   const recordA = versions.find((v) => v.version === compareA)
   const recordB = versions.find((v) => v.version === compareB)
 
   const diffs =
     recordA && recordB
       ? [
-          diffField("Allergies", recordA.allergies, recordB.allergies),
-          diffField("Medications", recordA.medications, recordB.medications),
-          diffField("Conditions", recordA.conditions, recordB.conditions),
+          diffField(t("medicalHistory.allergies", "Allergies"), recordA.allergies, recordB.allergies),
+          diffField(
+            t("medicalHistory.medications", "Medications"),
+            recordA.medications,
+            recordB.medications
+          ),
+          diffField(
+            t("medicalHistory.conditions", "Conditions"),
+            recordA.conditions,
+            recordB.conditions
+          ),
         ]
       : []
 
   const notesChanged =
     recordA && recordB && (recordA.notes ?? "") !== (recordB.notes ?? "")
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:justify-end">
-      <button type="button" className="absolute inset-0" onClick={onClose} aria-label="Close" />
-      <div className="relative flex h-[min(92vh,100dvh)] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:h-full sm:rounded-none">
-        <div className="sticky top-0 border-b border-neutral-200 bg-white px-4 py-3">
-          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-neutral-300 sm:hidden" aria-hidden />
-          <div className="flex items-center justify-between">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex justify-end"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="mh-version-history-title"
+      style={{ viewTransitionName: "none" }}
+    >
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/45"
+        aria-label={t("common.close", "Close")}
+        onClick={onClose}
+      />
+      <aside className="relative flex h-full w-full max-w-md flex-col overflow-hidden bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-3 border-b border-neutral-100 px-5 py-4">
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <History className="h-5 w-5 text-neutral-500" />
-              <h2 className="font-semibold text-neutral-950">Version history</h2>
+              <History className="h-4 w-4 shrink-0 text-primary-600" />
+              <h2
+                id="mh-version-history-title"
+                className="text-base font-semibold text-neutral-900"
+              >
+                {t("medicalHistory.versionHistoryTitle", "Version history")}
+              </h2>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
+            <p className="mt-1 text-sm text-neutral-500">
+              {t("medicalHistory.versionHistoryCount", "{count} saved record(s)").replace(
+                "{count}",
+                String(versions.length)
+              )}
+            </p>
           </div>
+          <Button variant="ghost" size="sm" className="shrink-0" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
-          <div className="space-y-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">All versions</CardTitle>
-              <CardDescription>{versions.length} saved record{versions.length === 1 ? "" : "s"}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {versions.length === 0 ? (
-                <p className="text-sm text-neutral-500">No versions yet.</p>
-              ) : (
-                versions.map((v) => (
-                  <div
-                    key={v.id}
-                    className="flex items-center justify-between text-sm border border-neutral-100 rounded-md px-3 py-2"
-                  >
-                    <span className="font-medium">v{v.version}</span>
-                    <span className="text-neutral-500 text-xs">
-                      {new Date(v.created_at).toLocaleString("en-PH", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </span>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
-          {versions.length >= 2 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Compare versions</CardTitle>
-                <CardDescription>See what changed between two snapshots.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-neutral-600">From</label>
-                    <select
-                      value={compareA}
-                      onChange={(e) => setCompareA(Number(e.target.value))}
-                      className="w-full h-9 rounded-md border border-neutral-300 px-2 text-sm"
-                    >
-                      {versions.map((v) => (
-                        <option key={v.id} value={v.version}>
-                          v{v.version}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-neutral-600">To</label>
-                    <select
-                      value={compareB}
-                      onChange={(e) => setCompareB(Number(e.target.value))}
-                      className="w-full h-9 rounded-md border border-neutral-300 px-2 text-sm"
-                    >
-                      {versions.map((v) => (
-                        <option key={v.id} value={v.version}>
-                          v{v.version}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {recordA && recordB && compareA === compareB && (
-                  <p className="text-sm text-amber-700">Select two different versions to compare.</p>
-                )}
-
-                {recordA && recordB && compareA !== compareB && (
-                  <div className="space-y-4 text-sm">
-                    {diffs.map((d) => (
-                      <div key={d.label}>
-                        <p className="font-medium text-neutral-900 mb-1">{d.label}</p>
-                        {d.added.length === 0 && d.removed.length === 0 ? (
-                          <p className="text-neutral-500 text-xs">No changes</p>
-                        ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {d.removed.map((item) => (
-                              <Badge key={`-${item}`} variant="danger" className="text-xs">
-                                − {item}
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-4">
+          {versions.length === 0 ? (
+            <p className="py-8 text-center text-sm text-neutral-500">
+              {t("medicalHistory.noVersions", "No versions yet.")}
+            </p>
+          ) : (
+            <>
+              <section className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                  {t("medicalHistory.allVersions", "All versions")}
+                </h3>
+                <ul className="space-y-2">
+                  {versions.map((v) => {
+                    const isSelected = selected?.version === v.version
+                    return (
+                      <li key={v.id}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedVersion(v.version)}
+                          className={
+                            isSelected
+                              ? "flex w-full items-center justify-between gap-3 rounded-xl border border-primary-200 bg-primary-50/60 px-3 py-2.5 text-left"
+                              : "flex w-full items-center justify-between gap-3 rounded-xl border border-neutral-200 px-3 py-2.5 text-left hover:bg-neutral-50"
+                          }
+                        >
+                          <span className="text-sm font-semibold text-neutral-900">
+                            v{v.version}
+                            {v.version === versions[0]?.version ? (
+                              <Badge variant="outline" className="ml-2 text-[10px]">
+                                {t("medicalHistory.latest", "Latest")}
                               </Badge>
-                            ))}
-                            {d.added.map((item) => (
-                              <Badge key={`+${item}`} variant="success" className="text-xs">
-                                + {item}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                            ) : null}
+                          </span>
+                          <span className="shrink-0 text-xs text-neutral-500">
+                            {new Date(v.created_at).toLocaleString(dateLocale, {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                              timeZone: "Asia/Manila",
+                            })}
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </section>
+
+              {selected ? (
+                <section className="space-y-3 rounded-xl border border-neutral-200 bg-neutral-50/70 p-4">
+                  <h3 className="text-sm font-semibold text-neutral-900">
+                    {t("medicalHistory.versionDetail", "Version {n} details").replace(
+                      "{n}",
+                      String(selected.version)
+                    )}
+                  </h3>
+                  <dl className="space-y-3 text-sm">
                     <div>
-                      <p className="font-medium text-neutral-900 mb-1">Notes</p>
-                      {notesChanged ? (
-                        <div className="space-y-2 text-xs">
-                          <p className="text-red-700 line-through">{recordA.notes || "—"}</p>
-                          <p className="text-success-700">{recordB.notes || "—"}</p>
-                        </div>
-                      ) : (
-                        <p className="text-neutral-500 text-xs">No changes</p>
+                      <dt className="text-xs font-medium text-neutral-500">
+                        {t("medicalHistory.allergies", "Allergies")}
+                      </dt>
+                      <dd className="mt-0.5 text-neutral-800">{listPreview(selected.allergies)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium text-neutral-500">
+                        {t("medicalHistory.medications", "Medications")}
+                      </dt>
+                      <dd className="mt-0.5 text-neutral-800">{listPreview(selected.medications)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium text-neutral-500">
+                        {t("medicalHistory.conditions", "Conditions")}
+                      </dt>
+                      <dd className="mt-0.5 text-neutral-800">{listPreview(selected.conditions)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium text-neutral-500">
+                        {t("medicalHistory.notes", "Notes")}
+                      </dt>
+                      <dd className="mt-0.5 text-neutral-800">{selected.notes?.trim() || "—"}</dd>
+                    </div>
+                  </dl>
+                </section>
+              ) : null}
+
+              {versions.length >= 2 ? (
+                <section className="space-y-3">
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                      {t("medicalHistory.compareVersions", "Compare versions")}
+                    </h3>
+                    <p className="mt-1 text-sm text-neutral-500">
+                      {t(
+                        "medicalHistory.compareHint",
+                        "See what changed between two snapshots."
                       )}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-neutral-600">
+                        {t("medicalHistory.compareFrom", "From")}
+                      </label>
+                      <select
+                        value={compareA}
+                        onChange={(e) => setCompareA(Number(e.target.value))}
+                        className="h-10 w-full rounded-lg border border-neutral-300 bg-white px-2.5 text-sm"
+                      >
+                        {versions.map((v) => (
+                          <option key={v.id} value={v.version}>
+                            v{v.version}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-neutral-600">
+                        {t("medicalHistory.compareTo", "To")}
+                      </label>
+                      <select
+                        value={compareB}
+                        onChange={(e) => setCompareB(Number(e.target.value))}
+                        className="h-10 w-full rounded-lg border border-neutral-300 bg-white px-2.5 text-sm"
+                      >
+                        {versions.map((v) => (
+                          <option key={v.id} value={v.version}>
+                            v{v.version}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+
+                  {recordA && recordB && compareA === compareB ? (
+                    <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                      {t(
+                        "medicalHistory.compareSame",
+                        "Select two different versions to compare."
+                      )}
+                    </p>
+                  ) : null}
+
+                  {recordA && recordB && compareA !== compareB ? (
+                    <div className="space-y-3">
+                      {diffs.map((d) => (
+                        <div
+                          key={d.label}
+                          className="rounded-xl border border-neutral-200 bg-white px-3 py-3"
+                        >
+                          <p className="text-sm font-medium text-neutral-900">{d.label}</p>
+                          {d.added.length === 0 && d.removed.length === 0 ? (
+                            <p className="mt-2 text-xs text-neutral-500">
+                              {t("medicalHistory.noChanges", "No changes")}
+                            </p>
+                          ) : (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {d.removed.map((item) => (
+                                <Badge key={`-${item}`} variant="danger" className="text-xs">
+                                  − {item}
+                                </Badge>
+                              ))}
+                              {d.added.map((item) => (
+                                <Badge key={`+${item}`} variant="success" className="text-xs">
+                                  + {item}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      <div className="rounded-xl border border-neutral-200 bg-white px-3 py-3">
+                        <p className="text-sm font-medium text-neutral-900">
+                          {t("medicalHistory.notes", "Notes")}
+                        </p>
+                        {notesChanged ? (
+                          <div className="mt-2 space-y-2 text-xs leading-relaxed">
+                            <p className="rounded-md bg-red-50 px-2 py-1.5 text-red-800 line-through">
+                              {recordA.notes || "—"}
+                            </p>
+                            <p className="rounded-md bg-emerald-50 px-2 py-1.5 text-emerald-800">
+                              {recordB.notes || "—"}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-xs text-neutral-500">
+                            {t("medicalHistory.noChanges", "No changes")}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+                </section>
+              ) : null}
+            </>
           )}
-          </div>
         </div>
-      </div>
-    </div>
+      </aside>
+    </div>,
+    document.body
   )
 }

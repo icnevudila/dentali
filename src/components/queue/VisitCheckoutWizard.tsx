@@ -26,7 +26,7 @@ const STEPS = [
   { id: 1, icon: FileText, labelKey: "queue.checkoutStepNote", fallback: "Clinical note" },
   { id: 2, icon: Receipt, labelKey: "queue.checkoutStepBilling", fallback: "Billing & plan" },
   { id: 3, icon: Wallet, labelKey: "queue.checkoutStepPayment", fallback: "Collect payment" },
-  { id: 4, icon: DoorClosed, labelKey: "queue.checkoutStepClose", fallback: "Close visit" },
+  { id: 4, icon: DoorClosed, labelKey: "queue.checkoutStepClose", fallback: "Checkout / Discharge" },
 ] as const
 
 export type VisitCheckoutWizardProps = {
@@ -116,10 +116,10 @@ export function VisitCheckoutWizard({
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 id="visit-checkout-title" className="text-lg font-semibold text-neutral-900">
-                {t("queue.checkoutTitle", "Visit checkout")}
+                {t("queue.checkoutTitle", "Patient checkout")}
               </h2>
               <p className="mt-0.5 text-sm text-neutral-500">
-                {patientName} - {t("queue.visitComplete", "visit marked complete")}
+                {patientName} — {t("queue.visitComplete", "treatment done — close the visit")}
               </p>
             </div>
             <button
@@ -273,7 +273,7 @@ export function VisitCheckoutWizard({
                 ) : (
                   <DoorClosed className="h-4 w-4" />
                 )}
-                {t("queue.closeVisit", "Close visit")}
+                {t("queue.closeVisit", "Checkout / Discharge")}
               </Button>
               <Button className="w-full gap-2" variant="ghost" size="sm" asChild>
                 <Link href={encounterHref} onClick={() => onOpenChange(false)}>

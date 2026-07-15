@@ -243,7 +243,9 @@ export default function MedicalHistoryPage() {
               <AlertTriangle className="h-5 w-5" />
               Allergies & Conditions
             </CardTitle>
-            <CardDescription>Comma-separated values. Saving creates a new version.</CardDescription>
+            <CardDescription className="text-pretty">
+              Separate items with commas. Saving creates a new version — it never overwrites the old one.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">

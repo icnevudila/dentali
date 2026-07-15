@@ -347,7 +347,7 @@ export default function OrthoRecordPage() {
               </Card>
               <Card>
                 <CardContent className="pt-4">
-                  <p className="text-xs text-neutral-500">Diagnosis / Case Summary</p>
+                  <p className="text-xs text-neutral-500">Diagnosis</p>
                   <p className="font-semibold text-neutral-800 line-clamp-2" title={orthoCase.diagnosis ?? "No diagnosis recorded"}>
                     {orthoCase.diagnosis ?? "—"}
                   </p>

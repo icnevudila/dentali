@@ -45,10 +45,10 @@ export function QueueWorkflowGuide() {
     },
     {
       icon: Receipt,
-      title: t("queue.flowCheckoutTitle", "Served & billing"),
+      title: t("queue.flowCheckoutTitle", "Checkout / Discharge"),
       body: t(
         "queue.flowCheckoutBody",
-        "Mark Served when treatment ends. Workflow can draft an invoice; collect payment in Billing, then close the visit."
+        "On In Chair, tap Checkout / Discharge when treatment ends. Confirm note, billing, and payment, then close the visit. Epicrisis is a separate discharge document — it does not close the visit."
       ),
     },
   ]
