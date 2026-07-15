@@ -28,13 +28,11 @@ import { TreatmentPlanTimelinePanel } from "@/components/clinical/TreatmentPlanT
 import { ChartFindingsPlanSuggestBanner } from "@/components/clinical/ChartFindingsPlanSuggestBanner"
 import { PatientChartFindingsPanel } from "@/components/analytics/PatientChartFindingsPanel"
 import { Button } from "@/components/ui/button"
-import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { ArrowLeft, Users } from "lucide-react"
+import { Users } from "lucide-react"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
-import { NAV_BACK_TRANSITION } from "@/lib/navigation/view-transition"
 import { createClient } from "@/lib/supabase/client"
 import { useRouteParams } from "@/hooks/use-route-params"
 import { notify } from "@/lib/ui/notify"
@@ -308,17 +306,6 @@ export default function DentalChartPage() {
       />
 
       <DirectionalTransition className="space-y-6 max-w-7xl mx-auto print:hidden">
-        <div className="animate-fade-in">
-          <Link
-            href={`/patients/${patientId}`}
-            transitionTypes={NAV_BACK_TRANSITION}
-            className="inline-flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-primary-600 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to Patient Profile</span>
-          </Link>
-        </div>
-
         <SectionEyebrow icon={Users}>Clinical · Dental chart</SectionEyebrow>
 
         {saveError && (

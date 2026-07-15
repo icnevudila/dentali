@@ -129,6 +129,34 @@ export async function closePatientEncounter(
   return { data: raw, error: null }
 }
 
+/** Undo discharge — reopen a closed visit when no other open visit exists. */
+export async function reopenPatientEncounter(
+  encounterId: string
+): Promise<{ data: { id: string; status: string; reopened?: boolean } | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("reopen_patient_encounter", {
+    p_encounter_id: encounterId,
+  })
+  if (error) return { data: null, error: error.message }
+  const raw = data as { id: string; status: string; reopened?: boolean }
+  return { data: raw, error: null }
+}
+
+/** Cancel a mistaken open visit (blocks if payments were recorded). */
+export async function cancelPatientEncounter(
+  encounterId: string,
+  reason?: string | null
+): Promise<{ data: { id: string; status: string; cancelled?: boolean } | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("cancel_patient_encounter", {
+    p_encounter_id: encounterId,
+    p_reason: reason ?? null,
+  })
+  if (error) return { data: null, error: error.message }
+  const raw = data as { id: string; status: string; cancelled?: boolean }
+  return { data: raw, error: null }
+}
+
 export async function linkNoteToEncounter(
   noteId: string,
   encounterId: string

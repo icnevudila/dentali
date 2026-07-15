@@ -100,6 +100,7 @@ export default function ToothDetailPage() {
       <PatientPageShell
         patientId={patientId}
         backHref={`/patients/${patientId}/chart`}
+        backLabel="Back to dental chart"
         section="Dental chart"
         title={
           <span className="inline-flex flex-wrap items-center gap-2">

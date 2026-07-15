@@ -528,7 +528,7 @@ export function buildEncounterVisitJourney(params: {
         ? "Visit closed on file"
         : "Close today’s visit: clinical note, billing, payment, then discharge",
       status: statuses.discharge,
-      href: `/patients/${patientId}?tab=visits`,
+      href: `/patients/${patientId}?checkout=1`,
       phase: "discharge",
     },
   ]

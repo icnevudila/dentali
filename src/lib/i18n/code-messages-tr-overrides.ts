@@ -95,11 +95,15 @@ export const codeMessagesTrOverrides: MessageTree = {
     balanceCleared: "Bakiye kapatıldı",
   },
   visits: {
-    activeVisit: "Aktif ziyaret",
+    activeVisit: "Bugünkü ziyaret",
     checkInCta: "Hasta gelişini aç",
     closeVisit: "Çıkış / Taburcu",
+    cancelCta: "Yanlış ziyareti iptal et",
     noActiveVisit: "Aktif ziyaret yok",
     openVisitsLog: "Ziyaret günlüğünü aç",
+    reopenCta: "Taburcuyu geri al",
+    reopened: "Ziyaret yeniden açıldı — bugünkü açık ziyaret olarak görünür.",
+    statusClosed: "Taburcu",
     viewAllVisits: "Ziyaret geçmişini görüntüle",
   },
   settings: {

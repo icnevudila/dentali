@@ -1,14 +1,16 @@
 import type { ReactNode } from "react"
-import Link from "next/link"
-import { NAV_BACK_TRANSITION } from "@/lib/navigation/view-transition"
-import { ArrowLeft, Users } from "lucide-react"
+import { Users } from "lucide-react"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
-import { Button } from "@/components/ui/button"
 import type { MetricItem } from "@/components/layout/MetricStrip"
+import { BackToPatientProfile } from "@/components/patients/BackToPatientProfile"
 
 type PatientPageShellProps = {
   patientId: string
+  /** When set, shows a contextual back (e.g. chart) under the sticky profile bar. */
   backHref?: string
+  backLabel?: string
+  /** Sticky layout already shows profile return — hide inline duplicate by default. */
+  showInlineBack?: boolean
   section: string
   title: ReactNode
   description?: ReactNode
@@ -28,6 +30,8 @@ type PatientPageShellProps = {
 export function PatientPageShell({
   patientId,
   backHref,
+  backLabel,
+  showInlineBack = false,
   section,
   title,
   description,
@@ -43,19 +47,20 @@ export function PatientPageShell({
   maxWidth = "max-w-5xl",
   className,
 }: PatientPageShellProps) {
+  const showBack = showInlineBack || Boolean(backHref)
+
   return (
     <div className="space-y-3">
-      {/* Prominent Back to Profile Link at Top Left */}
-      <div className="animate-fade-in">
-        <Link
-          href={backHref ?? `/patients/${patientId}`}
-          transitionTypes={NAV_BACK_TRANSITION}
-          className="inline-flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-primary-600 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Patient Profile</span>
-        </Link>
-      </div>
+      {showBack ? (
+        <div className="animate-fade-in print:hidden">
+          <BackToPatientProfile
+            patientId={patientId}
+            href={backHref}
+            label={backLabel}
+            variant={backHref ? "link" : "button"}
+          />
+        </div>
+      ) : null}
 
       <ModulePageShell
         icon={Users}

@@ -67,6 +67,10 @@ import { fetchCarryForwardSources, type CarryForwardSources } from "@/lib/clinic
 import { updateQueueStatus } from "@/lib/queue/queue-service"
 import { EncounterCarryForwardBanner } from "@/components/clinical/EncounterCarryForwardBanner"
 import { ManualInvoiceDrawer } from "@/components/billing/ManualInvoiceDrawer"
+import {
+  rememberVisitPatientContext,
+  writeVisitJourneyCache,
+} from "@/lib/patients/visit-patient-context"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/hooks/use-locale"
 import { notify } from "@/lib/ui/notify"
@@ -116,6 +120,7 @@ export default function PatientProfilePage() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get("tab")
   const intakeComplete = searchParams.get("intake") === "complete"
+  const checkoutParam = searchParams.get("checkout") === "1"
   const activeTab: PatientTabId =
     PATIENT_TAB_DEFS.some((tab) => tab.id === tabParam) ? (tabParam as PatientTabId) : "record"
 
@@ -163,6 +168,7 @@ export default function PatientProfilePage() {
   const [carryForwardSources, setCarryForwardSources] = React.useState<CarryForwardSources | null>(null)
   const [journeyContinueLoading, setJourneyContinueLoading] = React.useState(false)
   const [checkoutOpen, setCheckoutOpen] = React.useState(false)
+  const checkoutDeepLinkHandled = React.useRef(false)
   const [showInvoiceDrawer, setShowInvoiceDrawer] = React.useState(false)
   const [showMedicalAlertConfirm, setShowMedicalAlertConfirm] = React.useState(false)
   const pendingMedicalActionRef = React.useRef<(() => void) | null>(null)
@@ -378,6 +384,39 @@ export default function PatientProfilePage() {
     const id = window.setTimeout(() => refreshActiveEncounter(), 0)
     return () => window.clearTimeout(id)
   }, [refreshActiveEncounter])
+
+  React.useEffect(() => {
+    if (!checkoutParam || checkoutDeepLinkHandled.current) return
+    if (!activeEncounter || activeEncounter.encounter.status !== "open") return
+    checkoutDeepLinkHandled.current = true
+    setCheckoutOpen(true)
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("checkout")
+    const qs = params.toString()
+    router.replace(qs ? `/patients/${patientId}?${qs}` : `/patients/${patientId}`, {
+      scroll: false,
+    })
+  }, [checkoutParam, activeEncounter, patientId, router, searchParams])
+
+  React.useEffect(() => {
+    if (!patientId) return
+    rememberVisitPatientContext(
+      patientId,
+      patient ? `${patient.first_name} ${patient.last_name}` : undefined
+    )
+    if (!activeEncounter || activeEncounter.encounter.status !== "open") return
+    const journey = buildEncounterVisitJourney({
+      patientId,
+      detail: activeEncounter,
+      hasChartFindings,
+    })
+    writeVisitJourneyCache({
+      patientId,
+      nextStep: journey.nextStep,
+      readyToClose: Boolean(journey.readyToClose),
+      hasOpenVisit: true,
+    })
+  }, [patientId, patient, activeEncounter, hasChartFindings])
 
   React.useEffect(() => {
     if (!patientId || !activeBranchId || !activeEncounter) {
@@ -812,7 +851,7 @@ export default function PatientProfilePage() {
         journey={visitJourney}
         headerBadge={
           activeEncounter?.encounter.status === "open" ? (
-            <Badge variant="info">{t("visits.activeVisit", "Active visit")}</Badge>
+            <Badge variant="info">{t("visits.activeVisit", "Today’s visit")}</Badge>
           ) : undefined
         }
         celebrate={

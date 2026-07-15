@@ -46,19 +46,28 @@ export async function createPaymentIntent(params: {
 
 export async function completePaymentIntent(
   intentId: string
-): Promise<{ data: { paid_amount: number; status: string; balance: number } | null; error: string | null }> {
+): Promise<{
+  data: {
+    paid_amount: number
+    status: string
+    balance: number
+    encounter_closed?: boolean
+  } | null
+  error: string | null
+}> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("complete_payment_intent", {
     p_intent_id: intentId,
   })
 
   if (error) return { data: null, error: error.message }
-  const raw = data as Record<string, number>
+  const raw = data as Record<string, unknown>
   return {
     data: {
       paid_amount: Number(raw.paid_amount),
       status: String(raw.status),
       balance: Number(raw.balance),
+      encounter_closed: Boolean(raw.encounter_closed),
     },
     error: null,
   }

@@ -260,7 +260,7 @@ export function VisitCheckoutWizard({
               <p className="text-sm text-neutral-600">
                 {t(
                   "queue.checkoutClosePrompt",
-                  "Close this visit so it no longer appears as an open encounter. If billing or notes are incomplete, leave it open and return from Dentist or Patient Visits."
+                  "This closes today’s visit (discharge). The patient leaves the open-visit list. If billing or notes are incomplete, leave it open and return from Queue or Patient Visits."
                 )}
               </p>
               <Button
@@ -277,7 +277,7 @@ export function VisitCheckoutWizard({
               </Button>
               <Button className="w-full gap-2" variant="ghost" size="sm" asChild>
                 <Link href={encounterHref} onClick={() => onOpenChange(false)}>
-                  {t("queue.viewEncounterRecord", "View encounter record")}
+                  {t("queue.viewEncounterRecord", "View visit record")}
                 </Link>
               </Button>
             </>

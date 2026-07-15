@@ -3,7 +3,6 @@
 import * as React from "react"
 import Link from "next/link"
 import {
-  ArrowLeft,
   Calendar,
   FileText,
   Plus,
@@ -356,11 +355,6 @@ export function ClinicalNotesWorkspace({
         <div className="space-y-4 animate-page-enter">
           <SectionEyebrow icon={Users}>Clinical · Notes</SectionEyebrow>
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <Button variant="ghost" size="icon" className="shrink-0 self-start" asChild>
-              <Link href={`/patients/${patientId}`}>
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-            </Button>
             <div className="flex-1 min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-950">Clinical notes</h1>
               <p className="text-sm text-neutral-500 truncate">

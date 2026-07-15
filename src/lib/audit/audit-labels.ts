@@ -26,6 +26,15 @@ export const AUDIT_ACTION_LABELS_EN: Record<string, string> = {
   "checkin.consent_override": "Check-in consent override",
   "session.login": "Signed in",
   "session.logout": "Signed out",
+  "encounter.auto_close": "Today’s visit closed automatically",
+  "encounter.reopen": "Visit reopened (undo discharge)",
+  "encounter.cancel": "Visit cancelled",
+  "encounter.close": "Visit discharged",
+  "invoice.auto_draft_from_plan": "Invoice drafted from treatment plan",
+  "treatment_plan.approved": "Treatment plan approved",
+  "treatment_plan.item_add": "Treatment plan item added",
+  "consent.signed": "Consent signed",
+  "consent.pdf_stored": "Consent PDF stored",
 }
 
 export const AUDIT_ENTITY_LABELS_EN: Record<string, string> = {
@@ -46,6 +55,8 @@ export const AUDIT_ENTITY_LABELS_EN: Record<string, string> = {
   queue_entry: "Queue",
   consent: "Consent",
   session: "Session",
+  patient_encounter: "Visit",
+  encounter: "Visit",
 }
 
 function actionMessageKey(action: string): string {

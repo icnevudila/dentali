@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   Calendar,
   CheckCircle2,
@@ -10,25 +11,33 @@ import {
   Circle,
   CircleDot,
   ClipboardList,
+  DoorClosed,
   FileText,
   FlaskConical,
   Loader2,
   Receipt,
+  RotateCcw,
   Stethoscope,
   UserCheck,
   Wallet,
+  XCircle,
 } from "lucide-react"
+import { addTransitionType, startTransition } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { PermissionGate } from "@/components/auth/PermissionGate"
+import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useLocale } from "@/hooks/use-locale"
 import { formatDate } from "@/lib/i18n/translate"
+import { notify } from "@/lib/ui/notify"
 import { cn } from "@/lib/utils"
 import {
-  closePatientEncounter,
+  cancelPatientEncounter,
   encounterPublicId,
   fetchEncounterDetail,
   fetchPatientEncounters,
+  reopenPatientEncounter,
   type PatientEncounterDetail,
   type PatientEncounterSummary,
 } from "@/lib/clinical/encounter-service"
@@ -49,7 +58,6 @@ function buildChecklist(
   detail: PatientEncounterDetail,
   hasChartFindings: boolean
 ): CheckItem[] {
-  const enc = detail.encounter
   const queue = detail.queue
   const notes = detail.notes
   const plans = detail.plans
@@ -78,16 +86,16 @@ function buildChecklist(
       id: "note",
       label: "Clinical note",
       description: notes[0]
-        ? `${notes[0].title} (${notes[0].status})`
-        : "No note for this visit",
-      done: hasSignedNote,
+        ? `${notes[0].title} · ${notes[0].status}`
+        : "No clinical note for this visit",
+      done: hasSignedNote || notes.length > 0,
       href: `/patients/${patientId}?tab=clinical-notes`,
       icon: FileText,
     },
     {
       id: "chart",
       label: "Dental chart",
-      description: hasChartFindings ? "Findings on file" : "No chart updates linked",
+      description: hasChartFindings ? "Chart findings recorded" : "No chart findings yet",
       done: hasChartFindings,
       href: `/patients/${patientId}/chart`,
       icon: Stethoscope,
@@ -96,32 +104,20 @@ function buildChecklist(
       id: "plan",
       label: "Treatment plan",
       description: plans[0]
-        ? `${plans[0].title} (${plans[0].status})`
+        ? `${plans[0].title} · ${plans[0].status}`
         : "No plan for this visit",
-      done: hasApprovedPlan,
-      href: `/patients/${patientId}/treatment-plan?encounter=${enc.id}`,
+      done: hasApprovedPlan || plans.length > 0,
+      href: `/patients/${patientId}/treatment-plan`,
       icon: ClipboardList,
     },
     {
-      id: "invoice",
-      label: "Invoice",
+      id: "billing",
+      label: "Invoice & payment",
       description: invoices[0]
-        ? `${invoices[0].invoice_number ?? "Draft"} · ₱${invoices[0].total_amount.toLocaleString()}`
-        : "No invoice for this visit",
-      done: invoices.length > 0,
-      href: invoices[0]?.id
-        ? `/billing/${invoices[0].id}`
-        : `/billing?patient=${patientId}`,
-      icon: Receipt,
-    },
-    {
-      id: "payment",
-      label: "Payment",
-      description: invoicePaid ? "Balance settled" : "Outstanding or not billed",
+        ? `${invoices[0].invoice_number ?? "Invoice"} · ${invoices[0].status}`
+        : "No invoice linked",
       done: invoicePaid,
-      href: invoices[0]?.id
-        ? `/billing/${invoices[0].id}`
-        : `/billing?patient=${patientId}`,
+      href: invoices[0] ? `/billing/${invoices[0].id}` : `/billing?patient=${patientId}`,
       icon: Wallet,
     },
   ]
@@ -133,20 +129,28 @@ function statusBadgeVariant(status: string) {
   return "outline" as const
 }
 
+function statusLabel(status: string, t: (key: string, fallback: string) => string) {
+  if (status === "open") return t("visits.statusOpen", "Open")
+  if (status === "closed") return t("visits.statusClosed", "Discharged")
+  if (status === "cancelled") return t("visits.statusCancelled", "Cancelled")
+  return status
+}
+
 function EncounterDetailPanel({
   patientId,
   detail,
   hasChartFindings,
-  onClosed,
+  onChanged,
 }: {
   patientId: string
   detail: PatientEncounterDetail
   hasChartFindings: boolean
-  onClosed: () => void
+  onChanged: () => void
 }) {
   const { t } = useLocale()
-  const [closing, setClosing] = React.useState(false)
-  const [closeError, setCloseError] = React.useState<string | null>(null)
+  const router = useRouter()
+  const [busy, setBusy] = React.useState<"reopen" | "cancel" | null>(null)
+  const [actionError, setActionError] = React.useState<string | null>(null)
 
   const journey = buildEncounterVisitJourney({
     patientId,
@@ -155,14 +159,73 @@ function EncounterDetailPanel({
   })
   const checklist = buildChecklist(patientId, detail, hasChartFindings)
   const isOpen = detail.encounter.status === "open"
+  const isClosed = detail.encounter.status === "closed"
+  const hasPaidInvoice = detail.invoices.some(
+    (inv) => inv.status === "paid" || inv.paid_amount > 0
+  )
 
-  const handleClose = async () => {
-    setClosing(true)
-    setCloseError(null)
-    const { error } = await closePatientEncounter(detail.encounter.id)
-    if (error) setCloseError(error)
-    else onClosed()
-    setClosing(false)
+  const goCheckout = () => {
+    startTransition(() => {
+      addTransitionType("nav-forward")
+      router.push(`/patients/${patientId}?checkout=1`)
+    })
+  }
+
+  const handleReopen = async () => {
+    const ok = await notify.confirm(
+      t(
+        "visits.reopenConfirm",
+        "Undo discharge and reopen today’s visit? Use this if checkout closed too early."
+      ),
+      {
+        title: t("visits.reopenTitle", "Undo discharge"),
+        confirmLabel: t("visits.reopenCta", "Reopen visit"),
+      }
+    )
+    if (!ok) return
+
+    setBusy("reopen")
+    setActionError(null)
+    const { error } = await reopenPatientEncounter(detail.encounter.id)
+    if (error) {
+      setActionError(error)
+      notify.error(error)
+    } else {
+      notify.success(
+        t("visits.reopened", "Visit reopened — it appears as today’s open visit again.")
+      )
+      onChanged()
+    }
+    setBusy(null)
+  }
+
+  const handleCancel = async () => {
+    const ok = await notify.confirm(
+      t(
+        "visits.cancelConfirm",
+        "Cancel this mistaken visit? The patient leaves the live queue if still waiting or in chair. Paid visits cannot be cancelled."
+      ),
+      {
+        title: t("visits.cancelTitle", "Cancel visit"),
+        confirmLabel: t("visits.cancelCta", "Cancel visit"),
+      }
+    )
+    if (!ok) return
+
+    setBusy("cancel")
+    setActionError(null)
+    const { error } = await cancelPatientEncounter(
+      detail.encounter.id,
+      "Staff cancelled mistaken visit"
+    )
+    if (error) {
+      setActionError(error)
+      notify.error(error)
+    } else {
+      notify.success(t("visits.cancelled", "Visit cancelled"))
+      onChanged()
+    }
+    setBusy(null)
   }
 
   return (
@@ -173,16 +236,73 @@ function EncounterDetailPanel({
         finishAction={
           isOpen
             ? {
-                label: t("visits.finishVisit", "Finish visit"),
-                onClick: () => void handleClose(),
-                disabled: closing,
-                loading: closing,
+                label: t("visits.finishVisit", "Checkout / Discharge"),
+                onClick: goCheckout,
               }
             : undefined
         }
       />
 
-      {closeError ? <p className="text-sm text-red-700">{closeError}</p> : null}
+      <div className="flex flex-wrap gap-2">
+        {isOpen ? (
+          <Button size="sm" className="gap-2" onClick={goCheckout}>
+            <DoorClosed className="h-4 w-4" aria-hidden />
+            {t("queue.checkoutDischargeCta", "Checkout / Discharge")}
+          </Button>
+        ) : null}
+
+        {isClosed ? (
+          <PermissionGate
+            anyOf={[PERMISSIONS.QUEUE_MANAGE, PERMISSIONS.DENTAL_CHART_WRITE]}
+            fallback={null}
+          >
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              disabled={busy === "reopen"}
+              onClick={() => void handleReopen()}
+            >
+              {busy === "reopen" ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <RotateCcw className="h-4 w-4" aria-hidden />
+              )}
+              {t("visits.reopenCta", "Undo discharge")}
+            </Button>
+          </PermissionGate>
+        ) : null}
+
+        {isOpen && !hasPaidInvoice ? (
+          <PermissionGate permission={PERMISSIONS.QUEUE_MANAGE} fallback={null}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="gap-2 text-red-700 hover:text-red-800 hover:bg-red-50"
+              disabled={busy === "cancel"}
+              onClick={() => void handleCancel()}
+            >
+              {busy === "cancel" ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <XCircle className="h-4 w-4" aria-hidden />
+              )}
+              {t("visits.cancelCta", "Cancel mistaken visit")}
+            </Button>
+          </PermissionGate>
+        ) : null}
+      </div>
+
+      {actionError ? <p className="text-sm text-red-700">{actionError}</p> : null}
+
+      {isClosed ? (
+        <p className="text-xs text-neutral-600">
+          {t(
+            "visits.reopenHint",
+            "Closed by checkout or auto-close after payment. Undo discharge if it happened too early."
+          )}
+        </p>
+      ) : null}
 
       <div>
         <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">
@@ -319,18 +439,18 @@ export function PatientEncountersWorkspace({
 
   React.useEffect(() => {
     const id = window.setTimeout(() => {
-    if (defaultExpandedId) {
-      setExpandedId(defaultExpandedId)
-      void loadDetail(defaultExpandedId)
-      return
-    }
-    if (autoExpandedRef.current || encounters.length === 0) return
-    const open = encounters.find((e) => e.status === "open")
-    if (open) {
-      autoExpandedRef.current = true
-      setExpandedId(open.id)
-      void loadDetail(open.id)
-    }
+      if (defaultExpandedId) {
+        setExpandedId(defaultExpandedId)
+        void loadDetail(defaultExpandedId)
+        return
+      }
+      if (autoExpandedRef.current || encounters.length === 0) return
+      const open = encounters.find((e) => e.status === "open")
+      if (open) {
+        autoExpandedRef.current = true
+        setExpandedId(open.id)
+        void loadDetail(open.id)
+      }
     }, 0)
     return () => window.clearTimeout(id)
   }, [encounters, defaultExpandedId, loadDetail])
@@ -344,7 +464,7 @@ export function PatientEncountersWorkspace({
     if (!details[id]) void loadDetail(id)
   }
 
-  const handleClosed = async (id: string) => {
+  const handleChanged = async (id: string) => {
     await loadDetail(id)
     await loadList()
   }
@@ -443,8 +563,8 @@ export function PatientEncountersWorkspace({
                         <Badge variant="outline" className="font-mono text-[10px]">
                           {encounterPublicId(enc)}
                         </Badge>
-                        <Badge variant={statusBadgeVariant(enc.status)} className="text-[10px] capitalize">
-                          {enc.status}
+                        <Badge variant={statusBadgeVariant(enc.status)} className="text-[10px]">
+                          {statusLabel(enc.status, t)}
                         </Badge>
                         <Badge variant="outline" className="text-[10px] capitalize">
                           {enc.source_type === "appointment"
@@ -482,7 +602,7 @@ export function PatientEncountersWorkspace({
                         patientId={patientId}
                         detail={detail}
                         hasChartFindings={hasChartFindings}
-                        onClosed={() => void handleClosed(enc.id)}
+                        onChanged={() => void handleChanged(enc.id)}
                       />
                     ) : null
                   ) : null}

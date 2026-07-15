@@ -30,8 +30,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { IntegrationEnvBanner } from "@/components/layout/IntegrationEnvBanner"
+import { PatientVisitActionRail } from "@/components/patients/PatientVisitActionRail"
 import { logManualWhatsAppNotification } from "@/lib/notifications/notification-service"
 import { buildWhatsAppSendUrl } from "@/lib/notifications/whatsapp"
+import { rememberVisitPatientContext } from "@/lib/patients/visit-patient-context"
+import { notifyVisitAutoClosed } from "@/lib/billing/notify-visit-auto-closed"
 
 export default function InvoiceDetailPage() {
   const params = useParams()
@@ -57,6 +60,7 @@ export default function InvoiceDetailPage() {
   const [clinicName, setClinicName] = React.useState("Dental Clinic")
   const [pdfLoading, setPdfLoading] = React.useState(false)
   const [paymentJustSettled, setPaymentJustSettled] = React.useState(false)
+  const [visitAutoClosed, setVisitAutoClosed] = React.useState(false)
   const [reminderSending, setReminderSending] = React.useState(false)
 
   // Edit line item states
@@ -203,6 +207,11 @@ export default function InvoiceDetailPage() {
     load()
   }, [load])
 
+  React.useEffect(() => {
+    if (!invoice?.patient_id) return
+    rememberVisitPatientContext(invoice.patient_id, invoice.patient_name ?? undefined)
+  }, [invoice?.patient_id, invoice?.patient_name])
+
   const balance = invoice ? invoice.total_amount - invoice.paid_amount : 0
 
   const handleSaveInvoiceDiscount = async () => {
@@ -243,12 +252,8 @@ export default function InvoiceDetailPage() {
     notify.success(t("billing.paymentSuccessWithCommission", "Payment recorded! Doktor hakedişi (%40) otomatik hesaplanıp maaş hesabına aktarıldı."))
 
     if (data?.encounter_closed) {
-      notify.info(
-        t(
-          "billing.encounterAutoClosed",
-          "Visit closed automatically — balance is settled for this encounter."
-        )
-      )
+      setVisitAutoClosed(true)
+      notifyVisitAutoClosed(t)
     }
     
     // Auto-Recall Marketing Simulation
@@ -304,6 +309,10 @@ export default function InvoiceDetailPage() {
       return
     }
     notify.success(t("billing.paymentIntentCompleted", "Payment intent completed"))
+    if (data?.encounter_closed) {
+      setVisitAutoClosed(true)
+      notifyVisitAutoClosed(t)
+    }
     if (data && invoice) {
       setInvoice({ ...invoice, paid_amount: data.paid_amount, status: data.status })
       const newBalance = invoice.total_amount - data.paid_amount
@@ -414,8 +423,11 @@ export default function InvoiceDetailPage() {
   return (
     <PermissionGate permission={PERMISSIONS.BILLING_READ}>
       <div className="space-y-6 pb-10">
+        {invoice.patient_id ? (
+          <PatientVisitActionRail patientId={invoice.patient_id} className="mx-0" />
+        ) : null}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Button variant="ghost" size="icon" asChild>
               <Link href="/billing" aria-label={t("billing.back", "Back")}>
                 <ArrowLeft className="h-4 w-4" />
@@ -529,10 +541,20 @@ export default function InvoiceDetailPage() {
         {paymentJustSettled && balance <= 0 ? (
           <ContentPanel className="border-emerald-200/80 bg-emerald-50/50">
             <p className="text-sm font-medium text-emerald-900">
-              {t("billing.paymentComplete", "Payment recorded — invoice settled")}
+              {visitAutoClosed
+                ? t("billing.encounterAutoClosedTitle", "Today’s visit closed")
+                : t("billing.paymentComplete", "Payment recorded — invoice settled")}
             </p>
             <p className="mt-1 text-sm text-emerald-800/90">
-              {t("billing.paymentCompleteHint", "Return to the patient chart or print a receipt for checkout.")}
+              {visitAutoClosed
+                ? t(
+                    "billing.encounterAutoClosed",
+                    "Balance is settled — the visit was closed automatically. The patient no longer appears on the open-visit list."
+                  )
+                : t(
+                    "billing.paymentCompleteHint",
+                    "Return to the patient chart or print a receipt for checkout."
+                  )}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Button size="sm" variant="outline" className="gap-2" asChild>
