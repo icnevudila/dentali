@@ -50,9 +50,15 @@ export function useOperationalRealtime(branchId: string | undefined) {
   const router = useRouter()
   const { t } = useLocale()
   const lastToastRef = React.useRef<Record<string, number>>({})
+  const tRef = React.useRef(t)
+  const routerRef = React.useRef(router)
+  tRef.current = t
+  routerRef.current = router
 
-  const showDebouncedToast = React.useCallback(
-    (table: OperationalTable) => {
+  React.useEffect(() => {
+    if (!branchId) return
+
+    const showDebouncedToast = (table: OperationalTable) => {
       if (table === "queue_entries" && !shouldShowOperationalQueueToast()) return
 
       const now = Date.now()
@@ -60,24 +66,19 @@ export function useOperationalRealtime(branchId: string | undefined) {
       if (now - last < TOAST_DEBOUNCE_MS) return
       lastToastRef.current[table] = now
 
-      const config = tableToastConfig(table, t)
+      const config = tableToastConfig(table, tRef.current)
       toast.info(config.message, {
         duration: 5000,
         action: {
           label: config.actionLabel,
-          onClick: () => router.push(config.href),
+          onClick: () => routerRef.current.push(config.href),
         },
       })
-    },
-    [router, t]
-  )
-
-  React.useEffect(() => {
-    if (!branchId) return
+    }
 
     const supabase = createClient()
-    const instanceId = Math.random().toString(36).slice(2)
-    let channel = supabase.channel(`operational-ops-${branchId}-${instanceId}`)
+    // Stable channel name per branch — reconnects must not leak multiple channels.
+    let channel = supabase.channel(`operational-ops-${branchId}`)
 
     for (const table of OPERATIONAL_TABLES) {
       channel = channel.on(
@@ -100,5 +101,5 @@ export function useOperationalRealtime(branchId: string | undefined) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [branchId, showDebouncedToast])
+  }, [branchId])
 }

@@ -33,13 +33,32 @@ function createDummyClient(): any {
   return new Proxy({} as any, {
     get(_, prop) {
       if (prop === "auth") return authMethods
-      if (prop === "from") return () => ({ select: noopAsync, insert: noopAsync, update: noopAsync, delete: noopAsync, upsert: noopAsync })
+      if (prop === "from")
+        return () => ({
+          select: noopAsync,
+          insert: noopAsync,
+          update: noopAsync,
+          delete: noopAsync,
+          upsert: noopAsync,
+        })
       if (prop === "rpc") return noopAsync
       if (prop === "channel") return () => mockChannel
       if (prop === "removeChannel") return () => {}
       return noopAsync
     },
   })
+}
+
+function storageIsUsable(): boolean {
+  if (typeof window === "undefined") return false
+  try {
+    const key = "sb-storage-probe"
+    window.localStorage.setItem(key, "1")
+    window.localStorage.removeItem(key)
+    return true
+  } catch {
+    return false
+  }
 }
 
 export function createClient() {
@@ -51,12 +70,13 @@ export function createClient() {
   }
 
   if (typeof window === "undefined") {
-    // Server-side: create a fresh client without browser storage
+    // Server Components path — no browser storage.
     try {
       return createBrowserClient(url, key, {
         auth: {
           persistSession: false,
-          storage: undefined,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
         },
       })
     } catch {
@@ -66,30 +86,27 @@ export function createClient() {
 
   if (!browserClient) {
     try {
-      // Test if storage is accessible
-      let safeStorage: any = undefined
-      try {
-        window.sessionStorage.setItem("sb-test", "1")
-        window.sessionStorage.removeItem("sb-test")
-        safeStorage = window.sessionStorage
-      } catch {
-        // Storage blocked
+      if (!storageIsUsable()) {
+        // Privacy mode with blocked storage — keep app alive without auth thrash.
+        const memoryStorage = {
+          getItem: () => null,
+          setItem: () => {},
+          removeItem: () => {},
+        }
+        browserClient = createBrowserClient(url, key, {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            storage: memoryStorage,
+          },
+        })
+      } else {
+        // Default cookie storage from @supabase/ssr — must stay aligned with middleware.
+        // Do NOT force sessionStorage; that fights cookie sessions and can remount pages
+        // every TOKEN_REFRESH / cookie sync cycle (~tens of seconds).
+        browserClient = createBrowserClient(url, key)
       }
-
-      const memoryStorage = {
-        getItem: () => null,
-        setItem: () => {},
-        removeItem: () => {},
-      }
-
-      browserClient = createBrowserClient(url, key, {
-        auth: {
-          persistSession: !!safeStorage,
-          storage: safeStorage || memoryStorage,
-        },
-      })
     } catch {
-      // createBrowserClient itself threw
       return createDummyClient()
     }
   }
