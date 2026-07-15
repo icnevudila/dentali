@@ -671,7 +671,7 @@ export const LANDING_HEADINGS = {
       "Start on one branch, add sites when you grow. Full clinical workflow on every tier.",
       "Tek şubeden başlayın, büyüdükçe şube ekleyin. Her planda tam klinik iş akışı."
     ),
-    pricePlaceholder: t("Pricing coming soon", "Fiyatlar yakında"),
+    pricePlaceholder: t("Free 14-day trial", "14 gün ücretsiz deneme"),
     viewAll: t("See plan details →", "Plan detayları →"),
   },
   stickyCta: {

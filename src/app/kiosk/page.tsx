@@ -5,10 +5,14 @@ import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 import {
   createKioskSession,
+  getKioskMedicalHistoryPreview,
+  getKioskQueueStats,
   kioskCheckInSafeError,
   publicChannelSafeError,
   submitKioskCheckin,
   submitKioskIntake,
+  submitKioskSatisfaction,
+  updateKioskMood,
 } from "@/lib/kiosk/kiosk-service"
 import { useLocale } from "@/hooks/use-locale"
 import { Button } from "@/components/ui/button"
@@ -23,14 +27,12 @@ import {
 import { readKioskSignReturn } from "@/lib/kiosk/kiosk-sign-return"
 import { PublicChannelBrand } from "@/components/brand/public-channel-brand"
 import { CheckCircle2, AlertCircle, Loader2, Users, MapPin } from "lucide-react"
-import { updateKioskMood, getKioskQueueStats } from "@/lib/kiosk/kiosk-service"
 import {
   emptyPublicIntakeFormState,
   publicIntakeToKioskPayload,
   type PublicIntakeFormState,
 } from "@/lib/patients/public-intake-form"
 import { PublicPatientIntakeFields } from "@/components/patients/PublicPatientIntakeFields"
-import { createClient } from "@/lib/supabase/client"
 
 type Step = "loading" | "welcome" | "form" | "consents" | "mood" | "success" | "error" | "intakeForm" | "intakeSuccess" | "pending_approval" | "update_history_verify" | "update_history_form" | "satisfaction_survey" | "survey_success"
 
@@ -140,6 +142,8 @@ function KioskContent() {
     setIntakeForm(emptyPublicIntakeFormState())
     setHasSigned(false)
     setConsentAccepted(false)
+    setRating(0)
+    setFeedbackText("")
   }, [])
 
   const getIntakeProgress = () => {
@@ -431,16 +435,45 @@ function KioskContent() {
     await performCheckIn()
   }
 
+  const finishCheckInSuccess = () => {
+    setStep("success")
+    const spelledCode = queueCode.split("").join(" ")
+    const announcementText = `Sayın ${lastName}, girişiniz yapıldı. Sıra numaranız: ${spelledCode}. Lütfen bekleme alanına geçiniz.`
+    playSuccessSound(announcementText)
+  }
+
   const handleMoodSelect = async (mood: string) => {
     if (entryId) {
       await updateKioskMood(entryId, mood)
     }
-    setStep("success")
-    
-    // Personalized friendly announcement in Turkish with fallback to English
-    const spelledCode = queueCode.split("").join(" ")
-    const announcementText = `Sayın ${lastName}, girişiniz yapıldı. Sıra numaranız: ${spelledCode}. Lütfen bekleme alanına geçiniz.`
-    playSuccessSound(announcementText)
+    setStep("satisfaction_survey")
+  }
+
+  const handleSatisfactionSubmit = async () => {
+    if (rating < 1 || rating > 5) {
+      setErrorMsg(t("kiosk.ratingRequired", "Please choose a star rating before continuing."))
+      return
+    }
+    setSubmitting(true)
+    setErrorMsg("")
+    const { error } = await submitKioskSatisfaction(sessionId, entryId || null, rating, feedbackText)
+    setSubmitting(false)
+    if (error) {
+      setErrorMsg(
+        publicChannelSafeError(
+          error,
+          t("kiosk.feedbackFailed", "We could not save your feedback. Please see the front desk.")
+        )
+      )
+      return
+    }
+    setStep("survey_success")
+    window.setTimeout(() => finishCheckInSuccess(), 1200)
+  }
+
+  const handleSatisfactionSkip = () => {
+    setErrorMsg("")
+    finishCheckInSuccess()
   }
 
   const handleIntakeSubmit = async (e: React.FormEvent) => {
@@ -473,59 +506,30 @@ function KioskContent() {
     setSubmitting(true)
     setErrorMsg("")
 
-    const supabase = createClient()
-    const { data: patient, error } = await supabase
-      .from("patients")
-      .select("id, first_name, last_name, phone")
-      .eq("phone", phone)
-      .ilike("last_name", lastName)
-      .maybeSingle()
+    const { data, error } = await getKioskMedicalHistoryPreview(sessionId, phone, lastName)
+    setSubmitting(false)
 
-    if (error || !patient) {
-      setSubmitting(false)
-      setErrorMsg(t("kiosk.patientNotFound", "No patient record found matching those details. Please check and try again."))
+    if (error || !data) {
+      setErrorMsg(
+        publicChannelSafeError(
+          error,
+          t(
+            "kiosk.patientNotFound",
+            "No patient record found matching those details. Please check and try again."
+          )
+        )
+      )
       return
     }
 
-    setUpdatePatientId(patient.id)
-
-    // Load active medical history version if exists
-    const { data: history } = await supabase
-      .from("patient_medical_histories")
-      .select("allergies, medications, conditions, notes")
-      .eq("patient_id", patient.id)
-      .order("version", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (history) {
-      const allergiesText = Array.isArray(history.allergies) ? history.allergies.join(", ") : ""
-      const medsText = Array.isArray(history.medications) ? history.medications.join(", ") : ""
-      const condsText = Array.isArray(history.conditions) ? history.conditions.join(", ") : ""
-      const combinedNotes = [
-        allergiesText ? `Allergies: ${allergiesText}` : null,
-        medsText ? `Medications: ${medsText}` : null,
-        condsText ? `Conditions: ${condsText}` : null,
-        history.notes ? `Notes: ${history.notes}` : null,
-      ].filter(Boolean).join("\n")
-
-      setIntakeForm({
-        ...emptyPublicIntakeFormState(),
-        firstName: patient.first_name,
-        lastName: patient.last_name,
-        phone: patient.phone ?? "",
-        medicalAlerts: combinedNotes,
-      })
-    } else {
-      setIntakeForm({
-        ...emptyPublicIntakeFormState(),
-        firstName: patient.first_name,
-        lastName: patient.last_name,
-        phone: patient.phone ?? "",
-      })
-    }
-
-    setSubmitting(false)
+    setUpdatePatientId(data.patient_id)
+    setIntakeForm({
+      ...emptyPublicIntakeFormState(),
+      firstName: data.first_name,
+      lastName: data.last_name,
+      phone: data.phone ?? phone,
+      medicalAlerts: data.medical_alerts,
+    })
     setStep("update_history_form")
   }
 
@@ -1002,6 +1006,90 @@ function KioskContent() {
             <Button variant="ghost" className="mt-8 text-neutral-400 hover:text-neutral-600" onClick={() => handleMoodSelect('skipped')}>
               Skip this step
             </Button>
+          </div>
+        )}
+
+        {step === "satisfaction_survey" && (
+          <div className="rounded-[2rem] border border-white bg-white/70 p-10 text-center shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-8 fade-in duration-500">
+            <h2 className="mb-2 text-3xl font-semibold tracking-tight text-neutral-900">
+              {t("kiosk.surveyTitle", "How was check-in today?")}
+            </h2>
+            <p className="mb-8 text-neutral-500">
+              {t("kiosk.surveyHint", "Optional — your feedback helps our front desk improve.")}
+            </p>
+
+            <div className="mb-6 flex justify-center gap-2" role="group" aria-label={t("kiosk.surveyRating", "Star rating")}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => {
+                    setRating(star)
+                    setErrorMsg("")
+                  }}
+                  className={[
+                    "flex h-14 w-14 items-center justify-center rounded-2xl border text-2xl transition active:scale-95",
+                    rating >= star
+                      ? "border-amber-300 bg-amber-50 text-amber-500"
+                      : "border-neutral-200 bg-white text-neutral-300 hover:border-amber-200 hover:text-amber-400",
+                  ].join(" ")}
+                  aria-pressed={rating >= star}
+                  aria-label={`${star}`}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value.slice(0, 500))}
+              rows={3}
+              maxLength={500}
+              placeholder={t("kiosk.surveyCommentPlaceholder", "Anything we should know? (optional)")}
+              className="mb-4 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-left text-sm text-neutral-800 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+            />
+
+            {errorMsg ? (
+              <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {errorMsg}
+              </div>
+            ) : null}
+
+            <div className="space-y-3">
+              <Button
+                type="button"
+                size="lg"
+                className="h-14 w-full text-lg"
+                disabled={submitting}
+                onClick={() => void handleSatisfactionSubmit()}
+              >
+                {submitting
+                  ? t("common.saving", "Saving…")
+                  : t("kiosk.surveySubmit", "Send feedback")}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-12 w-full text-neutral-500"
+                disabled={submitting}
+                onClick={handleSatisfactionSkip}
+              >
+                {t("kiosk.surveySkip", "Skip")}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === "survey_success" && (
+          <div className="rounded-[2rem] border border-emerald-100 bg-white/80 p-12 text-center shadow-[0_16px_60px_rgb(16,185,129,0.12)] backdrop-blur-2xl animate-in zoom-in-95 duration-500">
+            <CheckCircle2 className="mx-auto mb-4 h-14 w-14 text-emerald-500" />
+            <h2 className="text-2xl font-bold text-neutral-900">
+              {t("kiosk.surveyThanks", "Thank you!")}
+            </h2>
+            <p className="mt-2 text-neutral-500">
+              {t("kiosk.surveyThanksHint", "Getting your queue number ready…")}
+            </p>
           </div>
         )}
 

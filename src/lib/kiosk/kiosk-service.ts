@@ -219,6 +219,63 @@ export async function verifyPortalPatient(
   return { data: { patient_id: result.patient_id }, error: null }
 }
 
+export type KioskMedicalHistoryPreview = {
+  patient_id: string
+  first_name: string
+  last_name: string
+  phone: string | null
+  medical_alerts: string
+}
+
+export async function getKioskMedicalHistoryPreview(
+  sessionId: string,
+  phone: string,
+  lastName: string
+): Promise<{ data: KioskMedicalHistoryPreview | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("get_kiosk_medical_history_preview", {
+    p_session_id: sessionId,
+    p_phone: phone,
+    p_last_name: lastName,
+  })
+
+  if (error) return { data: null, error: error.message }
+  const result = data as KioskMedicalHistoryPreview | null
+  if (!result?.patient_id) {
+    return { data: null, error: "We could not find your record." }
+  }
+  return {
+    data: {
+      patient_id: String(result.patient_id),
+      first_name: String(result.first_name ?? ""),
+      last_name: String(result.last_name ?? ""),
+      phone: result.phone ? String(result.phone) : null,
+      medical_alerts: String(result.medical_alerts ?? ""),
+    },
+    error: null,
+  }
+}
+
+export async function submitKioskSatisfaction(
+  sessionId: string,
+  entryId: string | null,
+  rating: number,
+  feedbackText?: string
+): Promise<{ data: { feedback_id: string; rating: number } | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("submit_kiosk_satisfaction", {
+    p_session_id: sessionId,
+    p_entry_id: entryId,
+    p_rating: rating,
+    p_feedback_text: feedbackText?.trim() || null,
+  })
+
+  if (error) return { data: null, error: error.message }
+  const result = data as { feedback_id: string; rating: number }
+  if (!result?.feedback_id) return { data: null, error: "Could not save feedback." }
+  return { data: result, error: null }
+}
+
 export async function submitPortalAppointment(params: {
   sessionId: string
   phone: string

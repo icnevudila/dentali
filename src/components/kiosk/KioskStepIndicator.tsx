@@ -44,8 +44,17 @@ export function KioskStepIndicator({ active }: { active: KioskStep }) {
 }
 
 export function kioskStepFromFlow(step: string): KioskStep {
-  if (step === "success" || step === "intakeSuccess") return "done"
+  if (
+    step === "success" ||
+    step === "intakeSuccess" ||
+    step === "satisfaction_survey" ||
+    step === "survey_success"
+  ) {
+    return "done"
+  }
   if (step === "form" || step === "consents" || step === "mood") return "checkin"
-  if (step === "intakeForm") return "intake"
+  if (step === "intakeForm" || step === "update_history_verify" || step === "update_history_form") {
+    return "intake"
+  }
   return "welcome"
 }

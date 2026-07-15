@@ -19,6 +19,7 @@ export function PricingSummarySection() {
     {
       id: "starter",
       name: t("pricingTiers.starterName", "Starter"),
+      price: t("pricingTiers.starterPrice", "Free 14-day trial"),
       description: t("pricingTiers.starterDesc", "Single branch, up to 5 staff seats. Core clinical workflow."),
       highlight: t("pricingTiers.starterF1", "Patient registry & dental chart"),
       cta: { label: t("marketing.startTrial", "Start free trial"), href: "/signup" },
@@ -27,6 +28,7 @@ export function PricingSummarySection() {
     {
       id: "growth",
       name: t("pricingTiers.growthName", "Growth"),
+      price: t("pricingTiers.growthPrice", "Free 14-day trial"),
       description: t("pricingTiers.growthDesc", "Multi-branch clinics with HMO and inventory."),
       highlight: t("pricingTiers.growthF2", "Multiple branches"),
       cta: { label: t("marketing.startTrial", "Start free trial"), href: "/signup" },
@@ -35,6 +37,7 @@ export function PricingSummarySection() {
     {
       id: "enterprise",
       name: t("pricingTiers.enterpriseName", "Enterprise"),
+      price: t("pricingTiers.enterprisePrice", "Custom quote"),
       description: t(
         "pricingTiers.enterpriseDesc",
         "Large groups, custom integrations, and dedicated onboarding."
@@ -90,9 +93,7 @@ export function PricingSummarySection() {
                   <div className="mb-2 h-4" aria-hidden />
                 )}
                 <h3 className="text-base font-semibold text-neutral-950">{tier.name}</h3>
-                <p className="mt-1 text-sm font-medium text-neutral-500">
-                  {lt(LANDING_HEADINGS.pricingSummary.pricePlaceholder, locale)}
-                </p>
+                <p className="mt-1 text-sm font-medium text-neutral-500">{tier.price}</p>
                 <p className="mt-2 text-sm leading-relaxed text-neutral-600">{tier.description}</p>
                 <p className="mt-4 flex gap-2 text-sm text-neutral-700">
                   <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" aria-hidden />
