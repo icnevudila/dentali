@@ -25,6 +25,7 @@ import {
   UserCheck,
   Timer,
   AlertTriangle,
+  Star,
 } from "lucide-react"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { MetricStrip } from "@/components/layout/MetricStrip"
@@ -56,6 +57,7 @@ import { HmoAnalyticsPanel } from "@/components/analytics/HmoAnalyticsPanel"
 import { PhilHealthAnalyticsPanel } from "@/components/analytics/PhilHealthAnalyticsPanel"
 import { KioskAnalyticsPanel } from "@/components/analytics/KioskAnalyticsPanel"
 import { DisplayAnalyticsPanel } from "@/components/analytics/DisplayAnalyticsPanel"
+import { SatisfactionAnalyticsPanel } from "@/components/analytics/SatisfactionAnalyticsPanel"
 import { BranchPublicTokensPanel } from "@/components/analytics/BranchPublicTokensPanel"
 import { ChartConditionPanel } from "@/components/analytics/ChartConditionPanel"
 import { OrthoAnalyticsPanel } from "@/components/analytics/OrthoAnalyticsPanel"
@@ -299,6 +301,15 @@ export default function ReportsHubPage() {
         description: t("reports.linkComplianceDesc", "Autoclave cycles and indicator results"),
         href: "/reports/compliance",
         icon: Shield,
+      },
+      {
+        title: t("reports.linkSatisfaction", "Check-in satisfaction"),
+        description: t(
+          "reports.linkSatisfactionDesc",
+          "Kiosk star ratings and optional comments"
+        ),
+        href: "/reports/satisfaction",
+        icon: Star,
       },
       {
         title: t("reports.linkInventory", "Inventory"),
@@ -968,9 +979,16 @@ export default function ReportsHubPage() {
             "Keep the waiting-room experience healthy: verify display heartbeat, check kiosk traffic, and close stale public tokens before they confuse staff."
           )}
           action={
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/display">{t("display.analyticsTitle", "Kiosk & TV display")}</Link>
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/display">{t("display.analyticsTitle", "Kiosk & TV display")}</Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/reports/satisfaction">
+                  {t("satisfaction.openFull", "Open satisfaction report")}
+                </Link>
+              </Button>
+            </div>
           }
         >
           <div className="space-y-4">
@@ -982,6 +1000,15 @@ export default function ReportsHubPage() {
               )}
             >
               <DisplayAnalyticsPanel branchId={activeBranch.id} />
+            </ReportPanelCaption>
+            <ReportPanelCaption
+              title={t("reports.panelSatisfactionTitle", "Check-in satisfaction")}
+              description={t(
+                "reports.panelSatisfactionDescription",
+                "Average kiosk star ratings and response volume for this branch. Comments never include patient names on this board."
+              )}
+            >
+              <SatisfactionAnalyticsPanel branchId={activeBranch.id} periodDays={periodDays} />
             </ReportPanelCaption>
             <ReportPanelCaption
               title={t("reports.panelTokensTitle", "Public links and tokens")}
