@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1"
-import { encode as encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +12,8 @@ const STAFF_SAFE = {
   notConfigured:
     "Form reading is not configured yet. Add a free GEMINI_API_KEY (or OPENAI_API_KEY) in Edge Function secrets.",
   providerFailed: "We could not read that form. Try again with a brighter, flatter photo.",
+  providerKeyInvalid:
+    "Gemini API key is invalid or not allowed for this model. Create a new key at Google AI Studio (AIza…) and set GEMINI_API_KEY in Supabase secrets.",
   pdfUnsupported:
     "PDF reading is limited in this version. Please upload a JPEG or PNG photo of the form.",
 }
@@ -107,6 +108,17 @@ function extractJsonObject(text: string): unknown {
   }
 }
 
+/** Chunked btoa — avoids Deno.land imports (they can 503 cold starts on Edge). */
+function encodeBase64(bytes: Uint8Array): string {
+  const chunkSize = 0x2000
+  let binary = ""
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize)
+    binary += String.fromCharCode.apply(null, Array.from(chunk) as number[])
+  }
+  return btoa(binary)
+}
+
 function resolveProvider(geminiKey: string, openaiKey: string): ProviderKind | null {
   const forced = (Deno.env.get("MEDICAL_HISTORY_OCR_PROVIDER") ?? "").trim().toLowerCase()
   if (forced === "gemini" && geminiKey) return "gemini"
@@ -140,13 +152,15 @@ async function extractWithGemini(params: {
   model: string
   mime: string
   b64: string
-}): Promise<string | null> {
+}): Promise<{ text: string | null; keyInvalid: boolean }> {
   const candidates = [
     params.model,
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
     "gemini-flash-latest",
   ].filter((m, i, arr) => Boolean(m) && arr.indexOf(m) === i)
+
+  let keyInvalid = false
 
   for (const model of candidates) {
     const url =
@@ -185,16 +199,26 @@ async function extractWithGemini(params: {
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "")
-      console.error("gemini_http", model, res.status, errText.slice(0, 300))
+      console.error("gemini_http", model, res.status, errText.slice(0, 400))
+      if (
+        res.status === 400 ||
+        res.status === 401 ||
+        res.status === 403 ||
+        /API_KEY_INVALID|API key not valid|PERMISSION_DENIED|API_KEY_SERVICE_BLOCKED/i.test(
+          errText
+        )
+      ) {
+        keyInvalid = true
+      }
       continue
     }
 
     const json = await res.json()
     const text = readGeminiText(json)
-    if (text) return text
+    if (text) return { text, keyInvalid: false }
   }
 
-  return null
+  return { text: null, keyInvalid }
 }
 
 async function extractWithOpenAI(params: {
@@ -359,20 +383,42 @@ Deno.serve(async (req) => {
 
     const b64 = encodeBase64(bytes)
 
-    const content =
-      provider === "gemini"
-        ? await extractWithGemini({
-            apiKey: geminiKey,
-            model: modelOverride || "gemini-2.5-flash",
-            mime,
-            b64,
-          })
-        : await extractWithOpenAI({
-            apiKey: openaiKey,
-            model: modelOverride || "gpt-4o-mini",
-            mime,
-            b64,
-          })
+    if (provider === "gemini") {
+      const gemini = await extractWithGemini({
+        apiKey: geminiKey,
+        model: modelOverride || "gemini-2.5-flash",
+        mime,
+        b64,
+      })
+      if (!gemini.text) {
+        return jsonResponse(
+          {
+            error: gemini.keyInvalid
+              ? STAFF_SAFE.providerKeyInvalid
+              : STAFF_SAFE.providerFailed,
+          },
+          gemini.keyInvalid ? 503 : 502
+        )
+      }
+      let parsed: unknown
+      try {
+        parsed = extractJsonObject(gemini.text)
+      } catch {
+        return jsonResponse({ error: STAFF_SAFE.providerFailed }, 502)
+      }
+      const draft = parseDraft(parsed, storagePath)
+      if (!draft) {
+        return jsonResponse({ error: STAFF_SAFE.providerFailed }, 502)
+      }
+      return jsonResponse({ data: draft })
+    }
+
+    const content = await extractWithOpenAI({
+      apiKey: openaiKey,
+      model: modelOverride || "gpt-4o-mini",
+      mime,
+      b64,
+    })
 
     if (!content) {
       return jsonResponse({ error: STAFF_SAFE.providerFailed }, 502)

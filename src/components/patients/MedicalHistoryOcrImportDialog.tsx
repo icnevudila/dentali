@@ -186,12 +186,14 @@ export function MedicalHistoryOcrImportDialog({
           {error ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
               {error}
-              <p className="mt-1 text-xs text-amber-700/80">
-                {t(
-                  "medicalHistory.ocrRetryHint",
-                  "Use a brighter, flatter photo of the form and try again."
-                )}
-              </p>
+              {!/GEMINI_API_KEY|API key|Google AI Studio/i.test(error) ? (
+                <p className="mt-1 text-xs text-amber-700/80">
+                  {t(
+                    "medicalHistory.ocrRetryHint",
+                    "Use a brighter, flatter photo of the form and try again."
+                  )}
+                </p>
+              ) : null}
             </div>
           ) : null}
 
