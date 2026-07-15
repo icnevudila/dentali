@@ -105,11 +105,15 @@ function extractJsonObject(text: string): unknown {
   }
 }
 
-async function bytesToBase64(bytes: Uint8Array): Promise<string> {
+function bytesToBase64(bytes: Uint8Array): string {
+  // Avoid spread (...chunk) which can blow the call stack on large phone photos.
   let binary = ""
-  const chunk = 0x8000
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
+  const chunkSize = 0x2000
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize)
+    for (let j = 0; j < chunk.length; j++) {
+      binary += String.fromCharCode(chunk[j]!)
+    }
   }
   return btoa(binary)
 }
@@ -130,45 +134,61 @@ async function extractWithGemini(params: {
   mime: string
   b64: string
 }): Promise<string | null> {
-  const model = params.model || "gemini-2.0-flash"
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`
+  const candidates = [
+    params.model,
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-flash-latest",
+  ].filter((m, i, arr) => Boolean(m) && arr.indexOf(m) === i)
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": params.apiKey,
-    },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: EXTRACTION_PROMPT }] },
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: "Extract medical history fields from this clinic form photo. JSON only." },
-            {
-              inline_data: {
-                mime_type: params.mime,
-                data: params.b64,
-              },
-            },
-          ],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.1,
-        responseMimeType: "application/json",
+  for (const model of candidates) {
+    const url =
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": params.apiKey,
       },
-    }),
-  })
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: EXTRACTION_PROMPT }] },
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: "Extract medical history fields from this clinic form photo. JSON only." },
+              {
+                inline_data: {
+                  mime_type: params.mime,
+                  data: params.b64,
+                },
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.1,
+          responseMimeType: "application/json",
+        },
+      }),
+    })
 
-  if (!res.ok) return null
-  const json = await res.json()
-  const text = json?.candidates?.[0]?.content?.parts
-    ?.map((p: { text?: string }) => p.text ?? "")
-    .join("")
-  return typeof text === "string" && text.trim() ? text : null
+    if (!res.ok) {
+      // Try next model (retired / not found / quota on this id).
+      continue
+    }
+
+    const json = await res.json()
+    const text = json?.candidates?.[0]?.content?.parts
+      ?.map((p: { text?: string }) => p.text ?? "")
+      .join("")
+    if (typeof text === "string" && text.trim()) {
+      return text
+    }
+  }
+
+  return null
 }
 
 async function extractWithOpenAI(params: {
@@ -333,7 +353,7 @@ Deno.serve(async (req) => {
       provider === "gemini"
         ? await extractWithGemini({
             apiKey: geminiKey,
-            model: modelOverride || "gemini-2.0-flash",
+            model: modelOverride || "gemini-2.5-flash",
             mime,
             b64,
           })
