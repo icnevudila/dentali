@@ -113,6 +113,7 @@ export default function PrescriptionsPage() {
   const [diagnosis, setDiagnosis] = React.useState("")
   const [generalInstructions, setGeneralInstructions] = React.useState("")
   const [items, setItems] = React.useState([EMPTY_ITEM()])
+  const [medFilter, setMedFilter] = React.useState("")
   const [viewRxId, setViewRxId] = React.useState<string | null>(null)
   const [viewRx, setViewRx] = React.useState<PrescriptionRecord | null>(null)
   const [viewLoading, setViewLoading] = React.useState(false)
@@ -413,19 +414,35 @@ export default function PrescriptionsPage() {
                         key={index}
                         className="rounded-lg border border-neutral-200 bg-neutral-50/50 p-3 space-y-2"
                       >
-                        <div className="flex flex-wrap gap-2">
-                          {COMMON_DENTAL_MEDS.map((tmpl) => (
-                            <Button
-                              key={tmpl.drug_name}
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-xs"
-                              onClick={() => applyTemplate(index, tmpl)}
-                            >
-                              {tmpl.drug_name}
-                            </Button>
-                          ))}
+                        <div className="space-y-2">
+                          <Input
+                            type="text"
+                            placeholder="🔍 Filter common medications..."
+                            value={medFilter}
+                            onChange={(e) => setMedFilter(e.target.value)}
+                            className="h-8 text-xs max-w-xs"
+                          />
+                          <div className="flex flex-wrap gap-2">
+                            {COMMON_DENTAL_MEDS.filter((tmpl) =>
+                              tmpl.drug_name.toLowerCase().includes(medFilter.toLowerCase())
+                            ).map((tmpl) => (
+                              <Button
+                                key={tmpl.drug_name}
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs border-primary-100 hover:border-primary-300 bg-white"
+                                onClick={() => applyTemplate(index, tmpl)}
+                              >
+                                {tmpl.drug_name}
+                              </Button>
+                            ))}
+                            {COMMON_DENTAL_MEDS.filter((tmpl) =>
+                              tmpl.drug_name.toLowerCase().includes(medFilter.toLowerCase())
+                            ).length === 0 && (
+                              <span className="text-xs text-neutral-400">No matching drugs in template shortcuts</span>
+                            )}
+                          </div>
                         </div>
                         <div className="grid gap-2 sm:grid-cols-3">
                           <Input

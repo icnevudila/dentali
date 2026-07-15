@@ -9,6 +9,8 @@ export type PublicQueueDisplayItem = {
 export interface PublicQueueDisplay {
   branch_id?: string
   branch_name: string
+  /** Optional clinic announcement for the TV ticker (no PHI). */
+  announcement?: string | null
   now_serving: PublicQueueDisplayItem[]
   waiting: PublicQueueDisplayItem[]
   updated_at: string

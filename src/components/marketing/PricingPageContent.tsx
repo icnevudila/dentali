@@ -21,7 +21,7 @@ export function PricingPageContent() {
           <p className="mt-4 text-base leading-relaxed text-neutral-600">
             {t(
               "pricingPage.subtitle",
-              "Placeholder tiers for launch — final pricing and promos will appear here. All plans include the full clinical workflow: patients, chart, queue, billing, and consent."
+              "Every plan includes the full clinical workflow — patients, chart, queue, billing, and consent. Start with a free trial; Growth and Enterprise unlock multi-branch and automation."
             )}
           </p>
         </div>

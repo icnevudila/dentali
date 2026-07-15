@@ -124,3 +124,17 @@ export async function fetchBranchSetting(
   if (error) return { value: null, error: error.message }
   return { value: data?.value ?? null, error: null }
 }
+
+export async function saveBranchDisplayAnnouncement(
+  branchId: string,
+  message: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const trimmed = message.trim().slice(0, 280)
+  const { error } = await supabase.rpc("set_branch_setting", {
+    p_branch_id: branchId,
+    p_key: "display_announcement",
+    p_value: trimmed,
+  })
+  return { error: error?.message ?? null }
+}

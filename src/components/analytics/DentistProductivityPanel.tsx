@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useBranch } from "@/hooks/use-branch"
 import { Badge } from "@/components/ui/badge"
-import { Users, TrendingUp, CalendarDays, RefreshCw, BarChart2, ShieldAlert } from "lucide-react"
+import { Users, RefreshCw, BarChart2, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface DentistStat {
@@ -17,13 +17,18 @@ interface DentistStat {
   noshow_count: number
 }
 
+const phpFormatter = new Intl.NumberFormat("en-PH", {
+  style: "currency",
+  currency: "PHP",
+  maximumFractionDigits: 0,
+})
+
 export function DentistProductivityPanel() {
   const { activeBranch } = useBranch()
   const [stats, setStats] = React.useState<DentistStat[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
-  
-  // Filter States
+
   const [timeRange, setTimeRange] = React.useState<"all" | "today" | "7days" | "30days">("all")
   const [selectedDentist, setSelectedDentist] = React.useState<string>("all")
   const [availableDentists, setAvailableDentists] = React.useState<{ id: string; name: string }[]>([])
@@ -35,44 +40,57 @@ export function DentistProductivityPanel() {
     const supabase = createClient()
 
     try {
-      const { data: appts, error: apptErr } = await supabase
+      const cutoff =
+        timeRange === "all"
+          ? null
+          : (() => {
+              const now = new Date()
+              const c = new Date()
+              if (timeRange === "today") c.setHours(0, 0, 0, 0)
+              else if (timeRange === "7days") c.setDate(now.getDate() - 7)
+              else c.setDate(now.getDate() - 30)
+              return c.toISOString()
+            })()
+
+      let apptQuery = supabase
         .from("appointments")
         .select("id, status, provider_id, scheduled_at, profiles!provider_id(full_name)")
         .eq("branch_id", activeBranch.id)
 
-      if (apptErr) throw apptErr
+      if (cutoff) {
+        apptQuery = apptQuery.gte("scheduled_at", cutoff)
+      }
 
-      // Extract unique dentists from appointments to populate filter dropdown
+      let invoiceQuery = supabase
+        .from("invoices")
+        .select("paid_amount, created_by, created_at, status")
+        .eq("branch_id", activeBranch.id)
+        .gt("paid_amount", 0)
+        .neq("status", "void")
+
+      if (cutoff) {
+        invoiceQuery = invoiceQuery.gte("created_at", cutoff)
+      }
+
+      const [{ data: appts, error: apptErr }, { data: invoices, error: invErr }] = await Promise.all([
+        apptQuery,
+        invoiceQuery,
+      ])
+
+      if (apptErr) throw apptErr
+      if (invErr) throw invErr
+
       const dentistSet = new Map<string, string>()
       appts?.forEach((appt) => {
         if (appt.provider_id) {
-          const name = (appt.profiles as { full_name: string } | null)?.full_name ?? "Unknown Dentist"
+          const name =
+            (appt.profiles as { full_name: string } | null)?.full_name ?? "Unknown Dentist"
           dentistSet.set(appt.provider_id, name)
         }
       })
       setAvailableDentists(Array.from(dentistSet.entries()).map(([id, name]) => ({ id, name })))
 
       let filteredAppts = appts ?? []
-
-      // Apply Time Filter
-      if (timeRange !== "all") {
-        const now = new Date()
-        let cutoff = new Date()
-        if (timeRange === "today") {
-          cutoff.setHours(0, 0, 0, 0)
-        } else if (timeRange === "7days") {
-          cutoff.setDate(now.getDate() - 7)
-        } else if (timeRange === "30days") {
-          cutoff.setDate(now.getDate() - 30)
-        }
-        filteredAppts = filteredAppts.filter((appt) => {
-          if (!appt.scheduled_at) return false
-          const apptDate = new Date(appt.scheduled_at)
-          return apptDate >= cutoff
-        })
-      }
-
-      // Apply Dentist Filter
       if (selectedDentist !== "all") {
         filteredAppts = filteredAppts.filter((appt) => appt.provider_id === selectedDentist)
       }
@@ -81,8 +99,9 @@ export function DentistProductivityPanel() {
 
       filteredAppts.forEach((appt) => {
         if (!appt.provider_id) return
-        const providerName = (appt.profiles as { full_name: string } | null)?.full_name ?? "Unknown Dentist"
-        
+        const providerName =
+          (appt.profiles as { full_name: string } | null)?.full_name ?? "Unknown Dentist"
+
         if (!dentistMap[appt.provider_id]) {
           dentistMap[appt.provider_id] = {
             provider_id: appt.provider_id,
@@ -98,11 +117,30 @@ export function DentistProductivityPanel() {
         stat.appointment_count++
         if (appt.status === "completed") {
           stat.completed_count++
-          stat.total_revenue += 1800 // default mock standard procedure revenue per visit
         } else if (appt.status === "no_show") {
           stat.noshow_count++
         }
       })
+
+      // Attribute collected invoice amounts to the creating staff user when they match a provider.
+      for (const inv of invoices ?? []) {
+        const creatorId = inv.created_by as string | null
+        if (!creatorId) continue
+        if (selectedDentist !== "all" && creatorId !== selectedDentist) continue
+        if (!dentistMap[creatorId]) {
+          const name = dentistSet.get(creatorId)
+          if (!name) continue
+          dentistMap[creatorId] = {
+            provider_id: creatorId,
+            provider_name: name,
+            appointment_count: 0,
+            completed_count: 0,
+            total_revenue: 0,
+            noshow_count: 0,
+          }
+        }
+        dentistMap[creatorId].total_revenue += Number(inv.paid_amount) || 0
+      }
 
       setStats(Object.values(dentistMap).sort((a, b) => b.completed_count - a.completed_count))
     } catch (err: unknown) {
@@ -113,7 +151,7 @@ export function DentistProductivityPanel() {
   }, [activeBranch?.id, timeRange, selectedDentist])
 
   React.useEffect(() => {
-    loadStats()
+    void loadStats()
   }, [loadStats])
 
   if (!activeBranch) return null
@@ -127,22 +165,24 @@ export function DentistProductivityPanel() {
             Dentist Productivity &amp; Performance
           </CardTitle>
           <CardDescription>
-            Appointments, completions, and estimated collection distribution by clinician.
+            Appointments, completions, and collected invoice amounts attributed to the clinician who
+            created the invoice.
           </CardDescription>
         </div>
-        <Button variant="outline" size="sm" onClick={loadStats} disabled={loading} className="gap-1">
+        <Button variant="outline" size="sm" onClick={() => void loadStats()} disabled={loading} className="gap-1">
           <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} /> Refresh
         </Button>
       </CardHeader>
-      
-      {/* FILTERS */}
-      <div className="flex flex-wrap items-center gap-4 px-6 pb-4 border-b border-neutral-100">
+
+      <div className="flex flex-wrap items-center gap-4 border-b border-neutral-100 px-6 pb-4">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400">Date Range:</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+            Date Range:
+          </span>
           <select
             value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value as any)}
-            className="text-xs font-medium bg-white border border-neutral-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            onChange={(e) => setTimeRange(e.target.value as "all" | "today" | "7days" | "30days")}
+            className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary-500"
           >
             <option value="all">All time</option>
             <option value="today">Today</option>
@@ -152,11 +192,13 @@ export function DentistProductivityPanel() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400">Dentist:</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+            Dentist:
+          </span>
           <select
             value={selectedDentist}
             onChange={(e) => setSelectedDentist(e.target.value)}
-            className="text-xs font-medium bg-white border border-neutral-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary-500"
           >
             <option value="all">All dentists</option>
             {availableDentists.map((d) => (
@@ -177,34 +219,35 @@ export function DentistProductivityPanel() {
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-6 text-center text-red-600">
-            <ShieldAlert className="h-8 w-8 mb-2" />
+            <ShieldAlert className="mb-2 h-8 w-8" />
             <p className="text-sm font-medium">Failed to load dentist productivity</p>
-            <p className="text-xs text-neutral-500 mt-1">{error}</p>
+            <p className="mt-1 text-xs text-neutral-500">{error}</p>
           </div>
         ) : stats.length === 0 ? (
-          <p className="text-sm text-neutral-500 text-center py-8">
+          <p className="py-8 text-center text-sm text-neutral-500">
             No dentist performance records found for this branch.
           </p>
         ) : (
-          <div className="overflow-hidden border border-neutral-100 rounded-lg">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-neutral-50 border-b border-neutral-100 text-neutral-500 text-xs uppercase">
+          <div className="overflow-hidden rounded-lg border border-neutral-100">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-neutral-100 bg-neutral-50 text-xs uppercase text-neutral-500">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Clinician</th>
-                  <th className="px-4 py-3 font-semibold text-center">Appointments</th>
-                  <th className="px-4 py-3 font-semibold text-center">Completed Visits</th>
-                  <th className="px-4 py-3 font-semibold text-center">No-Show rate</th>
-                  <th className="px-4 py-3 font-semibold text-right">Est. Revenue</th>
+                  <th className="px-4 py-3 text-center font-semibold">Appointments</th>
+                  <th className="px-4 py-3 text-center font-semibold">Completed Visits</th>
+                  <th className="px-4 py-3 text-center font-semibold">No-Show rate</th>
+                  <th className="px-4 py-3 text-right font-semibold">Collected</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {stats.map((stat) => {
-                  const noShowRate = stat.appointment_count > 0 
-                    ? Math.round((stat.noshow_count / stat.appointment_count) * 100) 
-                    : 0
+                  const noShowRate =
+                    stat.appointment_count > 0
+                      ? Math.round((stat.noshow_count / stat.appointment_count) * 100)
+                      : 0
                   return (
                     <tr key={stat.provider_id} className="hover:bg-neutral-50/50">
-                      <td className="px-4 py-3 text-neutral-900 font-medium whitespace-nowrap">
+                      <td className="whitespace-nowrap px-4 py-3 font-medium text-neutral-900">
                         <div className="flex items-center gap-2">
                           <Users className="h-4 w-4 text-neutral-400" />
                           {stat.provider_name}
@@ -217,17 +260,23 @@ export function DentistProductivityPanel() {
                         <div className="flex items-center justify-center gap-1.5">
                           <span className="font-semibold text-neutral-900">{stat.completed_count}</span>
                           <span className="text-xs text-neutral-400">
-                            ({stat.appointment_count > 0 ? Math.round((stat.completed_count / stat.appointment_count) * 100) : 0}%)
+                            (
+                            {stat.appointment_count > 0
+                              ? Math.round((stat.completed_count / stat.appointment_count) * 100)
+                              : 0}
+                            %)
                           </span>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <Badge variant={noShowRate > 20 ? "danger" : noShowRate > 10 ? "warning" : "success"}>
+                        <Badge
+                          variant={noShowRate > 20 ? "danger" : noShowRate > 10 ? "warning" : "success"}
+                        >
                           {noShowRate}%
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-right text-emerald-700 font-bold">
-                        ₱{stat.total_revenue.toLocaleString()}
+                      <td className="px-4 py-3 text-right font-bold text-emerald-700">
+                        {phpFormatter.format(stat.total_revenue)}
                       </td>
                     </tr>
                   )

@@ -75,7 +75,7 @@ export const marketingMessagesEn: MessageTree = {
     eyebrow: "Pricing",
     title: "Plans that scale with your clinic",
     subtitle:
-      "Placeholder tiers for launch — final pricing and promos will appear here. All plans include the full clinical workflow: patients, chart, queue, billing, and consent.",
+      "Every plan includes the full clinical workflow — patients, chart, queue, billing, and consent. Start with a free trial; Growth and Enterprise unlock multi-branch and automation.",
     footerNeedCustom: "Need a custom rollout or PhilHealth / PayMongo integration?",
     footerOr: "or",
     footerStartTrial: "start a free trial",
@@ -84,6 +84,10 @@ export const marketingMessagesEn: MessageTree = {
     mostPopular: "Most popular",
     perMonth: "/ month",
     custom: "Custom",
+    priceComingSoon: "Free trial · rates on request",
+    starterPrice: "Free 14-day trial",
+    growthPrice: "Free 14-day trial",
+    enterprisePrice: "Custom quote",
     starterName: "Starter",
     starterDesc: "Single branch, up to 5 staff seats. Core clinical workflow.",
     starterF1: "Patient registry & dental chart",
@@ -164,22 +168,30 @@ export const marketingMessagesEn: MessageTree = {
     contactLoginLink: "Sign in →",
     privacyEyebrow: "Legal",
     privacyTitle: "Privacy policy",
-    privacyIntro: "This page is a plain-language summary. A finalized legal policy can replace this template at any time.",
+    privacyIntro:
+      "dentQL processes clinic and account data to run your branch workflows. This summary explains what we collect, why we use it, and how access is controlled. Your organization remains the data controller for patient records.",
     privacyCard1Title: "What we collect",
-    privacyCard1Body: "Account and clinic setup details, usage logs, and operational records needed to run the platform.",
+    privacyCard1Body:
+      "Staff account details, clinic and branch configuration, operational usage logs, and patient/clinical records that your authorized staff enter to deliver care and billing.",
     privacyCard2Title: "How we use data",
-    privacyCard2Body: "To provide product functionality, improve reliability, and support compliance and audit requirements.",
+    privacyCard2Body:
+      "To provide product features (scheduling, charting, queue, billing), maintain reliability and security, send operational notifications you configure, and support audit or compliance reviews.",
     privacyCard3Title: "Data access and retention",
-    privacyCard3Body: "Access is role-based. Retention and deletion requests can be processed through your organization administrator.",
+    privacyCard3Body:
+      "Access is role- and branch-scoped. Retention follows your organization's policies. Deletion or export requests for clinic data should go through your organization administrator.",
     termsEyebrow: "Legal",
     termsTitle: "Terms of service",
-    termsIntro: "This page is an operational summary and placeholder for full legal terms.",
+    termsIntro:
+      "By creating an account or using dentQL, you agree to use the platform for authorized clinical operations, keep credentials secure, and follow applicable healthcare and privacy rules in your jurisdiction.",
     termsCard1Title: "Service usage",
-    termsCard1Body: "Users must have authorized access from their clinic organization and use the platform for legitimate clinical operations.",
+    termsCard1Body:
+      "Access is limited to users invited by a clinic organization. You may not misuse the service, attempt to access other clinics' data, or interfere with system integrity.",
     termsCard2Title: "Security responsibilities",
-    termsCard2Body: "Organizations are responsible for account hygiene, staff access reviews, and secure handling of local devices.",
+    termsCard2Body:
+      "Organizations must manage staff access, revoke leavers promptly, protect kiosk/TV devices, and avoid sharing passwords. dentQL enforces permissions and records critical actions in audit logs.",
     termsCard3Title: "Availability and support",
-    termsCard3Body: "We maintain the service and ship updates continuously; support channels depend on your subscription tier.",
+    termsCard3Body:
+      "We maintain the service and ship updates continuously. Support channels and response SLAs depend on your subscription tier. Planned changes that affect workflows are communicated to organization admins.",
   },
 }
 
@@ -257,7 +269,7 @@ export const marketingMessagesTr: MessageTree = {
     eyebrow: "Fiyatlandırma",
     title: "Kliniğinizle birlikte ölçeklenen planlar",
     subtitle:
-      "Lansman için placeholder kademeler — nihai fiyatlar burada güncellenecek. Tüm planlarda tam klinik akış: hasta, chart, sıra, faturalama, onam.",
+      "Her plan tam klinik akışı içerir — hasta, chart, sıra, faturalama ve onam. Ücretsiz denemeyle başlayın; Growth ve Enterprise çok şube ve otomasyonu açar.",
     footerNeedCustom: "Özel kurulum veya PhilHealth / PayMongo entegrasyonu mu?",
     footerOr: "veya",
     footerStartTrial: "ücretsiz denemeye başlayın",
@@ -266,6 +278,10 @@ export const marketingMessagesTr: MessageTree = {
     mostPopular: "En popüler",
     perMonth: "/ ay",
     custom: "Özel",
+    priceComingSoon: "Ücretsiz deneme · fiyat talep üzerine",
+    starterPrice: "14 gün ücretsiz deneme",
+    growthPrice: "14 gün ücretsiz deneme",
+    enterprisePrice: "Özel teklif",
     starterName: "Starter",
     starterDesc: "Tek şube, en fazla 5 personel. Temel klinik akış.",
     starterF1: "Hasta kaydı ve diş chart",
@@ -346,22 +362,30 @@ export const marketingMessagesTr: MessageTree = {
     contactLoginLink: "Giriş yap →",
     privacyEyebrow: "Yasal",
     privacyTitle: "Gizlilik politikası",
-    privacyIntro: "Bu sayfa sade bir özet sunar. Nihai yasal metin istendiğinde bu şablonun yerini alabilir.",
+    privacyIntro:
+      "dentQL, şube iş akışlarınızı çalıştırmak için klinik ve hesap verilerini işler. Bu özet ne topladığımızı, neden kullandığımızı ve erişimin nasıl kontrol edildiğini açıklar. Hasta kayıtlarında veri sorumlusu kuruluşunuzdur.",
     privacyCard1Title: "Ne topluyoruz",
-    privacyCard1Body: "Hesap ve klinik kurulum bilgileri, kullanım logları ve platformu çalıştırmak için gereken operasyonel kayıtlar.",
+    privacyCard1Body:
+      "Personel hesap bilgileri, klinik/şube yapılandırması, operasyonel kullanım logları ve yetkili personelin bakım ve faturalama için girdiği hasta/klinik kayıtları.",
     privacyCard2Title: "Veriyi nasıl kullanıyoruz",
-    privacyCard2Body: "Ürün işlevselliği, güvenilirlik iyileştirmeleri ve uyumluluk/denetim gereksinimlerini desteklemek için.",
+    privacyCard2Body:
+      "Ürün özelliklerini sunmak (randevu, chart, sıra, faturalama), güvenlik ve güvenilirliği sürdürmek, yapılandırdığınız operasyonel bildirimleri göndermek ve denetim/uyumluluk incelemelerini desteklemek için.",
     privacyCard3Title: "Veri erişimi ve saklama",
-    privacyCard3Body: "Erişim role dayalıdır. Saklama ve silme talepleri kurum yöneticiniz üzerinden işlenebilir.",
+    privacyCard3Body:
+      "Erişim role ve şubeye göre sınırlıdır. Saklama kuruluş politikanıza uyar. Klinik veri silme veya dışa aktarma talepleri kurum yöneticiniz üzerinden ilerlemelidir.",
     termsEyebrow: "Yasal",
     termsTitle: "Hizmet şartları",
-    termsIntro: "Bu sayfa operasyonel bir özet ve tam yasal şartlar için yer tutucudur.",
+    termsIntro:
+      "Hesap oluşturarak veya dentQL kullanarak platformu yetkili klinik operasyonları için kullanmayı, kimlik bilgilerini korumayı ve geçerli sağlık/gizlilik kurallarına uymayı kabul edersiniz.",
     termsCard1Title: "Hizmet kullanımı",
-    termsCard1Body: "Kullanıcılar klinik organizasyonlarından yetkili erişime sahip olmalı ve platformu meşru klinik operasyonları için kullanmalıdır.",
+    termsCard1Body:
+      "Erişim, bir klinik organizasyonu tarafından davet edilen kullanıcılarla sınırlıdır. Hizmeti kötüye kullanamaz, başka kliniklerin verisine erişemez veya sistem bütünlüğünü bozamazsınız.",
     termsCard2Title: "Güvenlik sorumlulukları",
-    termsCard2Body: "Organizasyonlar hesap hijyeni, personel erişim incelemeleri ve yerel cihazların güvenli kullanımından sorumludur.",
+    termsCard2Body:
+      "Kuruluşlar personel erişimini yönetmeli, ayrılanları hızla iptal etmeli, kiosk/TV cihazlarını korumalı ve şifre paylaşmamalıdır. dentQL izinleri uygular ve kritik işlemleri denetim kaydına alır.",
     termsCard3Title: "Erişilebilirlik ve destek",
-    termsCard3Body: "Hizmeti sürdürür ve güncellemeleri sürekli yayınlarız; destek kanalları abonelik kademenize bağlıdır.",
+    termsCard3Body:
+      "Hizmeti sürdürür ve güncellemeleri sürekli yayınlarız. Destek kanalları ve SLA abonelik kademenize bağlıdır. İş akışını etkileyen planlı değişiklikler organizasyon yöneticilerine bildirilir.",
   },
 }
 
@@ -439,7 +463,7 @@ export const marketingMessagesFil: MessageTree = {
     eyebrow: "Presyo",
     title: "Mga planong lumalaki kasama ng clinic mo",
     subtitle:
-      "Placeholder tiers para sa launch — final pricing dito lalabas. Lahat ng plan may buong clinical workflow: patients, chart, queue, billing, consent.",
+      "Bawat plan may buong clinical workflow — patients, chart, queue, billing, at consent. Magsimula sa free trial; ang Growth at Enterprise ay nagbubukas ng multi-branch at automation.",
     footerNeedCustom: "Kailangan ng custom rollout o PhilHealth / PayMongo integration?",
     footerOr: "o",
     footerStartTrial: "simulan ang free trial",
@@ -448,6 +472,10 @@ export const marketingMessagesFil: MessageTree = {
     mostPopular: "Pinakasikat",
     perMonth: "/ buwan",
     custom: "Custom",
+    priceComingSoon: "Free trial · rates on request",
+    starterPrice: "Libre nang 14 araw",
+    growthPrice: "Libre nang 14 araw",
+    enterprisePrice: "Custom quote",
     starterName: "Starter",
     starterDesc: "Isang branch, hanggang 5 staff seats. Core clinical workflow.",
     starterF1: "Patient registry at dental chart",

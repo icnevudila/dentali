@@ -22,6 +22,8 @@ export type QueueDisplayBoardProps = {
   branchName: string
   nowServing: QueueDisplayItem[]
   waiting: QueueDisplayItem[]
+  /** Custom clinic announcement; when set, replaces default ticker tips. */
+  announcement?: string | null
   theme?: QueueDisplayTheme
   clock?: Date
   updatedAt?: string | null
@@ -207,6 +209,7 @@ export function QueueDisplayBoard({
   branchName,
   nowServing,
   waiting,
+  announcement,
   theme = "light",
   clock,
   updatedAt,
@@ -225,7 +228,7 @@ export function QueueDisplayBoard({
 
   const [activeAnnounce, setActiveAnnounce] = React.useState<QueueDisplayItem | null>(null)
   const prevTriggerRef = React.useRef("")
-  const announceTimerRef = React.useRef<any>(null)
+  const announceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   React.useEffect(() => {
     if (nowServing.length === 0) {
@@ -272,11 +275,14 @@ export function QueueDisplayBoard({
     timeZone: "Asia/Manila",
   })
 
-  const tickerItems = [
-    t("display.proceedToCounter", "Please proceed to the front desk when your number appears"),
-    t("display.tickerSilence", "Please keep your voice low in the waiting area"),
-    t("display.tickerSeat", "Have a seat — we will call your queue number shortly"),
-  ]
+  const customAnnouncement = announcement?.trim() ?? ""
+  const tickerItems = customAnnouncement
+    ? [customAnnouncement, customAnnouncement]
+    : [
+        t("display.proceedToCounter", "Please proceed to the front desk when your number appears"),
+        t("display.tickerSilence", "Please keep your voice low in the waiting area"),
+        t("display.tickerSeat", "Have a seat — we will call your queue number shortly"),
+      ]
 
   return (
     <div

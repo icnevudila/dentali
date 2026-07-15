@@ -288,6 +288,27 @@ export type SessionAuditEntry = {
   id: string
   event_type: string
   created_at: string
+  user_agent: string | null
+}
+
+export function describeUserAgent(ua: string | null | undefined): string {
+  if (!ua) return "Unknown device"
+  if (/Edg\//i.test(ua)) return "Edge"
+  if (/Chrome\//i.test(ua) && !/Edg\//i.test(ua)) return "Chrome"
+  if (/Firefox\//i.test(ua)) return "Firefox"
+  if (/Safari\//i.test(ua) && !/Chrome\//i.test(ua)) return "Safari"
+  if (/Mobile|Android|iPhone/i.test(ua)) return "Mobile browser"
+  return "Browser"
+}
+
+export function describeUserAgentPlatform(ua: string | null | undefined): string {
+  if (!ua) return "Unknown"
+  if (/Windows/i.test(ua)) return "Windows"
+  if (/Mac OS|Macintosh/i.test(ua)) return "macOS"
+  if (/Android/i.test(ua)) return "Android"
+  if (/iPhone|iPad/i.test(ua)) return "iOS"
+  if (/Linux/i.test(ua)) return "Linux"
+  return "Desktop"
 }
 
 export async function fetchMySessionLogs(
@@ -299,11 +320,19 @@ export async function fetchMySessionLogs(
 
   const { data, error } = await supabase
     .from("session_audit_logs")
-    .select("id, event_type, created_at")
+    .select("id, event_type, created_at, user_agent")
     .eq("profile_id", user.id)
     .order("created_at", { ascending: false })
     .limit(limit)
 
   if (error) return { data: [], error: error.message }
-  return { data: (data ?? []) as SessionAuditEntry[], error: null }
+  return {
+    data: (data ?? []).map((row) => ({
+      id: String(row.id),
+      event_type: String(row.event_type),
+      created_at: String(row.created_at),
+      user_agent: row.user_agent ? String(row.user_agent) : null,
+    })),
+    error: null,
+  }
 }

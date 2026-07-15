@@ -32,7 +32,7 @@ import {
 import { PublicPatientIntakeFields } from "@/components/patients/PublicPatientIntakeFields"
 import { createClient } from "@/lib/supabase/client"
 
-type Step = "loading" | "welcome" | "form" | "consents" | "mood" | "success" | "error" | "intakeForm" | "intakeSuccess" | "pending_approval" | "update_history_verify" | "update_history_form"
+type Step = "loading" | "welcome" | "form" | "consents" | "mood" | "success" | "error" | "intakeForm" | "intakeSuccess" | "pending_approval" | "update_history_verify" | "update_history_form" | "satisfaction_survey" | "survey_success"
 
 const AUTO_RESET_MS = 8_000
 const FORM_IDLE_MS = 120_000
@@ -81,6 +81,8 @@ function KioskContent() {
   const [isDrawing, setIsDrawing] = React.useState(false)
   const [hasSigned, setHasSigned] = React.useState(false)
   const [consentAccepted, setConsentAccepted] = React.useState(false)
+  const [rating, setRating] = React.useState<number>(0)
+  const [feedbackText, setFeedbackText] = React.useState("")
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current

@@ -222,6 +222,7 @@ function DisplayContent() {
       branchName={data?.branch_name ?? ""}
       nowServing={data?.now_serving ?? []}
       waiting={data?.waiting ?? []}
+      announcement={data?.announcement ?? null}
       theme={theme}
       clock={liveNow}
       updatedAt={data?.updated_at ?? null}
