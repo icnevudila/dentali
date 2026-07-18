@@ -859,7 +859,7 @@ function TreatmentPlanContent() {
                         <option value="">Select procedure</option>
                         {QUICK_CASE_PROCEDURES.map((p) => (
                           <option key={p.code} value={p.code}>
-                            {p.name} — ₱{p.defaultPrice.toLocaleString()}
+                            {p.name}
                           </option>
                         ))}
                         <option value="custom">Other / Custom procedure...</option>
