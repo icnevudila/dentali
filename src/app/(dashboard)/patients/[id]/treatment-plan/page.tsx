@@ -56,6 +56,7 @@ import { ProcedureStockWarningBanner } from "@/components/inventory/ProcedureSto
 import { ChartFindingSuggestionsCard } from "@/components/clinical/ChartFindingSuggestionsCard"
 import { TreatmentPlanItemRow } from "@/components/clinical/TreatmentPlanItemRow"
 import { toStoredBulletText } from "@/lib/text/bullet-text"
+import { cn } from "@/lib/utils"
 
 const PROCEDURE_TEMPLATES = [
   { code: "EXAM", name: "Oral Examination" },
@@ -130,6 +131,7 @@ function TreatmentPlanContent() {
   const [billingGate, setBillingGate] = React.useState<PatientBillingGate | null>(null)
   const [carryPlan, setCarryPlan] = React.useState<CarryForwardPlan | null>(null)
   const [showPlanCarryPicker, setShowPlanCarryPicker] = React.useState(true)
+  const [noPlanTab, setNoPlanTab] = React.useState<"quick" | "standard">("quick")
 
   const planEditable = planStatus === "proposed" || planStatus === "draft"
 
@@ -377,6 +379,7 @@ function TreatmentPlanContent() {
   const [qcProc, setQcProc] = React.useState("")
   const [qcPrice, setQcPrice] = React.useState("")
   const [qcTooth, setQcTooth] = React.useState("")
+  const [qcNotes, setQcNotes] = React.useState("")
 
   const handleQuickCase = async (mode: "bill" | "discharge") => {
     if (!user || !activeBranch) return
@@ -440,10 +443,11 @@ function TreatmentPlanContent() {
     }
 
     // 4. Add item
+    const notesSuffix = qcNotes.trim() ? `\n${qcNotes.trim()}` : ""
     const { error: itemErr } = await addPlanItem({
       planId: newPlan.id,
       procedureId: procId,
-      description: toStoredBulletText(procName),
+      description: toStoredBulletText(procName + notesSuffix),
       estimatedPrice: parsedPrice,
       toothNumber: qcTooth.trim() || undefined,
       priority: "phase_1",
@@ -727,126 +731,156 @@ function TreatmentPlanContent() {
                 onDismiss={() => setShowPlanCarryPicker(false)}
               />
             ) : null}
-            {/* ── QUICK CASE FORM ─────────────────────────────────────────── */}
-            <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50/60 to-white shadow-sm">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100">
-                    <Sparkles className="h-4 w-4 text-emerald-700" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base text-emerald-950">Quick Case</CardTitle>
-                    <CardDescription className="text-emerald-700/80 text-xs">
-                      Single visit · Log, approve & go — no multi-step workflow
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {/* Procedure */}
-                  <div className="sm:col-span-2 flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                      Procedure done
-                    </label>
-                    <select
-                      value={qcProc}
-                      onChange={(e) => setQcProc(e.target.value)}
-                      className="h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                    >
-                      <option value="">— Select procedure —</option>
-                      {procedures.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}{p.base_price ? ` (₱${Number(p.base_price).toLocaleString()})` : ""}
-                        </option>
-                      ))}
-                    </select>
+            {/* ── 2-tab plan picker ── */}
+            <Card>
+              {/* Tab bar */}
+              <div className="flex border-b border-neutral-200">
+                <button
+                  type="button"
+                  onClick={() => setNoPlanTab("quick")}
+                  className={cn(
+                    "flex-1 px-4 py-3 text-sm font-medium text-left transition-colors",
+                    noPlanTab === "quick"
+                      ? "border-b-2 border-neutral-900 text-neutral-900 bg-white"
+                      : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50"
+                  )}
+                >
+                  Quick Case
+                  <span className="ml-2 text-xs font-normal text-neutral-400">single visit</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNoPlanTab("standard")}
+                  className={cn(
+                    "flex-1 px-4 py-3 text-sm font-medium text-left transition-colors",
+                    noPlanTab === "standard"
+                      ? "border-b-2 border-neutral-900 text-neutral-900 bg-white"
+                      : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50"
+                  )}
+                >
+                  Standard Plan
+                  <span className="ml-2 text-xs font-normal text-neutral-400">multi-phase</span>
+                </button>
+              </div>
+
+              {/* Tab: Quick Case */}
+              {noPlanTab === "quick" && (
+                <CardContent className="pt-5 space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="sm:col-span-2 flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                        Procedure
+                      </label>
+                      <select
+                        value={qcProc}
+                        onChange={(e) => setQcProc(e.target.value)}
+                        className="h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                      >
+                        <option value="">Select procedure</option>
+                        {procedures.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}{p.base_price ? ` — ₱${Number(p.base_price).toLocaleString()}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                        Tooth <span className="font-normal normal-case text-neutral-400">(optional)</span>
+                      </label>
+                      <Input
+                        placeholder="e.g. 36"
+                        value={qcTooth}
+                        onChange={(e) => setQcTooth(e.target.value)}
+                        className="h-10"
+                      />
+                    </div>
                   </div>
 
-                  {/* Tooth # */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                      Tooth # <span className="font-normal normal-case">(optional)</span>
+                      Amount collected (₱)
                     </label>
                     <Input
-                      placeholder="e.g. 36"
-                      value={qcTooth}
-                      onChange={(e) => setQcTooth(e.target.value)}
-                      className="h-10"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={qcPrice}
+                      onChange={(e) => setQcPrice(e.target.value)}
+                      className="h-10 max-w-48"
                     />
                   </div>
-                </div>
 
-                {/* Price */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                    Amount collected today (₱)
-                  </label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="e.g. 1000"
-                    value={qcPrice}
-                    onChange={(e) => setQcPrice(e.target.value)}
-                    className="h-10 max-w-48"
-                  />
-                </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      Clinical notes <span className="font-normal normal-case text-neutral-400">(optional)</span>
+                    </label>
+                    <textarea
+                      value={qcNotes}
+                      onChange={(e) => setQcNotes(e.target.value)}
+                      placeholder="e.g. Extraction performed without complications. Patient tolerated well."
+                      rows={3}
+                      className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                    />
+                  </div>
 
-                {/* 2 Action Buttons */}
-                <div className="flex flex-wrap gap-3 pt-1">
-                  <Button
-                    onClick={() => handleQuickCase("bill")}
-                    disabled={saving || !qcProc || !qcPrice.trim()}
-                    className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm"
-                  >
-                    {saving ? "Saving…" : "💳 Save & Go to Invoice"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleQuickCase("discharge")}
-                    disabled={saving || !qcProc || !qcPrice.trim()}
-                    className="gap-2 border-emerald-300 text-emerald-800 hover:bg-emerald-50 font-semibold"
-                  >
-                    {saving ? "Saving…" : "✅ Save & Return to Patient"}
-                  </Button>
-                </div>
-
-                {procedures.length === 0 && (
-                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                    No procedures in catalog yet.{" "}
-                    <button
-                      type="button"
-                      onClick={handleSeedDefaults}
-                      disabled={seeding}
-                      className="font-semibold underline"
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button
+                      onClick={() => handleQuickCase("bill")}
+                      disabled={saving || !qcProc || !qcPrice.trim()}
                     >
-                      {seeding ? "Loading…" : "Load defaults"}
-                    </button>
+                      {saving ? "Saving…" : "Save & go to invoice"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleQuickCase("discharge")}
+                      disabled={saving || !qcProc || !qcPrice.trim()}
+                    >
+                      {saving ? "Saving…" : "Save & return to patient"}
+                    </Button>
+                  </div>
+
+                  {procedures.length === 0 && (
+                    <p className="text-xs text-neutral-500 border border-neutral-200 rounded-md px-3 py-2">
+                      No procedures in catalog.{" "}
+                      <button
+                        type="button"
+                        onClick={handleSeedDefaults}
+                        disabled={seeding}
+                        className="font-semibold underline"
+                      >
+                        {seeding ? "Loading…" : "Load defaults"}
+                      </button>
+                    </p>
+                  )}
+                </CardContent>
+              )}
+
+              {/* Tab: Standard Plan */}
+              {noPlanTab === "standard" && (
+                <CardContent className="pt-5 space-y-3">
+                  <p className="text-sm text-neutral-500">
+                    Multi-phase plan with individual procedures, tooth assignments, and phased approvals.
                   </p>
-                )}
-              </CardContent>
+                  <div className="flex gap-2">
+                    <Input
+                      value={planTitle}
+                      onChange={(e) => setPlanTitle(e.target.value)}
+                      placeholder="e.g. Restorative Phase 1"
+                      className="max-w-sm"
+                    />
+                    <Button
+                      onClick={handleCreatePlanClick}
+                      disabled={saving || !planTitle.trim()}
+                    >
+                      Create plan
+                    </Button>
+                  </div>
+                </CardContent>
+              )}
             </Card>
 
-            {/* ── OR: full standard plan ──────────────────────────────────── */}
-            <div className="relative flex items-center gap-3 py-1">
-              <div className="flex-1 border-t border-neutral-200" />
-              <span className="text-xs text-neutral-400 font-medium">or build a comprehensive plan</span>
-              <div className="flex-1 border-t border-neutral-200" />
-            </div>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-neutral-700">Standard Treatment Plan</CardTitle>
-                <CardDescription className="text-xs">Multi-phase · Multiple procedures · Patient signature workflow</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Input value={planTitle} onChange={(e) => setPlanTitle(e.target.value)} placeholder="e.g. Restorative Phase 1" />
-                <Button onClick={handleCreatePlanClick} disabled={saving || !planTitle.trim()} variant="outline" size="sm">
-                  Create Standard Plan
-                </Button>
-              </CardContent>
-            </Card>
 
           </div>
         ) : (
