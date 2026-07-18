@@ -701,11 +701,16 @@ function TreatmentPlanContent() {
 
 
 
+  const formatPrice = (val: any) => {
+    const num = Number(val)
+    return Number.isNaN(num) ? "0" : num.toLocaleString("en-PH")
+  }
+
   const metricItems = activePlanId
     ? [
         { label: "Status", value: planStatus, hint: patientName },
         { label: "Items", value: String((items || []).length), hint: "Procedures on plan" },
-        { label: "Estimated total", value: `₱${total.toLocaleString()}`, hint: "Before invoice" },
+        { label: "Estimated total", value: `₱${formatPrice(total)}`, hint: "Before invoice" },
       ]
     : undefined
 
@@ -1045,7 +1050,7 @@ function TreatmentPlanContent() {
                             <p className="text-xs text-neutral-500">{phase.hint}</p>
                           </div>
                           <div className="text-xs font-semibold text-neutral-600">
-                            {phase.items.length} · ₱{phase.total.toLocaleString("en-PH")}
+                            {phase.items.length} · ₱{formatPrice(phase.total)}
                           </div>
                         </div>
                         {phase.items.length === 0 ? (

@@ -72,9 +72,9 @@ export function TreatmentPlanItemRow({
           {labelForPriority(item.priority)}
         </td>
         <td className="py-2.5 px-3 text-right font-medium text-neutral-900">
-          ₱{Number(item.estimated_price).toLocaleString()}
+          ₱{Number(item.estimated_price || 0).toLocaleString("en-PH")}
         </td>
-        <td></td>
+        <td className="py-2.5 px-3 text-right"></td>
       </tr>
     )
   }
