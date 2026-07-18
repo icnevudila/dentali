@@ -373,6 +373,111 @@ function TreatmentPlanContent() {
     setSaving(false)
   }
 
+  // ─── Quick Case: create plan + add procedure + approve, one shot ────────
+  const [qcProc, setQcProc] = React.useState("")
+  const [qcPrice, setQcPrice] = React.useState("")
+  const [qcTooth, setQcTooth] = React.useState("")
+
+  const handleQuickCase = async (mode: "bill" | "discharge") => {
+    if (!user || !activeBranch) return
+
+    if (!qcProc) {
+      notify.error("Select a procedure first.")
+      return
+    }
+    const parsedPrice = parseFloat(qcPrice)
+    if (!qcPrice.trim() || Number.isNaN(parsedPrice) || parsedPrice < 0) {
+      notify.error("Enter a valid price (0 or more).")
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+
+    const org = await fetchOrganization()
+    if (!org) { setError("Organization not found."); setSaving(false); return }
+
+    // 1. Resolve procedure (from catalog or create on the fly)
+    let procId: string | undefined
+    let procName = ""
+
+    if (qcProc === "__custom__") {
+      notify.error("Select a procedure from the list.")
+      setSaving(false)
+      return
+    }
+
+    const catalogProc = procedures.find((p) => p.id === qcProc)
+    if (catalogProc) {
+      procId = catalogProc.id
+      procName = catalogProc.name
+    } else {
+      // Shouldn't happen but guard anyway
+      setError("Procedure not found.")
+      setSaving(false)
+      return
+    }
+
+    // 2. Resolve encounter
+    const encounterId =
+      encounterIdParam ??
+      (await fetchActiveEncounter(patientId, activeBranch.id)).data?.encounter.id ??
+      null
+
+    // 3. Create plan
+    const { data: newPlan, error: planErr } = await createTreatmentPlan({
+      organizationId: org.id,
+      branchId: activeBranch.id,
+      patientId,
+      title: `${procName} – Quick Case`,
+      userId: user.id,
+      encounterId,
+    })
+    if (planErr || !newPlan) {
+      setError(planErr ?? "Failed to create plan")
+      setSaving(false)
+      return
+    }
+
+    // 4. Add item
+    const { error: itemErr } = await addPlanItem({
+      planId: newPlan.id,
+      procedureId: procId,
+      description: toStoredBulletText(procName),
+      estimatedPrice: parsedPrice,
+      toothNumber: qcTooth.trim() || undefined,
+      priority: "phase_1",
+    })
+    if (itemErr) {
+      setError(itemErr)
+      notify.error(itemErr)
+      setSaving(false)
+      return
+    }
+
+    // 5. Approve (auto-generates draft invoice)
+    const { data: approvedPlan, error: approveErr } = await approveTreatmentPlan(newPlan.id)
+    if (approveErr || !approvedPlan) {
+      setError(approveErr ?? "Approval failed")
+      notify.error(approveErr ?? "Approval failed")
+      setSaving(false)
+      return
+    }
+
+    const invoiceId = approvedPlan.invoice_id
+
+    if (mode === "bill" && invoiceId) {
+      // Go straight to the invoice to collect payment
+      router.push(`/billing/${invoiceId}`)
+    } else {
+      // Just go back to the patient profile
+      notify.success(`${procName} logged & approved.`)
+      router.push(`/patients/${patientId}`)
+    }
+    setSaving(false)
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const handleBulkFromChart = async () => {
     if (!activePlanId) return
     setSaving(true)
@@ -392,6 +497,8 @@ function TreatmentPlanContent() {
     await syncInvoiceIfNeeded()
     setSaving(false)
   }
+
+
 
   const handleUpdateItem = async (
     itemId: string,
@@ -620,16 +727,127 @@ function TreatmentPlanContent() {
                 onDismiss={() => setShowPlanCarryPicker(false)}
               />
             ) : null}
-            <Card>
-              <CardHeader>
-                <CardTitle>New Treatment Plan</CardTitle>
-                <CardDescription>Create a proposed treatment plan for this patient.</CardDescription>
+            {/* ── QUICK CASE FORM ─────────────────────────────────────────── */}
+            <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50/60 to-white shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100">
+                    <Sparkles className="h-4 w-4 text-emerald-700" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base text-emerald-950">Quick Case</CardTitle>
+                    <CardDescription className="text-emerald-700/80 text-xs">
+                      Single visit · Log, approve & go — no multi-step workflow
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Input value={planTitle} onChange={(e) => setPlanTitle(e.target.value)} placeholder="e.g. Restorative Phase 1" />
-                <Button onClick={handleCreatePlanClick} disabled={saving || !planTitle.trim()}>Create Plan</Button>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {/* Procedure */}
+                  <div className="sm:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      Procedure done
+                    </label>
+                    <select
+                      value={qcProc}
+                      onChange={(e) => setQcProc(e.target.value)}
+                      className="h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    >
+                      <option value="">— Select procedure —</option>
+                      {procedures.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}{p.base_price ? ` (₱${Number(p.base_price).toLocaleString()})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Tooth # */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      Tooth # <span className="font-normal normal-case">(optional)</span>
+                    </label>
+                    <Input
+                      placeholder="e.g. 36"
+                      value={qcTooth}
+                      onChange={(e) => setQcTooth(e.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+                </div>
+
+                {/* Price */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    Amount collected today (₱)
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="e.g. 1000"
+                    value={qcPrice}
+                    onChange={(e) => setQcPrice(e.target.value)}
+                    className="h-10 max-w-48"
+                  />
+                </div>
+
+                {/* 2 Action Buttons */}
+                <div className="flex flex-wrap gap-3 pt-1">
+                  <Button
+                    onClick={() => handleQuickCase("bill")}
+                    disabled={saving || !qcProc || !qcPrice.trim()}
+                    className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm"
+                  >
+                    {saving ? "Saving…" : "💳 Save & Go to Invoice"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleQuickCase("discharge")}
+                    disabled={saving || !qcProc || !qcPrice.trim()}
+                    className="gap-2 border-emerald-300 text-emerald-800 hover:bg-emerald-50 font-semibold"
+                  >
+                    {saving ? "Saving…" : "✅ Save & Return to Patient"}
+                  </Button>
+                </div>
+
+                {procedures.length === 0 && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    No procedures in catalog yet.{" "}
+                    <button
+                      type="button"
+                      onClick={handleSeedDefaults}
+                      disabled={seeding}
+                      className="font-semibold underline"
+                    >
+                      {seeding ? "Loading…" : "Load defaults"}
+                    </button>
+                  </p>
+                )}
               </CardContent>
             </Card>
+
+            {/* ── OR: full standard plan ──────────────────────────────────── */}
+            <div className="relative flex items-center gap-3 py-1">
+              <div className="flex-1 border-t border-neutral-200" />
+              <span className="text-xs text-neutral-400 font-medium">or build a comprehensive plan</span>
+              <div className="flex-1 border-t border-neutral-200" />
+            </div>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-neutral-700">Standard Treatment Plan</CardTitle>
+                <CardDescription className="text-xs">Multi-phase · Multiple procedures · Patient signature workflow</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Input value={planTitle} onChange={(e) => setPlanTitle(e.target.value)} placeholder="e.g. Restorative Phase 1" />
+                <Button onClick={handleCreatePlanClick} disabled={saving || !planTitle.trim()} variant="outline" size="sm">
+                  Create Standard Plan
+                </Button>
+              </CardContent>
+            </Card>
+
           </div>
         ) : (
           <>
@@ -850,7 +1068,9 @@ function TreatmentPlanContent() {
                 <CardTitle className="text-base">{t("treatmentPlan.addProcedure", "Add procedure")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+
                 <div className="flex flex-col gap-1.5">
+
                   <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                     {t("treatmentPlan.quickSelect", "Quick select from templates")}
                   </label>
@@ -964,6 +1184,7 @@ function TreatmentPlanContent() {
                       <Plus className="h-4 w-4" /> {t("treatmentPlan.addToPlan", "Add to plan")}
                     </Button>
                   </div>
+
                 </div>
 
                 {isCustom ? (
