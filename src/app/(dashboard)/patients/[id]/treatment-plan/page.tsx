@@ -698,7 +698,8 @@ function TreatmentPlanContent() {
   const uniqueProcedures = React.useMemo(() => {
     const seen = new Set<string>()
     return (procedures || []).filter((p) => {
-      const key = `${p.name.trim().toLowerCase()}_${Number(p.base_price)}`
+      if (!p || !p.name) return false
+      const key = `${p.name.trim().toLowerCase()}_${Number(p.base_price || 0)}`
       if (seen.has(key)) return false
       seen.add(key)
       return true
