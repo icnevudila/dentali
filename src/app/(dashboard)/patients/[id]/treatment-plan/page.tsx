@@ -174,7 +174,7 @@ function TreatmentPlanContent() {
       setPlanTitle(result.plan.title)
       setPlanStatus(result.plan.status)
       setTotal(Number(result.plan.total_estimated))
-      setItems(result.items)
+      setItems(result.items || [])
     }
     setAutoInvoiceId(invoiceResult.data?.id ?? null)
     setLoading(false)
@@ -704,20 +704,20 @@ function TreatmentPlanContent() {
   const metricItems = activePlanId
     ? [
         { label: "Status", value: planStatus, hint: patientName },
-        { label: "Items", value: String(items.length), hint: "Procedures on plan" },
+        { label: "Items", value: String((items || []).length), hint: "Procedures on plan" },
         { label: "Estimated total", value: `₱${total.toLocaleString()}`, hint: "Before invoice" },
       ]
     : undefined
 
   const baseGroups = PLAN_PHASES.map((phase) => {
-    const phaseItems = items.filter((item) => normalizePlanPhase(item.priority) === phase.value)
+    const phaseItems = (items || []).filter((item) => normalizePlanPhase(item.priority) === phase.value)
     return {
       ...phase,
       items: phaseItems,
       total: phaseItems.reduce((sum, item) => sum + Number(item.estimated_price || 0), 0),
     }
   })
-  const otherItems = items.filter(
+  const otherItems = (items || []).filter(
     (item) => !PLAN_PHASES.some((phase) => phase.value === normalizePlanPhase(item.priority))
   )
   const phaseGroups = otherItems.length > 0
