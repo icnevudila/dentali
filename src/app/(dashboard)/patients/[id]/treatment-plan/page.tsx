@@ -913,12 +913,12 @@ function TreatmentPlanContent() {
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                       Clinical notes <span className="font-normal normal-case text-neutral-400">(optional)</span>
                     </label>
-                    <textarea
+                    <BulletTextarea
                       value={qcNotes}
-                      onChange={(e) => setQcNotes(e.target.value)}
-                      placeholder="e.g. Extraction performed without complications. Patient tolerated well."
+                      onChange={setQcNotes}
+                      placeholder={`e.g.\n• Extraction performed without complications.\n• Patient tolerated the procedure well.`}
                       rows={3}
-                      className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                      className="bg-white"
                     />
                   </div>
 
