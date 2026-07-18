@@ -154,6 +154,18 @@ function TreatmentPlanContent() {
 
   const planEditable = planStatus === "proposed" || planStatus === "draft"
 
+  // Must be declared before any early return (Rules of Hooks)
+  const uniqueProcedures = React.useMemo(() => {
+    const seen = new Set<string>()
+    return (procedures || []).filter((p) => {
+      if (!p || !p.name) return false
+      const key = `${p.name.trim().toLowerCase()}_${Number(p.base_price || 0)}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }, [procedures])
+
   const handleSeedDefaults = async () => {
     setSeeding(true)
     setError(null)
@@ -694,18 +706,6 @@ function TreatmentPlanContent() {
   if (loading || !mounted) {
     return <PageLoadingSkeleton variant="detail" className="max-w-4xl px-4 py-8" />
   }
-
-  const uniqueProcedures = React.useMemo(() => {
-    const seen = new Set<string>()
-    return (procedures || []).filter((p) => {
-      if (!p || !p.name) return false
-      const key = `${p.name.trim().toLowerCase()}_${Number(p.base_price || 0)}`
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-  }, [procedures])
-
 
 
   const formatPrice = (val: any) => {
