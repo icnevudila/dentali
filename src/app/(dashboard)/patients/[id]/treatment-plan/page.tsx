@@ -133,9 +133,15 @@ function TreatmentPlanContent() {
   const [itemPrice, setItemPrice] = React.useState("")
   const [itemPhase, setItemPhase] = React.useState("phase_1")
   const [loading, setLoading] = React.useState(!!planId)
+  const [mounted, setMounted] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [autoInvoiceId, setAutoInvoiceId] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const [stockWarnings, setStockWarnings] = React.useState<
     { name: string; quantity_on_hand: number; min_stock_level: number }[]
   >([])
@@ -685,7 +691,7 @@ function TreatmentPlanContent() {
     setSaving(false)
   }
 
-  if (loading) {
+  if (loading || !mounted) {
     return <PageLoadingSkeleton variant="detail" className="max-w-4xl px-4 py-8" />
   }
 
