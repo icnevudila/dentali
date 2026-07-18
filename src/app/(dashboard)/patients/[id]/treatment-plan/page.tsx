@@ -72,6 +72,19 @@ const PROCEDURE_TEMPLATES = [
   { code: "DENT", name: "Complete Denture (Upper & Lower)" },
 ]
 
+const QUICK_CASE_PROCEDURES = [
+  { name: "Oral Examination", defaultPrice: 500, code: "EXAM" },
+  { name: "Prophylaxis / Cleaning", defaultPrice: 1000, code: "PROPH" },
+  { name: "Composite Filling", defaultPrice: 1200, code: "FILL" },
+  { name: "Tooth Extraction", defaultPrice: 1500, code: "EXT" },
+  { name: "Root Canal Treatment", defaultPrice: 12000, code: "RCT" },
+  { name: "PFM Crown", defaultPrice: 1500, code: "PFM" },
+  { name: "Zirconia Crown (Single)", defaultPrice: 15000, code: "ZIRC" },
+  { name: "E-Max Veneer", defaultPrice: 15000, code: "EMAX" },
+  { name: "Complete Denture (Upper & Lower)", defaultPrice: 20000, code: "DENT" },
+]
+
+
 const PLAN_PHASES = [
   { value: "urgent", label: "Urgent", hint: "Pain, infection, or same-day relief" },
   { value: "phase_1", label: "Phase 1", hint: "Primary active treatment" },
@@ -380,6 +393,8 @@ function TreatmentPlanContent() {
   const [qcPrice, setQcPrice] = React.useState("")
   const [qcTooth, setQcTooth] = React.useState("")
   const [qcNotes, setQcNotes] = React.useState("")
+  const [qcCustomName, setQcCustomName] = React.useState("")
+
 
   const handleQuickCase = async (mode: "bill" | "discharge") => {
     if (!user || !activeBranch) return
@@ -388,6 +403,12 @@ function TreatmentPlanContent() {
       notify.error("Select a procedure first.")
       return
     }
+
+    if (qcProc === "custom" && !qcCustomName.trim()) {
+      notify.error("Please enter a custom procedure name.")
+      return
+    }
+
     const parsedPrice = parseFloat(qcPrice)
     if (!qcPrice.trim() || Number.isNaN(parsedPrice) || parsedPrice < 0) {
       notify.error("Enter a valid price (0 or more).")
@@ -400,26 +421,65 @@ function TreatmentPlanContent() {
     const org = await fetchOrganization()
     if (!org) { setError("Organization not found."); setSaving(false); return }
 
-    // 1. Resolve procedure (from catalog or create on the fly)
+    // 1. Resolve procedure (from catalog, create dynamically if missing, or create custom)
     let procId: string | undefined
     let procName = ""
 
-    if (qcProc === "__custom__") {
-      notify.error("Select a procedure from the list.")
-      setSaving(false)
-      return
+    if (qcProc === "custom") {
+      const { data: newProc, error: createErr } = await createProcedure({
+        organizationId: org.id,
+        name: qcCustomName.trim(),
+        basePrice: parsedPrice,
+      })
+      if (createErr || !newProc) {
+        setError(createErr ?? "Failed to create custom procedure.")
+        setSaving(false)
+        return
+      }
+      procId = newProc.id
+      procName = newProc.name
+
+      const { data: updatedProcs } = await fetchProcedures(activeBranch.id)
+      setProcedures(updatedProcs)
+    } else {
+      const targetStatic = QUICK_CASE_PROCEDURES.find((sp) => sp.code === qcProc)
+      if (!targetStatic) {
+        setError("Invalid procedure selected.")
+        setSaving(false)
+        return
+      }
+
+      // Check database if it already exists
+      const dbProc = procedures.find(
+        (p) => p.code?.toUpperCase() === targetStatic.code.toUpperCase() ||
+               p.name.toLowerCase() === targetStatic.name.toLowerCase()
+      )
+
+      if (dbProc) {
+        procId = dbProc.id
+        procName = dbProc.name
+      } else {
+        // If not in database yet, create it on-the-fly to seed
+        const { data: newDbProc, error: seedErr } = await createProcedure({
+          organizationId: org.id,
+          name: targetStatic.name,
+          code: targetStatic.code,
+          basePrice: targetStatic.defaultPrice,
+        })
+        if (seedErr || !newDbProc) {
+          setError(seedErr ?? "Failed to register procedure in catalog.")
+          setSaving(false)
+          return
+        }
+        procId = newDbProc.id
+        procName = newDbProc.name
+
+        const { data: updatedProcs } = await fetchProcedures(activeBranch.id)
+        setProcedures(updatedProcs)
+      }
     }
 
-    const catalogProc = procedures.find((p) => p.id === qcProc)
-    if (catalogProc) {
-      procId = catalogProc.id
-      procName = catalogProc.name
-    } else {
-      // Shouldn't happen but guard anyway
-      setError("Procedure not found.")
-      setSaving(false)
-      return
-    }
+
 
     // 2. Resolve encounter
     const encounterId =
@@ -629,6 +689,17 @@ function TreatmentPlanContent() {
     return <PageLoadingSkeleton variant="detail" className="max-w-4xl px-4 py-8" />
   }
 
+  const uniqueProcedures = React.useMemo(() => {
+    const seen = new Set<string>()
+    return procedures.filter((p) => {
+      const key = `${p.name.trim().toLowerCase()}_${Number(p.base_price)}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }, [procedures])
+
+
   const metricItems = activePlanId
     ? [
         { label: "Status", value: planStatus, hint: patientName },
@@ -773,15 +844,25 @@ function TreatmentPlanContent() {
                       </label>
                       <select
                         value={qcProc}
-                        onChange={(e) => setQcProc(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          setQcProc(val)
+                          const target = QUICK_CASE_PROCEDURES.find((sp) => sp.code === val)
+                          if (target) {
+                            setQcPrice(String(target.defaultPrice))
+                          } else {
+                            setQcPrice("")
+                          }
+                        }}
                         className="h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-400"
                       >
                         <option value="">Select procedure</option>
-                        {procedures.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}{p.base_price ? ` — ₱${Number(p.base_price).toLocaleString()}` : ""}
+                        {QUICK_CASE_PROCEDURES.map((p) => (
+                          <option key={p.code} value={p.code}>
+                            {p.name} — ₱{p.defaultPrice.toLocaleString()}
                           </option>
                         ))}
+                        <option value="custom">Other / Custom procedure...</option>
                       </select>
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -792,10 +873,26 @@ function TreatmentPlanContent() {
                         placeholder="e.g. 36"
                         value={qcTooth}
                         onChange={(e) => setQcTooth(e.target.value)}
+
                         className="h-10"
                       />
                     </div>
                   </div>
+
+                  {qcProc === "custom" && (
+                    <div className="flex flex-col gap-1.5 animate-in slide-in-from-top-1 duration-150">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                        Custom procedure name
+                      </label>
+                      <Input
+                        placeholder="e.g. Laser teeth whitening, Crown cementing..."
+                        value={qcCustomName}
+                        onChange={(e) => setQcCustomName(e.target.value)}
+                        className="h-10"
+                      />
+                    </div>
+                  )}
+
 
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
