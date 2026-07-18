@@ -691,13 +691,14 @@ function TreatmentPlanContent() {
 
   const uniqueProcedures = React.useMemo(() => {
     const seen = new Set<string>()
-    return procedures.filter((p) => {
+    return (procedures || []).filter((p) => {
       const key = `${p.name.trim().toLowerCase()}_${Number(p.base_price)}`
       if (seen.has(key)) return false
       seen.add(key)
       return true
     })
   }, [procedures])
+
 
 
   const metricItems = activePlanId
@@ -938,7 +939,7 @@ function TreatmentPlanContent() {
                     </Button>
                   </div>
 
-                  {procedures.length === 0 && (
+                  {(!procedures || procedures.length === 0) && (
                     <p className="text-xs text-neutral-500 border border-neutral-200 rounded-md px-3 py-2">
                       No procedures in catalog.{" "}
                       <button
@@ -1253,7 +1254,7 @@ function TreatmentPlanContent() {
                       className="h-10 rounded-md border border-neutral-300 px-3 text-sm bg-white"
                     >
                       <option value="">{t("treatmentPlan.selectProcedure", "Select procedure…")}</option>
-                      {procedures.map((p) => (
+                      { (procedures || []).map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name}
                         </option>
@@ -1344,7 +1345,7 @@ function TreatmentPlanContent() {
                   </div>
                 ) : null}
 
-                {procedures.length === 0 && (
+                {(!procedures || procedures.length === 0) && (
                   <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50 border border-amber-100 text-xs text-amber-800">
                     <span>Your procedure catalog is empty. You can load default procedures or add custom ones above.</span>
                     <Button
