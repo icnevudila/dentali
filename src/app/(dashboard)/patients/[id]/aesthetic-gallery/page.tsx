@@ -1,8 +1,7 @@
 "use client"
 
-import { use, useState } from "react"
+import { useState } from "react"
 import { BeforeAfterSlider } from "@/components/clinical/BeforeAfterSlider"
-import { useBranch } from "@/hooks/use-branch"
 import { Sparkles, Camera, Award } from "lucide-react"
 
 interface AestheticCase {
@@ -42,11 +41,8 @@ const SAMPLE_AESTHETIC_CASES: AestheticCase[] = [
   },
 ]
 
-export default function AestheticGalleryPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: patientId } = use(params)
-  const { activeBranch } = useBranch()
-  const [cases] = useState<AestheticCase[]>(SAMPLE_AESTHETIC_CASES)
-  const [selectedCase, setSelectedCase] = useState<AestheticCase>(SAMPLE_AESTHETIC_CASES[0])
+export default function AestheticGalleryPage() {
+  const [selectedCase] = useState<AestheticCase>(SAMPLE_AESTHETIC_CASES[0])
 
   return (
     <div className="space-y-6">
