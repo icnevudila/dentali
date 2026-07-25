@@ -112,7 +112,7 @@ const PRESCRIPTION_PACKS = [
 
 import { useSearchParams } from "next/navigation"
 
-export default function PrescriptionsPage() {
+function PrescriptionsPage() {
   const { id: patientId } = useRouteParams<{ id: string }>()
   const searchParams = useSearchParams()
   const presetParam = searchParams.get("preset")
@@ -796,5 +796,13 @@ export default function PrescriptionsPage() {
         </div>
       )}
     </PermissionGate>
+  )
+}
+
+export default function PrescriptionsPageWrapper() {
+  return (
+    <React.Suspense fallback={<PageLoadingSkeleton variant="detail" className="max-w-4xl px-4 py-8" />}>
+      <PrescriptionsPage />
+    </React.Suspense>
   )
 }

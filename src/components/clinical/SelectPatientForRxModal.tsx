@@ -6,7 +6,7 @@ import { Search, User, X, Pill, ArrowRight, Phone, Calendar } from "lucide-react
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { fetchPatients, type PatientRecord } from "@/lib/patients/patient-service"
+import { searchPatients, type PatientRecord } from "@/lib/patients/patient-service"
 import { useBranch } from "@/hooks/use-branch"
 
 interface SelectPatientForRxModalProps {
@@ -32,8 +32,7 @@ export function SelectPatientForRxModal({
     if (!isOpen) return
     let isCancelled = false
     setLoading(true)
-    fetchPatients(activeBranch?.id ?? null, {
-      filters: { search: searchQuery },
+    searchPatients(searchQuery, activeBranch?.id ?? null, {
       pageSize: 20,
     }).then(({ data }) => {
       if (!isCancelled) {
