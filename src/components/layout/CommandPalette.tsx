@@ -123,29 +123,32 @@ export function CommandPalette() {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-slate-950/60 backdrop-blur-md transition-all">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-slate-900/30 backdrop-blur-xs transition-all"
+      onClick={() => setIsOpen(false)}
+    >
       <div
-        className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+        className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search Input Bar */}
-        <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 px-4 py-3.5">
-          <Search className="h-5 w-5 text-slate-400 shrink-0" />
+        <div className="flex items-center gap-3 border-b border-slate-100 bg-white px-4 py-3.5">
+          <Search className="h-5 w-5 text-teal-600 shrink-0" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search patient name, procedure or page... (e.g. Rx, Patient, Calendar)"
-            className="w-full bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none font-medium"
+            className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 outline-none font-medium"
             autoFocus
           />
-          <div className="flex items-center gap-1 shrink-0">
-            <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-500 border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 border border-slate-200">
               ESC
             </kbd>
             <button
               onClick={() => setIsOpen(false)}
-              className="rounded-lg p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
@@ -153,9 +156,9 @@ export function CommandPalette() {
         </div>
 
         {/* Results List */}
-        <div className="max-h-[360px] overflow-y-auto p-2 space-y-1">
+        <div className="max-h-[360px] overflow-y-auto p-2 space-y-1 bg-white">
           {filteredItems.length === 0 ? (
-            <div className="p-8 text-center text-xs text-slate-500">
+            <div className="p-8 text-center text-xs font-medium text-slate-500">
               No matching clinical results found.
             </div>
           ) : (
@@ -165,18 +168,18 @@ export function CommandPalette() {
                 <button
                   key={item.id}
                   onClick={item.action}
-                  className="flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left transition-colors hover:bg-teal-50 dark:hover:bg-slate-800/80 group"
+                  className="flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left transition-colors hover:bg-teal-50/80 hover:border-teal-200 group border border-transparent"
                 >
                   <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 group-hover:bg-teal-600 group-hover:text-white transition-colors shrink-0">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-700 group-hover:bg-teal-600 group-hover:text-white transition-colors shrink-0">
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="overflow-hidden">
-                      <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-teal-700 dark:group-hover:text-teal-300 truncate">
+                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-teal-800 truncate">
                         {item.title}
                       </h4>
                       {item.subtitle && (
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                        <p className="text-[11px] text-slate-500 truncate">
                           {item.subtitle}
                         </p>
                       )}
@@ -184,7 +187,7 @@ export function CommandPalette() {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-slate-600 border border-slate-200/60">
                       {item.category}
                     </span>
                     <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
@@ -196,14 +199,14 @@ export function CommandPalette() {
         </div>
 
         {/* Command Footer */}
-        <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-2.5 bg-slate-50 dark:bg-slate-950/60 text-[11px] text-slate-500">
+        <div className="flex items-center justify-between border-t border-slate-100 px-4 py-2.5 bg-slate-50 text-[11px] text-slate-500 font-medium">
           <div className="flex items-center gap-2">
             <Command className="h-3.5 w-3.5 text-teal-600" />
             <span>Dentali Command Search & Spotlight Action Palette</span>
           </div>
           <div className="flex items-center gap-3">
-            <span>Open: <kbd className="font-bold">Ctrl+K</kbd></span>
-            <span>Close: <kbd className="font-bold font-mono">ESC</kbd></span>
+            <span>Open: <kbd className="font-bold text-slate-700">Ctrl+K</kbd></span>
+            <span>Close: <kbd className="font-bold text-slate-700">ESC</kbd></span>
           </div>
         </div>
       </div>
