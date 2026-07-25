@@ -2,13 +2,11 @@
 
 import * as React from "react"
 import { usePathname, useParams } from "next/navigation"
-import { ClinicalWorkflowPipelineNavbar } from "@/components/patients/ClinicalWorkflowPipelineNavbar"
-import { PatientQuickDock } from "@/components/patients/PatientQuickDock"
 import { PatientVisitActionRail } from "@/components/patients/PatientVisitActionRail"
 
 /**
- * Clinical Workflow Pipeline Navbar, Quick Dock & Action Rail for every patient sub-route.
- * Hidden on the profile root and print surfaces.
+ * Clean, lightweight layout for patient sub-routes.
+ * Renders the clean action rail when needed without heavy stacked banner clutter.
  */
 export default function PatientSectionLayout({
   children,
@@ -23,17 +21,11 @@ export default function PatientSectionLayout({
     Boolean(patientId) &&
     (pathname === `/patients/${patientId}` || pathname === `/patients/${patientId}/`)
   const isPrint = pathname.includes("/print")
-  const showBar = Boolean(patientId) && !isProfileRoot && !isPrint
+  const showActionRail = Boolean(patientId) && !isProfileRoot && !isPrint
 
   return (
     <div className="min-w-0">
-      {showBar ? (
-        <>
-          <ClinicalWorkflowPipelineNavbar patientId={patientId} />
-          <PatientQuickDock patientId={patientId} />
-          <PatientVisitActionRail patientId={patientId} />
-        </>
-      ) : null}
+      {showActionRail ? <PatientVisitActionRail patientId={patientId} /> : null}
       {children}
     </div>
   )
