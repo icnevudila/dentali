@@ -35,6 +35,9 @@ export const AUDIT_ACTION_LABELS_EN: Record<string, string> = {
   "treatment_plan.item_add": "Treatment plan item added",
   "consent.signed": "Consent signed",
   "consent.pdf_stored": "Consent PDF stored",
+  "consent.ensure": "Consent record verified",
+  "queue.status_change": "Queue status updated",
+  "queue_entry.status_change": "Queue status updated",
 }
 
 export const AUDIT_ENTITY_LABELS_EN: Record<string, string> = {
@@ -50,9 +53,12 @@ export const AUDIT_ENTITY_LABELS_EN: Record<string, string> = {
   staff: "Staff",
   profile: "Staff",
   treatment_plan: "Treatment plan",
+  treatment_plan_item: "Treatment plan item",
+  patient_consent: "Consent",
   patient_medical_history: "Medical history",
   medical_history: "Medical history",
   queue_entry: "Queue",
+  queue: "Queue",
   consent: "Consent",
   session: "Session",
   patient_encounter: "Visit",
@@ -144,6 +150,47 @@ export function formatAuditDetailsLabel(log: AuditLogRecord, t: Translate): stri
       }
       return t("auditLog.details.patient_update_profile", "Patient profile information updated.")
     }
+    case "treatment_plan.item_add": {
+      const procName = String(meta.item_name || meta.procedure_name || meta.name || meta.description || "")
+      const tooth = meta.tooth_number ? ` (Tooth #${meta.tooth_number})` : ""
+      const price = meta.estimated_price || meta.price
+        ? ` — ₱${Number(meta.estimated_price || meta.price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
+        : ""
+      if (procName) {
+        return `Added procedure to plan: ${procName}${tooth}${price}`
+      }
+      return "New procedure item added to treatment plan."
+    }
+    case "treatment_plan.approved": {
+      const totalEstimated = meta.total_estimated != null
+        ? ` (est. ₱${Number(meta.total_estimated).toLocaleString("en-PH", { minimumFractionDigits: 2 })})`
+        : ""
+      return `Treatment plan approved by clinician${totalEstimated}.`
+    }
+    case "invoice.auto_draft_from_plan": {
+      return "Draft invoice auto-generated from approved treatment plan."
+    }
+    case "consent.signed": {
+      const title = String(meta.form_title || meta.title || meta.template_name || "")
+      return title ? `Patient signed consent form: ${title}` : "Informed consent form signed by patient."
+    }
+    case "consent.pdf_stored":
+      return "Signed consent form PDF generated and archived."
+    case "consent.ensure":
+      return "Consent form verified and attached to patient record."
+    case "queue.status_change":
+    case "queue_entry.status_change": {
+      const status = String(meta.to_status || meta.status || "").replace(/_/g, " ")
+      const statusUpper = status ? status.replace(/\b\w/g, (c) => c.toUpperCase()) : ""
+      return statusUpper ? `Patient queue status updated to: ${statusUpper}` : "Patient queue status updated."
+    }
+    case "encounter.auto_close":
+    case "encounter.close":
+      return "Patient visit session completed and discharged."
+    case "encounter.reopen":
+      return "Patient visit session reopened for clinical updates."
+    case "encounter.cancel":
+      return "Patient visit session cancelled."
     case "invoice.payment": {
       const amount = Number(meta.amount || 0).toLocaleString("en-PH", {
         minimumFractionDigits: 2,
@@ -226,10 +273,16 @@ export function formatAuditDetailsLabel(log: AuditLogRecord, t: Translate): stri
         "Staff overrode a missing consent during check-in."
       )
     default: {
+      // Smart metadata extraction instead of generic boilerplate
+      if (meta.title || meta.name || meta.item_name || meta.description) {
+        const text = String(meta.title || meta.name || meta.item_name || meta.description)
+        return `Record updated: ${text}`
+      }
+      if (meta.reason) return `Reason: ${String(meta.reason)}`
+      if (meta.status) return `Status changed to: ${String(meta.status)}`
       const keys = Object.keys(meta)
       if (keys.length === 0) return "—"
-      // Never dump raw technical JSON to staff-facing UI.
-      return t("auditLog.details.generic", "See related patient or clinic record.")
+      return t("auditLog.details.generic", "Clinical audit event logged.")
     }
   }
 }
