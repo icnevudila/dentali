@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { Sparkles, MoveHorizontal } from "lucide-react"
 
 interface BeforeAfterSliderProps {
@@ -21,7 +21,20 @@ export function BeforeAfterSlider({
 }: BeforeAfterSliderProps) {
   const [sliderPosition, setSliderPosition] = useState(50)
   const [isDragging, setIsDragging] = useState(false)
+  const [containerWidth, setContainerWidth] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!containerRef.current) return
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.clientWidth)
+      }
+    }
+    updateWidth()
+    window.addEventListener("resize", updateWidth)
+    return () => window.removeEventListener("resize", updateWidth)
+  }, [])
 
   const handleMove = useCallback(
     (clientX: number) => {
@@ -88,7 +101,7 @@ export function BeforeAfterSlider({
             alt={beforeLabel}
             className="absolute inset-0 w-full h-full object-cover object-center"
             style={{
-              width: containerRef.current ? `${containerRef.current.clientWidth}px` : "100%",
+              width: containerWidth ? `${containerWidth}px` : "100%",
               maxWidth: "none",
             }}
           />

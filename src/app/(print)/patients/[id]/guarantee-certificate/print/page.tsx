@@ -1,13 +1,11 @@
 "use client"
 
 import { use } from "react"
-import { Printer, ShieldCheck, Award, CheckCircle2 } from "lucide-react"
+import { Printer, ShieldCheck, Award } from "lucide-react"
 
 export default function GuaranteeCertificatePrintPage({
-  params,
   searchParams,
 }: {
-  params: Promise<{ id: string }>
   searchParams: Promise<{
     patientName?: string
     treatment?: string
@@ -16,14 +14,12 @@ export default function GuaranteeCertificatePrintPage({
     certNo?: string
   }>
 }) {
-  const { id: patientId } = use(params)
-  const {
-    patientName = "Hasta Adı Soyadı",
-    treatment = "Zirkonyum Porselen Kron / İmplant Destekli Protez",
-    teeth = "#11, #12, #21, #22 (Üst Ön Estetik Bölge)",
-    years = "5",
-    certNo = `GRN-${Date.now().toString().slice(-6)}`,
-  } = use(searchParams)
+  const queryParams = use(searchParams)
+  const patientName = queryParams.patientName ?? "Hasta Adı Soyadı"
+  const treatment = queryParams.treatment ?? "Zirkonyum Porselen Kron / İmplant Destekli Protez"
+  const teeth = queryParams.teeth ?? "#11, #12, #21, #22 (Üst Ön Estetik Bölge)"
+  const years = queryParams.years ?? "5"
+  const certNo = queryParams.certNo ?? "GRN-984012"
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-8 print:p-0 print:bg-white text-slate-900">
