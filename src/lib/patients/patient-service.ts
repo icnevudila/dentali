@@ -132,7 +132,7 @@ export async function searchPatients(
 
   if (!error) {
     const mapped = mapSearchPatientsRows((data ?? []) as SearchPatientsRow[])
-    let finalPatients = mapped.data
+    const finalPatients = mapped.data
 
     // If query looks like an invoice or receipt search, or we want comprehensive search:
     if (trimmedQuery && trimmedQuery.length >= 3 && branchId) {

@@ -63,6 +63,25 @@ const EMPTY_ITEM = (): Omit<PrescriptionItem, "id" | "sort_order"> => ({
 
 const PRESCRIPTION_PACKS = [
   {
+    name: "Akut Diş Ağrısı & Enfeksiyon Paket",
+    diagnosis: "Akut Periapikal Absedasyon / Pulpatik Ağrı",
+    generalInstructions: "• İlaçları tok karnına alınız.\n• Şiddetli ağrıda parasetamol takviyesi alabilirsiniz.\n• Antibiyotik tedavisini yarıda kesmeyiniz.",
+    items: [
+      { drug_name: "Amoksisilin", strength: "500 mg", dosage: "1 Kapsül", frequency: "Günde 3 kez (8 saatte bir)", duration: "7 Gün", quantity: "21 Kapsül", instructions: "Yemeklerden sonra bol su ile alınız." },
+      { drug_name: "Parasetamol", strength: "500 mg", dosage: "1 Tablet", frequency: "Ağrı anında (6 saatte bir max)", duration: "5 Gün", quantity: "10 Tablet", instructions: "Ağrı hissedildiğinde tok karnına alınız." }
+    ]
+  },
+  {
+    name: "Cerrahi Çekim & İmplant Post-Op Paket",
+    diagnosis: "Post-Operatif Cerrahi Çekim / Greftleme Bakımı",
+    generalInstructions: "• Operasyon bölgesini 24 saat fırçalamayınız.\n• Tükürmeyiniz, pipet kullanmayınız ve sıcak gıdalardan kaçınınız.",
+    items: [
+      { drug_name: "Amoksisilin + Klavulanik Asit", strength: "1000 mg", dosage: "1 Tablet", frequency: "Günde 2 kez (12 saatte bir)", duration: "7 Gün", quantity: "14 Tablet", instructions: "Yemek başlangıcında alınız." },
+      { drug_name: "Mefenamik Asit / İbuprofen", strength: "500 mg", dosage: "1 Kapsül", frequency: "Günde 3 kez tok", duration: "4 Gün", quantity: "12 Kapsül", instructions: "Yemek sonrası alınız." },
+      { drug_name: "Klorheksidin %0.12 Gargara", strength: "250 ml", dosage: "15 ml Çalkalama", frequency: "Günde 2 kez", duration: "7 Gün", quantity: "1 Şişe", instructions: "Diş fırçalamadan 30 dk sonra 1 dk çalkalayınız." }
+    ]
+  },
+  {
     name: "Extraction Post-Op Pack",
     diagnosis: "Post-extraction management",
     generalInstructions: "• Take medications as prescribed.\n• Avoid spitting, drinking from a straw, and hot food for 24 hours.",

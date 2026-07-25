@@ -156,9 +156,9 @@ export function PatientDocumentsPanel({ patientId }: { patientId: string }) {
       icon: Pill,
     },
     {
-      label: t("patients.outputCertificate", "Medical certificate"),
-      hint: t("patients.outputCertificateHint", "Certificate for school/work/HMO"),
-      href: `/patients/${patientId}/medical-certificate`,
+      label: t("patients.outputCertificate", "Tıbbi İstirahat Raporları"),
+      hint: t("patients.outputCertificateHint", "Resmi istirahat belgesi oluştur ve yazdır"),
+      href: `/patients/${patientId}/medical-certificates`,
       icon: FileText,
     },
     {

@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { AlertTriangle, CalendarDays, Plus, Lock, Receipt, FileSignature, Pencil } from "lucide-react"
+import { AlertTriangle, CalendarDays, Plus, Lock, Receipt, FileSignature, Pencil, Printer } from "lucide-react"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Button } from "@/components/ui/button"
@@ -275,6 +275,11 @@ export default function OrthoRecordPage() {
                         </Link>
                       </Button>
                     ) : null}
+                    <Button size="sm" variant="outline" className="gap-2" asChild>
+                      <Link href={`/patients/${patientId}/ortho/print`} target="_blank">
+                        <Printer className="h-4 w-4" /> Form Yazdır (Print)
+                      </Link>
+                    </Button>
                   </div>
                 </div>
               </CardHeader>

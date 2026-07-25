@@ -33,6 +33,7 @@ export function DentistProductivityPanel() {
   const [selectedDentist, setSelectedDentist] = React.useState<string>("all")
   const [availableDentists, setAvailableDentists] = React.useState<{ id: string; name: string }[]>([])
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const loadStats = React.useCallback(async () => {
     if (!activeBranch?.id) return
     setLoading(true)

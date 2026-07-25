@@ -52,8 +52,11 @@ export function useOperationalRealtime(branchId: string | undefined) {
   const lastToastRef = React.useRef<Record<string, number>>({})
   const tRef = React.useRef(t)
   const routerRef = React.useRef(router)
-  tRef.current = t
-  routerRef.current = router
+
+  React.useEffect(() => {
+    tRef.current = t
+    routerRef.current = router
+  }, [t, router])
 
   React.useEffect(() => {
     if (!branchId) return

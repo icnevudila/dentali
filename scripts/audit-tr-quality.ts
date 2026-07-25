@@ -14,7 +14,7 @@ function flatten(tree: Record<string, unknown>, prefix = ""): FlatMessages {
 
 const en = flatten(getMessages("en"))
 const tr = flatten(getMessages("tr"))
-const allowedSame = /^(PRC|HMO|PhilHealth(?: eClaims| ID)?|SMS(?: \(Semaphore\))?|WhatsApp|SKU|GCash|PHP|PDF|CSV|API|URL|Email|Blog|Kiosk|Portal|Lab|BOM|Starter|Growth|Enterprise)$/i
+const allowedSame = /^(PRC|HMO|PhilHealth(?: eClaims| ID)?|SMS(?: \(Semaphore\))?|WhatsApp|SKU|GCash|PHP|PDF|CSV|API|URL|Email|Blog|Kiosk|Portal|Lab|BOM|Starter|Growth|Enterprise|https?:\/\/.*)$/i
 const englishWord = /\b(the|and|for|with|from|your|this|that|before|after|please|click|showing|required)\b/i
 const missing: string[] = []
 const untranslated: string[] = []
