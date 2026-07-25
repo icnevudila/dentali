@@ -2,11 +2,12 @@
 
 import * as React from "react"
 import { usePathname, useParams } from "next/navigation"
+import { ClinicalWorkflowPipelineNavbar } from "@/components/patients/ClinicalWorkflowPipelineNavbar"
 import { PatientQuickDock } from "@/components/patients/PatientQuickDock"
 import { PatientVisitActionRail } from "@/components/patients/PatientVisitActionRail"
 
 /**
- * Sticky Back + Next / Checkout rail & Chairside Quick Dock for every patient sub-route.
+ * Clinical Workflow Pipeline Navbar, Quick Dock & Action Rail for every patient sub-route.
  * Hidden on the profile root and print surfaces.
  */
 export default function PatientSectionLayout({
@@ -28,6 +29,7 @@ export default function PatientSectionLayout({
     <div className="min-w-0">
       {showBar ? (
         <>
+          <ClinicalWorkflowPipelineNavbar patientId={patientId} />
           <PatientQuickDock patientId={patientId} />
           <PatientVisitActionRail patientId={patientId} />
         </>
