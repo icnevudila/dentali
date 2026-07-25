@@ -35,11 +35,11 @@ export function MedicalCertificateModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!diagnosis.trim()) {
-      setErrorMsg("Lütfen geçerli bir teşhis/tanı giriniz.")
+      setErrorMsg("Please enter a valid clinical diagnosis.")
       return
     }
     if (restDays < 1) {
-      setErrorMsg("İstirahat süresi en az 1 gün olmalıdır.")
+      setErrorMsg("Medical rest period must be at least 1 day.")
       return
     }
 
@@ -60,9 +60,9 @@ export function MedicalCertificateModal({
     setIsSubmitting(false)
 
     if (res.error || !res.data) {
-      setErrorMsg(res.error ?? "Rapor oluşturulurken bir hata oluştu.")
+      setErrorMsg(res.error ?? "An error occurred while creating the medical certificate.")
     } else {
-      setSuccessMsg("Tıbbi istirahat raporu başarıyla oluşturuldu!")
+      setSuccessMsg("Medical rest certificate created successfully!")
       if (onSuccess) onSuccess(res.data)
       setTimeout(() => {
         setSuccessMsg(null)
@@ -87,10 +87,10 @@ export function MedicalCertificateModal({
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-              Tıbbi İstirahat Raporu Düzenle
+              Issue Medical Rest Certificate
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Hasta: <span className="font-semibold text-slate-700 dark:text-slate-300">{patientName}</span>
+              Patient: <span className="font-semibold text-slate-700 dark:text-slate-300">{patientName}</span>
             </p>
           </div>
         </div>
@@ -112,14 +112,14 @@ export function MedicalCertificateModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Tanı / Klinik Teşhis *
+              Diagnosis / Clinical Condition *
             </label>
             <input
               type="text"
-              placeholder="Örn: Akut Periapikal Absedasyon / Post-Op Cerrahi Çekim"
+              placeholder="e.g. Acute Periapical Abscess / Post-Op Surgical Extraction"
               value={diagnosis}
               onChange={(e) => setDiagnosis(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 focus:border-teal-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-teal-400 transition-colors"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               required
             />
           </div>
@@ -127,77 +127,75 @@ export function MedicalCertificateModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Başlangıç Tarihi
+                <Clock className="inline-block h-3.5 w-3.5 mr-1 text-slate-400" />
+                Rest Duration (Days) *
               </label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 focus:border-teal-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-teal-400 transition-colors"
-                />
-                <Calendar className="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
-              </div>
+              <input
+                type="number"
+                min={1}
+                max={30}
+                value={restDays}
+                onChange={(e) => setRestDays(Number(e.target.value))}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                required
+              />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                İstirahat Süresi (Gün)
+                <Calendar className="inline-block h-3.5 w-3.5 mr-1 text-slate-400" />
+                Start Date *
               </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  min="1"
-                  max="30"
-                  value={restDays}
-                  onChange={(e) => setRestDays(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 focus:border-teal-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-teal-400 transition-colors"
-                />
-                <Clock className="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
-              </div>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                required
+              />
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Düzenleyen Hekim Adı Unvanı (İsteğe Bağlı)
+              Issuing Dentist Name / Title
             </label>
             <input
               type="text"
-              placeholder="Örn: Dr. Dt. Ahmet Yılmaz"
+              placeholder="e.g. Dr. Jane Smith, DDS"
               value={doctorName}
               onChange={(e) => setDoctorName(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 focus:border-teal-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-teal-400 transition-colors"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Açıklama / Tıbbi Notlar
+              Additional Clinical Notes (Optional)
             </label>
             <textarea
               rows={3}
-              placeholder="İstirahat süresince dikkat edilecek klinik hususlar ve tavsiyeler..."
+              placeholder="e.g. Patient is advised to refrain from strenuous physical activity and heavy mastication."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 focus:border-teal-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-teal-400 transition-colors"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 resize-none"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
               className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
             >
-              İptal
+              Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white shadow-md hover:bg-teal-700 disabled:opacity-50 transition-colors"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-5 py-2 text-xs font-semibold text-white shadow-md hover:bg-teal-500 disabled:opacity-50 transition-colors"
             >
-              {isSubmitting ? "Oluşturuluyor..." : "Raporu Oluştur & İmzala"}
+              {isSubmitting ? "Generating..." : "Generate Certificate"}
             </button>
           </div>
         </form>

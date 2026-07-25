@@ -19,7 +19,7 @@ export default function OrthoPrintPage({ params }: { params: Promise<{ id: strin
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50">
-        <p className="text-sm font-semibold text-slate-600">Ortodonti takip formu hazırlanıyor...</p>
+        <p className="text-sm font-semibold text-slate-600">Loading orthodontic case form...</p>
       </div>
     )
   }
@@ -27,7 +27,7 @@ export default function OrthoPrintPage({ params }: { params: Promise<{ id: strin
   if (!orthoData) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50">
-        <p className="text-sm font-semibold text-rose-600">Ortodonti vaka kaydı bulunamadı.</p>
+        <p className="text-sm font-semibold text-rose-600">No orthodontic case record found.</p>
       </div>
     )
   }
@@ -36,15 +36,15 @@ export default function OrthoPrintPage({ params }: { params: Promise<{ id: strin
     <div className="min-h-screen bg-slate-100 p-4 sm:p-8 print:p-0 print:bg-white text-slate-900">
       <div className="no-print mb-6 flex items-center justify-between max-w-4xl mx-auto rounded-2xl bg-white p-4 shadow-sm border border-slate-200">
         <div>
-          <h2 className="text-sm font-bold text-slate-900">Ortodonti Vaka Muayene Formu Önizleme</h2>
-          <p className="text-xs text-slate-500">Fiziki dosyaya eklemek veya hastaya vermek için &quot;Yazdır&quot; butonuna basınız.</p>
+          <h2 className="text-sm font-bold text-slate-900">Orthodontic Case Examination Sheet Preview</h2>
+          <p className="text-xs text-slate-500">Click &quot;Print&quot; to output a physical paper copy for patient records.</p>
         </div>
         <button
           onClick={() => window.print()}
           className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors shadow-md"
         >
           <Printer className="h-4 w-4" />
-          <span>Yazdır / Form Çıktısı Al</span>
+          <span>Print / Export Form</span>
         </button>
       </div>
 

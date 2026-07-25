@@ -15,8 +15,8 @@ interface BeforeAfterSliderProps {
 export function BeforeAfterSlider({
   beforeImage,
   afterImage,
-  beforeLabel = "Tedavi Öncesi",
-  afterLabel = "Tedavi Sonrası",
+  beforeLabel = "Before Treatment",
+  afterLabel = "After Treatment (Aesthetic Finish)",
   className = "",
 }: BeforeAfterSliderProps) {
   const [sliderPosition, setSliderPosition] = useState(50)

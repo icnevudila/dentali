@@ -15,26 +15,26 @@ export default function GuaranteeCertificatePrintPage({
   }>
 }) {
   const queryParams = use(searchParams)
-  const patientName = queryParams.patientName ?? "Hasta Adı Soyadı"
-  const treatment = queryParams.treatment ?? "Zirkonyum Porselen Kron / İmplant Destekli Protez"
-  const teeth = queryParams.teeth ?? "#11, #12, #21, #22 (Üst Ön Estetik Bölge)"
+  const patientName = queryParams.patientName ?? "Patient Full Name"
+  const treatment = queryParams.treatment ?? "Zirconia Porcelain Crown / Implant Prosthesis"
+  const teeth = queryParams.teeth ?? "#11, #12, #21, #22 (Upper Anterior Aesthetic Region)"
   const years = queryParams.years ?? "5"
   const certNo = queryParams.certNo ?? "GRN-984012"
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 sm:p-8 print:p-0 print:bg-white text-slate-900">
+    <div className="min-h-screen bg-slate-100 p-4 sm:p-8 print:p-0 print:bg-white text-slate-900 font-sans">
       {/* Action Bar */}
       <div className="no-print mb-6 flex items-center justify-between max-w-3xl mx-auto rounded-2xl bg-white p-4 shadow-sm border border-slate-200">
         <div>
-          <h2 className="text-sm font-bold text-slate-900">Diş Protez & İmplant Garanti Sertifikası Önizleme</h2>
-          <p className="text-xs text-slate-500">Resmi sertifikayı hastaya teslim etmek için &quot;Yazdır&quot; butonuna basınız.</p>
+          <h2 className="text-sm font-bold text-slate-900">Dental Guarantee Certificate Preview</h2>
+          <p className="text-xs text-slate-500">Click &quot;Print&quot; to issue an official certificate copy to the patient.</p>
         </div>
         <button
           onClick={() => window.print()}
           className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-xs font-semibold text-white hover:bg-amber-700 transition-colors shadow-md"
         >
           <Printer className="h-4 w-4" />
-          <span>Sertifikayı Yazdır / PDF</span>
+          <span>Print Certificate / PDF</span>
         </button>
       </div>
 
@@ -50,59 +50,57 @@ export default function GuaranteeCertificatePrintPage({
               <Award className="h-9 w-9" />
             </div>
           </div>
-          <h1 className="text-2xl font-black tracking-wider text-slate-900 uppercase">DENTALI DİŞ SAĞLIĞI KLİNİĞİ</h1>
-          <p className="text-xs uppercase tracking-widest text-amber-700 font-sans font-bold">Resmi Klinik Protez & İmplant Garanti Sertifikası</p>
+          <h1 className="text-2xl font-black text-slate-900 tracking-wider">DENTALI HEALTH CENTER</h1>
+          <p className="text-xs font-bold text-amber-700 uppercase tracking-widest font-sans">
+            Official Dental Prosthesis & Implant Guarantee Certificate
+          </p>
+          <p className="text-[10px] text-slate-400 font-sans">Certificate No: {certNo}</p>
         </div>
 
         {/* Certificate Body Text */}
         <div className="text-center space-y-6 font-sans">
-          <p className="text-sm text-slate-600">İşbu belge ile kliniğimizde gerçekleştirilen tedaviye ilişkin olarak;</p>
+          <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">This Certificate Is Proudly Presented To:</p>
+          <h2 className="text-2xl font-black text-slate-900 border-b-2 border-slate-900 pb-2 inline-block px-8">
+            {patientName}
+          </h2>
 
-          <div className="rounded-2xl bg-amber-50/60 border border-amber-200 p-6 space-y-4 text-left">
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="font-bold text-slate-500 text-xs uppercase">Sertifika Sahibi Hasta:</span>
-              <span className="col-span-2 font-black text-slate-900 text-base">{patientName}</span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="font-bold text-slate-500 text-xs uppercase">Uygulanan Tedavi:</span>
-              <span className="col-span-2 font-bold text-slate-800">{treatment}</span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="font-bold text-slate-500 text-xs uppercase">Tedavi Edilen Diş No:</span>
-              <span className="col-span-2 font-semibold text-slate-800">{teeth}</span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="font-bold text-slate-500 text-xs uppercase">Garanti Süresi:</span>
-              <span className="col-span-2 font-black text-amber-700 text-base">{years} Yıl Koşulsuz Üretici & Klinik Garantisi</span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 text-sm pt-2 border-t border-amber-200">
-              <span className="font-bold text-slate-500 text-xs uppercase">Sertifika / Seri No:</span>
-              <span className="col-span-2 font-mono font-bold text-slate-900">{certNo}</span>
-            </div>
-          </div>
-
-          <p className="text-xs text-slate-600 leading-relaxed px-4">
-            Bu sertifika, yukarıda belirtilen protez ve materyalin üretim, laboratuvar ve klinik uygulama hatalarına karşı verilen resmi taahhüttür.
+          <p className="text-xs leading-relaxed text-slate-700 max-w-xl mx-auto">
+            The dental restoration and/or implant procedure specified below has been completed with high-grade biocompatible materials and validated quality standards. This restoration is guaranteed for <span className="font-bold text-amber-800">{years} YEARS</span> against material fracture and structural defect under standard oral hygiene maintenance.
           </p>
         </div>
 
-        {/* Footer Signature */}
-        <div className="pt-8 flex items-center justify-between border-t border-slate-200 font-sans text-xs">
-          <div className="flex items-center gap-2 text-emerald-700 font-semibold">
+        {/* Treatment Details Box */}
+        <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 font-sans grid grid-cols-2 gap-4 text-xs">
+          <div>
+            <span className="font-bold text-amber-900 uppercase text-[10px]">Restoration / Procedure</span>
+            <p className="font-bold text-slate-900">{treatment}</p>
+          </div>
+          <div>
+            <span className="font-bold text-amber-900 uppercase text-[10px]">Treated Tooth Position(s)</span>
+            <p className="font-bold text-slate-900">{teeth}</p>
+          </div>
+        </div>
+
+        {/* Guarantee Conditions */}
+        <div className="text-[11px] text-slate-500 font-sans space-y-1 bg-slate-50 p-3 rounded-lg border border-slate-200">
+          <p className="font-bold text-slate-700">Guarantee Terms & Conditions:</p>
+          <p>1. Patient must attend regular 6-month routine dental check-ups.</p>
+          <p>2. Accidental facial trauma and unrecommended hard food biting are excluded.</p>
+        </div>
+
+        {/* Signatures */}
+        <div className="pt-6 border-t border-amber-200 flex items-center justify-between font-sans text-xs">
+          <div className="flex items-center gap-2 text-amber-700 font-bold">
             <ShieldCheck className="h-5 w-5" />
-            <span>Onaylı Resmi Garanti Belgesi</span>
+            <span>Verified Clinic Guarantee</span>
           </div>
 
-          <div className="text-center space-y-8">
+          <div className="text-center space-y-6">
             <div>
-              <p className="font-bold text-slate-900">Mesul Müdür Hekim İmzası & Kaşe</p>
-              <p className="text-[11px] text-slate-500">Dentali Ağız ve Diş Sağlığı Polikliniği</p>
+              <p className="font-bold text-slate-900">Attending Dentist / Clinic Director</p>
+              <p className="text-[10px] text-slate-500">Dentali Health Center</p>
             </div>
-            <div className="h-10 border-b border-slate-400 w-44 mx-auto" />
+            <div className="h-8 border-b border-slate-400 w-40 mx-auto" />
           </div>
         </div>
       </div>

@@ -20,31 +20,31 @@ export function PatientQuickDock({ patientId, patientName }: PatientQuickDockPro
 
   const quickActions = [
     {
-      label: "Odontogram & Tedavi",
+      label: "Odontogram & Charting",
       href: `/patients/${patientId}/pda-dental-chart`,
       icon: Stethoscope,
       accent: "bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800",
     },
     {
-      label: "Hızlı e-Reçete Yaz",
+      label: "Issue e-Rx",
       href: `/patients/${patientId}/prescriptions`,
       icon: Pill,
       accent: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
     },
     {
-      label: "İstirahat Raporu",
+      label: "Rest Certificate",
       href: `/patients/${patientId}/medical-certificates`,
       icon: FileText,
       accent: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
     },
     {
-      label: "Öncesi/Sonrası Galeri",
+      label: "Before/After Gallery",
       href: `/patients/${patientId}/aesthetic-gallery`,
       icon: Sparkles,
       accent: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800",
     },
     {
-      label: "Protez Garanti Belgesi",
+      label: "Prosthesis Guarantee",
       href: `/patients/${patientId}/guarantee-certificate/print`,
       icon: ShieldCheck,
       accent: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
@@ -56,15 +56,15 @@ export function PatientQuickDock({ patientId, patientName }: PatientQuickDockPro
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-2 pb-2.5 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-600 text-white font-bold text-xs shadow-sm">
-            K
+            C
           </div>
           <div>
             <h3 className="text-xs font-extrabold text-slate-900 dark:text-slate-100">
-              Koltuk Başı Hızlı Klinik Eylem Dock&apos;u
+              Chairside Quick Clinical Action Dock
             </h3>
             {patientName && (
               <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                Aktif Diş Hastası: <span className="font-bold text-slate-800 dark:text-slate-200">{patientName}</span>
+                Active Patient: <span className="font-bold text-slate-800 dark:text-slate-200">{patientName}</span>
               </p>
             )}
           </div>

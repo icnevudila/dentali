@@ -12,28 +12,28 @@ export interface VitaShade {
 
 export const VITA_SHADES: VitaShade[] = [
   // Group A (Reddish-brownish)
-  { code: "A1", name: "A1 (Açık Beyaz)", group: "A", hexColor: "#f6f1e7" },
-  { code: "A2", name: "A2 (Doğal Standart)", group: "A", hexColor: "#eee3d0" },
-  { code: "A3", name: "A3 (Orta Sarı)", group: "A", hexColor: "#e6d5bd" },
-  { code: "A3.5", name: "A3.5 (Koyu Sarı)", group: "A", hexColor: "#dbc5aa" },
-  { code: "A4", name: "A4 (Kahve-Sarı)", group: "A", hexColor: "#cbb496" },
+  { code: "A1", name: "A1 (Light White)", group: "A", hexColor: "#f6f1e7" },
+  { code: "A2", name: "A2 (Natural Standard)", group: "A", hexColor: "#eee3d0" },
+  { code: "A3", name: "A3 (Medium Yellow)", group: "A", hexColor: "#e6d5bd" },
+  { code: "A3.5", name: "A3.5 (Dark Yellow)", group: "A", hexColor: "#dbc5aa" },
+  { code: "A4", name: "A4 (Brownish Yellow)", group: "A", hexColor: "#cbb496" },
 
   // Group B (Reddish-yellowish)
-  { code: "B1", name: "B1 (Çok Açık)", group: "B", hexColor: "#f9f5ec" },
-  { code: "B2", name: "B2 (Açık Sarı)", group: "B", hexColor: "#f0e7d5" },
-  { code: "B3", name: "B3 (Canlı Sarı)", group: "B", hexColor: "#e3d4bb" },
-  { code: "B4", name: "B4 (Koyu Sarı-Kahve)", group: "B", hexColor: "#d8c3a5" },
+  { code: "B1", name: "B1 (Extra Light)", group: "B", hexColor: "#f9f5ec" },
+  { code: "B2", name: "B2 (Light Yellow)", group: "B", hexColor: "#f0e7d5" },
+  { code: "B3", name: "B3 (Vivid Yellow)", group: "B", hexColor: "#e3d4bb" },
+  { code: "B4", name: "B4 (Dark Yellow Brown)", group: "B", hexColor: "#d8c3a5" },
 
   // Group C (Greyish)
-  { code: "C1", name: "C1 (Açık Gri)", group: "C", hexColor: "#ede7dd" },
-  { code: "C2", name: "C2 (Gri-Kahve)", group: "C", hexColor: "#e2d7c7" },
-  { code: "C3", name: "C3 (Koyu Gri)", group: "C", hexColor: "#d3c5b2" },
-  { code: "C4", name: "C4 (Derin Gri)", group: "C", hexColor: "#c2b29e" },
+  { code: "C1", name: "C1 (Light Grey)", group: "C", hexColor: "#ede7dd" },
+  { code: "C2", name: "C2 (Greyish Brown)", group: "C", hexColor: "#e2d7c7" },
+  { code: "C3", name: "C3 (Dark Grey)", group: "C", hexColor: "#d3c5b2" },
+  { code: "C4", name: "C4 (Deep Grey)", group: "C", hexColor: "#c2b29e" },
 
   // Group D (Reddish-grey)
-  { code: "D2", name: "D2 (Gri-Kırmızı)", group: "D", hexColor: "#ebdccb" },
-  { code: "D3", name: "D3 (Orta Gri-Kırmızı)", group: "D", hexColor: "#dfceb8" },
-  { code: "D4", name: "D4 (Koyu Gri-Kırmızı)", group: "D", hexColor: "#d2be9f" },
+  { code: "D2", name: "D2 (Reddish Grey)", group: "D", hexColor: "#ebdccb" },
+  { code: "D3", name: "D3 (Medium Reddish Grey)", group: "D", hexColor: "#dfceb8" },
+  { code: "D4", name: "D4 (Dark Reddish Grey)", group: "D", hexColor: "#d2be9f" },
 
   // Bleach Shades (Ultra-White Aesthetic)
   { code: "BL1", name: "BL1 (Ultra Bleach)", group: "Bleach", hexColor: "#ffffff" },
@@ -51,7 +51,7 @@ interface VitaShadePickerProps {
 export function VitaShadePicker({
   selectedShade = "A2",
   onSelectShade,
-  label = "VITA Diş Renk Tonu Seçici",
+  label = "VITA Tooth Shade Picker",
 }: VitaShadePickerProps) {
   const [activeGroup, setActiveGroup] = useState<"ALL" | "A" | "B" | "C" | "D" | "Bleach">("ALL")
 
@@ -77,13 +77,13 @@ export function VitaShadePicker({
                   : "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               }`}
             >
-              {group === "ALL" ? "Tümü" : group}
+              {group === "ALL" ? "All" : group}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+      <div className="grid grid-cols-5 sm:grid-cols-9 gap-2">
         {filteredShades.map((shade) => {
           const isSelected = selectedShade === shade.code
           return (
@@ -91,23 +91,24 @@ export function VitaShadePicker({
               key={shade.code}
               type="button"
               onClick={() => onSelectShade(shade.code)}
-              className={`relative flex flex-col items-center justify-between rounded-xl p-2.5 text-center transition-all border ${
+              className={`relative flex flex-col items-center justify-between rounded-xl p-2 text-center transition-all ${
                 isSelected
-                  ? "border-teal-500 bg-white ring-2 ring-teal-500/20 shadow-md dark:bg-slate-950"
-                  : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950"
+                  ? "ring-2 ring-teal-600 ring-offset-2 dark:ring-offset-slate-900 scale-105 shadow-md bg-white dark:bg-slate-800"
+                  : "bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 hover:scale-100 border border-slate-200 dark:border-slate-700"
               }`}
             >
-              {/* Swatch Circle */}
               <div
-                className="h-7 w-7 rounded-full border border-slate-300 dark:border-slate-700 shadow-inner flex items-center justify-center"
+                className="h-6 w-full rounded-lg border border-slate-300 dark:border-slate-600 shadow-inner mb-1"
                 style={{ backgroundColor: shade.hexColor }}
-              >
-                {isSelected && <Check className="h-4 w-4 text-teal-700 font-extrabold" />}
-              </div>
+              />
+              <span className="text-[11px] font-black text-slate-900 dark:text-slate-100">{shade.code}</span>
+              <span className="text-[9px] text-slate-500 dark:text-slate-400 truncate w-full">{shade.name.split(" ")[1] || ""}</span>
 
-              <span className="mt-1.5 text-xs font-bold text-slate-900 dark:text-slate-100">
-                {shade.code}
-              </span>
+              {isSelected && (
+                <div className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-teal-600 text-white">
+                  <Check className="h-2.5 w-2.5" />
+                </div>
+              )}
             </button>
           )
         })}

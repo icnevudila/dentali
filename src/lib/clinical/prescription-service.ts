@@ -39,31 +39,31 @@ export const COMMON_DENTAL_MEDS = [
 
 export const DENTAL_PRESCRIPTION_PRESETS = [
   {
-    name: "Akut Diş Ağrısı & Enfeksiyon Protokolü",
-    diagnosis: "Akut Periapikal Absedasyon / Pulpatik Ağrı",
-    general_instructions: "İlaçlar tokluk durumunda alınmalıdır. Alkol ve aşırı sıcak gıdalardan kaçınınız.",
+    name: "Acute Dental Pain & Infection Protocol",
+    diagnosis: "Acute Periapical Abscess / Pulpal Pain",
+    general_instructions: "Take medication with food. Avoid alcohol and extreme heat with food.",
     items: [
-      { drug_name: "Amoksisilin", strength: "500 mg", dosage: "1 Kapsül", frequency: "8 saatte bir (3x1)", duration: "7 Gün", quantity: "21 Kapsül", instructions: "Yemeklerden sonra bol su ile alınız." },
-      { drug_name: "Parasetamol", strength: "500 mg", dosage: "1 Tablet", frequency: "Ağrı anında (6 saatte bir max)", duration: "3-5 Gün", quantity: "10 Tablet", instructions: "Şiddetli ağrı durumunda alınız." },
+      { drug_name: "Amoxicillin", strength: "500 mg", dosage: "1 Capsule", frequency: "Every 8 hours (3x1)", duration: "7 days", quantity: "21 Capsules", instructions: "Take with plenty of water after meals." },
+      { drug_name: "Paracetamol", strength: "500 mg", dosage: "1 Tablet", frequency: "Every 6 hours as needed", duration: "3-5 days", quantity: "10 Tablets", instructions: "Take in case of severe pain." },
     ],
   },
   {
-    name: "Cerrahi Çekim & İmplant Post-Op Protokolü",
-    diagnosis: "Post-Operatif Cerrahi Çekim / Greftleme Bakımı",
-    general_instructions: "Operasyon bölgesini 24 saat fırçalamayınız. Tükürmeyiniz ve pipet kullanmayınız.",
+    name: "Surgical Extraction & Implant Post-Op Protocol",
+    diagnosis: "Post-Operative Surgical Extraction / Graft Care",
+    general_instructions: "Do not brush the surgical area for 24 hours. Do not spit or use straws.",
     items: [
-      { drug_name: "Amoksisilin + Klavulanik Asit", strength: "1000 mg", dosage: "1 Tablet", frequency: "12 saatte bir (2x1)", duration: "7 Gün", quantity: "14 Tablet", instructions: "Yemek başlangıcında alınız." },
-      { drug_name: "Mefenamik Asit", strength: "500 mg", dosage: "1 Kapsül", frequency: "8 saatte bir (3x1) Tok", duration: "4 Gün", quantity: "12 Kapsül", instructions: "Tok karnına alınız." },
-      { drug_name: "Klorheksidin %0.12 Ağız Çalkalama Suyu", strength: "250 ml", dosage: "15 ml Gargara", frequency: "Günde 2 kez (Sabah/Akşam)", duration: "7 Gün", quantity: "1 Şişe", instructions: "Diş fırçalamadan 30 dk sonra 1 dakika boyunca gargara yapınız." },
+      { drug_name: "Amoxicillin + Clavulanic Acid", strength: "1000 mg", dosage: "1 Tablet", frequency: "Every 12 hours (2x1)", duration: "7 days", quantity: "14 Tablets", instructions: "Take at the start of meals." },
+      { drug_name: "Mefenamic Acid", strength: "500 mg", dosage: "1 Capsule", frequency: "Every 8 hours (3x1) with food", duration: "4 days", quantity: "12 Capsules", instructions: "Take with food." },
+      { drug_name: "Chlorhexidine 0.12% Mouthwash", strength: "250 ml", dosage: "15 ml Rinse", frequency: "Twice daily (Morning/Evening)", duration: "7 days", quantity: "1 Bottle", instructions: "Rinse for 1 minute, 30 minutes after brushing." },
     ],
   },
   {
-    name: "Periodontal Enfeksiyon Protokolü",
-    diagnosis: "Akut Nekrotizan Ülseratif Ginjivit / Periodontal Abse",
-    general_instructions: "Yumuşak diyet uygulayınız. Sigara ve tütün ürünlerinden kaçınınız.",
+    name: "Periodontal Infection Protocol",
+    diagnosis: "Acute Necrotizing Ulcerative Gingivitis / Periodontal Abscess",
+    general_instructions: "Follow a soft diet. Avoid smoking and tobacco products.",
     items: [
-      { drug_name: "Amoksisilin", strength: "500 mg", dosage: "1 Kapsül", frequency: "8 saatte bir", duration: "7 Gün", quantity: "21 Kapsül", instructions: "Düzenli aralıklarla alınız." },
-      { drug_name: "Metronidazol", strength: "500 mg", dosage: "1 Tablet", frequency: "8 saatte bir", duration: "7 Gün", quantity: "21 Tablet", instructions: "Alkolle birlikte kesinlikle almayınız." },
+      { drug_name: "Amoxicillin", strength: "500 mg", dosage: "1 Capsule", frequency: "Every 8 hours", duration: "7 days", quantity: "21 Capsules", instructions: "Take at regular intervals." },
+      { drug_name: "Metronidazole", strength: "500 mg", dosage: "1 Tablet", frequency: "Every 8 hours", duration: "7 days", quantity: "21 Tablets", instructions: "Do not consume with alcohol." },
     ],
   },
 ] as const

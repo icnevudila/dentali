@@ -20,7 +20,7 @@ interface NavigationItem {
   id: string
   title: string
   subtitle?: string
-  category: "Hastalar" | "Klinik İşlemler text-xs" | "Hızlı Eylemler" | "Modüller"
+  category: "Patients" | "Clinical Actions" | "Quick Actions" | "Modules"
   icon: React.ComponentType<{ className?: string }>
   action: () => void
 }
@@ -57,57 +57,57 @@ export function CommandPalette() {
   const items: NavigationItem[] = [
     {
       id: "nav-patients",
-      title: "Hasta Listesi & Detay Arama",
-      subtitle: "Tüm kayıtlı diş hastalarını görüntüleyin",
-      category: "Modüller",
+      title: "Patient Directory & Search",
+      subtitle: "View and search registered dental patients",
+      category: "Modules",
       icon: User,
       action: () => navigateTo("/patients"),
     },
     {
       id: "nav-appointments",
-      title: "Randevu Takvimi & Çizelge",
-      subtitle: "Günlük ve haftalık diş hekimi randevuları",
-      category: "Modüller",
+      title: "Appointment Calendar & Schedule",
+      subtitle: "Daily and weekly dentist appointments",
+      category: "Modules",
       icon: Calendar,
       action: () => navigateTo("/appointments"),
     },
     {
       id: "act-new-patient",
-      title: "Yeni Diş Hastası Kaydı Oluştur",
-      subtitle: "Hızlı hasta kaydı ve onam formu",
-      category: "Hızlı Eylemler",
+      title: "Register New Dental Patient",
+      subtitle: "Fast patient registration and consent onboarding",
+      category: "Quick Actions",
       icon: Plus,
       action: () => navigateTo("/patients/new"),
     },
     {
       id: "nav-prescriptions",
-      title: "e-Reçete & Protokol Dökümü",
-      subtitle: "Diş ağrısı ve antibiyotik reçete şablonları",
-      category: "Klinik İşlemler text-xs",
+      title: "e-Prescriptions & Rx Protocols",
+      subtitle: "Dental pain and antibiotic prescription templates",
+      category: "Clinical Actions",
       icon: Pill,
       action: () => navigateTo("/prescriptions"),
     },
     {
       id: "nav-lab",
-      title: "Diş Laboratuvar Siparişleri",
-      subtitle: "Kron, zirkonyum ve prova takipleri",
-      category: "Klinik İşlemler text-xs",
+      title: "Dental Laboratory Work Orders",
+      subtitle: "Crown, zirconia, and try-in case tracking",
+      category: "Clinical Actions",
       icon: FlaskConical,
       action: () => navigateTo("/lab-cases"),
     },
     {
       id: "nav-billing",
-      title: "Kasa & Fatura Yönetimi",
-      subtitle: "Ödemeler, faturalar ve finansal özet",
-      category: "Modüller",
+      title: "Billing, Invoicing & Payments",
+      subtitle: "Payments, patient invoices, and financial overview",
+      category: "Modules",
       icon: CreditCard,
       action: () => navigateTo("/billing"),
     },
     {
       id: "nav-branches",
-      title: "Şube & Klinik Yönetimi",
-      subtitle: "Poliklinik şubeleri arası geçiş",
-      category: "Modüller",
+      title: "Branch & Multi-Clinic Management",
+      subtitle: "Switch between dental clinic locations",
+      category: "Modules",
       icon: Building,
       action: () => navigateTo("/branches"),
     },
