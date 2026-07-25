@@ -412,6 +412,8 @@ function TreatmentPlanContent() {
   const [qcTooth, setQcTooth] = React.useState("")
   const [qcNotes, setQcNotes] = React.useState("")
   const [qcCustomName, setQcCustomName] = React.useState("")
+  const [qcDate, setQcDate] = React.useState(() => new Date().toISOString().slice(0, 10))
+  const [itemDate, setItemDate] = React.useState(() => new Date().toISOString().slice(0, 10))
 
 
   const handleQuickCase = async (mode: "bill" | "discharge") => {
@@ -907,19 +909,32 @@ function TreatmentPlanContent() {
                   )}
 
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                      Amount collected (₱)
-                    </label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={qcPrice}
-                      onChange={(e) => setQcPrice(e.target.value)}
-                      className="h-10 max-w-48"
-                    />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                        Treatment Date <span className="font-normal normal-case text-neutral-400">(Antedate)</span>
+                      </label>
+                      <Input
+                        type="date"
+                        value={qcDate}
+                        onChange={(e) => setQcDate(e.target.value)}
+                        className="h-10 bg-white"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                        Amount collected (₱)
+                      </label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={qcPrice}
+                        onChange={(e) => setQcPrice(e.target.value)}
+                        className="h-10"
+                      />
+                    </div>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
@@ -1245,7 +1260,7 @@ function TreatmentPlanContent() {
                   </select>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                       {t("treatmentPlan.catalogProcedure", "Catalog procedure")}
@@ -1306,6 +1321,18 @@ function TreatmentPlanContent() {
 
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                      Procedure Date <span className="font-normal normal-case text-neutral-400">(Antedate)</span>
+                    </label>
+                    <Input
+                      type="date"
+                      value={itemDate}
+                      onChange={(e) => setItemDate(e.target.value)}
+                      className="h-10 bg-white"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                       {t("treatmentPlan.patientPrice", "Patient price (₱)")}
                     </label>
                     <Input
@@ -1323,12 +1350,11 @@ function TreatmentPlanContent() {
                     <Button
                       onClick={handleAddItem}
                       disabled={saving || (!selectedProc && !isCustom)}
-                      className="h-10 gap-2 w-full"
+                      className="h-10 gap-2 w-full bg-teal-600 hover:bg-teal-700 text-white"
                     >
                       <Plus className="h-4 w-4" /> {t("treatmentPlan.addToPlan", "Add to plan")}
                     </Button>
                   </div>
-
                 </div>
 
                 {isCustom ? (
