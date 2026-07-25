@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Upload, Download, Trash2, FileText, ImageIcon, ClipboardList, FileCheck2, Pill, ShieldCheck } from "lucide-react"
+import { Upload, Download, Trash2, FileText, ImageIcon, ClipboardList, FileCheck2, Pill, ShieldCheck, Sparkles, Award } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -160,6 +160,18 @@ export function PatientDocumentsPanel({ patientId }: { patientId: string }) {
       hint: t("patients.outputCertificateHint", "Resmi istirahat belgesi oluştur ve yazdır"),
       href: `/patients/${patientId}/medical-certificates`,
       icon: FileText,
+    },
+    {
+      label: "Estetik Öncesi / Sonrası Galerisi",
+      hint: "Gülüş tasarımı ve beyazlatma öncesi/sonrası sürgülü karşılaştırma",
+      href: `/patients/${patientId}/aesthetic-gallery`,
+      icon: Sparkles,
+    },
+    {
+      label: "Protez & İmplant Garanti Sertifikası",
+      hint: "Zirkonyum, lamine ve implant garanti belgesi çıktısı",
+      href: `/patients/${patientId}/guarantee-certificate/print`,
+      icon: Award,
     },
     {
       label: t("patients.outputAbstract", "Medical abstract"),
