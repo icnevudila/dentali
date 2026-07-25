@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   Clock,
   Printer,
-  Sparkles,
   User,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -157,7 +156,6 @@ export default function GlobalPrescriptionsPage() {
                   <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200 text-[10px] font-semibold">
                     {preset.diagnosis}
                   </Badge>
-                  <Sparkles className="h-4 w-4 text-teal-600 shrink-0" />
                 </div>
                 <CardTitle className="text-sm font-bold text-slate-900 mt-2">
                   {preset.name}
