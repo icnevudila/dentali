@@ -13,6 +13,7 @@ import {
   Monitor,
   Package,
   PieChart,
+  Pill,
   Settings,
   Shield,
   Stethoscope,
@@ -116,6 +117,13 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         href: "/patients/new",
         icon: UserPlus,
         permission: PERMISSIONS.PATIENTS_WRITE,
+      },
+      {
+        nameKey: "nav.prescriptions",
+        fallback: "e-Prescriptions",
+        href: "/prescriptions",
+        icon: Pill,
+        permission: PERMISSIONS.PRESCRIPTIONS_READ,
       },
       {
         nameKey: "nav.labCases",
