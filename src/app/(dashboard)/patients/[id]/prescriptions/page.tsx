@@ -63,22 +63,22 @@ const EMPTY_ITEM = (): Omit<PrescriptionItem, "id" | "sort_order"> => ({
 
 const PRESCRIPTION_PACKS = [
   {
-    name: "Akut Diş Ağrısı & Enfeksiyon Paket",
-    diagnosis: "Akut Periapikal Absedasyon / Pulpatik Ağrı",
-    generalInstructions: "• İlaçları tok karnına alınız.\n• Şiddetli ağrıda parasetamol takviyesi alabilirsiniz.\n• Antibiyotik tedavisini yarıda kesmeyiniz.",
+    name: "Acute Dental Pain & Infection Pack",
+    diagnosis: "Acute Periapical Abscess / Pulpal Pain",
+    generalInstructions: "• Take medications after meals with water.\n• Take paracetamol for severe pain as needed.\n• Complete the full course of antibiotics.",
     items: [
-      { drug_name: "Amoksisilin", strength: "500 mg", dosage: "1 Kapsül", frequency: "Günde 3 kez (8 saatte bir)", duration: "7 Gün", quantity: "21 Kapsül", instructions: "Yemeklerden sonra bol su ile alınız." },
-      { drug_name: "Parasetamol", strength: "500 mg", dosage: "1 Tablet", frequency: "Ağrı anında (6 saatte bir max)", duration: "5 Gün", quantity: "10 Tablet", instructions: "Ağrı hissedildiğinde tok karnına alınız." }
+      { drug_name: "Amoxicillin", strength: "500 mg", dosage: "1 Capsule", frequency: "Three times a day (every 8 hours)", duration: "7 Days", quantity: "21 Capsules", instructions: "Take with plenty of water after meals." },
+      { drug_name: "Paracetamol", strength: "500 mg", dosage: "1 Tablet", frequency: "As needed for pain (every 6 hours max)", duration: "5 Days", quantity: "10 Tablets", instructions: "Take after meals when pain occurs." }
     ]
   },
   {
-    name: "Cerrahi Çekim & İmplant Post-Op Paket",
-    diagnosis: "Post-Operatif Cerrahi Çekim / Greftleme Bakımı",
-    generalInstructions: "• Operasyon bölgesini 24 saat fırçalamayınız.\n• Tükürmeyiniz, pipet kullanmayınız ve sıcak gıdalardan kaçınınız.",
+    name: "Surgical Extraction & Post-Op Implant Pack",
+    diagnosis: "Post-Operative Surgical Extraction / Grafting Care",
+    generalInstructions: "• Do not brush the surgical area for 24 hours.\n• Do not spit, use straws, or consume hot food/drinks.",
     items: [
-      { drug_name: "Amoksisilin + Klavulanik Asit", strength: "1000 mg", dosage: "1 Tablet", frequency: "Günde 2 kez (12 saatte bir)", duration: "7 Gün", quantity: "14 Tablet", instructions: "Yemek başlangıcında alınız." },
-      { drug_name: "Mefenamik Asit / İbuprofen", strength: "500 mg", dosage: "1 Kapsül", frequency: "Günde 3 kez tok", duration: "4 Gün", quantity: "12 Kapsül", instructions: "Yemek sonrası alınız." },
-      { drug_name: "Klorheksidin %0.12 Gargara", strength: "250 ml", dosage: "15 ml Çalkalama", frequency: "Günde 2 kez", duration: "7 Gün", quantity: "1 Şişe", instructions: "Diş fırçalamadan 30 dk sonra 1 dk çalkalayınız." }
+      { drug_name: "Amoxicillin + Clavulanic Acid", strength: "1000 mg", dosage: "1 Tablet", frequency: "Twice a day (every 12 hours)", duration: "7 Days", quantity: "14 Tablets", instructions: "Take at the start of a meal." },
+      { drug_name: "Mefenamic Acid / Ibuprofen", strength: "500 mg", dosage: "1 Capsule", frequency: "Three times a day after meals", duration: "4 Days", quantity: "12 Capsules", instructions: "Take after food for pain and swelling." },
+      { drug_name: "Chlorhexidine 0.12% Mouthwash", strength: "250 ml", dosage: "15 ml Rinse", frequency: "Twice a day", duration: "7 Days", quantity: "1 Bottle", instructions: "Gargle for 1 minute 30 minutes after brushing." }
     ]
   },
   {
@@ -110,8 +110,12 @@ const PRESCRIPTION_PACKS = [
   }
 ]
 
+import { useSearchParams } from "next/navigation"
+
 export default function PrescriptionsPage() {
   const { id: patientId } = useRouteParams<{ id: string }>()
+  const searchParams = useSearchParams()
+  const presetParam = searchParams.get("preset")
   const { user } = useAuth()
   const { activeBranch } = useBranch()
   const { hasPermission } = usePermission()
@@ -162,6 +166,17 @@ export default function PrescriptionsPage() {
       void loadHistory()
     })
   }, [patientId, loadHistory])
+
+  // Auto-apply preset if passed in query param
+  React.useEffect(() => {
+    if (!presetParam) return
+    const matched = PRESCRIPTION_PACKS.find(
+      (p) => p.name.toLowerCase() === presetParam.toLowerCase() || p.name.toLowerCase().includes(presetParam.toLowerCase())
+    )
+    if (matched) {
+      applyPrescriptionPack(matched)
+    }
+  }, [presetParam])
 
   React.useEffect(() => {
     if (!viewRxId) {

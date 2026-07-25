@@ -5,7 +5,6 @@ import Link from "next/link"
 import {
   Pill,
   Search,
-  FileText,
   Plus,
   ChevronRight,
   ShieldCheck,
@@ -19,6 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { DENTAL_PRESCRIPTION_PRESETS } from "@/lib/clinical/prescription-service"
+import { SelectPatientForRxModal } from "@/components/clinical/SelectPatientForRxModal"
 
 interface PrescriptionSummary {
   id: string
@@ -34,7 +34,7 @@ interface PrescriptionSummary {
 const RECENT_CLINIC_PRESCRIPTIONS: PrescriptionSummary[] = [
   {
     id: "rx_101",
-    patientId: "p_01",
+    patientId: "00000000-0000-0000-0000-000000000001",
     patientName: "John Doe",
     protocolTitle: "Acute Dental Pain & Infection Protocol",
     doctorName: "Dr. Jane Smith, DDS",
@@ -44,7 +44,7 @@ const RECENT_CLINIC_PRESCRIPTIONS: PrescriptionSummary[] = [
   },
   {
     id: "rx_102",
-    patientId: "p_02",
+    patientId: "00000000-0000-0000-0000-000000000002",
     patientName: "Maria Santos",
     protocolTitle: "Surgical Extraction & Post-Op Implant Protocol",
     doctorName: "Dr. Robert Tan, DMD",
@@ -54,7 +54,7 @@ const RECENT_CLINIC_PRESCRIPTIONS: PrescriptionSummary[] = [
   },
   {
     id: "rx_103",
-    patientId: "p_03",
+    patientId: "00000000-0000-0000-0000-000000000003",
     patientName: "Alex Mercer",
     protocolTitle: "Periodontal Infection Protocol",
     doctorName: "Dr. Jane Smith, DDS",
@@ -66,6 +66,13 @@ const RECENT_CLINIC_PRESCRIPTIONS: PrescriptionSummary[] = [
 
 export default function GlobalPrescriptionsPage() {
   const [searchQuery, setSearchQuery] = React.useState("")
+  const [modalOpen, setModalOpen] = React.useState(false)
+  const [selectedPreset, setSelectedPreset] = React.useState<{ name: string; diagnosis: string } | null>(null)
+
+  const openModalWithPreset = (preset?: { name: string; diagnosis: string }) => {
+    setSelectedPreset(preset ?? null)
+    setModalOpen(true)
+  }
 
   const filteredPrescriptions = RECENT_CLINIC_PRESCRIPTIONS.filter(
     (rx) =>
@@ -76,6 +83,14 @@ export default function GlobalPrescriptionsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Patient Picker Modal */}
+      <SelectPatientForRxModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        selectedPresetName={selectedPreset?.name}
+        selectedPresetDiagnosis={selectedPreset?.diagnosis}
+      />
+
       {/* Header Container */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-white p-6 shadow-xs border border-slate-200">
         <div className="space-y-1">
@@ -91,11 +106,13 @@ export default function GlobalPrescriptionsPage() {
           </p>
         </div>
 
-        <Button asChild size="sm" className="bg-teal-600 hover:bg-teal-700 text-white gap-2 shadow-xs">
-          <Link href="/patients">
-            <Plus className="h-4 w-4" />
-            <span>Issue New e-Rx</span>
-          </Link>
+        <Button
+          onClick={() => openModalWithPreset()}
+          size="sm"
+          className="bg-teal-600 hover:bg-teal-700 text-white gap-2 shadow-xs cursor-pointer"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Issue New e-Rx</span>
         </Button>
       </div>
 
@@ -135,11 +152,14 @@ export default function GlobalPrescriptionsPage() {
                   ))}
                 </div>
 
-                <Button asChild variant="outline" size="sm" className="w-full text-xs gap-1 border-slate-200 hover:bg-slate-50">
-                  <Link href="/patients">
-                    <span>Select Patient to Issue</span>
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Link>
+                <Button
+                  onClick={() => openModalWithPreset(preset)}
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs gap-1 border-slate-200 hover:bg-slate-50 text-teal-700 hover:text-teal-800 font-semibold cursor-pointer"
+                >
+                  <span>Select Patient to Issue</span>
+                  <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
               </CardContent>
             </Card>

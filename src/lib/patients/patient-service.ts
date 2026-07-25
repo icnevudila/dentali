@@ -207,6 +207,7 @@ export async function fetchPatientRecordsByIds(
   patientIds: string[],
   branchId: string | null
 ): Promise<{ data: PatientRecord[]; error: string | null }> {
+  const isUuid = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
   const uniqueIds = [...new Set(patientIds)]
   if (uniqueIds.length === 0) return { data: [], error: null }
 
@@ -221,6 +222,9 @@ export async function fetchPatientRecordsByIds(
     }
   }
 
+  const validUuids = uniqueIds.filter(isUuid)
+  if (validUuids.length === 0) return { data: [], error: null }
+
   if (!branchId) return { data: [], error: null }
 
   const supabase = createClient()
@@ -230,13 +234,13 @@ export async function fetchPatientRecordsByIds(
       .select(
         "id, patient_number, first_name, last_name, date_of_birth, gender, phone, email, address, status"
       )
-      .in("id", uniqueIds),
+      .in("id", validUuids),
     supabase
       .from("patient_branch_links")
       .select("patient_id, last_visit_at")
       .eq("branch_id", branchId)
-      .in("patient_id", uniqueIds),
-    supabase.from("patient_medical_histories").select("patient_id").in("patient_id", uniqueIds),
+      .in("patient_id", validUuids),
+    supabase.from("patient_medical_histories").select("patient_id").in("patient_id", validUuids),
     supabase
       .from("patient_consents")
       .select("patient_id, status")
