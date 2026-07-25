@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Upload, Download, Trash2, FileText, ImageIcon, ClipboardList, FileCheck2, Pill, ShieldCheck, Sparkles, Award } from "lucide-react"
+import { Upload, Download, Trash2, FileText, ImageIcon, ClipboardList, FileCheck2, Pill, ShieldCheck, Sparkles, Award, Activity, Calculator } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -172,6 +172,18 @@ export function PatientDocumentsPanel({ patientId }: { patientId: string }) {
       hint: "Zirkonyum, lamine ve implant garanti belgesi çıktısı",
       href: `/patients/${patientId}/guarantee-certificate/print`,
       icon: Award,
+    },
+    {
+      label: "Periodontal Diş Eti Muayene Raporu",
+      hint: "Diş eti cepleri, kanama ve mobilite durum raporu çıktısı",
+      href: `/patients/${patientId}/perio/print`,
+      icon: Activity,
+    },
+    {
+      label: "Tedavi Maliyet & Fiyat Teklifi Formu",
+      hint: "Hasta onaylı tedavi planı indirimli fiyat teklifi ve taksit çıktısı",
+      href: `/patients/${patientId}/treatment-quote/print`,
+      icon: Calculator,
     },
     {
       label: t("patients.outputAbstract", "Medical abstract"),
