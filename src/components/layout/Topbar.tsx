@@ -31,7 +31,7 @@ export function Topbar() {
           className="hidden sm:flex items-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 px-3 py-1.5 text-xs text-slate-500 transition-all border border-slate-200/80 shrink-0"
         >
           <Search className="h-3.5 w-3.5 text-teal-600" />
-          <span className="font-medium">Akıllı Arama & Hızlı İşlem...</span>
+          <span className="font-medium">Search patient, action or module...</span>
           <kbd className="inline-flex items-center gap-0.5 rounded-md bg-white px-1.5 py-0.5 text-[10px] font-bold text-slate-600 border border-slate-200 shadow-2xs">
             <Command className="h-2.5 w-2.5" />K
           </kbd>

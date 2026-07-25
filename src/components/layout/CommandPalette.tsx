@@ -135,7 +135,7 @@ export function CommandPalette() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Hasta adı, işlem veya sayfa ara... (örn: Reçete, Hasta, Randevu)"
+            placeholder="Search patient name, procedure or page... (e.g. Rx, Patient, Calendar)"
             className="w-full bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none font-medium"
             autoFocus
           />
@@ -156,7 +156,7 @@ export function CommandPalette() {
         <div className="max-h-[360px] overflow-y-auto p-2 space-y-1">
           {filteredItems.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-500">
-              Aradığınız kriterlere uygun sonuç bulunamadı.
+              No matching clinical results found.
             </div>
           ) : (
             filteredItems.map((item) => {
@@ -199,11 +199,11 @@ export function CommandPalette() {
         <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-2.5 bg-slate-50 dark:bg-slate-950/60 text-[11px] text-slate-500">
           <div className="flex items-center gap-2">
             <Command className="h-3.5 w-3.5 text-teal-600" />
-            <span>Dentali Akıllı Arama & Hızlı İşlem Paleti</span>
+            <span>Dentali Command Search & Spotlight Action Palette</span>
           </div>
           <div className="flex items-center gap-3">
-            <span>Aç: <kbd className="font-bold">Ctrl+K</kbd></span>
-            <span>Kapat: <kbd className="font-bold font-mono">ESC</kbd></span>
+            <span>Open: <kbd className="font-bold">Ctrl+K</kbd></span>
+            <span>Close: <kbd className="font-bold font-mono">ESC</kbd></span>
           </div>
         </div>
       </div>
