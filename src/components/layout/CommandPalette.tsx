@@ -7,8 +7,6 @@ import {
   User,
   Calendar,
   Pill,
-  FileText,
-  Sparkles,
   FlaskConical,
   Plus,
   CreditCard,

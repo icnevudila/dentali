@@ -6,10 +6,6 @@ import {
   Pill,
   FileText,
   Sparkles,
-  ClipboardList,
-  CreditCard,
-  Printer,
-  ChevronRight,
   ShieldCheck,
   Stethoscope,
 } from "lucide-react"
