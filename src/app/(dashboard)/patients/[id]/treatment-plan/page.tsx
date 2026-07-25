@@ -912,7 +912,7 @@ function TreatmentPlanContent() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                        Treatment Date <span className="font-normal normal-case text-neutral-400">(Antedate)</span>
+                        Treatment Date
                       </label>
                       <Input
                         type="date"
@@ -1321,7 +1321,7 @@ function TreatmentPlanContent() {
 
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                      Procedure Date <span className="font-normal normal-case text-neutral-400">(Antedate)</span>
+                      Procedure Date
                     </label>
                     <Input
                       type="date"
