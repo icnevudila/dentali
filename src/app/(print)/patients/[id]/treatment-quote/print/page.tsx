@@ -1,13 +1,11 @@
 "use client"
 
 import { use } from "react"
-import { Printer, Calculator, FileCheck, ShieldCheck } from "lucide-react"
+import { Printer, Calculator } from "lucide-react"
 
 export default function TreatmentQuotePrintPage({
-  params,
   searchParams,
 }: {
-  params: Promise<{ id: string }>
   searchParams: Promise<{
     patientName?: string
     totalAmount?: string
@@ -16,7 +14,6 @@ export default function TreatmentQuotePrintPage({
     installment?: string
   }>
 }) {
-  const { id: patientId } = use(params)
   const {
     patientName = "Hasta Adı Soyadı",
     totalAmount = "45.000 ₺",

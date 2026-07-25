@@ -1,13 +1,11 @@
 "use client"
 
 import { use } from "react"
-import { Printer, Activity, ShieldAlert, Award } from "lucide-react"
+import { Printer, Activity, ShieldAlert } from "lucide-react"
 
 export default function PeriodontalChartPrintPage({
-  params,
   searchParams,
 }: {
-  params: Promise<{ id: string }>
   searchParams: Promise<{
     patientName?: string
     avgPocket?: string
@@ -15,7 +13,6 @@ export default function PeriodontalChartPrintPage({
     mobilityCount?: string
   }>
 }) {
-  const { id: patientId } = use(params)
   const {
     patientName = "Hasta Adı Soyadı",
     avgPocket = "2.8 mm (Normal - Hafif Gingivitis)",
