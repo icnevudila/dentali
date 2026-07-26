@@ -115,4 +115,6 @@ supabase functions deploy paymongo-webhook --project-ref YOUR_PROJECT_REF
 
 **Ops (kod dışı, klinik):** PITR/yedek, consent/privacy legal imza, 5 dk A→Z smoke.
 
+**Harici hesaplar (isteğe bağlı):** PayMongo / PhilHealth / Semaphore — yoksa dry-run. Kopyala-yapıştır rehber → [`docs/EXTERNAL_INTEGRATIONS_READY.md`](./EXTERNAL_INTEGRATIONS_READY.md)
+
 **Detaylı F6:** [`docs/VA-F6_USER_STEPS.md`](./VA-F6_USER_STEPS.md) · **Deploy:** [`docs/DEPLOY_CHECKLIST.md`](./DEPLOY_CHECKLIST.md)

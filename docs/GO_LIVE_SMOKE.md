@@ -60,6 +60,15 @@ npm run test:e2e -- e2e/smoke.spec.ts
 4. Approve treatment plan → invoice draft appears under Billing
 5. Record payment → balance updates
 
+## 4b. Front-desk package (no paid APIs)
+
+1. Appointment → **Check-in link** → QR visible / WhatsApp opens
+2. Guest opens `/check-in/{token}` → queue entry created
+3. `/inbox` loads follow-ups + recent outreach
+4. Patient profile → WhatsApp outreach preset → log in inbox
+5. `/team-chat` post a message
+6. `/timesheet` clock in → clock out
+
 ## 5. Owner analytics & digest SMS
 
 1. Reports Hub — branch benchmark + finance summary panels load
@@ -73,13 +82,17 @@ npm run test:e2e -- e2e/smoke.spec.ts
 1. `/patients/new` — step through Insurance (optional) → Register
 2. Patient profile shows coverage if HMO/PhilHealth selected
 
-## 7. Live integrations (production only)
+## 7. Live integrations (production only — optional)
+
+Skip until vendor accounts exist. Without secrets the app stays in dry-run; clinic can still operate.
 
 | Integration | Verify |
 |-------------|--------|
 | Semaphore SMS | Branch notification dry-run off; reminder cron sends real SMS |
 | PayMongo | Test checkout → webhook marks intent paid |
 | Resend | Closeout email cron delivers to owner inbox |
-| PhilHealth | Claim submit returns provider response (not stub) |
+| PhilHealth | Claim sync returns live provider response (not dry-run) |
+
+Paste-ready secrets: [EXTERNAL_INTEGRATIONS_READY.md](./EXTERNAL_INTEGRATIONS_READY.md).
 
 See also [DEPLOY_CHECKLIST.md](./DEPLOY_CHECKLIST.md) and [VA-F6_USER_STEPS.md](./VA-F6_USER_STEPS.md).
