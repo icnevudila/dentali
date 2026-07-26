@@ -5,6 +5,7 @@ import { BranchSwitcher } from "./BranchSwitcher"
 import { UserAccountMenu } from "./UserAccountMenu"
 import { LocaleSwitcher } from "@/components/i18n/LocaleSwitcher"
 import { MobileNavTrigger } from "@/components/layout/Sidebar"
+import { InboxTopbarLink } from "@/components/layout/InboxTopbarLink"
 
 import { Search, Command } from "lucide-react"
 import { CommandPalette } from "./CommandPalette"
@@ -37,7 +38,8 @@ export function Topbar() {
           </kbd>
         </button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <InboxTopbarLink />
           <LocaleSwitcher />
           <UserAccountMenu />
         </div>

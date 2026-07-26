@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils"
 import type { StaffMember } from "@/lib/staff/staff-service"
 import { useLocale } from "@/hooks/use-locale"
 import { AppointmentBookingBadge } from "@/components/appointments/AppointmentBookingBadge"
+import { AppointmentCheckInLinkButton } from "@/components/appointments/AppointmentCheckInLinkButton"
 
 const DRAG_MIME = "application/x-dentali-appointment"
 
@@ -600,6 +601,13 @@ export function AppointmentWeekCalendar({
                                   : t("appointments.checkInBtn", "Check in")}
                               </Button>
                             ) : null}
+                            {(appt.status === "scheduled" || appt.status === "confirmed") ? (
+                              <AppointmentCheckInLinkButton
+                                appointmentId={appt.id}
+                                patientPhone={appt.patient_phone}
+                                patientName={appt.patient_name}
+                              />
+                            ) : null}
                             {allowDirectComplete ? (
                             <Button
                               variant="outline"
@@ -878,6 +886,13 @@ export function AppointmentWeekCalendar({
                             >
                               <UserCheck className="h-4 w-4" />
                             </Button>
+                          ) : null}
+                          {(appt.status === "scheduled" || appt.status === "confirmed") ? (
+                            <AppointmentCheckInLinkButton
+                              appointmentId={appt.id}
+                              patientPhone={appt.patient_phone}
+                              patientName={appt.patient_name}
+                            />
                           ) : null}
                           {allowDirectComplete ? (
                           <Button

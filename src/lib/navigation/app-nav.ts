@@ -9,6 +9,7 @@ import {
   FlaskConical,
   Globe,
   Home,
+  Inbox,
   ListOrdered,
   Monitor,
   Package,
@@ -69,6 +70,18 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
     labelFallback: "Overview",
     items: [
       { nameKey: "nav.dashboard", fallback: "Dashboard", href: "/", icon: Home },
+      {
+        nameKey: "nav.inbox",
+        fallback: "Inbox",
+        href: "/inbox",
+        icon: Inbox,
+        anyOf: [
+          PERMISSIONS.QUEUE_MANAGE,
+          PERMISSIONS.APPOINTMENTS_READ,
+          PERMISSIONS.BILLING_READ,
+          PERMISSIONS.PATIENTS_READ,
+        ],
+      },
       {
         nameKey: "nav.reports",
         fallback: "Reports",
