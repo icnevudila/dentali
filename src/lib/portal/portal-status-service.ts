@@ -98,16 +98,21 @@ export async function createPortalPaymentIntent(params: {
   error: string | null
 }> {
   const supabase = createClient()
-  const { data, error } = await supabase.rpc("create_portal_payment_intent", {
-    p_session_id: params.sessionId,
-    p_phone: params.phone,
-    p_last_name: params.lastName,
-    p_invoice_id: params.invoiceId,
-    p_provider: params.provider ?? "paymongo",
-    p_amount: params.amount ?? null,
+  const { data, error } = await supabase.functions.invoke("portal-create-payment-intent", {
+    body: {
+      session_id: params.sessionId,
+      phone: params.phone,
+      last_name: params.lastName,
+      invoice_id: params.invoiceId,
+      provider: params.provider ?? "paymongo",
+      amount: params.amount ?? null,
+    },
   })
+
   if (error) return { data: null, error: error.message }
   const raw = data as Record<string, unknown>
+  if (raw?.error) return { data: null, error: String(raw.error) }
+
   return {
     data: {
       id: String(raw.id),

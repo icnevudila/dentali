@@ -24,6 +24,7 @@ import {
   ArrowUpRight,
   Undo2,
   Eraser,
+  Save,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -42,6 +43,7 @@ import {
   getPatientDocumentUrl,
   MAX_PATIENT_DOCUMENT_BYTES,
   uploadPatientDocument,
+  savePatientDocumentAnnotations,
   type PatientDocument,
 } from "@/lib/patients/patient-documents-service"
 import { RadiologyAnnotationLayer } from "@/components/patients/RadiologyAnnotationLayer"
@@ -84,8 +86,11 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
   const [drawTool, setDrawTool] = React.useState<RadiologyDrawTool>("freehand")
   const [strokeColor, setStrokeColor] = React.useState<RadiologyStrokeColor>("#ef4444")
   const [annotationsByImageId, setAnnotationsByImageId] = React.useState<Record<string, RadiologyAnnotation[]>>({})
+  const [annotationVersionsByImageId, setAnnotationVersionsByImageId] = React.useState<Record<string, number>>({})
+  const [savingAnnotations, setSavingAnnotations] = React.useState(false)
 
   const currentAnnotations = selectedImage ? (annotationsByImageId[selectedImage.id] ?? []) : []
+  const currentAnnotationVersion = selectedImage ? (annotationVersionsByImageId[selectedImage.id] ?? 1) : 1
 
   const setCurrentAnnotations = React.useCallback(
     (next: RadiologyAnnotation[]) => {
@@ -103,6 +108,28 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
   const clearAnnotations = React.useCallback(() => {
     setCurrentAnnotations([])
   }, [setCurrentAnnotations])
+
+  const handleSaveAnnotations = React.useCallback(async () => {
+    if (!selectedImage) return
+    setSavingAnnotations(true)
+    const { data, error: saveErr } = await savePatientDocumentAnnotations(
+      selectedImage.id,
+      currentAnnotations,
+      currentAnnotationVersion
+    )
+    setSavingAnnotations(false)
+    if (saveErr) {
+      notify.error(saveErr)
+      return
+    }
+    if (data) {
+      setAnnotationVersionsByImageId((prev) => ({
+        ...prev,
+        [selectedImage.id]: data.annotations_version,
+      }))
+      notify.success(t("patients.annotationsSaved", "Annotations saved to patient record"))
+    }
+  }, [selectedImage, currentAnnotations, currentAnnotationVersion, t])
 
   React.useEffect(() => {
     setViewerMounted(true)
@@ -160,6 +187,16 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
     )
 
     setImages(xrayWithUrls)
+
+    const nextAnnotations: Record<string, RadiologyAnnotation[]> = {}
+    const nextVersions: Record<string, number> = {}
+    for (const doc of xrayWithUrls) {
+      nextAnnotations[doc.id] = doc.annotations ?? []
+      nextVersions[doc.id] = doc.annotations_version ?? 1
+    }
+    setAnnotationsByImageId(nextAnnotations)
+    setAnnotationVersionsByImageId(nextVersions)
+
     setLoading(false)
   }, [patientId])
 
@@ -494,8 +531,8 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
                       </h4>
                       <p className="text-xs text-neutral-400">
                         {t(
-                          "patients.markupSessionHint",
-                          "Markings stay for this session only and are not saved to the patient record."
+                          "patients.markupPersistHint",
+                          "Draw findings on the image, then save to store annotations on this X-ray record."
                         )}
                       </p>
                     </div>
@@ -599,6 +636,20 @@ export function PatientRadiologyPanel({ patientId }: { patientId: string }) {
                             {t("patients.clearMarkup", "Clear all")}
                           </Button>
                         </div>
+
+                        <PermissionGate permission={PERMISSIONS.PATIENTS_WRITE}>
+                          <Button
+                            size="sm"
+                            className="h-9 w-full gap-1.5"
+                            disabled={savingAnnotations}
+                            onClick={() => void handleSaveAnnotations()}
+                          >
+                            <Save className="h-3.5 w-3.5" />
+                            {savingAnnotations
+                              ? t("common.saving", "Saving…")
+                              : t("patients.saveAnnotations", "Save annotations")}
+                          </Button>
+                        </PermissionGate>
                       </>
                     ) : null}
                   </div>
