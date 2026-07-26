@@ -898,6 +898,7 @@ function AppointmentsPageContent() {
                 : undefined
             }
             providers={providers}
+            onBook={canWriteAppts ? openBookModal : undefined}
           />
           {activeBranch ? (
             <AppointmentEditDialog

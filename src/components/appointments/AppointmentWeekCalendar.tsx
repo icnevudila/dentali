@@ -46,6 +46,8 @@ interface AppointmentWeekCalendarProps {
   providers: StaffMember[]
   /** When false (default), completed visits must go through Queue → Served. */
   allowDirectComplete?: boolean
+  /** Opens the book-appointment flow from empty states. */
+  onBook?: () => void
 }
 
 export function AppointmentWeekCalendar({
@@ -67,6 +69,7 @@ export function AppointmentWeekCalendar({
   dragHint,
   providers,
   allowDirectComplete = false,
+  onBook,
 }: AppointmentWeekCalendarProps) {
   const { t } = useLocale()
   const [viewMode, setViewMode] = React.useState<"month" | "week" | "day" | "chairs">(() => {
@@ -514,7 +517,14 @@ export function AppointmentWeekCalendar({
             {selectedAppointments.length === 0 ? (
               <div className="py-12 text-center text-neutral-400">
                 <Calendar className="mx-auto h-8 w-8 mb-2 opacity-30" />
-                <p className="text-sm">No appointments scheduled for this day.</p>
+                <p className="text-sm text-neutral-600">
+                  {t("appointments.emptyDay", "No appointments for this day.")}
+                </p>
+                {onBook ? (
+                  <Button type="button" size="sm" className="mt-4 gap-2" onClick={onBook}>
+                    {t("appointments.book", "Book")}
+                  </Button>
+                ) : null}
               </div>
             ) : (
               <div className="divide-y divide-neutral-200/60">
@@ -787,7 +797,20 @@ export function AppointmentWeekCalendar({
           </div>
 
           {selectedAppointments.length === 0 ? (
-            <p className="text-sm text-neutral-500">Select another day or click &quot;Book&quot; above to add an appointment.</p>
+            <div className="py-6 text-center">
+              <p className="text-sm text-neutral-500">
+                {t("appointments.emptySelectedDay", "Nothing booked for this day yet.")}
+              </p>
+              {onBook ? (
+                <Button type="button" size="sm" className="mt-4 gap-2" onClick={onBook}>
+                  {t("appointments.book", "Book")}
+                </Button>
+              ) : (
+                <p className="mt-2 text-sm text-neutral-500">
+                  {t("appointments.emptySelectedDayHint", "Use Book above to add an appointment.")}
+                </p>
+              )}
+            </div>
           ) : (
             <ul className="space-y-2">
               {selectedAppointments.map((appt) => {
