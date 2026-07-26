@@ -190,8 +190,8 @@ Acceptance:
 - Advanced analytics
 - PhilHealth eClaims connector
 - Online payment integration
-- Dental imaging integration
-- QR check-in
+- Dental imaging integration → **deferred plan:** `docs/superpowers/specs/2026-07-26-dicom-windows-gateway-design.md` (Windows Orthanc C-STORE + Worklist skeleton; implement last)
+- QR check-in (shipped)
 
 ## Top 10 immediate TODOs
 
