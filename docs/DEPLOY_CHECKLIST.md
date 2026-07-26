@@ -22,7 +22,7 @@
 | `CLOSEOUT_EMAIL_FROM` | Sender for closeout emails (default `Dentali Closeout <closeout@dentali.ph>`) |
 | `CLOSEOUT_EMAIL_DRY_RUN` | Set `true` to force dry-run even when Resend is configured |
 | `PAYMONGO_SECRET_KEY` | Live PayMongo checkout sessions |
-| `PAYMONGO_WEBHOOK_SECRET` | Optional webhook signature verification |
+| `PAYMONGO_WEBHOOK_SECRET` | **Required for live PayMongo** — HMAC verification; webhook returns 503 if unset |
 | `SITE_URL` | Payment success/cancel URLs |
 | `PHILHEALTH_ECLAIMS_API_URL` | PhilHealth sync (omit = dry-run stub) |
 
@@ -65,7 +65,10 @@ Suggested schedule — full setup guide: [SUPABASE_CRON_SETUP.md](./SUPABASE_CRO
 ## PayMongo
 
 1. Create webhook pointing to `/functions/v1/paymongo-webhook` for `checkout_session.payment.paid`.
-2. Store checkout session id as `external_ref` on `payment_gateway_intents` (already done by `create-payment-intent`).
+2. Set `PAYMONGO_WEBHOOK_SECRET` to the endpoint secret from the PayMongo dashboard.
+3. Store checkout session id as `external_ref` on `payment_gateway_intents` (already done by `create-payment-intent`).
+4. Signature verification: HMAC-SHA256 of `t.<rawBody>`; compare against `te` (test) or `li` (live). Reject on mismatch / skew / missing secret.
+5. Amounts: ledger uses **pesos**; PayMongo `line_items.amount` is **centavos** (`Math.round(pesos * 100)`).
 
 ## Go-live verification
 

@@ -9,8 +9,16 @@ export type PaymentCheckoutResult =
     }
   | { ok: false; error: string }
 
+/**
+ * Create a checkout session.
+ *
+ * `amount` is PHP **major units (pesos)** as stored/compared on invoices in the app
+ * ledger UI (e.g. 1500.5 = ₱1,500.50). PayMongo line_items.amount must be
+ * **centavos** (minor units), so we convert with ×100.
+ */
 export async function createPaymentCheckout(params: {
   provider: PaymentProviderName
+  /** Invoice balance / pay amount in pesos (major units). */
   amount: number
   invoiceId: string
   externalRefSeed: string
@@ -20,6 +28,12 @@ export async function createPaymentCheckout(params: {
 
   if (params.provider === "paymongo" && paymongoKey) {
     try {
+      // Pesos → centavos for PayMongo. Reject non-finite / sub-centavo noise.
+      const amountCentavos = Math.round(Number(params.amount) * 100)
+      if (!Number.isFinite(amountCentavos) || amountCentavos < 100) {
+        return { ok: false, error: "Amount must be at least ₱1.00" }
+      }
+
       const res = await fetch("https://api.paymongo.com/v1/checkout_sessions", {
         method: "POST",
         headers: {
@@ -31,7 +45,7 @@ export async function createPaymentCheckout(params: {
             attributes: {
               line_items: [
                 {
-                  amount: Math.round(params.amount * 100),
+                  amount: amountCentavos,
                   currency: "PHP",
                   name: `Invoice ${params.invoiceId.slice(0, 8)}`,
                   quantity: 1,

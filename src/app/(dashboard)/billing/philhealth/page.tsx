@@ -242,6 +242,7 @@ function PhilHealthPageContent() {
         <div className="space-y-6">
         <IntegrationEnvBanner
           title={t("billing.philhealthIntegration", "PhilHealth eClaims sync")}
+          tone="warning"
           description={t(
             "billing.philhealthBanner",
             "Submissions use the sync-philhealth-claim edge function. Without PHILHEALTH_ECLAIMS_API_URL and related secrets, sync runs in dry-run mode and records a log only."
