@@ -21,6 +21,8 @@ export async function fetchEffectiveSettings(
   branchId: string
 ): Promise<{ data: EffectiveSettings | null; error: string | null }> {
   const supabase = createClient()
+  // Seed hours outside the STABLE get_effective_settings RPC (read-only).
+  await supabase.rpc("ensure_branch_clinic_hours", { p_branch_id: branchId })
   const { data, error } = await supabase.rpc("get_effective_settings", {
     p_branch_id: branchId,
   })
