@@ -62,6 +62,7 @@ export async function updateSession(request: NextRequest) {
     '/sign',
     '/portal',
     '/pda',
+    '/check-in',
     '/ui-preview',
   ] as const
 

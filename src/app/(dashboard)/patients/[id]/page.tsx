@@ -23,6 +23,7 @@ import { PERMISSIONS } from "@/lib/auth/permissions"
 import { getPatient, type PatientWithContacts } from "@/lib/patients/patient-service"
 import { getPatientBalance, getPatientBillingGate, type PatientBalance, type PatientBillingGate } from "@/lib/billing/invoice-service"
 import { PatientBillingGateBanner } from "@/components/billing/PatientBillingGateBanner"
+import { PatientOutreachCard } from "@/components/patients/PatientOutreachCard"
 import { ConsentFormsPanel } from "@/components/consent/ConsentFormsPanel"
 import { fetchPatientConsents, type PatientConsent } from "@/lib/patients/consent-service"
 import {
@@ -846,6 +847,13 @@ export default function PatientProfilePage() {
       ) : null}
 
       <MetricStrip items={profileMetrics} />
+
+      <PatientOutreachCard
+        patientId={patientId}
+        patientName={fullName}
+        phone={patient.phone}
+        className="print:hidden"
+      />
 
       <ClinicalVisitJourneyPanel
         journey={visitJourney}
