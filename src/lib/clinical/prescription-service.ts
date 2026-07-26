@@ -68,6 +68,38 @@ export const DENTAL_PRESCRIPTION_PRESETS = [
   },
 ] as const
 
+function mapPrescriptionRow(row: {
+  id: string
+  patient_id: string
+  branch_id: string
+  status: string
+  diagnosis: string | null
+  general_instructions: string | null
+  signed_at: string | null
+  voided_at: string | null
+  void_reason: string | null
+  prescriber_id: string | null
+  created_at: string
+  profiles: { full_name: string } | { full_name: string }[] | null
+}): PrescriptionRecord {
+  const p = row.profiles
+  const profile = Array.isArray(p) ? p[0] : p
+  return {
+    id: row.id,
+    patient_id: row.patient_id,
+    branch_id: row.branch_id,
+    status: row.status as PrescriptionRecord["status"],
+    diagnosis: row.diagnosis,
+    general_instructions: row.general_instructions,
+    signed_at: row.signed_at,
+    voided_at: row.voided_at,
+    void_reason: row.void_reason,
+    prescriber_id: row.prescriber_id,
+    created_at: row.created_at,
+    prescriber_name: profile?.full_name,
+  }
+}
+
 export async function fetchPatientPrescriptions(
   patientId: string,
   branchId: string
@@ -86,22 +118,48 @@ export async function fetchPatientPrescriptions(
   if (error) return { data: [], error: error.message }
 
   return {
+    data: (data ?? []).map((row) => mapPrescriptionRow(row as Parameters<typeof mapPrescriptionRow>[0])),
+    error: null,
+  }
+}
+
+export type BranchPrescriptionSummary = PrescriptionRecord & {
+  patient_first_name?: string | null
+  patient_last_name?: string | null
+  item_count?: number
+}
+
+/** Clinic-wide recent prescriptions for the active branch (no sample data). */
+export async function fetchBranchPrescriptions(
+  branchId: string,
+  limit = 40
+): Promise<{ data: BranchPrescriptionSummary[]; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("prescriptions")
+    .select(
+      "id, patient_id, branch_id, status, diagnosis, general_instructions, signed_at, voided_at, void_reason, prescriber_id, created_at, profiles:prescriber_id(full_name), patients:patient_id(first_name, last_name), prescription_items(id)"
+    )
+    .eq("branch_id", branchId)
+    .order("created_at", { ascending: false })
+    .limit(limit)
+
+  if (error) return { data: [], error: error.message }
+
+  return {
     data: (data ?? []).map((row) => {
-      const p = row.profiles as { full_name: string } | { full_name: string }[] | null
-      const profile = Array.isArray(p) ? p[0] : p
+      const base = mapPrescriptionRow(row as Parameters<typeof mapPrescriptionRow>[0])
+      const patient = row.patients as
+        | { first_name: string | null; last_name: string | null }
+        | { first_name: string | null; last_name: string | null }[]
+        | null
+      const patientRow = Array.isArray(patient) ? patient[0] : patient
+      const items = row.prescription_items as { id: string }[] | null
       return {
-        id: row.id,
-        patient_id: row.patient_id,
-        branch_id: row.branch_id,
-        status: row.status as PrescriptionRecord["status"],
-        diagnosis: row.diagnosis,
-        general_instructions: row.general_instructions,
-        signed_at: row.signed_at,
-        voided_at: row.voided_at,
-        void_reason: row.void_reason,
-        prescriber_id: row.prescriber_id,
-        created_at: row.created_at,
-        prescriber_name: profile?.full_name,
+        ...base,
+        patient_first_name: patientRow?.first_name ?? null,
+        patient_last_name: patientRow?.last_name ?? null,
+        item_count: items?.length ?? 0,
       }
     }),
     error: null,

@@ -162,7 +162,10 @@ export function PortalStatusPanel({
         </p>
         {snapshot?.balance.has_balance ? (
           <p className="mt-1 text-xs text-amber-800">
-            {t("portal.balanceDue", "Outstanding balance — settle at the front desk before leaving.")}
+            {t(
+              "portal.balanceDue",
+              "Outstanding balance on file. Online payment is not available in this portal — please settle at the front desk before leaving."
+            )}
           </p>
         ) : (
           <p className="mt-1 text-xs text-emerald-700">

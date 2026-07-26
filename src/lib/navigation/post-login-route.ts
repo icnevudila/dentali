@@ -1,8 +1,9 @@
 import { PERMISSIONS } from "@/lib/auth/permissions"
 
 const RECEPTION_ROLES = new Set(["receptionist"])
+const DENTIST_ROLES = new Set(["dentist"])
 
-/** Where staff land after login — front desk goes straight to Queue. */
+/** Where staff land after login — front desk → Queue; dentist → Today's chair. */
 export function resolvePostLoginPath(opts: {
   roleName: string | null
   permissions: string[]
@@ -12,9 +13,14 @@ export function resolvePostLoginPath(opts: {
   const hasQueue = permSet.has(PERMISSIONS.QUEUE_MANAGE)
   const hasChair = permSet.has(PERMISSIONS.DENTAL_CHART_READ)
   const isReception = roleName ? RECEPTION_ROLES.has(roleName) : false
+  const isDentist = roleName ? DENTIST_ROLES.has(roleName) : false
 
   if (hasQueue && (isReception || !hasChair)) {
     return "/queue"
+  }
+
+  if (isDentist && hasChair) {
+    return "/dentist"
   }
 
   return "/"

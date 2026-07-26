@@ -1002,8 +1002,8 @@ export default function InvoiceDetailPage() {
                           if (
                             !(await notify.confirm(
                               t(
-                                "billing.deletePaymentConfirm",
-                                "Are you sure you want to delete this payment record? The invoice paid amount and status will be recalculated."
+                                "billing.reversePaymentConfirm",
+                                "Reverse this payment? Use this only for mistaken entries. The invoice paid amount and status will be recalculated. This is logged in the audit trail."
                               )
                             ))
                           )
@@ -1014,11 +1014,13 @@ export default function InvoiceDetailPage() {
                             setError(delErr)
                             notify.error(delErr)
                           } else {
-                            notify.success(t("billing.paymentDeleted", "Payment record removed"))
+                            notify.success(
+                              t("billing.paymentReversed", "Payment reversed — invoice totals updated")
+                            )
                             await load()
                           }
                         }}
-                        title="Delete Payment"
+                        title={t("billing.reversePayment", "Reverse payment")}
                       >
                         <X className="h-4 w-4" />
                       </Button>

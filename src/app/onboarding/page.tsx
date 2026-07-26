@@ -207,26 +207,39 @@ export default function OnboardingPage() {
           )}
 
           {step === 3 && (
-            <dl className="text-sm space-y-3 divide-y divide-[var(--color-border-secondary)]">
-              <div className="flex justify-between pt-0">
-                <dt className="text-[var(--color-text-secondary)]">{t("onboarding.reviewOrg", "Organization")}</dt>
-                <dd className="font-medium text-[var(--color-text-primary)]">{orgName}</dd>
-              </div>
-              <div className="flex justify-between pt-3">
-                <dt className="text-[var(--color-text-secondary)]">{t("onboarding.reviewOwner", "Owner")}</dt>
-                <dd className="font-medium text-[var(--color-text-primary)]">{ownerName || "—"}</dd>
-              </div>
-              <div className="flex justify-between pt-3">
-                <dt className="text-[var(--color-text-secondary)]">{t("onboarding.reviewBranch", "Branch")}</dt>
-                <dd className="font-medium text-[var(--color-text-primary)]">{branchName}</dd>
-              </div>
-              {branchAddress && (
-                <div className="flex justify-between pt-3">
-                  <dt className="text-[var(--color-text-secondary)]">{t("onboarding.reviewAddress", "Address")}</dt>
-                  <dd className="font-medium text-[var(--color-text-primary)] text-right max-w-[60%]">{branchAddress}</dd>
+            <div className="space-y-4">
+              <dl className="text-sm space-y-3 divide-y divide-[var(--color-border-secondary)]">
+                <div className="flex justify-between pt-0">
+                  <dt className="text-[var(--color-text-secondary)]">{t("onboarding.reviewOrg", "Organization")}</dt>
+                  <dd className="font-medium text-[var(--color-text-primary)]">{orgName}</dd>
                 </div>
-              )}
-            </dl>
+                <div className="flex justify-between pt-3">
+                  <dt className="text-[var(--color-text-secondary)]">{t("onboarding.reviewOwner", "Owner")}</dt>
+                  <dd className="font-medium text-[var(--color-text-primary)]">{ownerName || "—"}</dd>
+                </div>
+                <div className="flex justify-between pt-3">
+                  <dt className="text-[var(--color-text-secondary)]">{t("onboarding.reviewBranch", "Branch")}</dt>
+                  <dd className="font-medium text-[var(--color-text-primary)]">{branchName}</dd>
+                </div>
+                {branchAddress ? (
+                  <div className="flex justify-between pt-3">
+                    <dt className="text-[var(--color-text-secondary)]">{t("onboarding.reviewAddress", "Address")}</dt>
+                    <dd className="font-medium text-[var(--color-text-primary)] text-right max-w-[60%]">{branchAddress}</dd>
+                  </div>
+                ) : null}
+              </dl>
+              <div className="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-bg-secondary)] p-3 text-xs space-y-2">
+                <p className="font-semibold text-[var(--color-text-primary)]">
+                  {t("onboarding.nextStepsTitle", "After launch — finish clinic setup")}
+                </p>
+                <ol className="list-decimal pl-4 space-y-1 text-[var(--color-text-secondary)]">
+                  <li>{t("onboarding.nextHours", "Set clinic hours under Settings → Branches")}</li>
+                  <li>{t("onboarding.nextProcedures", "Add procedures & prices under Settings → Procedures")}</li>
+                  <li>{t("onboarding.nextWorkflow", "Turn on visit automation under Settings → Workflow")}</li>
+                  <li>{t("onboarding.nextStaff", "Invite a receptionist under Settings → Staff")}</li>
+                </ol>
+              </div>
+            </div>
           )}
 
           <div className="flex justify-between pt-4">

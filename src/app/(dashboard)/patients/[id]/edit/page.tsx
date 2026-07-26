@@ -18,8 +18,10 @@ import { patientSchema, type PatientFormValues } from "@/lib/validations/patient
 import {
   getPatient,
   patientToFormValues,
+  setPatientStatus,
   updatePatient,
   updatePatientIntakeProfile,
+  type PatientLifecycleStatus,
 } from "@/lib/patients/patient-service"
 import { MergePatientPanel } from "@/components/patients/MergePatientPanel"
 import { PatientInsurancePanel } from "@/components/patients/PatientInsurancePanel"
@@ -42,6 +44,8 @@ export default function EditPatientPage() {
   const [submitError, setSubmitError] = React.useState<string | null>(null)
   const [isSaving, setIsSaving] = React.useState(false)
   const [patientName, setPatientName] = React.useState("")
+  const [patientStatus, setPatientStatusState] = React.useState<PatientLifecycleStatus>("active")
+  const [statusBusy, setStatusBusy] = React.useState(false)
   const [intakeProfile, setIntakeProfile] = React.useState<PatientIntakeProfile>(emptyPatientIntakeProfile())
 
   const form = useForm<PatientFormValues>({
@@ -57,6 +61,10 @@ export default function EditPatientPage() {
         form.reset(patientToFormValues(data))
         setIntakeProfile(data.intake_profile ?? emptyPatientIntakeProfile())
         setPatientName(`${data.first_name} ${data.last_name}`)
+        const status = (data.status as PatientLifecycleStatus) || "active"
+        setPatientStatusState(
+          status === "inactive" || status === "archived" ? status : "active"
+        )
       }
       setLoading(false)
     })
@@ -196,6 +204,88 @@ export default function EditPatientPage() {
           <PatientIntakeProfilePanel value={intakeProfile} onChange={setIntakeProfile} />
 
           <PatientInsurancePanel patientId={patientId} />
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Record status</CardTitle>
+              <CardDescription>
+                Archive inactive patients to keep search clean. Clinical history is kept; the patient can be reactivated later.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-center gap-3">
+              <span className="text-sm text-neutral-600">
+                Current: <strong className="capitalize text-neutral-900">{patientStatus}</strong>
+              </span>
+              {patientStatus === "active" ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={statusBusy || !user}
+                  onClick={async () => {
+                    if (!user) return
+                    if (
+                      !window.confirm(
+                        "Archive this patient? They will be hidden from the default active list."
+                      )
+                    ) {
+                      return
+                    }
+                    setStatusBusy(true)
+                    const { error } = await setPatientStatus(patientId, "archived", user.id)
+                    setStatusBusy(false)
+                    if (error) {
+                      toast.error(error)
+                      return
+                    }
+                    if (activeBranch?.organization_id) {
+                      await logAuditEvent({
+                        organizationId: activeBranch.organization_id,
+                        branchId: activeBranch.id,
+                        action: "patient.update",
+                        entityType: "patient",
+                        entityId: patientId,
+                        metadata: { status: "archived" },
+                      })
+                    }
+                    setPatientStatusState("archived")
+                    toast.success("Patient archived")
+                  }}
+                >
+                  Archive patient
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={statusBusy || !user}
+                  onClick={async () => {
+                    if (!user) return
+                    setStatusBusy(true)
+                    const { error } = await setPatientStatus(patientId, "active", user.id)
+                    setStatusBusy(false)
+                    if (error) {
+                      toast.error(error)
+                      return
+                    }
+                    if (activeBranch?.organization_id) {
+                      await logAuditEvent({
+                        organizationId: activeBranch.organization_id,
+                        branchId: activeBranch.id,
+                        action: "patient.update",
+                        entityType: "patient",
+                        entityId: patientId,
+                        metadata: { status: "active" },
+                      })
+                    }
+                    setPatientStatusState("active")
+                    toast.success("Patient reactivated")
+                  }}
+                >
+                  Reactivate patient
+                </Button>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="flex items-center justify-end gap-4">
             <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>

@@ -109,7 +109,7 @@ export function CommandPalette() {
       subtitle: "Switch between dental clinic locations",
       category: "Modules",
       icon: Building,
-      action: () => navigateTo("/branches"),
+      action: () => navigateTo("/settings/branches"),
     },
   ]
 

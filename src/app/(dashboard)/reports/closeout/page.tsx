@@ -20,6 +20,8 @@ import {
 } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
+import { PermissionGate } from "@/components/auth/PermissionGate"
+import { PERMISSIONS } from "@/lib/auth/permissions"
 import { MetricStrip } from "@/components/layout/MetricStrip"
 import type { MetricItem } from "@/components/layout/MetricStrip"
 import { ClinicDayBar } from "@/components/layout/ClinicDayBar"
@@ -379,6 +381,7 @@ function DailyCloseoutContent() {
   }))
 
   return (
+    <PermissionGate permission={PERMISSIONS.BILLING_READ}>
     <>
       {data ? (
         <CloseoutPrintDocument
@@ -742,6 +745,7 @@ function DailyCloseoutContent() {
         onConfirm={handleReopenDay}
       />
     </>
+    </PermissionGate>
   )
 }
 

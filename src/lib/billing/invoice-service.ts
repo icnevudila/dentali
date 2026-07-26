@@ -500,6 +500,7 @@ export async function voidInvoice(
   return { data: { status: raw.status }, error: null }
 }
 
+/** Reverse a mistaken payment (RPC recalculates invoice totals; audited server-side). */
 export async function deleteInvoicePayment(
   paymentId: string
 ): Promise<{ error: string | null }> {
@@ -509,6 +510,9 @@ export async function deleteInvoicePayment(
   })
   return { error: error?.message ?? null }
 }
+
+/** Alias for clearer call sites — same as deleteInvoicePayment. */
+export const reverseInvoicePayment = deleteInvoicePayment
 
 export async function updateInvoiceLineItem(params: {
   itemId: string
