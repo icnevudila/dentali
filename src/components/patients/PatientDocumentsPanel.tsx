@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Upload, Download, Trash2, FileText, ImageIcon, ClipboardList, FileCheck2, Pill, ShieldCheck, Sparkles, Award, Activity, Calculator } from "lucide-react"
+import { Upload, Download, Trash2, FileText, ImageIcon, ClipboardList, FileCheck2, Pill, ShieldCheck, Activity, Calculator, ScrollText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -156,22 +156,16 @@ export function PatientDocumentsPanel({ patientId }: { patientId: string }) {
       icon: Pill,
     },
     {
-      label: t("patients.outputCertificate", "Tıbbi İstirahat Raporları"),
-      hint: t("patients.outputCertificateHint", "Resmi istirahat belgesi oluştur ve yazdır"),
+      label: t("patients.outputCertificate", "Rest certificates"),
+      hint: t("patients.outputCertificateHint", "Create and print rest / medical certificates"),
       href: `/patients/${patientId}/medical-certificates`,
       icon: FileText,
     },
     {
-      label: "Aesthetic Before / After Gallery",
-      hint: "Interactive split-slider comparison for smile design and whitening",
-      href: `/patients/${patientId}/aesthetic-gallery`,
-      icon: Sparkles,
-    },
-    {
-      label: "Prosthesis & Implant Guarantee Certificate",
-      hint: "Printable official guarantee certificate for crowns, veneers and implants",
-      href: `/patients/${patientId}/guarantee-certificate/print`,
-      icon: Award,
+      label: t("patients.outputFitToWork", "Fit-to-work letter"),
+      hint: t("patients.outputFitToWorkHint", "Clinic clearance / fit-to-work letter"),
+      href: `/patients/${patientId}/medical-certificate`,
+      icon: ScrollText,
     },
     {
       label: "Periodontal Probing Examination Report",

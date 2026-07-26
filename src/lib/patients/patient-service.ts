@@ -429,6 +429,27 @@ export async function createPatient(
   return { data: { id: data.id }, error: null }
 }
 
+export type PatientLifecycleStatus = "active" | "inactive" | "archived"
+
+/** Soft-archive / reactivate a patient without deleting clinical history. */
+export async function setPatientStatus(
+  patientId: string,
+  status: PatientLifecycleStatus,
+  userId: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from("patients")
+    .update({
+      status,
+      updated_by: userId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", patientId)
+
+  return { error: error?.message ?? null }
+}
+
 export async function updatePatient(
   patientId: string,
   form: PatientFormValues,

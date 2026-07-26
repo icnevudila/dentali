@@ -298,7 +298,7 @@ function QueueCard({
               {t("queue.backToWaiting", "Back to waiting")}
             </Button>
             <Button size="sm" variant="default" disabled={loading} onClick={() => onAction("served")}>
-              {t("queue.complete", "Checkout / Discharge")}
+              {t("queue.complete", "Finish visit")}
             </Button>
           </>
         ) : null}

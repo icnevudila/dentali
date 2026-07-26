@@ -93,6 +93,22 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
             "At check-in and booking: block only overdue balances or totals ≥ ₱5,000. At checkout and clinical steps: full clearance. Staff can override with audit."
           ),
         },
+        {
+          key: "require_deposit_on_book",
+          label: t("settings.wfDepositLabel", "Warn when booking without deposit"),
+          description: t(
+            "settings.wfDepositDesc",
+            "When on, booking UI reminds staff to collect a deposit for new appointments (policy reminder — amount set at front desk)."
+          ),
+        },
+        {
+          key: "no_show_fee_policy",
+          label: t("settings.wfNoShowFeeLabel", "No-show fee policy reminder"),
+          description: t(
+            "settings.wfNoShowFeeDesc",
+            "When marking no-show, remind staff of the clinic’s no-show fee policy before rebooking."
+          ),
+        },
       ],
     },
     {
@@ -108,10 +124,10 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
         },
         {
           key: "auto_served_creates_invoice",
-          label: t("settings.wfServedInvoiceLabel", "Served creates invoice draft"),
+          label: t("settings.wfServedInvoiceLabel", "Treatment done creates invoice draft"),
           description: t(
             "settings.wfServedInvoiceDesc",
-            "When queue entry is marked served, spawn an invoice draft from the encounter's approved treatment plan."
+            "When a queue entry is marked treatment done, spawn an invoice draft from the visit's approved treatment plan."
           ),
         },
         {
@@ -119,7 +135,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
           label: t("settings.wfCloseVisitLabel", "Payment closes visit"),
           description: t(
             "settings.wfCloseVisitDesc",
-            "When an encounter-linked invoice is fully paid, automatically close the open visit."
+            "When a visit-linked invoice is fully paid, automatically close the open visit."
           ),
         },
       ],

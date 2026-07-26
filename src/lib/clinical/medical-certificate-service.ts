@@ -156,3 +156,89 @@ export async function createMedicalCertificate(params: {
   saveLocalCertificate(newRecord)
   return { data: newRecord, error: null }
 }
+
+/** Revoke an issued rest certificate (DB + local fallback). */
+export async function revokeMedicalCertificate(
+  certificateId: string,
+  reason?: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const revokedNotePrefix = reason ? `REVOKED: ${reason}` : "REVOKED"
+
+  const { data: existing } = await supabase
+    .from("medical_certificates")
+    .select("id, notes, status")
+    .eq("id", certificateId)
+    .maybeSingle()
+
+  if (existing) {
+    const { error } = await supabase
+      .from("medical_certificates")
+      .update({
+        status: "revoked",
+        notes: existing.notes
+          ? `${revokedNotePrefix} | ${existing.notes}`
+          : revokedNotePrefix,
+      })
+      .eq("id", certificateId)
+
+    if (error) return { error: error.message }
+  }
+
+  try {
+    const { createClient: sb } = await import("@/lib/supabase/client")
+    const client = sb()
+    const { data: certRow } = await client
+      .from("medical_certificates")
+      .select("branch_id, patient_id")
+      .eq("id", certificateId)
+      .maybeSingle()
+    if (certRow?.branch_id) {
+      const { data: branch } = await client
+        .from("branches")
+        .select("organization_id")
+        .eq("id", certRow.branch_id)
+        .maybeSingle()
+      if (branch?.organization_id) {
+        const { logAuditEvent } = await import("@/lib/audit/audit-service")
+        await logAuditEvent({
+          organizationId: branch.organization_id,
+          branchId: certRow.branch_id,
+          action: "medical_certificate.revoke",
+          entityType: "medical_certificate",
+          entityId: certificateId,
+          metadata: { reason: reason ?? null, patient_id: certRow.patient_id },
+        })
+      }
+    }
+  } catch {
+    // non-blocking
+  }
+
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem(LOCAL_STORAGE_KEY)
+      const list = raw ? (JSON.parse(raw) as MedicalCertificateRecord[]) : []
+      const idx = list.findIndex((item) => item.id === certificateId)
+      if (idx >= 0) {
+        list[idx] = {
+          ...list[idx],
+          status: "revoked",
+          notes: list[idx].notes
+            ? `${revokedNotePrefix} | ${list[idx].notes}`
+            : revokedNotePrefix,
+        }
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list))
+        return { error: null }
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  if (!existing) {
+    return { error: "Certificate not found" }
+  }
+
+  return { error: null }
+}

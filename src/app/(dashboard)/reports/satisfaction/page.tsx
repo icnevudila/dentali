@@ -44,7 +44,7 @@ export default function SatisfactionReportPage() {
     setSummary(data)
     setError(err)
     setLoading(false)
-  }, [activeBranch?.id, periodDays])
+  }, [activeBranch, periodDays])
 
   React.useEffect(() => {
     void load()

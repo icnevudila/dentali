@@ -18,9 +18,11 @@ import { CompletionRing } from "@/components/visual/CompletionRing"
 import { useLocale } from "@/hooks/use-locale"
 import { formatDate } from "@/lib/i18n/translate"
 import { cn } from "@/lib/utils"
-import { AlertCircle, Plus, UserSearch } from "lucide-react"
+import { AlertCircle, Armchair, DoorClosed, Loader2, Plus, UserSearch } from "lucide-react"
 
 type PatientTableContext = "registry" | "daily"
+
+export type QueueRowAction = "start" | "finish"
 
 interface PatientTableProps {
   patients: PatientRecord[]
@@ -36,7 +38,11 @@ interface PatientTableProps {
   chartFindingsByPatient?: Record<string, ToothFinding[]>
   context?: PatientTableContext
   queueByPatientId?: Record<string, QueueEntry>
+  onQueueAction?: (entry: QueueEntry, action: QueueRowAction) => void
+  queueActionBusyId?: string | null
 }
+
+const START_TREATMENT_STATUSES: QueueStatus[] = ["waiting", "ready", "now_serving"]
 
 function queueStatusBadgeVariant(status: QueueStatus) {
   if (status === "in_chair") return "success" as const
@@ -150,6 +156,8 @@ export function PatientTable({
   chartFindingsByPatient = {},
   context = "registry",
   queueByPatientId = {},
+  onQueueAction,
+  queueActionBusyId,
 }: PatientTableProps) {
   const { t, locale } = useLocale()
   const router = useRouter()
@@ -341,6 +349,14 @@ export function PatientTable({
                     <div className="hidden items-center gap-2 lg:flex" title={t("patients.colChart", "Chart")}>
                       <MiniOdontogram size="sm" findings={chartFindingsByPatient[patient.id] ?? []} />
                     </div>
+                    {isDaily && onQueueAction && queue && queue.status !== "served" && queue.status !== "cancelled" ? (
+                      <QueueRowActionButton
+                        entry={queue}
+                        busy={queueActionBusyId === queue.id}
+                        onAction={onQueueAction}
+                        t={t}
+                      />
+                    ) : null}
                     <PatientRowActions patient={patient} listContext={context} />
                   </div>
                 }
@@ -385,5 +401,52 @@ export function PatientTable({
         </nav>
       )}
     </div>
+  )
+}
+
+function QueueRowActionButton({
+  entry,
+  busy,
+  onAction,
+  t,
+}: {
+  entry: QueueEntry
+  busy: boolean
+  onAction: (entry: QueueEntry, action: QueueRowAction) => void
+  t: (key: string, fallback: string) => string
+}) {
+  const isInChair = entry.status === "in_chair"
+  const canStart = START_TREATMENT_STATUSES.includes(entry.status)
+  if (!isInChair && !canStart) return null
+
+  const action: QueueRowAction = isInChair ? "finish" : "start"
+  const label = isInChair
+    ? t("dentist.startFinishVisit", "Finish visit")
+    : t("dentist.startTreatment", "Start treatment")
+  const Icon = isInChair ? DoorClosed : Armchair
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant={isInChair ? "default" : "outline"}
+      disabled={busy}
+      className={cn(
+        "h-8 shrink-0 gap-1.5 px-2.5 text-xs",
+        isInChair && "bg-emerald-600 hover:bg-emerald-700"
+      )}
+      onClick={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        onAction(entry, action)
+      }}
+    >
+      {busy ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+      ) : (
+        <Icon className="h-3.5 w-3.5" aria-hidden />
+      )}
+      <span className="hidden sm:inline">{label}</span>
+    </Button>
   )
 }

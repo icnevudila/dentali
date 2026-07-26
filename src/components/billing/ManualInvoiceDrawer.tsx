@@ -219,6 +219,7 @@ export function ManualInvoiceDrawer({
               onChange={(e) => setSeries(e.target.value)}
             >
               <option value="INV">INV (Default)</option>
+              <option value="OR">OR (Official Receipt)</option>
               <option value="A">Series A</option>
               <option value="B">Series B</option>
               <option value="C">Series C</option>

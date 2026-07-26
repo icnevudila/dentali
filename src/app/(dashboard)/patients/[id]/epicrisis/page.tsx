@@ -23,6 +23,8 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Printer, FileText, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 import { fetchOrganization, fetchStaffProfile } from "@/lib/auth/auth-service"
+import { PermissionGate } from "@/components/auth/PermissionGate"
+import { PERMISSIONS } from "@/lib/auth/permissions"
 
 function SectionPreview({
   title,
@@ -149,6 +151,7 @@ export default function EpicrisisPage() {
     : "Patient"
 
   return (
+    <PermissionGate permission={PERMISSIONS.PATIENTS_READ}>
     <PatientPageShell
       patientId={patientId}
       section="Epicrisis"
@@ -166,7 +169,7 @@ export default function EpicrisisPage() {
             <p className="mt-1 text-amber-900/80">
               To finish today&apos;s visit, use{" "}
               <Link href={`/patients/${patientId}`} className="font-semibold underline underline-offset-2">
-                Checkout / Discharge
+                Finish visit
               </Link>{" "}
               on the patient profile, or the same action on Queue when the patient is In Chair.
             </p>
@@ -323,5 +326,6 @@ export default function EpicrisisPage() {
         </div>
       ) : null}
     </PatientPageShell>
+    </PermissionGate>
   )
 }

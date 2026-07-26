@@ -6,10 +6,10 @@ import {
   Stethoscope,
   ClipboardList,
   Pill,
-  Sparkles,
   CheckCircle2,
   ChevronRight,
-  ShieldCheck,
+  FlaskConical,
+  CreditCard,
 } from "lucide-react"
 
 interface WorkflowStep {
@@ -51,27 +51,26 @@ export function ClinicalWorkflowPipelineNavbar({ patientId }: ClinicalWorkflowPi
     },
     {
       stepNumber: 4,
-      title: "Aesthetics & Lab",
-      subtitle: "Before/After & VITA Shade",
-      href: `/patients/${patientId}/aesthetic-gallery`,
-      icon: Sparkles,
+      title: "Lab cases",
+      subtitle: "Prosthetic work orders",
+      href: `/lab-cases`,
+      icon: FlaskConical,
     },
     {
       stepNumber: 5,
-      title: "Guarantee & Discharge",
-      subtitle: "Certificate & Finalize",
-      href: `/patients/${patientId}/guarantee-certificate/print`,
-      icon: ShieldCheck,
+      title: "Billing & checkout",
+      subtitle: "Invoice & discharge",
+      href: `/billing`,
+      icon: CreditCard,
     },
   ]
 
-  // Determine current active step index (0-based)
   const getActiveStepIndex = () => {
     if (pathname.includes("/pda-dental-chart")) return 0
-    if (pathname.includes("treatment-plans")) return 1
-    if (pathname.includes("/prescriptions") || pathname.includes("/medical-certificates")) return 2
-    if (pathname.includes("/aesthetic-gallery") || pathname.includes("/ortho")) return 3
-    if (pathname.includes("/guarantee-certificate") || pathname.includes("/billing")) return 4
+    if (pathname.includes("treatment-plans") || pathname.includes("/treatment-plan")) return 1
+    if (pathname.includes("/prescriptions") || pathname.includes("/medical-certificate")) return 2
+    if (pathname.includes("/lab-cases") || pathname.includes("/ortho")) return 3
+    if (pathname.includes("/billing") || pathname.includes("/visits")) return 4
     return 0
   }
 

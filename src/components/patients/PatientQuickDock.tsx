@@ -2,13 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import {
-  Pill,
-  FileText,
-  Sparkles,
-  ShieldCheck,
-  Stethoscope,
-} from "lucide-react"
+import { Pill, FileText, Stethoscope, ScrollText } from "lucide-react"
 
 interface PatientQuickDockProps {
   patientId: string
@@ -32,22 +26,16 @@ export function PatientQuickDock({ patientId, patientName }: PatientQuickDockPro
       accent: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
     },
     {
-      label: "Rest Certificate",
+      label: "Rest certificates",
       href: `/patients/${patientId}/medical-certificates`,
       icon: FileText,
       accent: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
     },
     {
-      label: "Before/After Gallery",
-      href: `/patients/${patientId}/aesthetic-gallery`,
-      icon: Sparkles,
-      accent: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800",
-    },
-    {
-      label: "Prosthesis Guarantee",
-      href: `/patients/${patientId}/guarantee-certificate/print`,
-      icon: ShieldCheck,
-      accent: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+      label: "Fit-to-work letter",
+      href: `/patients/${patientId}/medical-certificate`,
+      icon: ScrollText,
+      accent: "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700",
     },
   ]
 
@@ -60,24 +48,19 @@ export function PatientQuickDock({ patientId, patientName }: PatientQuickDockPro
           </div>
           <div>
             <h3 className="text-xs font-extrabold text-slate-900 dark:text-slate-100">
-              Chairside Quick Clinical Action Dock
+              Chairside quick actions
             </h3>
-            {patientName && (
+            {patientName ? (
               <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                Active Patient: <span className="font-bold text-slate-800 dark:text-slate-200">{patientName}</span>
+                Active patient:{" "}
+                <span className="font-bold text-slate-800 dark:text-slate-200">{patientName}</span>
               </p>
-            )}
+            ) : null}
           </div>
         </div>
-
-        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/60 px-2.5 py-1 rounded-full border border-teal-200/60 dark:border-teal-800/60">
-          <span className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-pulse" />
-          Koltuk Başı Hızlı Çalışma Modu Aktif
-        </span>
       </div>
 
-      {/* Action Buttons Row */}
-      <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+      <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
         {quickActions.map((action) => {
           const Icon = action.icon
           const isActive = pathname.startsWith(action.href)

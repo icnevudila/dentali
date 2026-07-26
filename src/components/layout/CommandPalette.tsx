@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
   Search,
@@ -15,6 +15,8 @@ import {
   X,
   ChevronRight,
 } from "lucide-react"
+import { useBranch } from "@/hooks/use-branch"
+import { searchPatients, type PatientRecord } from "@/lib/patients/patient-service"
 
 interface NavigationItem {
   id: string
@@ -28,9 +30,12 @@ interface NavigationItem {
 export function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [patientHits, setPatientHits] = useState<PatientRecord[]>([])
+  const [patientsLoading, setPatientsLoading] = useState(false)
   const router = useRouter()
+  const { activeBranch } = useBranch()
+  const searchGen = useRef(0)
 
-  // Toggle command palette on Ctrl+K / Cmd+K
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
@@ -49,10 +54,35 @@ export function CommandPalette() {
     (path: string) => {
       setIsOpen(false)
       setSearchQuery("")
+      setPatientHits([])
       router.push(path)
     },
     [router]
   )
+
+  useEffect(() => {
+    if (!isOpen) return
+    const q = searchQuery.trim()
+    if (q.length < 2 || !activeBranch?.id) {
+      setPatientHits([])
+      setPatientsLoading(false)
+      return
+    }
+    const gen = ++searchGen.current
+    setPatientsLoading(true)
+    const timer = window.setTimeout(() => {
+      void searchPatients(q, activeBranch.id, { pageSize: 8 }).then(({ data, error }) => {
+        if (gen !== searchGen.current) return
+        setPatientsLoading(false)
+        if (error) {
+          setPatientHits([])
+          return
+        }
+        setPatientHits(data)
+      })
+    }, 280)
+    return () => window.clearTimeout(timer)
+  }, [searchQuery, isOpen, activeBranch?.id])
 
   const items: NavigationItem[] = [
     {
@@ -109,7 +139,7 @@ export function CommandPalette() {
       subtitle: "Switch between dental clinic locations",
       category: "Modules",
       icon: Building,
-      action: () => navigateTo("/branches"),
+      action: () => navigateTo("/settings/branches"),
     },
   ]
 
@@ -122,6 +152,9 @@ export function CommandPalette() {
 
   if (!isOpen) return null
 
+  const showEmpty =
+    filteredItems.length === 0 && patientHits.length === 0 && !patientsLoading
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-slate-900/30 backdrop-blur-xs transition-all"
@@ -131,14 +164,13 @@ export function CommandPalette() {
         className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Search Input Bar */}
         <div className="flex items-center gap-3 border-b border-slate-100 bg-white px-4 py-3.5">
           <Search className="h-5 w-5 text-teal-600 shrink-0" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search patient name, procedure or page... (e.g. Rx, Patient, Calendar)"
+            placeholder="Search patient (≥2 letters), procedure or page…"
             className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 outline-none font-medium"
             autoFocus
           />
@@ -155,9 +187,45 @@ export function CommandPalette() {
           </div>
         </div>
 
-        {/* Results List */}
         <div className="max-h-[360px] overflow-y-auto p-2 space-y-1 bg-white">
-          {filteredItems.length === 0 ? (
+          {patientHits.length > 0 ? (
+            <div className="px-2 pt-1 pb-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+              Patients
+            </div>
+          ) : null}
+          {patientHits.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => navigateTo(`/patients/${p.id}`)}
+              className="flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left transition-colors hover:bg-teal-50/80 group border border-transparent"
+            >
+              <div className="flex items-center gap-3 overflow-hidden">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-50 text-teal-700 shrink-0">
+                  <User className="h-4 w-4" />
+                </div>
+                <div className="overflow-hidden">
+                  <h4 className="text-xs font-bold text-slate-900 truncate">
+                    {p.first_name} {p.last_name}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    {[p.patient_number, p.phone].filter(Boolean).join(" · ") || "Open chart"}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
+            </button>
+          ))}
+          {patientsLoading ? (
+            <p className="px-3 py-2 text-[11px] text-slate-400">Searching patients…</p>
+          ) : null}
+
+          {filteredItems.length > 0 && patientHits.length > 0 ? (
+            <div className="px-2 pt-2 pb-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+              Pages & actions
+            </div>
+          ) : null}
+
+          {showEmpty ? (
             <div className="p-8 text-center text-xs font-medium text-slate-500">
               No matching clinical results found.
             </div>
@@ -178,11 +246,9 @@ export function CommandPalette() {
                       <h4 className="text-xs font-bold text-slate-900 group-hover:text-teal-800 truncate">
                         {item.title}
                       </h4>
-                      {item.subtitle && (
-                        <p className="text-[11px] text-slate-500 truncate">
-                          {item.subtitle}
-                        </p>
-                      )}
+                      {item.subtitle ? (
+                        <p className="text-[11px] text-slate-500 truncate">{item.subtitle}</p>
+                      ) : null}
                     </div>
                   </div>
 
@@ -198,15 +264,18 @@ export function CommandPalette() {
           )}
         </div>
 
-        {/* Command Footer */}
         <div className="flex items-center justify-between border-t border-slate-100 px-4 py-2.5 bg-slate-50 text-[11px] text-slate-500 font-medium">
           <div className="flex items-center gap-2">
             <Command className="h-3.5 w-3.5 text-teal-600" />
             <span>Dentali Command Search & Spotlight Action Palette</span>
           </div>
           <div className="flex items-center gap-3">
-            <span>Open: <kbd className="font-bold text-slate-700">Ctrl+K</kbd></span>
-            <span>Close: <kbd className="font-bold text-slate-700">ESC</kbd></span>
+            <span>
+              Open: <kbd className="font-bold text-slate-700">Ctrl+K</kbd>
+            </span>
+            <span>
+              Close: <kbd className="font-bold text-slate-700">ESC</kbd>
+            </span>
           </div>
         </div>
       </div>

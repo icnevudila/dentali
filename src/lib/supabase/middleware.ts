@@ -48,7 +48,6 @@ export async function updateSession(request: NextRequest) {
     '/signup',
     '/forgot-password',
     '/reset-password',
-    '/auth',
     '/welcome',
     '/pricing',
     '/quote',
@@ -58,12 +57,11 @@ export async function updateSession(request: NextRequest) {
     '/terms',
     '/security',
     '/blog',
-    '/resources',
-    '/showcase',
     '/kiosk',
     '/display',
     '/sign',
     '/portal',
+    '/pda',
     '/ui-preview',
   ] as const
 

@@ -11,7 +11,7 @@ export type LabCase = {
   sent_date: string
   expected_date: string | null
   received_date: string | null
-  status: "pending" | "received" | "cancelled"
+  status: "pending" | "sent" | "try_in" | "remake" | "received" | "completed" | "cancelled"
   cost: number
   notes: string | null
   created_at: string
@@ -107,9 +107,21 @@ export async function createLabCase(
   return { data: data as unknown as PatientWithLabCase, error: null }
 }
 
+export type LabCaseStatus = LabCase["status"]
+
+export const LAB_CASE_STATUS_FLOW: LabCaseStatus[] = [
+  "pending",
+  "sent",
+  "try_in",
+  "remake",
+  "received",
+  "completed",
+  "cancelled",
+]
+
 export async function updateLabCaseStatus(
   id: string,
-  status: "pending" | "received" | "cancelled"
+  status: LabCaseStatus
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
   const { error } = await supabase.rpc("update_lab_case_status_guarded", {

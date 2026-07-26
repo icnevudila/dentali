@@ -65,6 +65,25 @@ export async function saveMedicalHistory(params: {
 
   if (error) return { data: null, error: error.message }
   const raw = data as { version: number }
+
+  try {
+    const { logAuditEvent } = await import("@/lib/audit/audit-service")
+    await logAuditEvent({
+      organizationId: params.organizationId,
+      branchId: params.branchId ?? null,
+      action: "medical_history.save",
+      entityType: "patient_medical_history",
+      entityId: params.patientId,
+      metadata: {
+        version: raw.version,
+        allergy_count: params.allergies.length,
+        condition_count: params.conditions.length,
+      },
+    })
+  } catch {
+    // Audit must not block clinical save
+  }
+
   return { data: { version: raw.version }, error: null }
 }
 

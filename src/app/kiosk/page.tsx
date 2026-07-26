@@ -61,7 +61,13 @@ function KioskContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get("token") ?? ""
   const resume = searchParams.get("resume")
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
+  const speechLang =
+    locale.startsWith("tr")
+      ? "tr-TR"
+      : locale.startsWith("fil") || locale.startsWith("tl")
+        ? "fil-PH"
+        : "en-PH"
 
   const [step, setStep] = React.useState<Step>("loading")
   const [branchName, setBranchName] = React.useState("")
@@ -286,20 +292,12 @@ function KioskContent() {
         setTimeout(() => {
           window.speechSynthesis.cancel()
           const utterance = new SpeechSynthesisUtterance(speechText)
-          
-          // Try to select a natural voice
           const voices = window.speechSynthesis.getVoices()
-          const trVoice = voices.find(v => v.lang.startsWith("tr"))
-          const enVoice = voices.find(v => v.lang.startsWith("en"))
-          
-          if (/[a-zA-Z]/.test(speechText) && !/Kaydınız|Sıra/i.test(speechText)) {
-            utterance.lang = "en-US"
-            if (enVoice) utterance.voice = enVoice
-          } else {
-            utterance.lang = "tr-TR"
-            if (trVoice) utterance.voice = trVoice
-          }
-          
+          const preferred =
+            voices.find((v) => v.lang.toLowerCase().startsWith(speechLang.slice(0, 2).toLowerCase())) ??
+            voices.find((v) => v.lang.toLowerCase().startsWith("en"))
+          utterance.lang = speechLang
+          if (preferred) utterance.voice = preferred
           utterance.rate = 0.9
           utterance.pitch = 1.05
           window.speechSynthesis.speak(utterance)
@@ -337,7 +335,7 @@ function KioskContent() {
         setTimeout(() => {
           window.speechSynthesis.cancel()
           const utterance = new SpeechSynthesisUtterance(speechText)
-          utterance.lang = "tr-TR"
+          utterance.lang = speechLang
           utterance.rate = 0.9
           window.speechSynthesis.speak(utterance)
         }, 400)
@@ -345,7 +343,7 @@ function KioskContent() {
     } catch {
       // Ignore
     }
-  }, [])
+  }, [speechLang])
 
   const performCheckIn = React.useCallback(async () => {
     setSubmitting(true)

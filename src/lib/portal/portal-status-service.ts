@@ -20,6 +20,7 @@ export type PortalSnapshot = {
   balance: {
     open_balance: number
     has_balance: boolean
+    open_invoice_id?: string | null
   }
   consents: PortalConsentItem[]
   pending_intake_consents: number
@@ -75,6 +76,44 @@ export async function createPortalConsentSignToken(
     data: {
       token: String(raw.token),
       consent_id: String(raw.consent_id),
+    },
+    error: null,
+  }
+}
+
+export async function createPortalPaymentIntent(params: {
+  sessionId: string
+  phone: string
+  lastName: string
+  invoiceId: string
+  provider?: "paymongo" | "gcash"
+  amount?: number
+}): Promise<{
+  data: {
+    id: string
+    checkout_url: string
+    amount: number
+    dry_run?: boolean
+  } | null
+  error: string | null
+}> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("create_portal_payment_intent", {
+    p_session_id: params.sessionId,
+    p_phone: params.phone,
+    p_last_name: params.lastName,
+    p_invoice_id: params.invoiceId,
+    p_provider: params.provider ?? "paymongo",
+    p_amount: params.amount ?? null,
+  })
+  if (error) return { data: null, error: error.message }
+  const raw = data as Record<string, unknown>
+  return {
+    data: {
+      id: String(raw.id),
+      checkout_url: String(raw.checkout_url),
+      amount: Number(raw.amount),
+      dry_run: raw.dry_run === true,
     },
     error: null,
   }

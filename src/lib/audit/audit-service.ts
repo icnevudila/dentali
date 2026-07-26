@@ -16,7 +16,9 @@ export type AuditAction =
   | "invoice.payment"
   | "invoice.void"
   | "invoice.payment_delete"
+  | "medical_history.save"
   | "medical_history.ocr_import"
+  | "medical_certificate.revoke"
 
 export async function logAuditEvent(params: {
   organizationId: string

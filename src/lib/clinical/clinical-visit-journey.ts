@@ -523,10 +523,10 @@ export function buildEncounterVisitJourney(params: {
     },
     {
       id: "discharge",
-      label: "Checkout / Discharge",
+      label: "Finish visit",
       description: isClosed
         ? "Visit closed on file"
-        : "Close today’s visit: clinical note, billing, payment, then discharge",
+        : "Finish today’s visit: clinical note, billing, payment, then close",
       status: statuses.discharge,
       href: `/patients/${patientId}?checkout=1`,
       phase: "discharge",
@@ -542,7 +542,7 @@ export function buildEncounterVisitJourney(params: {
   const phaseLabel = isClosed
     ? "Visit closed"
     : readyToClose
-      ? "Ready for checkout / discharge"
+      ? "Ready to finish visit"
       : nextStep?.phase === "intake"
         ? "Intake — file & consents"
         : nextStep?.phase === "visit"
@@ -550,9 +550,9 @@ export function buildEncounterVisitJourney(params: {
           : nextStep?.phase === "clinical"
             ? "Chair — clinical work"
             : nextStep?.phase === "billing"
-              ? "Billing — checkout"
+              ? "Billing — payment"
               : nextStep?.phase === "discharge"
-                ? "Discharge — close visit"
+                ? "Finish visit — close"
                 : "Active visit"
 
   return {
