@@ -169,7 +169,7 @@ export default function EpicrisisPage() {
             <p className="mt-1 text-amber-900/80">
               To finish today&apos;s visit, use{" "}
               <Link href={`/patients/${patientId}`} className="font-semibold underline underline-offset-2">
-                Checkout / Discharge
+                Finish visit
               </Link>{" "}
               on the patient profile, or the same action on Queue when the patient is In Chair.
             </p>

@@ -768,7 +768,7 @@ function TreatmentPlanContent() {
         },
         {
           label: "Visit",
-          value: encounterIdParam ? "Encounter linked" : "No active visit",
+          value: encounterIdParam ? "Visit linked" : "No active visit",
           tone: encounterIdParam ? "ok" : "neutral",
           href: `/patients/${patientId}/visits`,
         },

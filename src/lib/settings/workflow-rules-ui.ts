@@ -124,10 +124,10 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
         },
         {
           key: "auto_served_creates_invoice",
-          label: t("settings.wfServedInvoiceLabel", "Served creates invoice draft"),
+          label: t("settings.wfServedInvoiceLabel", "Treatment done creates invoice draft"),
           description: t(
             "settings.wfServedInvoiceDesc",
-            "When queue entry is marked served, spawn an invoice draft from the encounter's approved treatment plan."
+            "When a queue entry is marked treatment done, spawn an invoice draft from the visit's approved treatment plan."
           ),
         },
         {
@@ -135,7 +135,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
           label: t("settings.wfCloseVisitLabel", "Payment closes visit"),
           description: t(
             "settings.wfCloseVisitDesc",
-            "When an encounter-linked invoice is fully paid, automatically close the open visit."
+            "When a visit-linked invoice is fully paid, automatically close the open visit."
           ),
         },
       ],

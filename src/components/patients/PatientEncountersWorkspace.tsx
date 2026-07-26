@@ -236,7 +236,7 @@ function EncounterDetailPanel({
         finishAction={
           isOpen
             ? {
-                label: t("visits.finishVisit", "Checkout / Discharge"),
+                label: t("visits.finishVisit", "Finish visit"),
                 onClick: goCheckout,
               }
             : undefined
@@ -247,7 +247,7 @@ function EncounterDetailPanel({
         {isOpen ? (
           <Button size="sm" className="gap-2" onClick={goCheckout}>
             <DoorClosed className="h-4 w-4" aria-hidden />
-            {t("queue.checkoutDischargeCta", "Checkout / Discharge")}
+            {t("queue.checkoutDischargeCta", "Finish visit")}
           </Button>
         ) : null}
 

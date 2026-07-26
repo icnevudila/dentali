@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useEffect, useEffectEvent, useState } from "react"
+import { use, useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import {
   FileText,
@@ -41,17 +41,17 @@ export default function PatientMedicalCertificatesPage({
   const [patientName, setPatientName] = useState("Patient")
   const [revokingId, setRevokingId] = useState<string | null>(null)
 
-  const loadData = useEffectEvent(async () => {
+  const loadData = useCallback(async () => {
     if (!activeBranch) return
     setLoading(true)
     const res = await fetchPatientCertificates(patientId, activeBranch.id)
     setCertificates(res.data)
     setLoading(false)
-  })
+  }, [activeBranch, patientId])
 
   useEffect(() => {
     void loadData()
-  }, [patientId, activeBranch?.id])
+  }, [loadData])
 
   useEffect(() => {
     const supabase = createClient()

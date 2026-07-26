@@ -42,7 +42,16 @@ import { useAuth } from "@/hooks/use-auth"
 import { useStaffRole } from "@/hooks/use-staff-role"
 import { fetchOrgStaff, type StaffMember } from "@/lib/staff/staff-service"
 import type { PatientRecord } from "@/lib/patients/patient-service"
-import { fetchQueueEntries, fetchQueueEntriesForDay, type QueueEntry } from "@/lib/queue/queue-service"
+import {
+  fetchQueueEntries,
+  fetchQueueEntriesForDay,
+  updateQueueStatus,
+  type QueueEntry,
+} from "@/lib/queue/queue-service"
+import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
+import { VisitCheckoutWizard } from "@/components/queue/VisitCheckoutWizard"
+import type { QueueRowAction } from "@/components/patients/PatientTable"
+import { notify } from "@/lib/ui/notify"
 import type { ToothFinding } from "@/lib/types/dental"
 import { createClient } from "@/lib/supabase/client"
 import { Armchair, MapPin, Stethoscope, Timer, Users, Calendar, UserCheck, FileText, Receipt } from "lucide-react"
@@ -103,6 +112,13 @@ function DentistPageContent() {
   const [chartFindingsByPatient, setChartFindingsByPatient] = React.useState<
     Record<string, ToothFinding[]>
   >({})
+  const [queueActionId, setQueueActionId] = React.useState<string | null>(null)
+  const [checkoutWizard, setCheckoutWizard] = React.useState<{
+    patientId: string
+    patientName: string
+    billingGate: PatientBillingGate | null
+    encounterId: string | null
+  } | null>(null)
 
   const isSearching = query !== debouncedQuery || (loading && debouncedQuery.length > 0)
 
@@ -317,6 +333,36 @@ function DentistPageContent() {
       setChartFindingsByPatient({})
     }
   }, [activeBranch, debouncedQuery, filter, page, providerId, isToday, clinicDay])
+
+  const handleQueueAction = React.useCallback(
+    async (entry: QueueEntry, action: QueueRowAction) => {
+      if (queueActionId) return
+      setQueueActionId(entry.id)
+      const nextStatus = action === "finish" ? "served" : "in_chair"
+      const { error: updateError } = await updateQueueStatus(entry.id, nextStatus)
+      if (updateError) {
+        setQueueActionId(null)
+        notify.error(updateError)
+        return
+      }
+
+      if (action === "finish") {
+        const { data: billingGate } = await getPatientBillingGate(entry.patient_id)
+        setCheckoutWizard({
+          patientId: entry.patient_id,
+          patientName: entry.patient_name ?? t("common.patient", "Patient"),
+          billingGate,
+          encounterId: entry.encounter_id ?? null,
+        })
+      } else {
+        notify.success(t("dentist.statusInChair", "In chair"))
+      }
+
+      setQueueActionId(null)
+      void loadPatients({ silent: true })
+    },
+    [queueActionId, loadPatients, t]
+  )
 
   React.useEffect(() => {
     const id = window.setTimeout(() => {
@@ -551,6 +597,8 @@ function DentistPageContent() {
                 chartFindingsByPatient={chartFindingsByPatient}
                 context="daily"
                 queueByPatientId={queueByPatientId}
+                onQueueAction={handleQueueAction}
+                queueActionBusyId={queueActionId}
               />
 
               {hasActiveBranch && completedTodayEntries.length > 0 && filter !== "served" ? (
@@ -684,6 +732,21 @@ function DentistPageContent() {
           ) : null}
         </ContentPanel>
       </DirectionalTransition>
+      {checkoutWizard ? (
+        <VisitCheckoutWizard
+          open={Boolean(checkoutWizard)}
+          onOpenChange={(next) => {
+            if (!next) {
+              setCheckoutWizard(null)
+              void loadPatients({ silent: true })
+            }
+          }}
+          patientId={checkoutWizard.patientId}
+          patientName={checkoutWizard.patientName}
+          billingGate={checkoutWizard.billingGate}
+          encounterId={checkoutWizard.encounterId}
+        />
+      ) : null}
     </PermissionGate>
   )
 }

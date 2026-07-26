@@ -769,7 +769,7 @@ export default function PatientProfilePage() {
               )}
             >
               <DoorClosed className="h-4 w-4" />
-              {t("queue.checkoutDischargeCta", "Checkout / Discharge")}
+              {t("queue.checkoutDischargeCta", "Finish visit")}
             </Button>
           ) : null}
           <Button variant="outline" size="sm" className="gap-2" asChild>
@@ -897,7 +897,7 @@ export default function PatientProfilePage() {
         finishAction={
           activeEncounter && activeEncounter.encounter.status === "open"
             ? {
-                label: t("visits.closeVisit", "Checkout / Discharge"),
+                label: t("visits.closeVisit", "Finish visit"),
                 onClick: handleFinishVisit,
               }
             : undefined
@@ -1349,7 +1349,7 @@ export default function PatientProfilePage() {
                   <CardTitle className="text-base">Discharge summary (document)</CardTitle>
                   <CardDescription>
                     Printable epicrisis for referral or records. This does not check the patient out —
-                    use Checkout / Discharge on the profile header or Queue when treatment ends.
+                    use Finish visit on the profile header or Queue when treatment ends.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
