@@ -42,6 +42,11 @@ Deploy all functions under `supabase/functions/`. Cron endpoints (JWT disabled, 
 - `send-closeout-email-cron` — daily closeout digest email queue
 - `process-slot-notifications` — waitlist slot queue
 - `paymongo-webhook` — payment completion
+- `create-payment-intent` — staff PayMongo checkout
+- `portal-create-payment-intent` — patient portal checkout (no staff JWT; session validated in RPC)
+- `sync-philhealth-claim` — PhilHealth submit (dry-run without API secrets)
+
+**Paste-ready when accounts exist:** [EXTERNAL_INTEGRATIONS_READY.md](./EXTERNAL_INTEGRATIONS_READY.md)
 
 ## Scheduled jobs
 

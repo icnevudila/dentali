@@ -47,6 +47,13 @@ WITH expected(name) AS (
     ,('delete_procedure_bom_line_guarded')
     ,('create_plan_invoice_guarded')
     ,('resync_draft_invoice_from_plan_guarded')
+    ,('create_appointment_checkin_token')
+    ,('get_appointment_checkin_by_token')
+    ,('redeem_appointment_checkin_token')
+    ,('save_patient_document_annotations')
+    ,('clock_in_staff')
+    ,('clock_out_staff')
+    ,('prepare_portal_payment_intent')
 )
 SELECT
   e.name,
