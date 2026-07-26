@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { useLocale } from "@/hooks/use-locale"
 import {
   createPortalConsentSignToken,
+  createPortalPaymentIntent,
   fetchPortalSnapshot,
   type PortalSnapshot,
 } from "@/lib/portal/portal-status-service"
@@ -54,6 +55,7 @@ export function PortalStatusPanel({
   const [snapshot, setSnapshot] = React.useState<PortalSnapshot | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [signingSlug, setSigningSlug] = React.useState<string | null>(null)
+  const [paying, setPaying] = React.useState(false)
 
   const load = React.useCallback(async () => {
     setLoading(true)
@@ -85,6 +87,43 @@ export function PortalStatusPanel({
     if (data?.token) {
       savePortalSignReturn({ portalToken, phone, lastName })
       window.location.href = `/sign/${data.token}?from=portal`
+    }
+  }
+
+  const handlePayOnline = async () => {
+    const invoiceId = snapshot?.balance.open_invoice_id
+    if (!invoiceId) {
+      notify.error(
+        t(
+          "portal.payNoInvoice",
+          "No open invoice found. Please settle at the front desk."
+        )
+      )
+      return
+    }
+    setPaying(true)
+    const { data, error } = await createPortalPaymentIntent({
+      sessionId,
+      phone,
+      lastName,
+      invoiceId,
+      amount: snapshot?.balance.open_balance,
+    })
+    setPaying(false)
+    if (error || !data) {
+      notify.error(error ?? t("portal.payFailed", "Could not start online payment."))
+      return
+    }
+    if (data.dry_run) {
+      notify.info(
+        t(
+          "portal.payStub",
+          "Online checkout is in demo mode for this clinic. Please settle at the front desk, or ask staff to send a PayMongo link."
+        )
+      )
+    }
+    if (data.checkout_url) {
+      window.open(data.checkout_url, "_blank", "noopener,noreferrer")
     }
   }
 
@@ -161,12 +200,30 @@ export function PortalStatusPanel({
           ₱{(snapshot?.balance.open_balance ?? 0).toLocaleString()}
         </p>
         {snapshot?.balance.has_balance ? (
-          <p className="mt-1 text-xs text-amber-800">
-            {t(
-              "portal.balanceDue",
-              "Outstanding balance on file. Online payment is not available in this portal — please settle at the front desk before leaving."
-            )}
-          </p>
+          <div className="mt-2 space-y-2">
+            <p className="text-xs text-amber-800">
+              {t(
+                "portal.balanceDue",
+                "Outstanding balance on file. You can start an online checkout when enabled, or settle at the front desk before leaving."
+              )}
+            </p>
+            {snapshot.balance.open_invoice_id ? (
+              <Button
+                type="button"
+                size="sm"
+                className="gap-1"
+                disabled={paying}
+                onClick={() => void handlePayOnline()}
+              >
+                {paying ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CreditCard className="h-4 w-4" />
+                )}
+                {t("portal.payOnline", "Pay online (PayMongo / GCash)")}
+              </Button>
+            ) : null}
+          </div>
         ) : (
           <p className="mt-1 text-xs text-emerald-700">
             {t("portal.balanceClear", "No open balance on file.")}

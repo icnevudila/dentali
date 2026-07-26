@@ -46,6 +46,7 @@ import { AppointmentWeekCalendar } from "@/components/appointments/AppointmentWe
 import { AppointmentEditDialog } from "@/components/appointments/AppointmentEditDialog"
 import { AppointmentSlotButtons } from "@/components/appointments/AppointmentSlotButtons"
 import { AppointmentRemindersDrawer } from "@/components/appointments/AppointmentRemindersDrawer"
+import { ProviderTimeBlockDialog } from "@/components/appointments/ProviderTimeBlockDialog"
 import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
 import { PatientBillingGateBanner } from "@/components/billing/PatientBillingGateBanner"
 import {
@@ -60,7 +61,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Calendar, Plus, UserCheck, MapPin, Globe, X, Clock } from "lucide-react"
+import { Calendar, Plus, UserCheck, MapPin, Globe, X, Clock, CalendarOff } from "lucide-react"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
@@ -159,6 +160,7 @@ function AppointmentsPageContent() {
   const [forceBillingOverride, setForceBillingOverride] = React.useState(false)
   const [todayQueueEntries, setTodayQueueEntries] = React.useState<QueueEntry[]>([])
   const [remindersOpen, setRemindersOpen] = React.useState(false)
+  const [blockOpen, setBlockOpen] = React.useState(false)
 
   const today = toDateKey(new Date())
 
@@ -674,6 +676,12 @@ function AppointmentsPageContent() {
             actions={
               <div className="hidden md:flex md:flex-wrap md:items-center md:gap-2">
                 <WorkflowSettingsLink />
+                {canWriteAppts ? (
+                  <Button variant="outline" className="gap-2" onClick={() => setBlockOpen(true)}>
+                    <CalendarOff className="h-4 w-4" />
+                    {t("appointments.blockTime", "Block time")}
+                  </Button>
+                ) : null}
                 <Button variant="outline" className="gap-2" onClick={() => setRemindersOpen(true)}>
                   <Clock className="h-4 w-4" />
                   {t("appointments.reminders", "Reminders")}
@@ -934,6 +942,15 @@ function AppointmentsPageContent() {
         staffMembers={providers}
         onActionComplete={() => loadWeek({ silent: true })}
       />
+      {activeBranch && canWriteAppts ? (
+        <ProviderTimeBlockDialog
+          open={blockOpen}
+          onOpenChange={setBlockOpen}
+          branchId={activeBranch.id}
+          providers={providers}
+          selectedDate={selectedDate}
+        />
+      ) : null}
       {portalReady && showBook
         ? createPortal(
             <div className="fixed inset-0 z-[200] flex items-end justify-center p-0 sm:items-center sm:p-4">

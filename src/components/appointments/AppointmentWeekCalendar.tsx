@@ -68,17 +68,17 @@ export function AppointmentWeekCalendar({
   allowDirectComplete = false,
 }: AppointmentWeekCalendarProps) {
   const { t } = useLocale()
-  const [viewMode, setViewMode] = React.useState<"month" | "week" | "day">(() => {
+  const [viewMode, setViewMode] = React.useState<"month" | "week" | "day" | "chairs">(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("dentali-calendar-viewmode")
-      if (saved === "month" || saved === "week" || saved === "day") {
+      if (saved === "month" || saved === "week" || saved === "day" || saved === "chairs") {
         return saved
       }
     }
     return "month"
   })
 
-  const handleViewModeChange = (mode: "month" | "week" | "day") => {
+  const handleViewModeChange = (mode: "month" | "week" | "day" | "chairs") => {
     setViewMode(mode)
     if (typeof window !== "undefined") {
       localStorage.setItem("dentali-calendar-viewmode", mode)
@@ -237,7 +237,7 @@ export function AppointmentWeekCalendar({
         
         {/* View Mode Tabs */}
         <div className="flex items-center space-x-1 bg-neutral-100/80 p-0.5 rounded-lg w-fit">
-          {(["month", "week", "day"] as const).map((mode) => (
+          {(["month", "week", "day", "chairs"] as const).map((mode) => (
             <button
               key={mode}
               onClick={() => handleViewModeChange(mode)}
@@ -248,7 +248,7 @@ export function AppointmentWeekCalendar({
                   : "text-neutral-500 hover:text-neutral-800"
               )}
             >
-              {mode}
+              {mode === "chairs" ? "dentists" : mode}
             </button>
           ))}
         </div>
@@ -682,8 +682,82 @@ export function AppointmentWeekCalendar({
         </div>
       )}
 
+      {/* Multi-dentist day columns */}
+      {viewMode === "chairs" && (
+        <div className="min-w-0 overflow-x-auto">
+          <div
+            className="grid gap-3"
+            style={{
+              gridTemplateColumns: `repeat(${Math.max(providers.length, 1)}, minmax(180px, 1fr))`,
+              minWidth: `${Math.max(providers.length, 1) * 200}px`,
+            }}
+          >
+            {(providers.length > 0
+              ? providers
+              : [
+                  {
+                    profile_id: "unassigned",
+                    full_name: "Unassigned",
+                    email: null,
+                    is_active: true,
+                    role_name: "dentist",
+                    branch_names: [],
+                    phone_number: null,
+                    prc_license_number: null,
+                    is_owner_or_admin: false,
+                  } satisfies StaffMember,
+                ]
+            ).map((provider) => {
+                const columnAppts = selectedAppointments.filter((a) =>
+                  provider.profile_id === "unassigned"
+                    ? !a.provider_id
+                    : a.provider_id === provider.profile_id
+                )
+                return (
+                  <div
+                    key={provider.profile_id}
+                    className="rounded-xl border border-neutral-200 bg-neutral-50/40 p-3"
+                  >
+                    <h4 className="mb-2 truncate text-xs font-bold uppercase tracking-wider text-neutral-500">
+                      {provider.full_name ?? provider.email ?? "Dentist"}
+                    </h4>
+                    {columnAppts.length === 0 ? (
+                      <p className="py-6 text-center text-[11px] text-neutral-400">Free</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {columnAppts.map((appt) => (
+                          <li
+                            key={appt.id}
+                            className={cn(
+                              "rounded-lg border bg-white p-2.5 shadow-sm",
+                              getStatusColor(appt.status)
+                            )}
+                          >
+                            <p className="text-[11px] font-bold">
+                              {formatAppointmentTime(appt.scheduled_at)}
+                            </p>
+                            <Link
+                              href={`/patients/${appt.patient_id}`}
+                              className="mt-0.5 block text-xs font-semibold text-neutral-900 hover:underline"
+                            >
+                              {appt.patient_name ?? "Patient"}
+                            </Link>
+                            <p className="text-[10px] text-neutral-500">
+                              {appt.purpose ?? "Visit"}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )
+              })}
+          </div>
+        </div>
+      )}
+
       {/* Selected Day Visits Panel for Month/Week views */}
-      {viewMode !== "day" && (
+      {viewMode !== "day" && viewMode !== "chairs" && (
         <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4 sm:p-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-neutral-200/80 mb-4 gap-2">
             <div>

@@ -4,7 +4,13 @@ import * as React from "react"
 import Link from "next/link"
 import { useLocale } from "@/hooks/use-locale"
 import { useBranch } from "@/hooks/use-branch"
-import { fetchActiveLabCases, updateLabCaseStatus, type PatientWithLabCase } from "@/lib/clinical/lab-service"
+import {
+  fetchActiveLabCases,
+  LAB_CASE_STATUS_FLOW,
+  updateLabCaseStatus,
+  type LabCaseStatus,
+  type PatientWithLabCase,
+} from "@/lib/clinical/lab-service"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
@@ -26,11 +32,48 @@ import { cn } from "@/lib/utils"
 const TODAY_KEY = new Date().toISOString().slice(0, 10)
 
 function labCaseUrgency(c: PatientWithLabCase) {
-  if (c.status === "received") return "received"
-  if (c.status === "pending" && c.expected_date && c.next_appointment_date && c.expected_date > c.next_appointment_date) return "conflict"
-  if (c.expected_date && c.expected_date < TODAY_KEY) return "overdue"
-  if (c.expected_date && c.expected_date <= TODAY_KEY) return "due_today"
+  if (c.status === "completed" || c.status === "received") return "received"
+  if (
+    ["pending", "sent", "try_in", "remake"].includes(c.status) &&
+    c.expected_date &&
+    c.next_appointment_date &&
+    c.expected_date > c.next_appointment_date
+  ) {
+    return "conflict"
+  }
+  if (
+    ["pending", "sent", "try_in", "remake"].includes(c.status) &&
+    c.expected_date &&
+    c.expected_date < TODAY_KEY
+  ) {
+    return "overdue"
+  }
+  if (
+    ["pending", "sent", "try_in", "remake"].includes(c.status) &&
+    c.expected_date &&
+    c.expected_date <= TODAY_KEY
+  ) {
+    return "due_today"
+  }
   return "pending"
+}
+
+const STATUS_LABEL: Record<LabCaseStatus, string> = {
+  pending: "Pending",
+  sent: "Sent to lab",
+  try_in: "Try-in",
+  remake: "Remake",
+  received: "Received",
+  completed: "Completed",
+  cancelled: "Cancelled",
+}
+
+const NEXT_STATUS: Partial<Record<LabCaseStatus, LabCaseStatus>> = {
+  pending: "sent",
+  sent: "try_in",
+  try_in: "received",
+  remake: "sent",
+  received: "completed",
 }
 
 export default function LabCasesPage() {
@@ -72,12 +115,14 @@ export default function LabCasesPage() {
   }, [loadCases])
 
   const caseStats = React.useMemo(() => {
-    const pending = cases.filter((c) => c.status === "pending")
+    const inFlight = cases.filter((c) =>
+      ["pending", "sent", "try_in", "remake"].includes(c.status)
+    )
     return {
-      pending: pending.length,
-      overdue: pending.filter((c) => labCaseUrgency(c) === "overdue").length,
-      dueToday: pending.filter((c) => labCaseUrgency(c) === "due_today").length,
-      received: cases.filter((c) => c.status === "received").length,
+      pending: inFlight.length,
+      overdue: inFlight.filter((c) => labCaseUrgency(c) === "overdue").length,
+      dueToday: inFlight.filter((c) => labCaseUrgency(c) === "due_today").length,
+      received: cases.filter((c) => c.status === "received" || c.status === "completed").length,
     }
   }, [cases])
 
@@ -93,18 +138,28 @@ export default function LabCasesPage() {
   )
 
   const overdueCases = React.useMemo(
-    () => sortedCases.filter((c) => c.status === "pending" && labCaseUrgency(c) === "overdue"),
+    () =>
+      sortedCases.filter(
+        (c) =>
+          ["pending", "sent", "try_in", "remake"].includes(c.status) &&
+          labCaseUrgency(c) === "overdue"
+      ),
     [sortedCases]
   )
 
-  const handleMarkReceived = async (id: string) => {
-    const { error } = await updateLabCaseStatus(id, "received")
+  const handleStatus = async (id: string, status: LabCaseStatus) => {
+    const { error } = await updateLabCaseStatus(id, status)
     if (error) {
       toast.error(error)
-    } else {
-      toast.success(t("labcases.markedReceived", "Lab case marked as received!"))
-      loadCases()
+      return
     }
+    toast.success(
+      t("labcases.statusUpdated", "Lab case updated to {status}.").replace(
+        "{status}",
+        STATUS_LABEL[status]
+      )
+    )
+    loadCases()
   }
 
   const handleCancel = async (id: string) => {
@@ -220,13 +275,15 @@ export default function LabCasesPage() {
                       <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-200">
                         <Clock className="w-3 h-3 mr-1" /> {t("labcases.dueToday", "Due today")}
                       </Badge>
-                    ) : c.status === "pending" ? (
-                      <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-200">
-                        <Clock className="w-3 h-3 mr-1" /> {t("labcases.pending", "Pending")}
+                    ) : c.status === "completed" || c.status === "received" ? (
+                      <Badge variant="outline" className="text-emerald-700 bg-emerald-50 border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3 mr-1" />{" "}
+                        {t(`labcases.status.${c.status}`, STATUS_LABEL[c.status])}
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-emerald-700 bg-emerald-50 border-emerald-200">
-                        <CheckCircle2 className="w-3 h-3 mr-1" /> {t("labcases.received", "Received")}
+                      <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-200">
+                        <Clock className="w-3 h-3 mr-1" />{" "}
+                        {t(`labcases.status.${c.status}`, STATUS_LABEL[c.status])}
                       </Badge>
                     )}
                   </div>
@@ -264,16 +321,51 @@ export default function LabCasesPage() {
                     </p>
                   )}
 
-                  {c.status === "pending" && (
-                    <div className="flex justify-end gap-2 pt-2 border-t mt-2">
+                  {c.status !== "cancelled" && c.status !== "completed" && (
+                    <div className="flex flex-wrap justify-end gap-2 pt-2 border-t mt-2">
                       <Button variant="outline" size="sm" className="h-8" asChild>
                         <Link href={`/patients/${c.patient_id}`}>{t("labcases.patient", "Patient")}</Link>
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleCancel(c.id)}>
+                      <select
+                        className="h-8 rounded-md border border-neutral-200 bg-white px-2 text-xs font-medium"
+                        value={c.status}
+                        onChange={(e) => void handleStatus(c.id, e.target.value as LabCaseStatus)}
+                        aria-label={t("labcases.changeStatus", "Change status")}
+                      >
+                        {LAB_CASE_STATUS_FLOW.filter((s) => s !== "cancelled").map((s) => (
+                          <option key={s} value={s}>
+                            {t(`labcases.status.${s}`, STATUS_LABEL[s])}
+                          </option>
+                        ))}
+                      </select>
+                      {c.status !== "received" && NEXT_STATUS[c.status] ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="h-8"
+                          onClick={() => void handleStatus(c.id, NEXT_STATUS[c.status]!)}
+                        >
+                          {t("labcases.advance", "Advance")} →{" "}
+                          {STATUS_LABEL[NEXT_STATUS[c.status]!]}
+                        </Button>
+                      ) : null}
+                      {c.status === "try_in" ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8"
+                          onClick={() => void handleStatus(c.id, "remake")}
+                        >
+                          {t("labcases.remake", "Remake")}
+                        </Button>
+                      ) : null}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => void handleCancel(c.id)}
+                      >
                         <XCircle className="w-3.5 h-3.5 mr-1" /> {t("labcases.cancel", "Cancel")}
-                      </Button>
-                      <Button variant="secondary" size="sm" className="h-8" onClick={() => handleMarkReceived(c.id)}>
-                        {t("labcases.markReceived", "Mark Received")}
                       </Button>
                     </div>
                   )}

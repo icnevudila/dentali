@@ -18,6 +18,8 @@ export interface DashboardStats {
   appointments_awaiting_checkin: number
   open_encounters_stale: number
   hmo_pending_claims: number
+  /** Optional — filled when dashboard RPC exposes lab overdue count */
+  overdue_lab_cases?: number
 }
 
 export async function fetchDashboardStats(
@@ -54,6 +56,7 @@ export async function fetchDashboardStats(
       appointments_awaiting_checkin: Number(raw.appointments_awaiting_checkin ?? 0),
       open_encounters_stale: Number(raw.open_encounters_stale ?? 0),
       hmo_pending_claims: Number(raw.hmo_pending_claims ?? 0),
+      overdue_lab_cases: Number(raw.overdue_lab_cases ?? 0),
     },
     error: null,
   }

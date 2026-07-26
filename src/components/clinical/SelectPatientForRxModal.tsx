@@ -114,7 +114,7 @@ export function SelectPatientForRxModal({
             </div>
           ) : patients.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-500 font-medium">
-              No patients found matching "{searchQuery}".
+              No patients found matching &ldquo;{searchQuery}&rdquo;.
             </div>
           ) : (
             patients.map((patient) => (

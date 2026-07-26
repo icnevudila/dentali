@@ -696,7 +696,7 @@ export default function PatientProfilePage() {
               <h3 className="font-semibold text-amber-900">Pending Medical History Update</h3>
               <p className="text-sm text-amber-700 mt-0.5">
                 The patient updated their medical history via Kiosk:{" "}
-                <span className="font-medium">"{pendingHistoryUpdate.medical_alerts}"</span>
+                <span className="font-medium">&ldquo;{pendingHistoryUpdate.medical_alerts}&rdquo;</span>
               </p>
             </div>
           </div>

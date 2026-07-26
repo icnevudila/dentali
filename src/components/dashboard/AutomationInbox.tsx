@@ -5,6 +5,7 @@ import {
   Bell,
   CalendarClock,
   FileWarning,
+  FlaskConical,
   Phone,
   RefreshCw,
   Stethoscope,
@@ -90,6 +91,15 @@ export function AutomationInbox({
       tone: stats.open_encounters_stale > 0 ? "warning" : "muted",
     },
     {
+      id: "lab",
+      title: t("inbox.labCases", "Lab cases to follow up"),
+      detail: t("inbox.labCasesDetail", "Open lab board for delayed crowns and try-ins"),
+      count: stats.overdue_lab_cases ?? 0,
+      href: "/lab-cases",
+      icon: FlaskConical,
+      tone: (stats.overdue_lab_cases ?? 0) > 0 ? "warning" : "muted",
+    },
+    {
       id: "recall",
       title: t("inbox.hygieneRecall", "Hygiene recall"),
       detail: t("inbox.hygieneRecallDetail", "6-month check-up SMS — review queue in reports"),
@@ -100,7 +110,9 @@ export function AutomationInbox({
     },
   ]
 
-  const actionable = items.filter((item) => item.count > 0 || item.id === "recall")
+  const actionable = items.filter(
+    (item) => item.count > 0 || item.id === "recall" || item.id === "lab"
+  )
 
   return (
     <section
