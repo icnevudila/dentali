@@ -888,6 +888,7 @@ export default function InvoiceDetailPage() {
             <CardContent className="space-y-4">
               <IntegrationEnvBanner
                 title={t("billing.paymongoTitle", "PayMongo online checkout")}
+                tone={gatewayDryRun ? "warning" : "ready"}
                 description={
                   gatewayDryRun
                     ? t(

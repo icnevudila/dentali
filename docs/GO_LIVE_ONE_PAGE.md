@@ -87,17 +87,32 @@ Tam liste: [`tasks/CLINICAL_JOURNEY_AZ.md`](../tasks/CLINICAL_JOURNEY_AZ.md)
 URL: `https://YOUR_REF.supabase.co/functions/v1/paymongo-webhook`  
 Event: `checkout_session.payment.paid`
 
+**Zorunlu secret:** `PAYMONGO_WEBHOOK_SECRET` (PayMongo Dashboard → Webhooks → endpoint secret)
+
+- İmza doğrulaması (HMAC-SHA256, `t.<rawBody>`, test `te` / live `li`) kodda açık.
+- Secret yoksa webhook **503** döner — imzasız ödeme tamamlama kabul edilmez.
+- Checkout tutarı: fatura bakiyesi **peso (major)**; PayMongo’ya **centavos** olarak ×100 gönderilir.
+
+Deploy:
+
+```bash
+supabase functions deploy paymongo-webhook --project-ref YOUR_PROJECT_REF
+```
+
 ---
 
 ## Hazır mı?
 
 | Kontrol | Beklenen |
 |---------|----------|
-| Vercel build | ✅ Ready |
+| Vercel build | Ready |
 | SQL verify | `PASS` |
 | Login | Staff girişi OK |
 | Journey panel | Hasta profilinde A→Z adımlar |
 | Workflow toggles | ON |
-| SMS/ödeme | Secret yoksa dry-run (normal) |
+| SMS/ödeme | Secret yoksa dry-run / sandbox banner (normal) |
+| PayMongo webhook | Secret set + HMAC verify + deploy edilmiş fonksiyon |
+
+**Ops (kod dışı, klinik):** PITR/yedek, consent/privacy legal imza, 5 dk A→Z smoke.
 
 **Detaylı F6:** [`docs/VA-F6_USER_STEPS.md`](./VA-F6_USER_STEPS.md) · **Deploy:** [`docs/DEPLOY_CHECKLIST.md`](./DEPLOY_CHECKLIST.md)

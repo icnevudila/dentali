@@ -1,8 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1"
+import { verifyPaymongoWebhookSignature } from "../_shared/paymongo-webhook-signature.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, paymongo-signature",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, paymongo-signature",
 }
 
 Deno.serve(async (req) => {
@@ -18,18 +20,34 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const webhookSecret = Deno.env.get("PAYMONGO_WEBHOOK_SECRET")
+    const webhookSecret = Deno.env.get("PAYMONGO_WEBHOOK_SECRET")?.trim()
     const rawBody = await req.text()
 
-    if (webhookSecret) {
-      const signature = req.headers.get("paymongo-signature")
-      if (!signature) {
-        return new Response(JSON.stringify({ error: "Missing signature" }), {
-          status: 401,
+    if (!webhookSecret) {
+      // Production must set PAYMONGO_WEBHOOK_SECRET. Reject to avoid unsigned payment completion.
+      return new Response(
+        JSON.stringify({
+          error:
+            "PAYMONGO_WEBHOOK_SECRET is not configured — refusing unsigned webhooks",
+        }),
+        {
+          status: 503,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        })
-      }
-      // PayMongo HMAC verification can be added when secret is configured in dashboard.
+        }
+      )
+    }
+
+    const verified = await verifyPaymongoWebhookSignature({
+      rawBody,
+      signatureHeader: req.headers.get("paymongo-signature"),
+      secret: webhookSecret,
+    })
+
+    if (!verified.ok) {
+      return new Response(JSON.stringify({ error: verified.error }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
     }
 
     const payload = JSON.parse(rawBody) as {
@@ -51,9 +69,7 @@ Deno.serve(async (req) => {
     }
 
     const sessionId =
-      payload?.data?.attributes?.data?.id ??
-      payload?.data?.id ??
-      null
+      payload?.data?.attributes?.data?.id ?? payload?.data?.id ?? null
 
     if (!sessionId) {
       return new Response(JSON.stringify({ error: "Missing checkout session id" }), {
