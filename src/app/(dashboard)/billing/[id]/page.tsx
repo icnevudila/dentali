@@ -249,7 +249,14 @@ export default function InvoiceDetailPage() {
       return
     }
 
-    notify.success(t("billing.paymentSuccessWithCommission", "Payment recorded! Doktor hakedişi (%40) otomatik hesaplanıp maaş hesabına aktarıldı."))
+    notify.success(
+      (data?.commission_amount ?? 0) > 0
+        ? t(
+            "billing.paymentSuccessCommissionLogged",
+            "Payment recorded. Provider commission was logged to the ledger."
+          )
+        : t("billing.paymentSuccess", "Payment recorded.")
+    )
 
     if (data?.encounter_closed) {
       setVisitAutoClosed(true)

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client"
+import type { RadiologyAnnotation } from "@/lib/radiology/annotation-types"
 
 export type PatientDocumentCategory = "xray" | "id" | "referral" | "insurance" | "other"
 
@@ -23,6 +24,8 @@ export interface PatientDocument {
   created_at: string
   uploaded_by: string | null
   uploader_name?: string
+  annotations?: RadiologyAnnotation[]
+  annotations_version?: number
 }
 
 const BUCKET = "patient-documents"
@@ -33,7 +36,9 @@ export async function fetchPatientDocuments(
   const supabase = createClient()
   const { data, error } = await supabase
     .from("patient_documents")
-    .select("id, file_name, file_type, file_size, storage_path, notes, category, created_at, uploaded_by")
+    .select(
+      "id, file_name, file_type, file_size, storage_path, notes, category, created_at, uploaded_by, annotations, annotations_version"
+    )
     .eq("patient_id", patientId)
     .order("created_at", { ascending: false })
 
@@ -65,7 +70,42 @@ export async function fetchPatientDocuments(
       created_at: row.created_at,
       uploaded_by: row.uploaded_by,
       uploader_name: row.uploaded_by ? nameMap.get(row.uploaded_by) ?? "Staff" : undefined,
+      annotations: parseDocumentAnnotations(row.annotations),
+      annotations_version: row.annotations_version != null ? Number(row.annotations_version) : 1,
     })),
+    error: null,
+  }
+}
+
+function parseDocumentAnnotations(raw: unknown): RadiologyAnnotation[] {
+  if (!Array.isArray(raw)) return []
+  return raw as RadiologyAnnotation[]
+}
+
+export async function savePatientDocumentAnnotations(
+  documentId: string,
+  annotations: RadiologyAnnotation[],
+  expectedVersion: number | null
+): Promise<{
+  data: { annotations_version: number; annotations_updated_at?: string } | null
+  error: string | null
+}> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("save_patient_document_annotations", {
+    p_document_id: documentId,
+    p_annotations: annotations,
+    p_expected_version: expectedVersion,
+  })
+
+  if (error) return { data: null, error: error.message }
+  const raw = data as Record<string, unknown>
+  return {
+    data: {
+      annotations_version: Number(raw.annotations_version),
+      annotations_updated_at: raw.annotations_updated_at
+        ? String(raw.annotations_updated_at)
+        : undefined,
+    },
     error: null,
   }
 }

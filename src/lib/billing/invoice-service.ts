@@ -369,7 +369,13 @@ export async function recordInvoicePayment(params: {
   paymentMethod?: string
   notes?: string
 }): Promise<{
-  data: { paid_amount: number; status: string; balance: number; encounter_closed?: boolean } | null
+  data: {
+    paid_amount: number
+    status: string
+    balance: number
+    encounter_closed?: boolean
+    commission_amount?: number
+  } | null
   error: string | null
 }> {
   const supabase = createClient()
@@ -386,6 +392,7 @@ export async function recordInvoicePayment(params: {
     status: string
     balance: number
     encounter_closed?: boolean
+    commission_amount?: number | null
   }
   return {
     data: {
@@ -393,6 +400,8 @@ export async function recordInvoicePayment(params: {
       status: raw.status,
       balance: Number(raw.balance),
       encounter_closed: Boolean(raw.encounter_closed),
+      commission_amount:
+        raw.commission_amount != null ? Number(raw.commission_amount) : undefined,
     },
     error: null,
   }
