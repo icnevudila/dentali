@@ -20,6 +20,7 @@ import { DailyCloseoutCard } from "@/components/dashboard/DailyCloseoutCard"
 import { DashboardOpsSummary } from "@/components/dashboard/DashboardOpsSummary"
 import { DashboardExtendedReports } from "@/components/dashboard/DashboardExtendedReports"
 import { AutomationInbox } from "@/components/dashboard/AutomationInbox"
+import { FirstRunWizard } from "@/components/dashboard/FirstRunWizard"
 import { useReportsSummary } from "@/hooks/use-reports-summary"
 import {
   Plus,
@@ -139,6 +140,8 @@ export default function DashboardPage() {
             </Button>
           </div>
         ) : null}
+
+        <FirstRunWizard patientCount={stats.active_patients} loading={loading} />
 
         {activeBranch ? (
           <DashboardScheduleSection branchId={activeBranch.id} periodDays={chartPeriodDays} />
