@@ -17,6 +17,8 @@ import {
   Unlock,
   Wallet,
   XCircle,
+  MapPin,
+  History,
 } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
@@ -48,6 +50,7 @@ import { Badge } from "@/components/ui/badge"
 import { TypedConfirmDialog } from "@/components/ui/TypedConfirmDialog"
 import { notify } from "@/lib/ui/notify"
 import { cn } from "@/lib/utils"
+import { EmptyState } from "@/components/ui/empty-state"
 
 function formatDayLabel(dateKey: string) {
   return parseDateKey(dateKey).toLocaleDateString("en-PH", {
@@ -167,7 +170,7 @@ function DailyCloseoutContent() {
           hint: t("closeout.hmoPendingHint", "Open HMO claims"),
           icon: PackageX,
           variant: data.hmoPending > 0 ? "warning" : "default",
-          href: "/billing/hmo?status=pending",
+          href: "/billing/hmo?status=draft",
         },
         {
           label: t("closeout.lowStock", "Low stock"),
@@ -269,7 +272,7 @@ function DailyCloseoutContent() {
         label: t("closeout.readyHmo", "HMO drafts"),
         value: String(data.hmoPending),
         action: t("closeout.readyHmoAction", "Open claims"),
-        href: "/billing/hmo?status=pending",
+        href: "/billing/hmo?status=draft",
         ok: data.hmoPending === 0,
         tone: "warning",
       },
@@ -484,7 +487,19 @@ function DailyCloseoutContent() {
         }
       >
         <PageErrorNotifier error={error} onRetry={reload} />
-        {error ? null : (
+        {!activeBranch ? (
+          <EmptyState
+            icon={MapPin}
+            title={t("dashboard.selectBranch", "Select a branch to view stats")}
+            description={t(
+              "closeout.selectBranchHint",
+              "Daily closeout is scoped to the active clinic branch."
+            )}
+          />
+        ) : null}
+        {error || !activeBranch ? null : loading && !data ? (
+          <PageLoadingSkeleton variant="hub" />
+        ) : error || !activeBranch ? null : (
           <div className="space-y-6">
             <ClinicDayBar
               compareHint={t(
@@ -710,7 +725,29 @@ function DailyCloseoutContent() {
                   ))}
                 </ul>
               </div>
-            ) : null}
+            ) : (
+              <EmptyState
+                icon={History}
+                className="py-8"
+                title={t("closeout.historyEmptyTitle", "No saved snapshots yet")}
+                description={t(
+                  "closeout.historyEmptyBody",
+                  "Save a draft snapshot during the day for audit, then finalize at end of shift to lock billing."
+                )}
+                action={
+                  isToday && data && !dayFinalized ? (
+                    <Button
+                      size="sm"
+                      onClick={() => void handleSaveSnapshot()}
+                      disabled={savingSnapshot}
+                    >
+                      <Save className="mr-1.5 h-3.5 w-3.5" />
+                      {t("closeout.saveSnapshot", "Save draft snapshot")}
+                    </Button>
+                  ) : null
+                }
+              />
+            )}
           </div>
         )}
       </ModulePageShell>

@@ -132,7 +132,7 @@ export const ATTENTION_RULES: AttentionRuleDef[] = [
     tone: "amber",
     priority: 7,
     permission: PERMISSIONS.BILLING_READ,
-    workflowKey: "auto_approve_creates_invoice",
+    // Invoice drafts are always created on plan approval; do not hint a fake automation off state.
     settingsKey: attentionShowKey("open_invoices"),
   },
   {

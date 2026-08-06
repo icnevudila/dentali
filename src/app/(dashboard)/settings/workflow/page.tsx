@@ -145,28 +145,51 @@ export default function WorkflowSettingsPage() {
                   {group.title}
                 </h3>
                 <ul className="divide-y rounded-xl border border-neutral-200/80 bg-white">
-                  {group.items.map((item) => (
-                    <li key={item.key} className="flex items-start justify-between gap-4 px-4 py-3">
-                      <div className="min-w-0 space-y-0.5">
-                        <p className="text-sm font-medium text-neutral-900">{item.label}</p>
-                        <p className="text-xs text-neutral-500">{item.description}</p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 shrink-0 px-2"
-                        disabled={savingKey === item.key}
-                        onClick={() => void handleToggle(item.key)}
-                      >
-                        <Badge variant={settings?.[item.key] !== false ? "success" : "outline"}>
-                          {settings?.[item.key] !== false
-                            ? t("common.on", "On")
-                            : t("common.off", "Off")}
-                        </Badge>
-                      </Button>
-                    </li>
-                  ))}
+                  {group.items.map((item) => {
+                    const notWired = item.honesty === "not_wired"
+                    const eventOnly = item.honesty === "event_only"
+                    const toggleDisabled = notWired || savingKey === item.key
+                    return (
+                      <li key={item.key} className="flex items-start justify-between gap-4 px-4 py-3">
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-medium text-neutral-900">{item.label}</p>
+                            {notWired ? (
+                              <Badge variant="outline" className="font-normal text-[10px]">
+                                {t("settings.wfHonestyNotWired", "Not wired yet")}
+                              </Badge>
+                            ) : null}
+                            {eventOnly ? (
+                              <Badge variant="outline" className="font-normal text-[10px]">
+                                {t("settings.wfHonestyEventOnly", "Event log only")}
+                              </Badge>
+                            ) : null}
+                          </div>
+                          <p className="text-xs text-neutral-500">{item.description}</p>
+                        </div>
+                        {notWired ? (
+                          <Badge variant="outline" className="shrink-0 font-normal">
+                            {t("settings.wfHonestyPlanned", "Planned")}
+                          </Badge>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 shrink-0 px-2"
+                            disabled={toggleDisabled}
+                            onClick={() => void handleToggle(item.key)}
+                          >
+                            <Badge variant={settings?.[item.key] !== false ? "success" : "outline"}>
+                              {settings?.[item.key] !== false
+                                ? t("common.on", "On")
+                                : t("common.off", "Off")}
+                            </Badge>
+                          </Button>
+                        )}
+                      </li>
+                    )
+                  })}
                 </ul>
               </section>
             ))}
@@ -207,12 +230,13 @@ export default function WorkflowSettingsPage() {
               </ul>
             </section>
             <p className="text-xs text-neutral-500">
-              Cron schedules and secrets:{" "}
+              {t(
+                "settings.wfCronHint",
+                "SMS cron schedules and provider secrets live under Notifications. Ask your admin if reminders are not firing."
+              )}{" "}
               <Link href="/settings/notifications" className="text-primary-600 hover:underline">
-                Notifications
+                {t("settings.navNotifications", "Notifications")}
               </Link>
-              {" · "}
-              See <code className="text-[11px]">docs/SUPABASE_CRON_SETUP.md</code> in the repo for scheduler setup.
             </p>
           </div>
         )}
