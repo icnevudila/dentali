@@ -65,7 +65,8 @@ export function PatientFilterBar({ filters, onChange, className }: PatientFilter
   const statusOptions: ChipOption<PatientStatusFilter>[] = [
     { value: "active", label: t("patients.filterActive", "Active") },
     { value: "inactive", label: t("patients.filterInactive", "Inactive") },
-    { value: "all", label: t("patients.filterAllStatus", "All") },
+    { value: "archived", label: t("patients.filterArchived", "Archived") },
+    { value: "all", label: t("patients.filterAllStatus", "All statuses") },
   ]
 
   const visitOptions: ChipOption<PatientVisitFilter>[] = [
