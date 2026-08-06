@@ -766,7 +766,7 @@ export default function PatientProfilePage() {
               onClick={handleFinishVisit}
               title={t(
                 "queue.checkoutDischargeHint",
-                "Close today’s visit: note → bill → pay → discharge"
+                "Finish today’s visit: note → bill → pay → close"
               )}
             >
               <DoorClosed className="h-4 w-4" />

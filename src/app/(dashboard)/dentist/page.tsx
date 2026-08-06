@@ -54,6 +54,7 @@ import type { QueueRowAction } from "@/components/patients/PatientTable"
 import { notify } from "@/lib/ui/notify"
 import type { ToothFinding } from "@/lib/types/dental"
 import { createClient } from "@/lib/supabase/client"
+import { resolveVisitCheckoutEncounterId } from "@/lib/clinical/resolve-visit-checkout"
 import { Armchair, MapPin, Stethoscope, Timer, Users, Calendar, UserCheck, FileText, Receipt } from "lucide-react"
 
 const PAGE_SIZE = 20
@@ -338,30 +339,58 @@ function DentistPageContent() {
     async (entry: QueueEntry, action: QueueRowAction) => {
       if (queueActionId) return
       setQueueActionId(entry.id)
-      const nextStatus = action === "finish" ? "served" : "in_chair"
-      const { error: updateError } = await updateQueueStatus(entry.id, nextStatus)
-      if (updateError) {
+      try {
+        const openFinishVisit = async () => {
+          const encounterId = await resolveVisitCheckoutEncounterId(entry, activeBranch?.id)
+          const { data: billingGate } = await getPatientBillingGate(entry.patient_id)
+          setCheckoutWizard({
+            patientId: entry.patient_id,
+            patientName: entry.patient_name ?? t("common.patient", "Patient"),
+            billingGate,
+            encounterId,
+          })
+        }
+
+        if (action === "checkout") {
+          await openFinishVisit()
+          return
+        }
+
+        const nextStatus = action === "finish" ? "served" : "in_chair"
+        const { data: updateData, error: updateError } = await updateQueueStatus(entry.id, nextStatus)
+        if (updateError) {
+          notify.error(updateError)
+          return
+        }
+
+        if (action === "finish") {
+          if (updateData?.invoice_draft_id) {
+            notify.info(
+              t(
+                "queue.autoInvoiceDraft",
+                "Invoice draft created from the approved treatment plan."
+              )
+            )
+          }
+          notify.success(t("queue.statusServed", "Treatment done — ready to finish visit"))
+          await openFinishVisit()
+        } else {
+          if (updateData?.soap_draft_id) {
+            notify.info(
+              t(
+                "queue.autoSoapDraft",
+                "Draft SOAP note created from the last visit — open Clinical Notes to review."
+              )
+            )
+          }
+          notify.success(t("dentist.statusInChair", "In chair"))
+        }
+      } finally {
         setQueueActionId(null)
-        notify.error(updateError)
-        return
+        void loadPatients({ silent: true })
       }
-
-      if (action === "finish") {
-        const { data: billingGate } = await getPatientBillingGate(entry.patient_id)
-        setCheckoutWizard({
-          patientId: entry.patient_id,
-          patientName: entry.patient_name ?? t("common.patient", "Patient"),
-          billingGate,
-          encounterId: entry.encounter_id ?? null,
-        })
-      } else {
-        notify.success(t("dentist.statusInChair", "In chair"))
-      }
-
-      setQueueActionId(null)
-      void loadPatients({ silent: true })
     },
-    [queueActionId, loadPatients, t]
+    [queueActionId, loadPatients, t, activeBranch?.id]
   )
 
   React.useEffect(() => {
@@ -593,6 +622,7 @@ function DentistPageContent() {
                 total={total}
                 onPageChange={handlePageChange}
                 searchQuery={debouncedQuery}
+                boardFilter={filter}
                 noBranch={!hasActiveBranch}
                 chartFindingsByPatient={chartFindingsByPatient}
                 context="daily"
@@ -675,7 +705,7 @@ function DentistPageContent() {
 
           {activeBranch ? (
             <CollapsibleGuide
-              summary={t("dentist.mobileFlowSummary", "Flow: Queue → Visit → Checkout")}
+              summary={t("dentist.mobileFlowSummary", "Flow: Queue → Visit → Finish visit")}
               dismissKey="dentist-flow-guide"
             >
               <div className="grid gap-3 md:grid-cols-3">
@@ -717,12 +747,12 @@ function DentistPageContent() {
                   </span>
                   <div>
                     <p className="font-semibold text-neutral-950">
-                      {t("dentist.flowCheckoutTitle", "3. Complete, bill, then checkout")}
+                      {t("dentist.flowCheckoutTitle", "3. Treatment done, bill, then finish visit")}
                     </p>
                     <p className="mt-0.5 text-xs leading-5 text-neutral-500">
                       {t(
                         "dentist.flowCheckoutHint",
-                        "Served patients open the checkout wizard; missing notes or balances stay soft-gated with audit."
+                        "Start treatment and Finish visit right from the board; missing notes or balances stay soft-gated with audit."
                       )}
                     </p>
                   </div>
