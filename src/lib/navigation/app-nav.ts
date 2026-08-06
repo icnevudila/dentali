@@ -141,6 +141,13 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         permission: PERMISSIONS.PATIENTS_READ,
       },
       {
+        nameKey: "nav.prescriptions",
+        fallback: "Prescriptions",
+        href: "/prescriptions",
+        icon: Pill,
+        permission: PERMISSIONS.PRESCRIPTIONS_READ,
+      },
+      {
         nameKey: "nav.appointments",
         fallback: "Appointments",
         href: "/appointments",
