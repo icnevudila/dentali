@@ -168,9 +168,12 @@ export function PatientDocumentsPanel({ patientId }: { patientId: string }) {
       icon: ScrollText,
     },
     {
-      label: "Periodontal Probing Examination Report",
-      hint: "Printable periodontal probing depths, BOP bleeding and mobility map",
-      href: `/patients/${patientId}/perio/print`,
+      label: t("patients.outputPerioChart", "Periodontal chart"),
+      hint: t(
+        "patients.outputPerioChartHint",
+        "Interactive perio chart (coming next) and print preview"
+      ),
+      href: `/patients/${patientId}/perio`,
       icon: Activity,
     },
     {
