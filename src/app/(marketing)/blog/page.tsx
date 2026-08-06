@@ -12,12 +12,12 @@ const [featured, ...rest] = BLOG_POSTS
 export const metadata: Metadata = {
   title: "Dental Blog — Oral Health Tips & Clinic Insights",
   description:
-    "Expert dental articles for patients and clinic teams in the Philippines — preventive care, treatments, orthodontics, implants, and practice operations.",
+    "Educational guides for patients and clinic teams in the Philippines — preventive care, treatments, and practice operations. Not a substitute for clinical advice.",
   alternates: { canonical: `${siteUrl}/blog` },
   openGraph: {
-    title: "Dental Blog | dentali.",
+    title: "Dental Blog | dentQL",
     description:
-      "Cover stories and guides on oral health, cosmetic dentistry, pediatric care, and running a modern Philippine dental clinic.",
+      "Practical guides on oral health and running a Philippine dental clinic. Educational content only — confirm care decisions with your dentist.",
     url: `${siteUrl}/blog`,
     type: "website",
     images: featured
@@ -39,10 +39,26 @@ export default function BlogPage() {
               Oral health & clinic insights
             </h1>
             <p className="mt-4 text-lg leading-relaxed text-neutral-600">
-              Practical guides for patients and dental teams — from check-ups and braces to queue flow
-              and clinic software in the Philippines.
+              Practical educational guides for patients and dental teams — from check-ups and braces to
+              queue flow and clinic software in the Philippines. Not medical advice.
             </p>
           </div>
+
+          {!featured && rest.length === 0 ? (
+            <div className="mt-12 rounded-xl border border-dashed border-neutral-300 bg-white px-6 py-12 text-center">
+              <p className="text-base font-semibold text-neutral-900">No articles published yet</p>
+              <p className="mt-2 text-sm text-neutral-600">
+                Check back soon, or explore product pages while we add new guides.
+              </p>
+              <Link
+                href="/welcome"
+                className="mt-6 inline-flex items-center gap-1 text-sm font-semibold text-primary-700"
+              >
+                Back to home
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </div>
+          ) : null}
 
           {featured ? (
             <Link

@@ -7,11 +7,12 @@ const siteUrl = getSiteUrl()
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Simple monthly pricing for Philippine dental clinics — single branch to multi-site groups.",
+    "Free trial for Philippine dental clinics. Published list prices are not final — Starter and Growth start with a trial; Enterprise is quote-based.",
   alternates: { canonical: `${siteUrl}/pricing` },
   openGraph: {
-    title: "dentali. pricing — Philippine dental clinic software",
-    description: "Starter, Growth, and Enterprise plans for clinics and multi-branch groups.",
+    title: "dentQL pricing — Philippine dental clinic software",
+    description:
+      "Trial access for single- and multi-branch clinics. Rates and Enterprise options confirmed after signup or quote.",
     url: `${siteUrl}/pricing`,
   },
 }

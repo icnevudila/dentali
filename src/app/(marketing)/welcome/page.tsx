@@ -12,14 +12,14 @@ const siteUrl = getSiteUrl()
 export const metadata: Metadata = {
   title: "Dental clinic software — dentQL",
   description:
-    "Run your clinic on one system — appointments, dental chart, billing, HMO, queue display, kiosk check-in, and digital consent.",
+    "Clinic OS for Philippine dental practices: appointments, chart, billing, HMO tracking, queue display, kiosk check-in, and digital consent. Start with a free trial.",
   alternates: {
     canonical: `${siteUrl}/welcome`,
   },
   openGraph: {
     title: `${BRAND_NAME} — Dental clinic operating system`,
     description:
-      "Patients, appointments, charting, billing, queue, and HMO — branch-aware from the first login.",
+      "Patients, appointments, charting, billing, queue, and HMO fields — branch-aware from first login. Vendor payment rails ship by engagement.",
     url: `${siteUrl}/welcome`,
   },
   keywords: [

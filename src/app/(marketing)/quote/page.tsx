@@ -10,8 +10,9 @@ export const metadata: Metadata = {
     "Request pricing and onboarding for your Philippine dental clinic or multi-branch group.",
   alternates: { canonical: `${siteUrl}/quote` },
   openGraph: {
-    title: "Request a quote — dentali.",
-    description: "Multi-branch clinics, HMO workflows, and custom integrations.",
+    title: "Request a quote — dentQL",
+    description:
+      "Tell us about your branches and HMO needs. We reply with plan options; paid integrations are scoped per engagement.",
     url: `${siteUrl}/quote`,
   },
 }
