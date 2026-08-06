@@ -15,6 +15,23 @@ import {
 } from "@/components/auth/auth-field"
 import { useLocale } from "@/hooks/use-locale"
 
+function mapUpdatePasswordError(raw: string, t: (key: string, fallback: string) => string): string {
+  const m = raw.toLowerCase()
+  if (m.includes("password")) {
+    return t("signup.passwordMin", "Password must be at least 8 characters.")
+  }
+  if (m.includes("session") || m.includes("expired") || m.includes("token")) {
+    return t(
+      "resetPassword.invalidLink",
+      "This reset link is invalid or has expired. Request a new one from the sign-in page."
+    )
+  }
+  return t(
+    "resetPassword.genericError",
+    "Could not update your password. Request a fresh reset link and try again."
+  )
+}
+
 export default function ResetPasswordPage() {
   const { t } = useLocale()
   const router = useRouter()
@@ -50,6 +67,10 @@ export default function ResetPasswordPage() {
     e.preventDefault()
     setError(null)
 
+    if (!password || !confirmPassword) {
+      setError(t("signup.passwordMatch", "Passwords do not match."))
+      return
+    }
     if (password.length < 8) {
       setError(t("signup.passwordMin", "Password must be at least 8 characters."))
       return
@@ -63,7 +84,7 @@ export default function ResetPasswordPage() {
     const { error: updateError } = await supabase.auth.updateUser({ password })
 
     if (updateError) {
-      setError(updateError.message)
+      setError(mapUpdatePasswordError(updateError.message, t))
       setLoading(false)
       return
     }
@@ -99,7 +120,7 @@ export default function ResetPasswordPage() {
         </div>
 
         {ready ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             {error ? <AuthErrorAlert message={error} /> : null}
 
             <AuthPasswordField
@@ -127,7 +148,16 @@ export default function ResetPasswordPage() {
                 : t("resetPassword.submit", "Update password")}
             </button>
           </form>
-        ) : null}
+        ) : (
+          <AuthCardFooter>
+            <Link
+              href="/forgot-password"
+              className={authPrimaryButtonClassName() + " inline-flex items-center justify-center"}
+            >
+              {t("resetPassword.requestNewLink", "Request a new reset link")}
+            </Link>
+          </AuthCardFooter>
+        )}
 
         <AuthCardFooter>
           <p className="text-neutral-500">

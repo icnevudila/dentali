@@ -13,9 +13,9 @@ import { useLocale } from "@/hooks/use-locale"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 
 const STEPS = [
-  { id: 1, key: "stepClinic" as const, icon: Building2 },
-  { id: 2, key: "stepBranch" as const, icon: MapPin },
-  { id: 3, key: "stepFinish" as const, icon: CheckCircle2 },
+  { id: 1, key: "stepClinic" as const, icon: Building2, fallback: "Clinic" },
+  { id: 2, key: "stepBranch" as const, icon: MapPin, fallback: "Branch" },
+  { id: 3, key: "stepFinish" as const, icon: CheckCircle2, fallback: "Finish" },
 ]
 
 export default function OnboardingPage() {
@@ -40,8 +40,14 @@ export default function OnboardingPage() {
       router.replace("/login")
       return
     }
-    setOwnerName(user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "")
-    setOrgName(`${user.email?.split("@")[0] ?? "My"} Dental Clinic`)
+    const meta = user.user_metadata ?? {}
+    setOwnerName(
+      (typeof meta.full_name === "string" && meta.full_name) ||
+        user.email?.split("@")[0] ||
+        ""
+    )
+    const clinicFromSignup = typeof meta.clinic_name === "string" ? meta.clinic_name.trim() : ""
+    setOrgName(clinicFromSignup || `${user.email?.split("@")[0] ?? "My"} Dental Clinic`)
 
     fetchMyBranches().then(async (branches) => {
       if (branches.length > 0) {
@@ -75,7 +81,11 @@ export default function OnboardingPage() {
     })
 
     if (setupError) {
-      setError(setupError)
+      setError(
+        setupError.length > 120
+          ? t("onboarding.setupFailed", "Could not finish clinic setup. Check your connection and try again.")
+          : setupError
+      )
       setSubmitting(false)
       return
     }
@@ -115,10 +125,20 @@ export default function OnboardingPage() {
 
   const stepDesc =
     step === 1
-      ? t("onboarding.stepOrgDesc", "Your clinic group or practice name.")
+      ? t(
+          "onboarding.stepOrgDesc",
+          "Your clinic group or practice name — shown on invoices and staff invites."
+        )
       : step === 2
-        ? t("onboarding.stepBranchDesc", "Where patients will be seen day to day.")
+        ? t(
+            "onboarding.stepBranchDesc",
+            "The location where patients check in and are seen day to day."
+          )
         : t("onboarding.stepReviewDesc", "Confirm details before entering the dashboard.")
+
+  const stepOfLabel = t("onboarding.stepOf", "Step {current} of {total}")
+    .replace("{current}", String(step))
+    .replace("{total}", String(STEPS.length))
 
   return (
     <div className="w-full max-w-lg space-y-6">
@@ -127,11 +147,19 @@ export default function OnboardingPage() {
           {t("onboarding.welcomeTitle", "Welcome — let's set up your clinic")}
         </h1>
         <p className="text-sm text-[var(--color-text-secondary)]">
-          {t("onboarding.welcomeSubtitle", "Create your organization and first branch to get started.")}
+          {t(
+            "onboarding.welcomeSubtitle",
+            "Three short steps: name your organization, add the first branch, then open the dashboard."
+          )}
         </p>
+        <p className="text-xs font-medium text-[var(--color-text-tertiary)] pt-1">{stepOfLabel}</p>
       </div>
 
-      <div className="flex justify-center gap-2" role="list" aria-label="Setup progress">
+      <div
+        className="flex justify-center gap-2"
+        role="list"
+        aria-label={t("onboarding.progressLabel", "Setup progress")}
+      >
         {STEPS.map((s) => (
           <div
             key={s.id}
@@ -146,7 +174,7 @@ export default function OnboardingPage() {
             }`}
           >
             <s.icon className="h-3.5 w-3.5" />
-            {t(`onboarding.${s.key}`, s.key)}
+            {t(`onboarding.${s.key}`, s.fallback)}
           </div>
         ))}
       </div>
@@ -164,54 +192,92 @@ export default function OnboardingPage() {
           <CardDescription>{stepDesc}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {error && (
-            <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">{error}</p>
-          )}
+          {error ? (
+            <p
+              role="alert"
+              className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2"
+            >
+              {error}
+            </p>
+          ) : null}
 
-          {step === 1 && (
+          {step === 1 ? (
             <>
+              <p className="text-xs leading-relaxed text-[var(--color-text-secondary)] rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-bg-secondary)] px-3 py-2">
+                {t(
+                  "onboarding.orgVsBranchHint",
+                  "Organization is the clinic group (billing entity). Branch is the physical location patients visit — you can add more branches later."
+                )}
+              </p>
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t("onboarding.orgName", "Organization / clinic name")}</label>
-                <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Smile Dental Group" />
+                <label className="text-sm font-medium" htmlFor="onboarding-org">
+                  {t("onboarding.orgName", "Organization / clinic name")}
+                </label>
+                <Input
+                  id="onboarding-org"
+                  value={orgName}
+                  onChange={(e) => setOrgName(e.target.value)}
+                  placeholder="Smile Dental Group"
+                />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t("onboarding.ownerName", "Your name (owner)")}</label>
-                <Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="Dr. Juan Cruz" />
+                <label className="text-sm font-medium" htmlFor="onboarding-owner">
+                  {t("onboarding.ownerName", "Your name (owner)")}
+                </label>
+                <Input
+                  id="onboarding-owner"
+                  value={ownerName}
+                  onChange={(e) => setOwnerName(e.target.value)}
+                  placeholder="Dr. Juan Cruz"
+                />
               </div>
             </>
-          )}
+          ) : null}
 
-          {step === 2 && (
+          {step === 2 ? (
             <>
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t("onboarding.branchName", "Branch name")}</label>
-                <Input value={branchName} onChange={(e) => setBranchName(e.target.value)} placeholder="Main Clinic" />
+                <label className="text-sm font-medium" htmlFor="onboarding-branch">
+                  {t("onboarding.branchName", "Branch name")}
+                </label>
+                <Input
+                  id="onboarding-branch"
+                  value={branchName}
+                  onChange={(e) => setBranchName(e.target.value)}
+                  placeholder="Main Clinic"
+                />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t("onboarding.address", "Address")}</label>
+                <label className="text-sm font-medium" htmlFor="onboarding-address">
+                  {t("onboarding.addressOptional", "Address (optional)")}
+                </label>
                 <Input
+                  id="onboarding-address"
                   value={branchAddress}
                   onChange={(e) => setBranchAddress(e.target.value)}
                   placeholder="123 Ayala Ave, Makati City"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t("onboarding.contactNumber", "Contact number")}</label>
+                <label className="text-sm font-medium" htmlFor="onboarding-phone">
+                  {t("onboarding.contactOptional", "Contact number (optional)")}
+                </label>
                 <Input
+                  id="onboarding-phone"
                   value={branchPhone}
                   onChange={(e) => setBranchPhone(e.target.value)}
                   placeholder="+63 2 8123 4567"
                 />
               </div>
             </>
-          )}
+          ) : null}
 
-          {step === 3 && (
+          {step === 3 ? (
             <div className="space-y-4">
               <dl className="text-sm space-y-3 divide-y divide-[var(--color-border-secondary)]">
                 <div className="flex justify-between pt-0">
                   <dt className="text-[var(--color-text-secondary)]">{t("onboarding.reviewOrg", "Organization")}</dt>
-                  <dd className="font-medium text-[var(--color-text-primary)]">{orgName}</dd>
+                  <dd className="font-medium text-[var(--color-text-primary)]">{orgName || "—"}</dd>
                 </div>
                 <div className="flex justify-between pt-3">
                   <dt className="text-[var(--color-text-secondary)]">{t("onboarding.reviewOwner", "Owner")}</dt>
@@ -219,7 +285,7 @@ export default function OnboardingPage() {
                 </div>
                 <div className="flex justify-between pt-3">
                   <dt className="text-[var(--color-text-secondary)]">{t("onboarding.reviewBranch", "Branch")}</dt>
-                  <dd className="font-medium text-[var(--color-text-primary)]">{branchName}</dd>
+                  <dd className="font-medium text-[var(--color-text-primary)]">{branchName || "—"}</dd>
                 </div>
                 {branchAddress ? (
                   <div className="flex justify-between pt-3">
@@ -236,13 +302,13 @@ export default function OnboardingPage() {
                   <li>
                     {t(
                       "onboarding.nextWorkflowOn",
-                      "Visit automations are already on (check-in, served, plan → invoice)."
+                      "Visit workflow defaults are enabled (check-in, served, plan → invoice). You can change them anytime in Settings → Workflow."
                     )}
                   </li>
                   <li>
                     {t(
                       "onboarding.nextFirstPatient",
-                      "Follow the 3-step guide to add your first patient (under 5 minutes)."
+                      "A short first-run guide will walk you through adding your first patient."
                     )}
                   </li>
                   <li>
@@ -254,7 +320,7 @@ export default function OnboardingPage() {
                 </ol>
               </div>
             </div>
-          )}
+          ) : null}
 
           <div className="flex justify-between pt-4">
             <Button

@@ -15,6 +15,17 @@ import {
 import { useLocale } from "@/hooks/use-locale"
 import { getSiteUrl } from "@/lib/site-url"
 
+function mapResetRequestError(raw: string, t: (key: string, fallback: string) => string): string {
+  const m = raw.toLowerCase()
+  if (m.includes("rate limit") || m.includes("too many")) {
+    return t("login.rateLimited", "Too many attempts. Wait a moment, then try again.")
+  }
+  if (m.includes("fetch") || m.includes("network") || m.includes("failed to fetch")) {
+    return t("login.networkError", "Could not reach the sign-in service. Check your connection and retry.")
+  }
+  return t("forgotPassword.genericError", "Could not send a reset link right now. Try again in a moment.")
+}
+
 export default function ForgotPasswordPage() {
   const { t } = useLocale()
   const supabase = createClient()
@@ -26,6 +37,12 @@ export default function ForgotPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+
+    if (!email.trim()) {
+      setError(t("forgotPassword.emailRequired", "Enter the email address for your staff account."))
+      return
+    }
+
     setLoading(true)
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
@@ -33,7 +50,7 @@ export default function ForgotPasswordPage() {
     })
 
     if (resetError) {
-      setError(resetError.message)
+      setError(mapResetRequestError(resetError.message, t))
       setLoading(false)
       return
     }
@@ -57,7 +74,7 @@ export default function ForgotPasswordPage() {
                 )
               : t(
                   "forgotPassword.subtitle",
-                  "Enter your work email and we will send you a secure reset link."
+                  "Enter your work email and we will send a secure reset link if an account exists."
                 )}
           </p>
         </div>
@@ -74,7 +91,7 @@ export default function ForgotPasswordPage() {
           </AuthCardFooter>
         ) : (
           <>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
               {error ? <AuthErrorAlert message={error} /> : null}
 
               <AuthField

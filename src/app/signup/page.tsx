@@ -17,6 +17,23 @@ import {
 import { useLocale } from "@/hooks/use-locale"
 import { getSiteUrl } from "@/lib/site-url"
 
+function mapSignupError(raw: string, t: (key: string, fallback: string) => string): string {
+  const m = raw.toLowerCase()
+  if (m.includes("already registered") || m.includes("already been registered") || m.includes("user already")) {
+    return t("signup.alreadyRegistered", "An account with this email already exists. Sign in or reset your password.")
+  }
+  if (m.includes("rate limit") || m.includes("too many")) {
+    return t("login.rateLimited", "Too many attempts. Wait a moment, then try again.")
+  }
+  if (m.includes("fetch") || m.includes("network") || m.includes("failed to fetch")) {
+    return t("login.networkError", "Could not reach the sign-in service. Check your connection and retry.")
+  }
+  if (m.includes("password")) {
+    return t("signup.passwordMin", "Password must be at least 8 characters.")
+  }
+  return t("signup.genericError", "Could not create your account right now. Try again in a moment.")
+}
+
 export default function SignupPage() {
   const { t } = useLocale()
   const router = useRouter()
@@ -44,6 +61,10 @@ export default function SignupPage() {
     e.preventDefault()
     setError(null)
 
+    if (!fullName.trim() || !clinicName.trim() || !email.trim() || !password || !confirmPassword) {
+      setError(t("signup.fieldsRequired", "Fill in your name, clinic, email, and password to continue."))
+      return
+    }
     if (password.length < 8) {
       setError(t("signup.passwordMin", "Password must be at least 8 characters."))
       return
@@ -69,7 +90,7 @@ export default function SignupPage() {
     })
 
     if (signUpError) {
-      setError(signUpError.message)
+      setError(mapSignupError(signUpError.message, t))
       setLoading(false)
       return
     }
@@ -130,7 +151,7 @@ export default function SignupPage() {
               </p>
             </div>
 
-            <form onSubmit={handleSignup} className="space-y-4" data-testid="signup-form">
+            <form onSubmit={handleSignup} className="space-y-4" data-testid="signup-form" noValidate>
               {error ? <AuthErrorAlert message={error} /> : null}
 
               <AuthField
