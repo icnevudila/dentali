@@ -18,10 +18,12 @@ import { DirectionalTransition } from "@/components/layout/DirectionalTransition
 import { CollapsibleBelowFold } from "@/components/layout/CollapsibleBelowFold"
 import { StickyActionBar } from "@/components/layout/StickyActionBar"
 import { MetricStrip } from "@/components/layout/MetricStrip"
-import { FlaskConical, Plus, CheckCircle2, Clock, XCircle, AlertCircle } from "lucide-react"
+import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
+import { FlaskConical, Plus, CheckCircle2, Clock, XCircle, AlertCircle, RefreshCw } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { EmptyState } from "@/components/ui/empty-state"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { NewLabCaseDialog } from "@/components/clinical/lab/NewLabCaseDialog"
@@ -81,13 +83,23 @@ export default function LabCasesPage() {
   const { activeBranch } = useBranch()
   const [cases, setCases] = React.useState<PatientWithLabCase[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
   const [dialogOpen, setDialogOpen] = React.useState(false)
 
   const loadCases = React.useCallback(async () => {
-    if (!activeBranch?.id) return
+    if (!activeBranch?.id) {
+      setCases([])
+      setError(null)
+      setLoading(false)
+      return
+    }
     setLoading(true)
-    const { data, error } = await fetchActiveLabCases(activeBranch.id)
-    if (error) toast.error(error)
+    setError(null)
+    const { data, error: loadError } = await fetchActiveLabCases(activeBranch.id)
+    if (loadError) {
+      setError(loadError)
+      toast.error(loadError)
+    }
     setCases(data)
     setLoading(false)
   }, [activeBranch])
@@ -100,6 +112,7 @@ export default function LabCasesPage() {
           if (exists) return prev
           return [created, ...prev]
         })
+        setError(null)
         setLoading(false)
       }
       await loadCases()
@@ -109,7 +122,7 @@ export default function LabCasesPage() {
 
   React.useEffect(() => {
     const id = window.setTimeout(() => {
-      loadCases()
+      void loadCases()
     }, 0)
     return () => window.clearTimeout(id)
   }, [loadCases])
@@ -148,9 +161,9 @@ export default function LabCasesPage() {
   )
 
   const handleStatus = async (id: string, status: LabCaseStatus) => {
-    const { error } = await updateLabCaseStatus(id, status)
-    if (error) {
-      toast.error(error)
+    const { error: statusError } = await updateLabCaseStatus(id, status)
+    if (statusError) {
+      toast.error(statusError)
       return
     }
     toast.success(
@@ -159,14 +172,16 @@ export default function LabCasesPage() {
         STATUS_LABEL[status]
       )
     )
-    loadCases()
+    void loadCases()
   }
 
   const handleCancel = async (id: string) => {
-    const { error } = await updateLabCaseStatus(id, "cancelled")
-    if (error) toast.error(error)
-    else loadCases()
+    const { error: cancelError } = await updateLabCaseStatus(id, "cancelled")
+    if (cancelError) toast.error(cancelError)
+    else void loadCases()
   }
+
+  const canCreate = Boolean(activeBranch?.id)
 
   return (
     <PermissionGate permission={PERMISSIONS.PATIENTS_READ}>
@@ -181,14 +196,19 @@ export default function LabCasesPage() {
           title={t("labcases.title", "Laboratory Cases")}
           description={t("labcases.description", "Track impressions, crowns, and external lab orders.")}
           actions={
-            <Button size="sm" className="hidden gap-2 md:inline-flex" onClick={() => setDialogOpen(true)}>
+            <Button
+              size="sm"
+              className="hidden gap-2 md:inline-flex"
+              onClick={() => setDialogOpen(true)}
+              disabled={!canCreate}
+            >
               <Plus className="h-4 w-4" />
               {t("labcases.new", "New Lab Case")}
             </Button>
           }
         />
 
-        {overdueCases.length > 0 && (
+        {overdueCases.length > 0 && !error ? (
           <div className="rounded-xl border border-red-200 bg-red-50/50 p-4 text-sm text-red-950 flex items-start gap-3 shadow-sm animate-fade-in">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
             <div className="flex-1 min-w-0">
@@ -213,29 +233,66 @@ export default function LabCasesPage() {
               </ul>
             </div>
           </div>
-        )}
+        ) : null}
 
         <StickyActionBar>
-          <Button className="h-11 w-full gap-2" onClick={() => setDialogOpen(true)}>
+          <Button
+            className="h-11 w-full gap-2"
+            onClick={() => setDialogOpen(true)}
+            disabled={!canCreate}
+          >
             <Plus className="h-4 w-4 shrink-0" />
             {t("labcases.new", "New Lab Case")}
           </Button>
         </StickyActionBar>
 
-        {loading ? (
-          <div className="py-12 text-center text-sm text-neutral-500 animate-pulse">
-            {t("labcases.loading", "Loading cases...")}
+        {!activeBranch?.id ? (
+          <EmptyState
+            icon={FlaskConical}
+            title={t("labcases.noBranchTitle", "Select a branch")}
+            description={t(
+              "labcases.noBranchHint",
+              "Choose an active clinic branch to track lab cases for that location."
+            )}
+            action={
+              <Button asChild size="sm" variant="outline">
+                <Link href="/settings/branches">{t("labcases.manageBranches", "Manage branches")}</Link>
+              </Button>
+            }
+          />
+        ) : loading ? (
+          <PageLoadingSkeleton variant="list" />
+        ) : error ? (
+          <div className="rounded-xl border border-red-200 bg-red-50/80 p-4">
+            <p className="text-sm font-medium text-red-800">
+              {t("labcases.loadErrorTitle", "Could not load lab cases")}
+            </p>
+            <p className="mt-1 text-sm text-red-700">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3 gap-1.5"
+              onClick={() => void loadCases()}
+            >
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+              {t("common.retry", "Retry")}
+            </Button>
           </div>
         ) : cases.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6 text-center py-16 text-neutral-500">
-              <FlaskConical className="h-10 w-10 mx-auto mb-3 text-neutral-300" />
-              <p className="font-medium text-neutral-800">{t("labcases.emptyTitle", "No active lab cases")}</p>
-              <p className="mt-1 text-sm text-neutral-500">
-                {t("labcases.emptyHint", "When you send an impression to an external lab, track it here.")}
-              </p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={FlaskConical}
+            title={t("labcases.emptyTitle", "No active lab cases")}
+            description={t(
+              "labcases.emptyHint",
+              "When you send an impression to an external lab, track it here."
+            )}
+            action={
+              <Button size="sm" className="gap-2" onClick={() => setDialogOpen(true)}>
+                <Plus className="h-4 w-4" aria-hidden />
+                {t("labcases.new", "New Lab Case")}
+              </Button>
+            }
+          />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {sortedCases.map((c) => {
@@ -287,7 +344,7 @@ export default function LabCasesPage() {
                       </Badge>
                     )}
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-2 text-xs bg-neutral-50 rounded-md p-2 border">
                     <div>
                       <p className="text-neutral-400 font-medium">{t("labcases.lab", "Lab")}</p>
