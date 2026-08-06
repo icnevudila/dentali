@@ -24,7 +24,7 @@ import { AlertCircle, Armchair, DoorClosed, Loader2, Plus, RotateCcw, UserSearch
 
 type PatientTableContext = "registry" | "daily"
 
-export type QueueRowAction = "start" | "finish"
+export type QueueRowAction = "start" | "finish" | "checkout"
 
 interface PatientTableProps {
   patients: PatientRecord[]
@@ -36,6 +36,8 @@ interface PatientTableProps {
   total: number
   onPageChange: (page: number) => void
   searchQuery?: string
+  /** When set (dentist board), empty copy distinguishes filter vs truly empty queue. */
+  boardFilter?: string | null
   noBranch?: boolean
   chartFindingsByPatient?: Record<string, ToothFinding[]>
   context?: PatientTableContext
@@ -50,6 +52,7 @@ const START_TREATMENT_STATUSES: QueueStatus[] = ["waiting", "ready", "now_servin
 
 function queueStatusBadgeVariant(status: QueueStatus) {
   if (status === "in_chair") return "success" as const
+  if (status === "served") return "success" as const
   if (status === "now_serving") return "warning" as const
   if (status === "ready") return "info" as const
   return "default" as const
@@ -65,8 +68,10 @@ function queueStatusLabel(t: (key: string, fallback: string) => string, status: 
       return t("dentist.statusReady", "Ready")
     case "waiting":
       return t("dentist.statusWaiting", "Waiting")
-    default:
-      return status.replace("_", " ")
+    case "served":
+      return t("dentist.statusTreatmentDone", "Treatment done")
+    case "cancelled":
+      return t("dentist.statusCancelled", "Cancelled")
   }
 }
 
@@ -156,6 +161,7 @@ export function PatientTable({
   total,
   onPageChange,
   searchQuery,
+  boardFilter = null,
   noBranch,
   chartFindingsByPatient = {},
   context = "registry",
@@ -170,6 +176,7 @@ export function PatientTable({
   const isDaily = context === "daily"
   const { hasPermission, loading: permissionLoading } = usePermission()
   const canWritePatients = !permissionLoading && hasPermission(PERMISSIONS.PATIENTS_WRITE)
+  const isBoardFiltered = Boolean(boardFilter && boardFilter !== "all")
 
   const openPatient = (patientId: string) => {
     startTransition(() => {
@@ -231,9 +238,11 @@ export function PatientTable({
         : t("patients.emptySearch", "No patients match your search.")
       : hasActiveFilters
         ? t("patients.emptyFilters", "No patients match these filters.")
-        : isDaily
-          ? t("dentist.empty", "Nobody in the chair queue right now.")
-          : t("patients.empty", "No patients found.")
+        : isDaily && isBoardFiltered
+          ? t("dentist.emptyFilter", "No patients in this stage right now.")
+          : isDaily
+            ? t("dentist.empty", "Nobody in the chair queue right now.")
+            : t("patients.empty", "No patients found.")
     const emptyHint = hasSearch
       ? isDaily
         ? t("dentist.emptySearchHint", "Try a queue code or patient name.")
@@ -243,9 +252,17 @@ export function PatientTable({
             "patients.emptyFiltersHint",
             "Archived and inactive patients stay out of the default Active list. Reset filters or switch status."
           )
-        : isDaily
-          ? t("dentist.emptyHint", "Checked-in patients appear here automatically.")
-          : t("patients.emptyHint", "Register a new patient to get started.")
+        : isDaily && isBoardFiltered
+          ? t(
+              "dentist.emptyFilterHint",
+              "Try All in clinic, or open Queue if the patient has not checked in yet."
+            )
+          : isDaily
+            ? t(
+                "dentist.emptyHint",
+                "Checked-in patients appear here after Queue check-in. Start treatment, then Finish visit from the row."
+              )
+            : t("patients.emptyHint", "Register a new patient to get started.")
 
     return (
       <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/60 px-6 py-14 text-center animate-fade-rise">
@@ -258,6 +275,13 @@ export function PatientTable({
           <Button type="button" variant="outline" size="sm" className="mt-5 gap-2" onClick={onClearFilters}>
             <RotateCcw className="h-4 w-4" />
             {t("patients.filtersReset", "Reset filters")}
+          </Button>
+        ) : null}
+        {isDaily && !isFiltered ? (
+          <Button asChild size="sm" variant="outline" className="mt-5 gap-2">
+            <Link href="/queue">
+              {t("dentist.openQueueArrivals", "Open Queue check-in")}
+            </Link>
           </Button>
         ) : null}
         {!isFiltered && !isDaily && canWritePatients ? (
@@ -376,7 +400,7 @@ export function PatientTable({
                     <div className="hidden items-center gap-2 lg:flex" title={t("patients.colChart", "Chart")}>
                       <MiniOdontogram size="sm" findings={chartFindingsByPatient[patient.id] ?? []} />
                     </div>
-                    {isDaily && onQueueAction && queue && queue.status !== "served" && queue.status !== "cancelled" ? (
+                    {isDaily && onQueueAction && queue && queue.status !== "cancelled" ? (
                       <QueueRowActionButton
                         entry={queue}
                         busy={queueActionBusyId === queue.id}
@@ -443,28 +467,45 @@ function QueueRowActionButton({
   t: (key: string, fallback: string) => string
 }) {
   const isInChair = entry.status === "in_chair"
+  const isServed = entry.status === "served"
   const canStart = START_TREATMENT_STATUSES.includes(entry.status)
-  if (!isInChair && !canStart) return null
+  if (!isInChair && !canStart && !isServed) return null
 
-  const action: QueueRowAction = isInChair ? "finish" : "start"
-  const label = isInChair
+  const action: QueueRowAction = isServed ? "checkout" : isInChair ? "finish" : "start"
+  const label = isServed || isInChair
     ? t("dentist.startFinishVisit", "Finish visit")
     : t("dentist.startTreatment", "Start treatment")
-  const Icon = isInChair ? DoorClosed : Armchair
+  const Icon = isServed || isInChair ? DoorClosed : Armchair
+  const emphasizeFinish = isInChair || isServed
 
   return (
     <Button
       type="button"
       size="sm"
-      variant={isInChair ? "default" : "outline"}
+      variant={emphasizeFinish ? "default" : "outline"}
       disabled={busy}
+      aria-label={label}
+      title={
+        isServed
+          ? t(
+              "dentist.finishVisitServedHint",
+              "Treatment is done — confirm note, billing, and close the visit"
+            )
+          : isInChair
+            ? t(
+                "dentist.finishVisitChairHint",
+                "Mark treatment done and open Finish visit checklist"
+              )
+            : t("dentist.startTreatment", "Start treatment")
+      }
       className={cn(
         "h-8 shrink-0 gap-1.5 px-2.5 text-xs",
-        isInChair && "bg-emerald-600 hover:bg-emerald-700"
+        emphasizeFinish && "bg-emerald-600 hover:bg-emerald-700"
       )}
       onClick={(e) => {
         e.preventDefault()
         e.stopPropagation()
+        if (busy) return
         onAction(entry, action)
       }}
     >

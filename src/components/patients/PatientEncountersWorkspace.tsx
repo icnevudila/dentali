@@ -506,7 +506,12 @@ export function PatientEncountersWorkspace({
             {t("common.loading", "Loading…")}
           </p>
         ) : error ? (
-          <p className="text-sm text-red-700">{error}</p>
+          <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 text-center animate-fade-rise">
+            <p className="text-sm text-red-700">{error}</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => void loadList()}>
+              {t("common.retry", "Retry")}
+            </Button>
+          </div>
         ) : encounters.length === 0 ? (
           <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50 px-4 py-8 text-center">
             <UserCheck className="h-8 w-8 mx-auto text-neutral-300 mb-2" />

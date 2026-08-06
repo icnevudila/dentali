@@ -835,10 +835,18 @@ export const messagesEnPh: MessageTree = {
     listLoading: "Chair queue",
     empty: "Nobody in the chair queue right now.",
     emptyFilter: "No patients in this stage right now.",
-    emptyHint: "Checked-in patients appear here automatically.",
+    emptyHint:
+      "Checked-in patients appear here after Queue check-in. Start treatment, then Finish visit from the row.",
+    emptyFilterHint:
+      "Try All in clinic, or open Queue if the patient has not checked in yet.",
     emptySearch: "No patients match your search.",
     emptySearchHint: "Try a queue code or patient name.",
     unknownPatient: "Patient",
+    statusTreatmentDone: "Treatment done",
+    statusCancelled: "Cancelled",
+    finishVisitServedHint:
+      "Treatment is done — confirm note, billing, and close the visit",
+    finishVisitChairHint: "Mark treatment done and open Finish visit checklist",
     patientSingular: "patient",
     patientPlural: "patients",
     inQueue: "in queue",
@@ -993,6 +1001,9 @@ export const messagesEnPh: MessageTree = {
     encounterClosed: "Visit closed",
     checkoutTitle: "Finish visit",
     visitComplete: "treatment done — close the visit",
+    checkoutNoOpenVisit:
+      "No open visit found to close. Open Patient Visits if this was already finished.",
+    checkoutResolvingVisit: "Finding today’s open visit…",
     checkoutSoftGateShort: "Missing items stay in closeout; continue if needed.",
     checkoutSoftGateHint:
       "Soft gate: if notes, billing, or payment are not ready, finish urgent clinic work first and return here. Exceptions stay visible in closeout and audit.",
@@ -2344,10 +2355,18 @@ export const messagesTr: MessageTree = {
     listLoading: "Sandalye sırası",
     empty: "Şu an sandalye sırasında kimse yok.",
     emptyFilter: "Bu aşamada hasta yok.",
-    emptyHint: "Check-in yapılan hastalar otomatik burada görünür.",
+    emptyHint:
+      "Check-in yapılan hastalar burada görünür. Satırdan tedaviye başlayın, sonra Ziyareti bitir.",
+    emptyFilterHint:
+      "Tüm klinik veya henüz check-in yoksa Queue’yu deneyin.",
     emptySearch: "Aramanızla eşleşen hasta yok.",
     emptySearchHint: "Sıra kodu veya hasta adı deneyin.",
     unknownPatient: "Hasta",
+    statusTreatmentDone: "Tedavi bitti",
+    statusCancelled: "İptal",
+    finishVisitServedHint:
+      "Tedavi bitti — not, fatura ve ziyaret kapanışını doğrulayın",
+    finishVisitChairHint: "Tedaviyi bitir olarak işaretle ve Ziyareti bitir listesini aç",
     patientSingular: "hasta",
     patientPlural: "hasta",
     inQueue: "sırada",
@@ -2502,6 +2521,9 @@ export const messagesTr: MessageTree = {
     encounterClosed: "Ziyaret kapatıldı",
     checkoutTitle: "Ziyareti bitir",
     visitComplete: "tedavi bitti — ziyareti kapatın",
+    checkoutNoOpenVisit:
+      "Kapatılacak açık ziyaret bulunamadı. Zaten bitirildiyse Hasta Ziyaretleri’ni açın.",
+    checkoutResolvingVisit: "Bugünkü açık ziyaret aranıyor…",
     checkoutSoftGateShort: "Eksikler closeout'ta kalır; gerekiyorsa devam edin.",
     checkoutSoftGateHint:
       "Soft gate: not, fatura veya ödeme hazır değilse önce acil klinik işi bitirin ve buraya geri dönün. İstisnalar closeout ve denetim kaydında görünür kalır.",

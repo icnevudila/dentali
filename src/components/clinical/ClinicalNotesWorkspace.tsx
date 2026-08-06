@@ -22,6 +22,7 @@ import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useAuth } from "@/hooks/use-auth"
 import { useBranch } from "@/hooks/use-branch"
+import { useLocale } from "@/hooks/use-locale"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { logAuditEvent } from "@/lib/audit/audit-service"
 import {
@@ -243,6 +244,7 @@ export function ClinicalNotesWorkspace({
 }) {
   const { user } = useAuth()
   const { activeBranch } = useBranch()
+  const { t } = useLocale()
   const [patientName, setPatientName] = React.useState(patientNameProp ?? "")
   const [timeline, setTimeline] = React.useState<TimelineEvent[]>([])
   const [selectedNote, setSelectedNote] = React.useState<ClinicalNote | null>(null)
@@ -447,8 +449,26 @@ export function ClinicalNotesWorkspace({
             <Card>
               <CardContent className="py-12 text-center text-neutral-500">
                 <Stethoscope className="h-10 w-10 mx-auto mb-3 text-neutral-300" />
-                <p>No timeline events yet.</p>
-                <p className="text-sm mt-1">Create a clinical note or book an appointment.</p>
+                <p className="font-medium text-neutral-700">
+                  {t("notes.emptyTimeline", "No clinical notes or visit events yet.")}
+                </p>
+                <p className="text-sm mt-1">
+                  {t(
+                    "notes.emptyTimelineHint",
+                    "Create a clinical note for today’s visit, or finish chart work first."
+                  )}
+                </p>
+                <PermissionGate permission={PERMISSIONS.DENTAL_CHART_WRITE}>
+                  <Button
+                    size="sm"
+                    className="mt-4 gap-2"
+                    onClick={handleNewNote}
+                    disabled={creating || !activeBranch}
+                  >
+                    <Plus className="h-4 w-4" />
+                    {creating ? t("notes.creating", "Creating…") : t("notes.newNote", "New Note")}
+                  </Button>
+                </PermissionGate>
               </CardContent>
             </Card>
           ) : (
@@ -519,7 +539,10 @@ export function ClinicalNotesWorkspace({
             <Card className="border-dashed h-full min-h-[280px]">
               <CardContent className="py-12 sm:py-16 text-center text-neutral-500 text-sm flex flex-col items-center justify-center h-full">
                 <FileText className="h-8 w-8 text-neutral-300 mb-3" />
-                Select a clinical note from the timeline to view or edit.
+                {t(
+                  "notes.selectPrompt",
+                  "Select a clinical note from the timeline to view or edit."
+                )}
               </CardContent>
             </Card>
           )}

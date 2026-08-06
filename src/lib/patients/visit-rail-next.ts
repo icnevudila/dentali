@@ -23,15 +23,24 @@ function pathMatchesStep(pathname: string, step: ClinicalVisitStep): boolean {
     return true
   }
   if (step.href.includes("tab=consents") && pathname.includes("/consent")) return true
-  if (step.href.includes("tab=clinical-notes") && pathname.includes("/clinical-notes")) {
+  if (
+    (step.href.includes("tab=clinical-notes") || step.id === "clinical-note") &&
+    (pathname.includes("/notes") || pathname.includes("/clinical-notes"))
+  ) {
     return true
   }
-  if (step.href.includes("tab=dental-chart") && pathname.includes("/chart")) return true
+  if (
+    (step.href.includes("tab=dental-chart") || step.id === "chart") &&
+    pathname.includes("/chart")
+  ) {
+    return true
+  }
   if (step.id === "treatment-plan" && pathname.includes("/treatment-plan")) return true
   if ((step.id === "invoice" || step.id === "payment") && pathname.startsWith("/billing")) {
     return true
   }
-  if (step.id === "discharge" && pathname.includes("/patients/") && !pathname.includes("/")) {
+  // Profile root only (not nested clinical routes)
+  if (step.id === "discharge" && /\/patients\/[^/]+\/?$/.test(pathname)) {
     return true
   }
   return false

@@ -15,9 +15,10 @@ import {
   ChevronRight,
 } from "lucide-react"
 import { useLocale } from "@/hooks/use-locale"
+import { useBranch } from "@/hooks/use-branch"
 import { Button } from "@/components/ui/button"
 import type { PatientBillingGate } from "@/lib/billing/invoice-service"
-import { closePatientEncounter } from "@/lib/clinical/encounter-service"
+import { closePatientEncounter, fetchActiveEncounter } from "@/lib/clinical/encounter-service"
 import { notify } from "@/lib/ui/notify"
 import { cn } from "@/lib/utils"
 
@@ -103,21 +104,54 @@ export function VisitCheckoutWizard({
   patientId,
   patientName,
   billingGate,
-  encounterId,
+  encounterId: encounterIdProp,
 }: VisitCheckoutWizardProps) {
   const { t } = useLocale()
+  const { activeBranch } = useBranch()
   const [closingEncounter, setClosingEncounter] = React.useState(false)
   const [encounterClosed, setEncounterClosed] = React.useState(false)
+  const [encounterId, setEncounterId] = React.useState<string | null>(encounterIdProp ?? null)
+  const [resolvingEncounter, setResolvingEncounter] = React.useState(false)
+  const [resolveError, setResolveError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     if (!open) return
     setEncounterClosed(false)
+    setEncounterId(encounterIdProp ?? null)
+    setResolveError(null)
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
     return () => {
       document.body.style.overflow = prevOverflow
     }
-  }, [open])
+  }, [open, encounterIdProp])
+
+  React.useEffect(() => {
+    if (!open || encounterIdProp || !activeBranch?.id) return
+    let cancelled = false
+    setResolvingEncounter(true)
+    void fetchActiveEncounter(patientId, activeBranch.id).then(({ data, error }) => {
+      if (cancelled) return
+      setResolvingEncounter(false)
+      if (error) {
+        setResolveError(error)
+        return
+      }
+      if (data?.encounter.id) {
+        setEncounterId(data.encounter.id)
+        return
+      }
+      setResolveError(
+        t(
+          "queue.checkoutNoOpenVisit",
+          "No open visit found to close. Open Patient Visits if this was already finished."
+        )
+      )
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [open, encounterIdProp, activeBranch?.id, patientId, t])
 
   const handleCloseEncounter = async () => {
     if (!encounterId || closingEncounter) return
@@ -269,6 +303,27 @@ export function VisitCheckoutWizard({
             actionLabel={t("queue.collectPayment", "Collect payment")}
             onNavigate={dismiss}
           />
+
+          {resolvingEncounter ? (
+            <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50/70 px-3 py-3 text-sm text-neutral-600">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              {t("queue.checkoutResolvingVisit", "Finding today’s open visit…")}
+            </div>
+          ) : null}
+
+          {!resolvingEncounter && resolveError && !encounterId ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-900">
+              <p>{resolveError}</p>
+              <Link
+                href={encounterHref}
+                onClick={dismiss}
+                className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary-700 hover:text-primary-800"
+              >
+                {t("queue.viewEncounterRecord", "View visit record")}
+                <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+              </Link>
+            </div>
+          ) : null}
 
           {encounterId ? (
             <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-3">
