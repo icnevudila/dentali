@@ -1,4 +1,4 @@
-export type PatientStatusFilter = "all" | "active" | "inactive"
+export type PatientStatusFilter = "all" | "active" | "inactive" | "archived"
 
 export type PatientVisitFilter = "all" | "today" | "week" | "month" | "never" | "custom"
 
@@ -92,7 +92,7 @@ export function parsePatientListFilters(params: URLSearchParams): PatientListFil
 
   return {
     status:
-      status === "all" || status === "inactive" || status === "active"
+      status === "all" || status === "inactive" || status === "active" || status === "archived"
         ? status
         : DEFAULT_PATIENT_LIST_FILTERS.status,
     visit:

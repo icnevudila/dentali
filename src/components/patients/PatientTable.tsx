@@ -18,7 +18,9 @@ import { CompletionRing } from "@/components/visual/CompletionRing"
 import { useLocale } from "@/hooks/use-locale"
 import { formatDate } from "@/lib/i18n/translate"
 import { cn } from "@/lib/utils"
-import { AlertCircle, Armchair, DoorClosed, Loader2, Plus, UserSearch } from "lucide-react"
+import { usePermission } from "@/hooks/use-permission"
+import { PERMISSIONS } from "@/lib/auth/permissions"
+import { AlertCircle, Armchair, DoorClosed, Loader2, Plus, RotateCcw, UserSearch } from "lucide-react"
 
 type PatientTableContext = "registry" | "daily"
 
@@ -40,6 +42,8 @@ interface PatientTableProps {
   queueByPatientId?: Record<string, QueueEntry>
   onQueueAction?: (entry: QueueEntry, action: QueueRowAction) => void
   queueActionBusyId?: string | null
+  hasActiveFilters?: boolean
+  onClearFilters?: () => void
 }
 
 const START_TREATMENT_STATUSES: QueueStatus[] = ["waiting", "ready", "now_serving"]
@@ -158,10 +162,14 @@ export function PatientTable({
   queueByPatientId = {},
   onQueueAction,
   queueActionBusyId,
+  hasActiveFilters = false,
+  onClearFilters,
 }: PatientTableProps) {
   const { t, locale } = useLocale()
   const router = useRouter()
   const isDaily = context === "daily"
+  const { hasPermission, loading: permissionLoading } = usePermission()
+  const canWritePatients = !permissionLoading && hasPermission(PERMISSIONS.PATIENTS_WRITE)
 
   const openPatient = (patientId: string) => {
     startTransition(() => {
@@ -215,31 +223,44 @@ export function PatientTable({
   }
 
   if (patients.length === 0) {
-    const isFiltered = Boolean(searchQuery?.trim())
+    const hasSearch = Boolean(searchQuery?.trim())
+    const isFiltered = hasSearch || hasActiveFilters
+    const emptyTitle = hasSearch
+      ? isDaily
+        ? t("dentist.emptySearch", "No patients match your search.")
+        : t("patients.emptySearch", "No patients match your search.")
+      : hasActiveFilters
+        ? t("patients.emptyFilters", "No patients match these filters.")
+        : isDaily
+          ? t("dentist.empty", "Nobody in the chair queue right now.")
+          : t("patients.empty", "No patients found.")
+    const emptyHint = hasSearch
+      ? isDaily
+        ? t("dentist.emptySearchHint", "Try a queue code or patient name.")
+        : t("patients.emptySearchHint", "Try a different name or phone number.")
+      : hasActiveFilters
+        ? t(
+            "patients.emptyFiltersHint",
+            "Archived and inactive patients stay out of the default Active list. Reset filters or switch status."
+          )
+        : isDaily
+          ? t("dentist.emptyHint", "Checked-in patients appear here automatically.")
+          : t("patients.emptyHint", "Register a new patient to get started.")
+
     return (
       <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/60 px-6 py-14 text-center animate-fade-rise">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-100 text-neutral-400">
           <UserSearch className="h-6 w-6" aria-hidden />
         </div>
-        <p className="mt-4 text-sm font-medium text-neutral-700">
-          {isFiltered
-            ? isDaily
-              ? t("dentist.emptySearch", "No patients match your search.")
-              : t("patients.emptySearch", "No patients match your search.")
-            : isDaily
-              ? t("dentist.empty", "Nobody in the chair queue right now.")
-              : t("patients.empty", "No patients found.")}
-        </p>
-        <p className="mt-1 text-sm text-neutral-500">
-          {isFiltered
-            ? isDaily
-              ? t("dentist.emptySearchHint", "Try a queue code or patient name.")
-              : t("patients.emptySearchHint", "Try a different name or phone number.")
-            : isDaily
-              ? t("dentist.emptyHint", "Checked-in patients appear here automatically.")
-              : t("patients.emptyHint", "Register a new patient to get started.")}
-        </p>
-        {!isFiltered && !isDaily ? (
+        <p className="mt-4 text-sm font-medium text-neutral-700">{emptyTitle}</p>
+        <p className="mt-1 text-sm text-neutral-500">{emptyHint}</p>
+        {isFiltered && onClearFilters ? (
+          <Button type="button" variant="outline" size="sm" className="mt-5 gap-2" onClick={onClearFilters}>
+            <RotateCcw className="h-4 w-4" />
+            {t("patients.filtersReset", "Reset filters")}
+          </Button>
+        ) : null}
+        {!isFiltered && !isDaily && canWritePatients ? (
           <Button asChild size="sm" className="mt-5 gap-2">
             <Link href="/patients/new">
               <Plus className="h-4 w-4" />
@@ -272,7 +293,13 @@ export function PatientTable({
             </Badge>
           ) : (
             <Badge
-              variant={patient.status === "active" ? "success" : "default"}
+              variant={
+                patient.status === "archived"
+                  ? "warning"
+                  : patient.status === "active"
+                    ? "success"
+                    : "default"
+              }
               className="shrink-0 font-normal"
             >
               {patient.status}

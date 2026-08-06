@@ -13,6 +13,7 @@ import { searchPatients } from "@/lib/patients/patient-service"
 import { fetchOdontogramFindingsForPatients } from "@/lib/odontogram/dental-chart-service"
 import type { ToothFinding } from "@/lib/types/dental"
 import {
+  countActiveFilters,
   DEFAULT_PATIENT_LIST_FILTERS,
   filtersToSearchParams,
   parsePatientListFilters,
@@ -20,6 +21,7 @@ import {
 } from "@/lib/patients/patient-list-filters"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
+import { usePermission } from "@/hooks/use-permission"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/layout/PageHeader"
@@ -83,6 +85,8 @@ function PatientsPageContent() {
   const searchParams = useSearchParams()
   const { activeBranch, hasActiveBranch } = useBranch()
   const { t } = useLocale()
+  const { hasPermission, loading: permissionLoading } = usePermission()
+  const canWritePatients = !permissionLoading && hasPermission(PERMISSIONS.PATIENTS_WRITE)
   const searchRef = React.useRef<HTMLInputElement>(null)
 
   const urlQuery = searchParams.get("q") ?? ""
@@ -153,6 +157,14 @@ function PatientsPageContent() {
     setPage(1)
     syncUrl(debouncedQuery, 1, next)
   }
+
+  const handleClearRegistryFilters = React.useCallback(() => {
+    setQuery("")
+    setFilters(DEFAULT_PATIENT_LIST_FILTERS)
+    setPage(1)
+    syncUrl("", 1, DEFAULT_PATIENT_LIST_FILTERS)
+  }, [syncUrl])
+  const registryFiltersActive = countActiveFilters(filters) > 0
 
   const loadPatients = React.useCallback(async () => {
     if (!activeBranch) {
@@ -300,23 +312,27 @@ function PatientsPageContent() {
               "Manage patient records, demographics, and clinical files."
             )}
             actions={
-              <Button asChild size="sm" className="hidden gap-2 shadow-sm md:inline-flex">
-                <Link href="/patients/new" transitionTypes={NAV_FORWARD_TRANSITION}>
-                  <Plus className="h-4 w-4" />
-                  {t("patients.newPatient", "New Patient")}
-                </Link>
-              </Button>
+              canWritePatients ? (
+                <Button asChild size="sm" className="hidden gap-2 shadow-sm md:inline-flex">
+                  <Link href="/patients/new" transitionTypes={NAV_FORWARD_TRANSITION}>
+                    <Plus className="h-4 w-4" />
+                    {t("patients.newPatient", "New Patient")}
+                  </Link>
+                </Button>
+              ) : null
             }
           />
 
-          <StickyActionBar>
-            <Button asChild className="h-11 w-full gap-2">
-              <Link href="/patients/new" transitionTypes={NAV_FORWARD_TRANSITION}>
-                <Plus className="h-4 w-4 shrink-0" />
-                {t("patients.newPatient", "New Patient")}
-              </Link>
-            </Button>
-          </StickyActionBar>
+          {canWritePatients ? (
+            <StickyActionBar>
+              <Button asChild className="h-11 w-full gap-2">
+                <Link href="/patients/new" transitionTypes={NAV_FORWARD_TRANSITION}>
+                  <Plus className="h-4 w-4 shrink-0" />
+                  {t("patients.newPatient", "New Patient")}
+                </Link>
+              </Button>
+            </StickyActionBar>
+          ) : null}
 
           {activeBranch ? (
             <div className="flex flex-wrap items-center gap-2 animate-fade-rise">
@@ -414,6 +430,8 @@ function PatientsPageContent() {
                 searchQuery={debouncedQuery}
                 noBranch={!hasActiveBranch}
                 chartFindingsByPatient={chartFindingsByPatient}
+                hasActiveFilters={registryFiltersActive}
+                onClearFilters={handleClearRegistryFilters}
               />
             </div>
           </div>
