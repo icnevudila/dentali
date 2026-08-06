@@ -24,6 +24,7 @@ import {
   Timer,
   UserPlus,
   Users,
+  Wallet,
 } from "lucide-react"
 import { PERMISSIONS, type PermissionKey } from "@/lib/auth/permissions"
 
@@ -51,7 +52,11 @@ export type AppNavGroup = {
 function billingInvoicesActive(pathname: string) {
   if (pathname === "/billing") return true
   if (!pathname.startsWith("/billing/")) return false
-  return !pathname.startsWith("/billing/hmo") && !pathname.startsWith("/billing/philhealth")
+  return (
+    !pathname.startsWith("/billing/hmo") &&
+    !pathname.startsWith("/billing/philhealth") &&
+    !pathname.startsWith("/billing/collections")
+  )
 }
 
 function settingsHubActive(pathname: string) {
@@ -211,6 +216,13 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         icon: Shield,
         permission: PERMISSIONS.BILLING_READ,
       },
+      {
+        nameKey: "nav.collections",
+        fallback: "Collections",
+        href: "/billing/collections",
+        icon: Wallet,
+        permission: PERMISSIONS.BILLING_READ,
+      },
     ],
   },
   {
@@ -334,6 +346,12 @@ export const BILLING_SUB_NAV = [
     key: "billing.navPhilhealth",
     fallback: "PhilHealth",
     href: "/billing/philhealth",
+    permission: PERMISSIONS.BILLING_READ,
+  },
+  {
+    key: "billing.navCollections",
+    fallback: "Collections",
+    href: "/billing/collections",
     permission: PERMISSIONS.BILLING_READ,
   },
 ] as const
