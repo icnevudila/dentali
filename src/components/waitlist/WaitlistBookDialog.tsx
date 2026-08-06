@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
+import Link from "next/link"
 import { Loader2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,6 +15,7 @@ import {
   manilaScheduledAtIso,
   pickDefaultSlotTime,
 } from "@/lib/appointments/appointment-slots"
+import { toDateKey } from "@/lib/appointments/week-calendar"
 import type { AppointmentSlot } from "@/lib/appointments/provider-availability-service"
 import { AppointmentSlotButtons } from "@/components/appointments/AppointmentSlotButtons"
 import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
@@ -69,7 +71,7 @@ export function WaitlistBookDialog({
   React.useEffect(() => {
     if (!entry) return
     const id = window.setTimeout(() => {
-      setDate(entry.preferred_date ?? "")
+      setDate(entry.preferred_date ?? toDateKey(new Date()))
       setTime(entry.preferred_time_start?.slice(0, 5) ?? "")
       setPurpose(entry.notes ?? "")
     }, 0)
@@ -201,12 +203,31 @@ export function WaitlistBookDialog({
                 className="h-10 w-full rounded-md border border-neutral-300 px-3 text-sm"
                 required
               >
-                {providers.map((p) => (
-                  <option key={p.profile_id} value={p.profile_id}>
-                    {p.full_name ?? p.profile_id}
-                  </option>
-                ))}
+                {providers.length === 0 ? (
+                  <option value="">{t("appointments.noDentists", "No dentists for this branch")}</option>
+                ) : (
+                  providers.map((p) => (
+                    <option key={p.profile_id} value={p.profile_id}>
+                      {p.full_name ?? p.profile_id}
+                    </option>
+                  ))
+                )}
               </select>
+              {providers.length === 0 ? (
+                <div className="mt-1 space-y-1">
+                  <p className="text-[11px] font-medium text-amber-700">
+                    {t(
+                      "appointments.noDoctorsAssigned",
+                      "No doctors assigned to this branch yet."
+                    )}
+                  </p>
+                  <Button type="button" variant="outline" className="h-7 px-2 text-[10px]" asChild>
+                    <Link href="/settings/staff">
+                      {t("appointments.assignDentist", "Assign dentist in staff settings")}
+                    </Link>
+                  </Button>
+                </div>
+              ) : null}
             </div>
             <div className="space-y-1">
               <label className="text-xs font-medium">{t("appointments.date", "Date")}</label>
@@ -242,7 +263,7 @@ export function WaitlistBookDialog({
           </div>
           <div className="shrink-0 border-t border-neutral-200 bg-white p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:px-6">
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button className="h-11 w-full sm:w-auto" type="submit" disabled={saving || !time || billingBlocked}>
+              <Button className="h-11 w-full sm:w-auto" type="submit" disabled={saving || !time || !providerId || providers.length === 0 || billingBlocked}>
                 {saving ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />

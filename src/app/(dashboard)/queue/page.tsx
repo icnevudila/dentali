@@ -1680,6 +1680,7 @@ function QueuePageContent() {
                 highlightAppointmentId={highlightAppointmentId}
                 apptCheckInId={apptCheckInId}
                 onArrivalCheckIn={handleAppointmentCheckIn}
+                onPatientArrival={isToday ? openCheckInModal : undefined}
                 branchId={activeBranch.id}
                 actionId={actionId}
                 onAction={handleAction}

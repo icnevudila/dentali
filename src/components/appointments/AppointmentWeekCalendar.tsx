@@ -636,7 +636,7 @@ export function AppointmentWeekCalendar({
                               className="h-8 gap-1 px-2 text-primary-700"
                               asChild
                             >
-                              <Link href="/queue" title={t("appointments.openQueueCheckIn", "Open Queue to check in")}>
+                              <Link href={`/queue?focus=checkin&appointment=${appt.id}`} title={t("appointments.openQueueCheckIn", "Open Queue to check in")}>
                                 <UserCheck className="h-3.5 w-3.5" />
                                 {t("queue.title", "Queue")}
                               </Link>
@@ -857,7 +857,7 @@ export function AppointmentWeekCalendar({
 
                       {appt.status === "checked_in" && onCheckIn ? (
                         <Button size="sm" variant="outline" className="h-8" asChild>
-                          <Link href="/queue">{t("appointments.openQueue", "Open queue")}</Link>
+                          <Link href={`/queue?focus=waiting&appointment=${appt.id}`}>{t("appointments.openQueue", "Open queue")}</Link>
                         </Button>
                       ) : null}
                       
@@ -936,7 +936,7 @@ export function AppointmentWeekCalendar({
                             asChild
                             title={t("appointments.openQueueCheckIn", "Open Queue to check in")}
                           >
-                            <Link href="/queue">
+                            <Link href={`/queue?focus=checkin&appointment=${appt.id}`}>
                               <UserCheck className="h-4 w-4" />
                             </Link>
                           </Button>

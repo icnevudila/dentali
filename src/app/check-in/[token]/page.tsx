@@ -91,6 +91,9 @@ export default function PublicCheckInPage() {
         <QrCode className="mx-auto h-10 w-10 text-neutral-400" aria-hidden />
         <h1 className="text-lg font-semibold text-neutral-900">Check-in unavailable</h1>
         <p className="text-sm text-neutral-600">{error ?? ERROR_COPY.invalid}</p>
+        <p className="text-xs text-neutral-500">
+          Please see the front desk — they can check you in on the queue board.
+        </p>
       </main>
     )
   }

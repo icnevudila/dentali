@@ -342,11 +342,11 @@ export default function WaitlistPage() {
                       ? t("waitlist.emptyActiveHint", "Each row shows urgency, contact progress, and quick actions.")
                       : t("waitlist.emptyHistoryHint", "Booked, cancelled, and expired entries appear here.")}
                   </p>
-                  {tab === "active" && (
+                  {tab === "active" && canWriteAppointments ? (
                     <Button variant="outline" className="mt-4 gap-2" onClick={() => setShowAdd(true)}>
                       <Plus className="h-4 w-4" /> {t("waitlist.addFirst", "Add first entry")}
                     </Button>
-                  )}
+                  ) : null}
                 </div>
                 {tab === "active" ? (
                   <div className="mt-12 mx-auto max-w-xl rounded-xl border border-dashed border-neutral-200 bg-neutral-50/80 p-4 pointer-events-none select-none">
