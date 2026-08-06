@@ -236,12 +236,12 @@ export function buildMedicalCertificatePrintHtml(data: MedicalCertificateData): 
 
   <div class="block">
     <strong>Clinical findings / diagnosis</strong>
-    <p>${escapeHtml(data.diagnosis || "Dental examination completed. No acute contraindication noted.")}</p>
+    <p>${escapeHtml(data.diagnosis.trim() || "—")}</p>
   </div>
 
   <div class="block">
     <strong>Recommendation</strong>
-    <p>${escapeHtml(data.recommendation || "Patient may resume normal activities as tolerated.")}${restLine}</p>
+    <p>${escapeHtml(data.recommendation.trim() || "—")}${restLine}</p>
   </div>
 
   ${data.remarks ? `<div class="block"><strong>Remarks</strong><p>${escapeHtml(data.remarks)}</p></div>` : ""}
