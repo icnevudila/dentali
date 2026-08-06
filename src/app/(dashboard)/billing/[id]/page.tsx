@@ -954,13 +954,22 @@ export default function InvoiceDetailPage() {
                             </a>
                           </Button>
                         ) : null}
-                        <Button
-                          size="sm"
-                          disabled={!!gatewayLoading}
-                          onClick={() => handleCompleteIntent(intent.id)}
-                        >
-                          {gatewayLoading === intent.id ? "Confirming…" : "Mark paid"}
-                        </Button>
+                        {intent.mode === "live" ? (
+                          <p className="text-xs text-neutral-500 max-w-[14rem]">
+                            {t(
+                              "billing.liveAwaitWebhook",
+                              "Live checkout — payment completes automatically after PayMongo confirms."
+                            )}
+                          </p>
+                        ) : (
+                          <Button
+                            size="sm"
+                            disabled={!!gatewayLoading}
+                            onClick={() => handleCompleteIntent(intent.id)}
+                          >
+                            {gatewayLoading === intent.id ? "Confirming…" : "Mark paid"}
+                          </Button>
+                        )}
                       </div>
                     </li>
                   ))}

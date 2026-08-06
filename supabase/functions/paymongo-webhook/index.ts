@@ -82,13 +82,17 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
 
-    const { data, error } = await supabaseAdmin.rpc("complete_payment_intent_by_ref", {
+    // Service-role RPC: writes ledger without auth.uid / staff permissions.
+    // Do not call staff-facing record_invoice_payment from this path.
+    const { data, error } = await supabaseAdmin.rpc("complete_payment_intent_webhook", {
       p_external_ref: sessionId,
       p_provider: "paymongo",
     })
 
     if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
+      // No PHI: message is RPC exception text only (intent/invoice ids may appear).
+      console.error("paymongo_webhook_complete_failed", error.message)
+      return new Response(JSON.stringify({ error: "Payment completion failed" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
@@ -98,8 +102,11 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error"
-    return new Response(JSON.stringify({ error: message }), {
+    console.error(
+      "paymongo_webhook_error",
+      err instanceof Error ? err.message : "unknown"
+    )
+    return new Response(JSON.stringify({ error: "Webhook processing failed" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })

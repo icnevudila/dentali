@@ -14,6 +14,7 @@ WITH expected(name) AS (
     ('record_invoice_payment'),
     ('void_invoice'),
     ('complete_payment_intent_by_ref'),
+    ('complete_payment_intent_webhook'),
     ('enqueue_payment_reminders'),
     ('enqueue_hygiene_recalls'),
     ('enqueue_owner_digest_sms'),
