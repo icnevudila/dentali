@@ -101,6 +101,8 @@ function PortalPageContent() {
   // Data
   const [providers, setProviders] = React.useState<{ id: string; name: string }[]>([])
   const [slots, setSlots] = React.useState<{ time: string; available: boolean }[]>([])
+  const [slotsLoading, setSlotsLoading] = React.useState(false)
+  const [slotsError, setSlotsError] = React.useState<string | null>(null)
 
   const portalError = React.useCallback((msg: string) => {
     setErrorMsg(msg)
@@ -273,10 +275,27 @@ function PortalPageContent() {
 
   const handleDateSelect = (date: string, provId = selectedProvider) => {
     setSelectedDate(date)
-    fetchAvailableAppointmentSlots({ branchId, providerId: provId, date }).then(({ data }) => {
-      setSlots(data || [])
-      setSelectedTime("")
-    })
+    setSelectedTime("")
+    setSlots([])
+    setSlotsError(null)
+    setSlotsLoading(true)
+    void fetchAvailableAppointmentSlots({ branchId, providerId: provId, date }).then(
+      ({ data, error }) => {
+        setSlots(data || [])
+        setSlotsError(
+          error
+            ? publicChannelSafeError(
+                error,
+                t(
+                  "portal.slotsLoadFailed",
+                  "Could not load available times. Please try another date."
+                )
+              )
+            : null
+        )
+        setSlotsLoading(false)
+      }
+    )
   }
 
   const handleBook = async () => {
@@ -784,29 +803,54 @@ function PortalPageContent() {
             </div>
 
             <div className="mb-6 grid grid-cols-3 gap-2">
-              {slots.length === 0 ? (
-                <div className="col-span-3 py-6 text-center text-sm text-neutral-500">No available times on the selected date.</div>
-              ) : slots.map(s => {
-                const isSelected = selectedTime === s.time
-                return (
-                  <button
-                    key={s.time}
-                    disabled={!s.available}
-                    onClick={() => setSelectedTime(s.time)}
-                    className={`rounded-xl py-2.5 text-sm font-bold transition-all cursor-pointer ${
-                      !s.available ? "bg-neutral-100 text-neutral-400 opacity-50 cursor-not-allowed border-transparent" : 
-                      isSelected ? "bg-primary-600 text-white shadow-md shadow-primary-500/20 border-transparent" : "bg-white border-2 border-transparent text-neutral-700 hover:border-primary-100 hover:bg-neutral-50"
-                    }`}
+              {slotsLoading ? (
+                <div className="col-span-3 flex flex-col items-center justify-center gap-2 py-6 text-sm text-neutral-500">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary-500" aria-hidden />
+                  {t("portal.slotsLoading", "Loading available times…")}
+                </div>
+              ) : slotsError ? (
+                <div className="col-span-3 space-y-3 rounded-xl border border-red-200 bg-red-50/70 px-4 py-6 text-center">
+                  <p className="text-sm text-red-700">{slotsError}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDateSelect(selectedDate)}
                   >
-                    {s.time}
-                    {!s.available ? (
-                      <span className="ml-1 text-[10px] font-normal opacity-70">
-                        ({t("portal.slotFull", "Full")})
-                      </span>
-                    ) : null}
-                  </button>
-                )
-              })}
+                    {t("common.retry", "Retry")}
+                  </Button>
+                </div>
+              ) : slots.length === 0 ? (
+                <div className="col-span-3 py-6 text-center text-sm text-neutral-500">
+                  {t("portal.noSlots", "No available times on the selected date.")}
+                </div>
+              ) : (
+                slots.map((s) => {
+                  const isSelected = selectedTime === s.time
+                  return (
+                    <button
+                      key={s.time}
+                      type="button"
+                      disabled={!s.available}
+                      onClick={() => setSelectedTime(s.time)}
+                      className={`rounded-xl py-2.5 text-sm font-bold transition-all cursor-pointer ${
+                        !s.available
+                          ? "cursor-not-allowed border-transparent bg-neutral-100 text-neutral-400 opacity-50"
+                          : isSelected
+                            ? "border-transparent bg-primary-600 text-white shadow-md shadow-primary-500/20"
+                            : "border-2 border-transparent bg-white text-neutral-700 hover:border-primary-100 hover:bg-neutral-50"
+                      }`}
+                    >
+                      {s.time}
+                      {!s.available ? (
+                        <span className="ml-1 text-[10px] font-normal opacity-70">
+                          ({t("portal.slotFull", "Full")})
+                        </span>
+                      ) : null}
+                    </button>
+                  )
+                })
+              )}
             </div>
 
             {/* Booking Reason Dropdown */}
