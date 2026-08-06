@@ -19,6 +19,7 @@ export const messagesEnPh: MessageTree = {
     appointments: "Appointments",
     waitlist: "Waitlist",
     queue: "Queue",
+    recare: "Recare",
     billing: "Billing",
     invoices: "Invoices",
     hmoClaims: "HMO Claims",
@@ -1046,6 +1047,17 @@ export const messagesEnPh: MessageTree = {
     booked: "Appointment booked from waitlist",
     cancelled: "Waitlist entry cancelled",
   },
+  recare: {
+    eyebrow: "Front desk",
+    description:
+      "Patients due for hygiene or recall visits. Book, message, or snooze from one worklist.",
+    openWorkflow: "Hygiene recall settings",
+    emptyTitle: "Recare worklist coming next",
+    emptyDescription:
+      "This skeleton reserves the route and nav for a Dentrix Ascend–style recall queue. Due patients, last visit, and outreach actions will land here — no fake PHI in the meantime.",
+    openAppointments: "Open appointments",
+    openWaitlist: "Open waitlist",
+  },
   billing: {
     hubTitle: "Billing & claims",
     navInvoices: "Invoices",
@@ -1517,6 +1529,7 @@ export const messagesTr: MessageTree = {
     appointments: "Randevular",
     waitlist: "Bekleme listesi",
     queue: "Sıra",
+    recare: "Recall",
     billing: "Faturalama",
     invoices: "Faturalar",
     hmoClaims: "HMO Talepleri",
@@ -2542,6 +2555,17 @@ export const messagesTr: MessageTree = {
     contactLogged: "İletişim kaydı oluşturuldu",
     booked: "Bekleme listesinden randevu oluşturuldu",
     cancelled: "Bekleme listesi kaydı iptal edildi",
+  },
+  recare: {
+    eyebrow: "Resepsiyon",
+    description:
+      "Hijyen veya recall için zamanı gelen hastalar. Tek listeden randevu, mesaj veya erteleme.",
+    openWorkflow: "Hijyen recall ayarları",
+    emptyTitle: "Recare listesi yakında",
+    emptyDescription:
+      "Bu iskelet, Dentrix Ascend tarzı recall kuyruğu için rota ve menüyü ayırır. Vadesi gelen hastalar ve iletişim aksiyonları buraya gelecek — şimdilik sahte PHI yok.",
+    openAppointments: "Randevuları aç",
+    openWaitlist: "Bekleme listesini aç",
   },
   billing: {
     hubTitle: "Faturalama ve talepler",

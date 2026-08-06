@@ -3,6 +3,7 @@ import {
   BarChart3,
   Bell,
   Calendar,
+  CalendarHeart,
   Clock,
   CreditCard,
   FileCheck2,
@@ -158,6 +159,13 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         fallback: "Waitlist",
         href: "/waitlist",
         icon: Clock,
+        permission: PERMISSIONS.APPOINTMENTS_READ,
+      },
+      {
+        nameKey: "nav.recare",
+        fallback: "Recare",
+        href: "/recare",
+        icon: CalendarHeart,
         permission: PERMISSIONS.APPOINTMENTS_READ,
       },
       {
