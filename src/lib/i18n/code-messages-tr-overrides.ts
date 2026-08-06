@@ -66,6 +66,11 @@ export const codeMessagesTrOverrides: MessageTree = {
     hmoRejectReason: "Red nedeni",
     hmoRejectReasonRequired: "Geri göndermeden önce red nedeni girin.",
     hmoSubmitted: "Talep gönderildi.",
+    hmoSubmittedDryRun:
+      "Yalnızca dry-run — talep durumu yerelde güncellendi. HMO clearinghouse ile iletişim kurulmadı.",
+    hmoIntegration: "HMO sağlayıcı gönderimi",
+    hmoBanner:
+      "Gönderim klinik kuyruğunda talep durumunu günceller ve yerel bir referans üretir. Canlı HMO clearinghouse API henüz bağlı değil — sağlayıcı entegrasyonu yapılandırılana kadar gönderimleri dry-run kabul edin.",
     hmoSubtitle: "Sağlayıcı taleplerini tek kuyruktan hazırlayın, inceleyin ve kapatın.",
     hmoTotalClaimed: "toplam talep",
     markPaid: "Ödendi işaretle",

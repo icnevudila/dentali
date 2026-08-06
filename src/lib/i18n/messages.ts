@@ -1139,6 +1139,11 @@ export const messagesEnPh: MessageTree = {
     draftClaim: "Draft HMO claim",
     claims: "Claims",
     noHmoClaims: "No HMO claims yet.",
+    hmoIntegration: "HMO provider submit",
+    hmoBanner:
+      "Submit updates claim status in the clinic queue and generates a local reference. No live HMO clearinghouse API is connected yet — treat submissions as dry-run until a provider integration is configured.",
+    hmoSubmittedDryRun:
+      "Dry-run only — claim status updated locally. No HMO clearinghouse was contacted.",
     philhealthTitle: "PhilHealth eClaims",
     philhealthSubtitle: "Readiness checklist — edge sync with dry-run fallback",
     philhealthBanner:
@@ -2631,6 +2636,11 @@ export const messagesTr: MessageTree = {
     draftClaim: "HMO taslak talebi",
     claims: "Talepler",
     noHmoClaims: "Henüz HMO talebi yok.",
+    hmoIntegration: "HMO sağlayıcı gönderimi",
+    hmoBanner:
+      "Gönderim klinik kuyruğunda talep durumunu günceller ve yerel bir referans üretir. Canlı HMO clearinghouse API henüz bağlı değil — sağlayıcı entegrasyonu yapılandırılana kadar gönderimleri dry-run kabul edin.",
+    hmoSubmittedDryRun:
+      "Yalnızca dry-run — talep durumu yerelde güncellendi. HMO clearinghouse ile iletişim kurulmadı.",
     philhealthTitle: "PhilHealth eClaims",
     philhealthSubtitle: "Hazırlık kontrol listesi — edge sync, dry-run yedekli",
     philhealthBanner:
@@ -3678,6 +3688,11 @@ export const messagesFil: MessageTree = {
     draftClaim: "Draft HMO claim",
     claims: "Claims",
     noHmoClaims: "Walang HMO claim pa.",
+    hmoIntegration: "HMO provider submit",
+    hmoBanner:
+      "Ina-update ng submit ang status ng claim sa clinic queue at gumagawa ng local reference. Wala pang live HMO clearinghouse API — ituring na dry-run ang submissions hanggang may provider integration.",
+    hmoSubmittedDryRun:
+      "Dry-run lang — na-update ang claim status locally. Walang HMO clearinghouse na kinontak.",
     philhealthTitle: "PhilHealth eClaims",
     philhealthSubtitle: "Readiness checklist — edge sync na may dry-run fallback",
     philhealthBanner:

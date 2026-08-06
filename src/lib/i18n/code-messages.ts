@@ -117,6 +117,11 @@ export const codeMessagesEn: MessageTree = {
     hmoRejectReason: "Rejection reason",
     hmoRejectReasonRequired: "Enter a rejection reason before sending back.",
     hmoSubmitted: "Claim submitted.",
+    hmoSubmittedDryRun:
+      "Dry-run only — claim status updated locally. No HMO clearinghouse was contacted.",
+    hmoIntegration: "HMO provider submit",
+    hmoBanner:
+      "Submit updates claim status in the clinic queue and generates a local reference. No live HMO clearinghouse API is connected yet — treat submissions as dry-run until a provider integration is configured.",
     hmoSubtitle: "Prepare, review, and settle provider claims from one queue.",
     hmoTotalClaimed: "total claimed",
     hubSubtitle: "Invoices, payments, HMO claims, and PhilHealth sync in one place.",
@@ -1247,6 +1252,11 @@ export const codeMessagesTr: MessageTree = {
     hmoRejectReason: "Red nedeni",
     hmoRejectReasonRequired: "Geri göndermeden önce red nedeni girin.",
     hmoSubmitted: "Talep gönderildi.",
+    hmoSubmittedDryRun:
+      "Yalnızca dry-run — talep durumu yerelde güncellendi. HMO clearinghouse ile iletişim kurulmadı.",
+    hmoIntegration: "HMO sağlayıcı gönderimi",
+    hmoBanner:
+      "Gönderim klinik kuyruğunda talep durumunu günceller ve yerel bir referans üretir. Canlı HMO clearinghouse API henüz bağlı değil — sağlayıcı entegrasyonu yapılandırılana kadar gönderimleri dry-run kabul edin.",
     hmoSubtitle: "Sağlayıcı taleplerini tek kuyruktan hazırlayın, inceleyin ve kapatın.",
     hmoTotalClaimed: "toplam talep",
     hubSubtitle: "Faturalar, ödemeler, HMO talepleri ve PhilHealth senkronu tek yerde.",

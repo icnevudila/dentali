@@ -115,14 +115,24 @@ export async function createHmoClaim(params: {
   return { data: { id: data.id }, error: null }
 }
 
+/**
+ * Marks the claim submitted locally and returns a clinic-generated provider_ref.
+ * No live HMO clearinghouse is connected yet — always dry-run until a vendor API ships.
+ */
 export async function submitHmoClaim(
   claimId: string
-): Promise<{ data: { provider_ref: string } | null; error: string | null }> {
+): Promise<{ data: { provider_ref: string; dry_run: true } | null; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("submit_hmo_claim", { p_claim_id: claimId })
   if (error) return { data: null, error: error.message }
   const raw = data as { provider_ref?: string }
-  return { data: { provider_ref: String(raw.provider_ref ?? "") }, error: null }
+  return {
+    data: {
+      provider_ref: String(raw.provider_ref ?? ""),
+      dry_run: true,
+    },
+    error: null,
+  }
 }
 
 export async function resetHmoClaimToDraft(claimId: string): Promise<{ error: string | null }> {
