@@ -152,6 +152,11 @@ function HmoClaimsPageContent() {
 
   const displayedClaims = React.useMemo(() => {
     if (statusFilter === "draft") return claims.filter((c) => c.status === "draft")
+    if (statusFilter === "pending") {
+      return claims.filter((c) =>
+        ["submitted", "under_review", "approved"].includes(c.status)
+      )
+    }
     return claims
   }, [claims, statusFilter])
 
@@ -210,6 +215,10 @@ function HmoClaimsPageContent() {
             <Badge variant="warning" className="font-normal">
               {t("billing.hmoDraftFilter", "Draft claims only")}
             </Badge>
+          ) : statusFilter === "pending" ? (
+            <Badge variant="info" className="font-normal">
+              {t("billing.hmoPendingFilter", "In-progress claims only")}
+            </Badge>
           ) : null
         }
         metrics={metricItems}
@@ -257,10 +266,12 @@ function HmoClaimsPageContent() {
                   <p className="mt-3 font-medium text-neutral-700">
                     {statusFilter === "draft"
                       ? t("billing.noHmoDraftClaims", "No draft HMO claims")
-                      : t("billing.noHmoClaimsTitle", "No HMO claims yet")}
+                      : statusFilter === "pending"
+                        ? t("billing.noHmoPendingClaims", "No in-progress HMO claims")
+                        : t("billing.noHmoClaimsTitle", "No HMO claims yet")}
                   </p>
                   <p className="mx-auto mt-1 max-w-sm text-sm text-neutral-500">
-                    {statusFilter === "draft" ? (
+                    {statusFilter === "draft" || statusFilter === "pending" ? (
                       <Link href="/billing/hmo" className="text-primary-600 hover:underline">
                         {t("billing.clearFilter", "Clear filter")}
                       </Link>
