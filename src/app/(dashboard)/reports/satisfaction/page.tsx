@@ -63,7 +63,7 @@ export default function SatisfactionReportPage() {
           )}
         >
           <p className="text-sm text-neutral-500">
-            {t("common.selectBranch", "Select a branch to continue.")}
+            {t("dashboard.selectBranch", "Select a branch to continue.")}
           </p>
         </ModulePageShell>
       </PermissionGate>
@@ -152,12 +152,19 @@ export default function SatisfactionReportPage() {
               </CardHeader>
               <CardContent>
                 {!summary?.recent.length ? (
-                  <p className="py-8 text-center text-sm text-neutral-500">
-                    {t(
-                      "satisfaction.empty",
-                      "No satisfaction responses in this period yet. They appear after kiosk check-in surveys."
-                    )}
-                  </p>
+                  <div className="flex flex-col items-center gap-3 py-8 text-center">
+                    <p className="text-sm text-neutral-500">
+                      {t(
+                        "satisfaction.empty",
+                        "No satisfaction responses in this period yet. They appear after kiosk check-in surveys."
+                      )}
+                    </p>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href="/settings/kiosk">
+                        {t("satisfaction.openKioskSettings", "Open kiosk settings")}
+                      </Link>
+                    </Button>
+                  </div>
                 ) : (
                   <ul className="divide-y divide-neutral-100">
                     {summary.recent.map((row) => (

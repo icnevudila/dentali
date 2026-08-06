@@ -1,9 +1,19 @@
 type Translate = (key: string, fallback: string) => string
 
+/** How honest the toggle is about what the product actually does. */
+export type WorkflowRuleHonesty =
+  /** Toggle is enforced by backend / cron / UI gates. */
+  | "live"
+  /** Toggle only emits an analytics/audit event; core side effect always runs. */
+  | "event_only"
+  /** Setting is stored but no front-desk or queue UI reads it yet. */
+  | "not_wired"
+
 export type WorkflowRuleUi = {
   key: string
   label: string
   description: string
+  honesty: WorkflowRuleHonesty
 }
 
 export type WorkflowGroupUi = {
@@ -18,6 +28,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
       items: [
         {
           key: "auto_checkin_updates_appointment",
+          honesty: "live",
           label: t("settings.wfCheckinApptLabel", "Check-in updates appointment"),
           description: t(
             "settings.wfCheckinApptDesc",
@@ -26,6 +37,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
         },
         {
           key: "auto_served_completes_appointment",
+          honesty: "live",
           label: t("settings.wfServedApptLabel", "Served completes appointment"),
           description: t(
             "settings.wfServedApptDesc",
@@ -34,6 +46,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
         },
         {
           key: "consent_gate_checkin",
+          honesty: "live",
           label: t("settings.wfConsentGateLabel", "Consent gate on check-in"),
           description: t(
             "settings.wfConsentGateDesc",
@@ -42,6 +55,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
         },
         {
           key: "auto_waitlist_on_slot_open",
+          honesty: "live",
           label: t("settings.wfWaitlistLabel", "No-show opens waitlist slot"),
           description: t(
             "settings.wfWaitlistDesc",
@@ -50,6 +64,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
         },
         {
           key: "auto_no_show_after_grace",
+          honesty: "live",
           label: t("settings.wfNoShowLabel", "Auto no-show after 15 min"),
           description: t(
             "settings.wfNoShowDesc",
@@ -63,14 +78,16 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
       items: [
         {
           key: "auto_approve_creates_invoice",
-          label: t("settings.wfPlanApproveLabel", "Plan approval automation event"),
+          honesty: "event_only",
+          label: t("settings.wfPlanApproveLabel", "Log plan-approval automation"),
           description: t(
             "settings.wfPlanApproveDesc",
-            "Emit workflow automation when a plan is approved. Invoice draft is always created on approval regardless of this toggle."
+            "When on, plan approval writes an automation event for analytics. An invoice draft is always created on approval — this toggle does not skip billing."
           ),
         },
         {
           key: "auto_hmo_claim_on_invoice",
+          honesty: "live",
           label: t("settings.wfHmoClaimLabel", "Invoice creates HMO claim draft"),
           description: t(
             "settings.wfHmoClaimDesc",
@@ -79,6 +96,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
         },
         {
           key: "auto_payment_reminder",
+          honesty: "live",
           label: t("settings.wfPaymentReminderLabel", "Payment balance reminders"),
           description: t(
             "settings.wfPaymentReminderDesc",
@@ -87,6 +105,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
         },
         {
           key: "billing_gate_block_services",
+          honesty: "live",
           label: t("settings.wfBillingGateLabel", "Billing gate on booking and check-in"),
           description: t(
             "settings.wfBillingGateDesc",
@@ -95,18 +114,20 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
         },
         {
           key: "require_deposit_on_book",
+          honesty: "not_wired",
           label: t("settings.wfDepositLabel", "Warn when booking without deposit"),
           description: t(
             "settings.wfDepositDesc",
-            "When on, booking UI reminds staff to collect a deposit for new appointments (policy reminder — amount set at front desk)."
+            "Planned policy reminder for bookings without a deposit. Not shown in the booking UI yet — toggle is stored only."
           ),
         },
         {
           key: "no_show_fee_policy",
+          honesty: "not_wired",
           label: t("settings.wfNoShowFeeLabel", "No-show fee policy reminder"),
           description: t(
             "settings.wfNoShowFeeDesc",
-            "When marking no-show, remind staff of the clinic’s no-show fee policy before rebooking."
+            "Planned reminder when marking no-show. Not shown in appointments or queue yet — toggle is stored only."
           ),
         },
       ],
@@ -116,6 +137,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
       items: [
         {
           key: "auto_draft_soap_on_chair",
+          honesty: "live",
           label: t("settings.wfDraftSoapLabel", "Draft SOAP when in chair"),
           description: t(
             "settings.wfDraftSoapDesc",
@@ -124,6 +146,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
         },
         {
           key: "auto_served_creates_invoice",
+          honesty: "live",
           label: t("settings.wfServedInvoiceLabel", "Treatment done creates invoice draft"),
           description: t(
             "settings.wfServedInvoiceDesc",
@@ -132,6 +155,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
         },
         {
           key: "auto_close_encounter_on_payment",
+          honesty: "live",
           label: t("settings.wfCloseVisitLabel", "Payment closes visit"),
           description: t(
             "settings.wfCloseVisitDesc",
@@ -145,6 +169,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
       items: [
         {
           key: "auto_deduct_procedure_bom",
+          honesty: "live",
           label: t("settings.wfBomLabel", "Auto-deduct procedure BOM"),
           description: t(
             "settings.wfBomDesc",
@@ -158,6 +183,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
       items: [
         {
           key: "auto_sms_reminders",
+          honesty: "live",
           label: t("settings.wfSmsRemindersLabel", "SMS appointment reminders"),
           description: t(
             "settings.wfSmsRemindersDesc",
@@ -166,6 +192,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
         },
         {
           key: "auto_hygiene_recall",
+          honesty: "live",
           label: t("settings.wfHygieneRecallLabel", "Hygiene recall SMS (6 months)"),
           description: t(
             "settings.wfHygieneRecallDesc",
@@ -174,6 +201,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
         },
         {
           key: "auto_owner_digest_sms",
+          honesty: "live",
           label: t("settings.wfOwnerDigestLabel", "Owner daily digest SMS"),
           description: t(
             "settings.wfOwnerDigestDesc",
@@ -182,6 +210,7 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
         },
         {
           key: "auto_review_request_sms",
+          honesty: "live",
           label: t("settings.wfReviewSmsLabel", "Google review SMS after visit"),
           description: t(
             "settings.wfReviewSmsDesc",
