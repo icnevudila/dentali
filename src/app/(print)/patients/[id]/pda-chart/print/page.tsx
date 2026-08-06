@@ -4,6 +4,7 @@ import * as React from "react"
 import { useSearchParams } from "next/navigation"
 import { useRouteParams } from "@/hooks/use-route-params"
 import { useBranch } from "@/hooks/use-branch"
+import { useLocale } from "@/hooks/use-locale"
 import { getPatient } from "@/lib/patients/patient-service"
 import { getLatestMedicalHistory, type MedicalHistoryRecord } from "@/lib/patients/medical-history-service"
 import { getPatientOdontogram } from "@/lib/odontogram/dental-chart-service"
@@ -22,8 +23,10 @@ export default function PdaDentalChartPrintPage() {
   const { id: patientId } = useRouteParams<{ id: string }>()
   const searchParams = useSearchParams()
   const { activeBranch } = useBranch()
+  const { t } = useLocale()
   const branchId = searchParams.get("branch") ?? activeBranch?.id ?? ""
   const [ready, setReady] = React.useState(false)
+  const [missingBranch, setMissingBranch] = React.useState(false)
   const [responses, setResponses] = React.useState<PdaIntakeResponses>(emptyPdaIntakeResponses())
   const [findings, setFindings] = React.useState<ToothFinding[]>([])
   const [treatmentRows, setTreatmentRows] = React.useState<TreatmentTimelineEntry[]>([])
@@ -37,20 +40,26 @@ export default function PdaDentalChartPrintPage() {
   }, [])
 
   React.useEffect(() => {
-    if (!patientId || !branchId) return
+    if (!patientId) return
+    if (!branchId) {
+      setMissingBranch(true)
+      setReady(true)
+      return
+    }
+    setMissingBranch(false)
     let cancelled = false
 
     async function load() {
       const [patientRes, medicalRes, chartRes, treatmentRes, staff, recordRes, branchVisitRes] =
         await Promise.all([
-        getPatient(patientId),
-        getLatestMedicalHistory(patientId),
-        getPatientOdontogram(patientId, branchId),
-        fetchPatientTreatmentTimeline(patientId, branchId),
-        fetchStaffProfile(),
-        fetchPatientPdaIntake(patientId, branchId),
-        getPatientBranchVisit(patientId, branchId),
-      ])
+          getPatient(patientId),
+          getLatestMedicalHistory(patientId),
+          getPatientOdontogram(patientId, branchId),
+          fetchPatientTreatmentTimeline(patientId, branchId),
+          fetchStaffProfile(),
+          fetchPatientPdaIntake(patientId, branchId),
+          getPatientBranchVisit(patientId, branchId),
+        ])
       if (cancelled) return
 
       const prefill = buildPdaIntakePrefill({
@@ -75,19 +84,61 @@ export default function PdaDentalChartPrintPage() {
   }, [patientId, branchId])
 
   React.useEffect(() => {
-    if (!ready) return
+    if (!ready || missingBranch || !patient) return
     const timer = window.setTimeout(() => window.print(), 600)
     return () => window.clearTimeout(timer)
-  }, [ready])
+  }, [ready, missingBranch, patient])
 
   if (!ready) {
     return (
       <div className="pda-print-route flex min-h-screen flex-col">
         <header className="pda-print-toolbar no-print">
-          <span className="pda-print-toolbar-title">PDA Dental Chart — Print Preview</span>
+          <span className="pda-print-toolbar-title">
+            {t("print.pdaPreviewTitle", "PDA dental chart — print preview")}
+          </span>
         </header>
         <div className="flex flex-1 items-center justify-center text-sm text-neutral-600">
-          Preparing PDA form…
+          {t("print.loadingPda", "Preparing PDA form…")}
+        </div>
+      </div>
+    )
+  }
+
+  if (missingBranch) {
+    return (
+      <div className="pda-print-route flex min-h-screen flex-col">
+        <header className="pda-print-toolbar no-print">
+          <span className="pda-print-toolbar-title">
+            {t("print.pdaPreviewTitle", "PDA dental chart — print preview")}
+          </span>
+          <div className="pda-print-toolbar-actions">
+            <Button size="sm" variant="outline" onClick={() => window.close()}>
+              {t("print.printClose", "Close")}
+            </Button>
+          </div>
+        </header>
+        <div className="flex flex-1 items-center justify-center px-6 text-center text-sm font-semibold text-rose-600">
+          {t("print.emptyPdaBranch", "Select a clinic branch before printing the PDA chart.")}
+        </div>
+      </div>
+    )
+  }
+
+  if (!patient) {
+    return (
+      <div className="pda-print-route flex min-h-screen flex-col">
+        <header className="pda-print-toolbar no-print">
+          <span className="pda-print-toolbar-title">
+            {t("print.pdaPreviewTitle", "PDA dental chart — print preview")}
+          </span>
+          <div className="pda-print-toolbar-actions">
+            <Button size="sm" variant="outline" onClick={() => window.close()}>
+              {t("print.printClose", "Close")}
+            </Button>
+          </div>
+        </header>
+        <div className="flex flex-1 items-center justify-center px-6 text-center text-sm font-semibold text-rose-600">
+          {t("print.emptyPda", "Patient record is not available for PDA chart print.")}
         </div>
       </div>
     )
@@ -96,13 +147,15 @@ export default function PdaDentalChartPrintPage() {
   return (
     <div className="pda-print-route">
       <header className="pda-print-toolbar no-print">
-        <span className="pda-print-toolbar-title">PDA Dental Chart — Print Preview</span>
+        <span className="pda-print-toolbar-title">
+          {t("print.pdaPreviewTitle", "PDA dental chart — print preview")}
+        </span>
         <div className="pda-print-toolbar-actions">
           <Button size="sm" onClick={() => window.print()}>
-            Print / PDF
+            {t("common.printPdf", "Print / PDF")}
           </Button>
           <Button size="sm" variant="outline" onClick={() => window.close()}>
-            Close
+            {t("print.printClose", "Close")}
           </Button>
         </div>
       </header>
