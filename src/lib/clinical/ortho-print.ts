@@ -46,34 +46,7 @@ export async function fetchOrthoPrintData(
     .maybeSingle()
 
   if (error || !caseRow) {
-    // Return sample/mock structure for print preview if offline/empty
-    return {
-      data: {
-        case_id: `ortho_${Date.now()}`,
-        patient_id: patientId,
-        patient_name: patient?.full_name ?? "Ortodonti Hastası",
-        birth_date: patient?.date_of_birth ?? "1995-04-12",
-        phone: patient?.mobile_number ?? "+90 532 000 0000",
-        branch_name: "Dentali Diş Kliniği",
-        malocclusion_type: "Sınıf I Çapraşıklık",
-        appliance_type: "Metal Braket (0.022 Slot)",
-        start_date: new Date().toISOString().split("T")[0],
-        estimated_months: 18,
-        archwires_upper: "0.014 NiTi (Üst Çene)",
-        archwires_lower: "0.014 NiTi (Alt Çene)",
-        elastics_config: "Class II 3/16 4.5 oz",
-        notes: "Aylık kontrol, hijyen takibi ve elastik kullanımı düzenli incelenecek.",
-        visits: [
-          {
-            visit_date: new Date().toISOString().split("T")[0],
-            procedure: "Braketleme ve 0.014 NiTi ark teli takıldı",
-            next_procedure: "Tel değişimi & braket kontrolü",
-            notes: "Hasta braket bakımı konusunda bilgilendirildi.",
-          },
-        ],
-      },
-      error: null,
-    }
+    return { data: null, error: error?.message ?? null }
   }
 
   // Fetch visits
@@ -87,14 +60,14 @@ export async function fetchOrthoPrintData(
     data: {
       case_id: caseRow.id,
       patient_id: patientId,
-      patient_name: patient?.full_name ?? "Ortodonti Hastası",
+      patient_name: patient?.full_name ?? "",
       birth_date: patient?.date_of_birth ?? "",
       phone: patient?.mobile_number ?? "",
-      branch_name: "Dentali Diş Kliniği",
-      malocclusion_type: caseRow.malocclusion_type ?? "Sınıf I Maloklüzyon",
-      appliance_type: caseRow.appliance_type ?? "Metal Braket",
+      branch_name: "",
+      malocclusion_type: caseRow.malocclusion_type ?? "",
+      appliance_type: caseRow.appliance_type ?? "",
       start_date: caseRow.start_date ?? new Date().toISOString().split("T")[0],
-      estimated_months: caseRow.estimated_months ?? 18,
+      estimated_months: caseRow.estimated_months ?? 0,
       notes: caseRow.notes ?? "",
       visits: (visitRows ?? []).map((v) => ({
         visit_date: v.visit_date,
