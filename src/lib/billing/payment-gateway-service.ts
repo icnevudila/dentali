@@ -10,6 +10,8 @@ export interface PaymentIntent {
   external_ref: string
   checkout_url: string
   created_at?: string
+  /** Gateway mode from intent metadata (`live` | `stub`). Live completes via webhook. */
+  mode?: "live" | "stub" | string
 }
 
 export async function createPaymentIntent(params: {
@@ -38,6 +40,7 @@ export async function createPaymentIntent(params: {
       status: String(raw.status ?? "pending"),
       external_ref: String(raw.external_ref),
       checkout_url: String(raw.checkout_url),
+      mode: typeof raw.mode === "string" ? raw.mode : undefined,
     },
     dryRun: raw.dry_run === true,
     error: null,
@@ -79,22 +82,27 @@ export async function fetchPendingIntents(
   const supabase = createClient()
   const { data, error } = await supabase
     .from("payment_gateway_intents")
-    .select("id, provider, amount, status, external_ref, checkout_url, created_at")
+    .select("id, provider, amount, status, external_ref, checkout_url, created_at, metadata")
     .eq("invoice_id", invoiceId)
     .eq("status", "pending")
     .order("created_at", { ascending: false })
 
   if (error) return { data: [], error: error.message }
   return {
-    data: (data ?? []).map((row) => ({
-      id: row.id,
-      provider: row.provider as PaymentProvider,
-      amount: Number(row.amount),
-      status: row.status,
-      external_ref: row.external_ref,
-      checkout_url: row.checkout_url,
-      created_at: row.created_at,
-    })),
+    data: (data ?? []).map((row) => {
+      const meta = (row.metadata ?? {}) as Record<string, unknown>
+      const mode = typeof meta.mode === "string" ? meta.mode : undefined
+      return {
+        id: row.id,
+        provider: row.provider as PaymentProvider,
+        amount: Number(row.amount),
+        status: row.status,
+        external_ref: row.external_ref,
+        checkout_url: row.checkout_url,
+        created_at: row.created_at,
+        mode,
+      }
+    }),
     error: null,
   }
 }
