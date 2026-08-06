@@ -6,17 +6,11 @@ import { Button } from "@/components/ui/button"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { useRouteParams } from "@/hooks/use-route-params"
 import {
+  checkInPublicErrorMessage,
   fetchCheckInByToken,
   redeemCheckInToken,
   type CheckInTokenPreview,
 } from "@/lib/appointments/checkin-token-service"
-
-const ERROR_COPY: Record<string, string> = {
-  invalid: "This check-in link is invalid.",
-  expired: "This check-in link has expired. Please see the front desk.",
-  already_used: "This check-in link was already used.",
-  redeem_failed: "Check-in could not be completed. Please see the front desk.",
-}
 
 export default function PublicCheckInPage() {
   const { token } = useRouteParams<{ token: string }>()
@@ -33,7 +27,7 @@ export default function PublicCheckInPage() {
     if (!token) return
     void fetchCheckInByToken(token).then(({ data, error: err }) => {
       if (err || !data) {
-        setError(ERROR_COPY[err ?? "invalid"] ?? ERROR_COPY.invalid)
+        setError(checkInPublicErrorMessage(err ?? "invalid"))
         setLoading(false)
         return
       }
@@ -49,7 +43,7 @@ export default function PublicCheckInPage() {
     const { data, error: err } = await redeemCheckInToken(token)
     setRedeeming(false)
     if (err || !data) {
-      setError(ERROR_COPY[err ?? "redeem_failed"] ?? ERROR_COPY.redeem_failed)
+      setError(checkInPublicErrorMessage(err ?? "redeem_failed"))
       return
     }
     setDone({
@@ -90,7 +84,7 @@ export default function PublicCheckInPage() {
       <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-3 p-6 text-center">
         <QrCode className="mx-auto h-10 w-10 text-neutral-400" aria-hidden />
         <h1 className="text-lg font-semibold text-neutral-900">Check-in unavailable</h1>
-        <p className="text-sm text-neutral-600">{error ?? ERROR_COPY.invalid}</p>
+        <p className="text-sm text-neutral-600">{error ?? checkInPublicErrorMessage("invalid")}</p>
         <p className="text-xs text-neutral-500">
           Please see the front desk — they can check you in on the queue board.
         </p>

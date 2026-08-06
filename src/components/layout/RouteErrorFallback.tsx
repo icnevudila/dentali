@@ -14,6 +14,8 @@ type RouteErrorFallbackProps = {
   title?: string
   homeHref?: string
   homeLabel?: string
+  /** Public kiosk/TV/portal/PDA — never surface raw Error.message */
+  publicSurface?: boolean
 }
 
 export function RouteErrorFallback({
@@ -22,29 +24,34 @@ export function RouteErrorFallback({
   title = "Something went wrong",
   homeHref = "/",
   homeLabel = "Back to dashboard",
+  publicSurface = false,
 }: RouteErrorFallbackProps) {
   const { locale, t } = useLocale()
 
   useEffect(() => {
-    console.error(error)
-  }, [error])
+    if (publicSurface) {
+      console.error("Public route error", error.digest ?? "no-digest")
+    } else {
+      console.error(error)
+    }
+  }, [error, publicSurface])
 
-  const localize = (value: string) => locale === "tr" ? translateMissingFallback("tr", value) : value
-  const isSensitiveError = /row-level security|permission denied for (table|schema)|postgres|sqlstate|minified react|relation .* does not exist/i.test(
-    error.message
-  )
-  const safeMessage = isSensitiveError
-    ? t("common.error", "Something went wrong")
-    : error.message || t("common.error", "Something went wrong")
+  const localize = (value: string) => (locale === "tr" ? translateMissingFallback("tr", value) : value)
+  const isSensitiveError =
+    /row-level security|permission denied for (table|schema)|postgres|sqlstate|minified react|relation .* does not exist|pgrst|jwt|failed to fetch/i.test(
+      error.message
+    )
+  const safeMessage =
+    publicSurface || isSensitiveError
+      ? t("common.error", "Something went wrong")
+      : error.message || t("common.error", "Something went wrong")
 
   return (
     <div className="mx-auto w-full max-w-lg animate-page-enter py-8">
       <ContentPanel className="py-10 text-center">
         <AlertTriangle className="mx-auto h-10 w-10 text-amber-600" aria-hidden />
         <h1 className="mt-4 text-lg font-semibold text-neutral-950">{localize(title)}</h1>
-        <p className="mt-2 text-sm text-neutral-600">
-          {safeMessage}
-        </p>
+        <p className="mt-2 text-sm text-neutral-600">{safeMessage}</p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Button onClick={reset}>{t("common.retry", "Retry")}</Button>
           <Button variant="outline" asChild>

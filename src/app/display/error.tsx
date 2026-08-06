@@ -16,6 +16,7 @@ export default function DisplayError({
       title="Queue display unavailable"
       homeHref="/welcome"
       homeLabel="Back to home"
+      publicSurface
     />
   )
 }

@@ -112,7 +112,12 @@ function PortalPageContent() {
   React.useEffect(() => {
     if (!token) {
       const id = window.setTimeout(() => {
-        portalError("Portal connection token is missing.")
+        portalError(
+          t(
+            "portal.tokenMissing",
+            "Portal connection token is missing. Please use the link from your clinic."
+          )
+        )
         setStep("error")
       }, 0)
       return () => window.clearTimeout(id)
@@ -120,7 +125,12 @@ function PortalPageContent() {
 
     createKioskSession(token).then(async ({ data, error }) => {
       if (error || !data) {
-        portalError(error ?? "Connection is invalid or has expired.")
+        portalError(
+          publicChannelSafeError(
+            error,
+            t("portal.connectionInvalid", "Connection is invalid or has expired.")
+          )
+        )
         setStep("error")
         return
       }
@@ -319,7 +329,15 @@ function PortalPageContent() {
     setSubmitting(false)
 
     if (error || !data) {
-      portalError(error ?? "An error occurred while booking the appointment.")
+      portalError(
+        publicChannelSafeError(
+          error,
+          t(
+            "portal.bookFailed",
+            "We could not book that appointment. Please try again or call the clinic."
+          )
+        )
+      )
     } else {
       setStep("success")
     }
@@ -417,7 +435,9 @@ function PortalPageContent() {
         {step === "error" && (
           <div className="rounded-3xl border border-red-100 bg-white/80 p-8 text-center shadow-xl backdrop-blur-xl animate-in slide-in-from-bottom-6 duration-300">
             <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-            <h2 className="text-xl font-semibold text-neutral-900 mb-2">Error</h2>
+            <h2 className="text-xl font-semibold text-neutral-900 mb-2">
+              {t("portal.seeFrontDesk", "Please see the front desk")}
+            </h2>
             <p className="text-neutral-500">{errorMsg}</p>
           </div>
         )}

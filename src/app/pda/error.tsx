@@ -2,7 +2,7 @@
 
 import { RouteErrorFallback } from "@/components/layout/RouteErrorFallback"
 
-export default function SignRouteError({
+export default function PdaError({
   error,
   reset,
 }: {
@@ -13,7 +13,7 @@ export default function SignRouteError({
     <RouteErrorFallback
       error={error}
       reset={reset}
-      title="Consent signing unavailable"
+      title="Intake form unavailable"
       homeHref="/welcome"
       homeLabel="Back to home"
       publicSurface

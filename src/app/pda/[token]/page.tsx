@@ -13,6 +13,7 @@ import {
 } from "@/lib/pda/pda-intake-schema"
 import { buildPdaIntakePrefill } from "@/lib/pda/pda-intake-prefill"
 import { fetchPdaIntakeByToken, submitPdaIntakeViaToken } from "@/lib/pda/pda-intake-service"
+import { publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
 import { notify } from "@/lib/ui/notify"
 
 export default function PublicPdaIntakePage() {
@@ -25,11 +26,18 @@ export default function PublicPdaIntakePage() {
   const [patientName, setPatientName] = React.useState("")
   const [responses, setResponses] = React.useState<PdaIntakeResponses>(emptyPdaIntakeResponses())
 
-  React.useEffect(() => {
+  const load = React.useCallback(() => {
     if (!token) return
-    fetchPdaIntakeByToken(token).then(({ data, error: err }) => {
+    setLoading(true)
+    setError(null)
+    void fetchPdaIntakeByToken(token).then(({ data, error: err }) => {
       if (err || !data) {
-        setError(err ?? "This link is invalid or has expired.")
+        setError(
+          publicChannelSafeError(
+            err,
+            "This link is invalid or has expired. Please ask the clinic for a new form link."
+          )
+        )
         setLoading(false)
         return
       }
@@ -53,6 +61,10 @@ export default function PublicPdaIntakePage() {
     })
   }, [token])
 
+  React.useEffect(() => {
+    load()
+  }, [load])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!token) return
@@ -60,7 +72,12 @@ export default function PublicPdaIntakePage() {
     const { error: submitErr } = await submitPdaIntakeViaToken(token, responses)
     setSubmitting(false)
     if (submitErr) {
-      notify.error(submitErr)
+      const safe = publicChannelSafeError(
+        submitErr,
+        "We could not submit your form. Please try again or see the front desk."
+      )
+      setError(safe)
+      notify.error(safe)
       return
     }
     setSubmitted(true)
@@ -70,10 +87,13 @@ export default function PublicPdaIntakePage() {
     return <PageLoadingSkeleton variant="form" className="mx-auto max-w-2xl px-4 py-12" />
   }
 
-  if (error) {
+  if (error && !submitted && !orgName) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+      <div className="mx-auto max-w-lg space-y-4 px-4 py-16 text-center">
         <p className="text-sm text-red-700">{error}</p>
+        <Button type="button" variant="outline" onClick={load}>
+          Try again
+        </Button>
       </div>
     )
   }
@@ -102,6 +122,11 @@ export default function PublicPdaIntakePage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {error ? (
+          <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
         <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-6">
           <PdaIntakeForm
             value={responses}

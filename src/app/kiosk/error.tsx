@@ -16,6 +16,7 @@ export default function KioskError({
       title="Kiosk unavailable"
       homeHref="/welcome"
       homeLabel="Back to home"
+      publicSurface
     />
   )
 }
