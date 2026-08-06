@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client"
+import { publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
 
 export type PortalConsentItem = {
   slug: string
@@ -27,6 +28,8 @@ export type PortalSnapshot = {
   ready_for_checkin: boolean
 }
 
+const PORTAL_FALLBACK = "Something went wrong. Please try again or see the front desk."
+
 export async function fetchPortalSnapshot(
   sessionId: string,
   phone: string,
@@ -39,7 +42,9 @@ export async function fetchPortalSnapshot(
     p_last_name: lastName,
   })
 
-  if (error) return { data: null, error: error.message }
+  if (error) {
+    return { data: null, error: publicChannelSafeError(error.message, PORTAL_FALLBACK) }
+  }
   return { data: data as PortalSnapshot, error: null }
 }
 
@@ -60,7 +65,15 @@ export async function createPortalConsentSignToken(
     p_template_slug: templateSlug,
   })
 
-  if (error) return { data: null, error: error.message }
+  if (error) {
+    return {
+      data: null,
+      error: publicChannelSafeError(
+        error.message,
+        "Could not open the signing form. Please see the front desk."
+      ),
+    }
+  }
   const raw = data as Record<string, unknown>
   if (raw.already_signed) {
     return {
@@ -109,9 +122,25 @@ export async function createPortalPaymentIntent(params: {
     },
   })
 
-  if (error) return { data: null, error: error.message }
+  if (error) {
+    return {
+      data: null,
+      error: publicChannelSafeError(
+        error.message,
+        "Could not start online payment. Please settle at the front desk."
+      ),
+    }
+  }
   const raw = data as Record<string, unknown>
-  if (raw?.error) return { data: null, error: String(raw.error) }
+  if (raw?.error) {
+    return {
+      data: null,
+      error: publicChannelSafeError(
+        String(raw.error),
+        "Could not start online payment. Please settle at the front desk."
+      ),
+    }
+  }
 
   return {
     data: {

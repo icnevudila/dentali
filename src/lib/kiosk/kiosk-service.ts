@@ -87,24 +87,51 @@ function isPublicIntakeSchemaError(message: string): boolean {
 const PUBLIC_INTAKE_SQL_HINT =
   "Portal/kiosk intake SQL is not fully applied. Run supabase/scripts/APPLY_PUBLIC_INTAKE_PROFILE_HARDENING.sql in Supabase SQL Editor, then retry."
 
+/** True when a message looks like Postgres / PostgREST / network plumbing — never show on public devices. */
+export function isTechnicalPublicChannelError(message: string): boolean {
+  const lower = message.toLowerCase()
+  return (
+    isPublicIntakeSchemaError(message) ||
+    message.includes(PUBLIC_INTAKE_SQL_HINT) ||
+    lower.includes("pgrst") ||
+    lower.includes("postgrest") ||
+    lower.includes("postgres") ||
+    lower.includes("sqlstate") ||
+    lower.includes("jwt") ||
+    lower.includes("failed to fetch") ||
+    lower.includes("networkerror") ||
+    lower.includes("typeerror") ||
+    lower.includes("edge function") ||
+    lower.includes("functions.invoke") ||
+    lower.includes("row-level security") ||
+    lower.includes("permission denied") ||
+    lower.includes("relation ") ||
+    lower.includes("column ") ||
+    lower.includes("syntax error") ||
+    lower.includes("rpc ") ||
+    lower.includes("supabase") ||
+    lower.includes("_next_queue_display_code") ||
+    lower.includes("queue_display_code") ||
+    (lower.includes("function") && lower.includes("is not unique")) ||
+    /^(error|exception|stack|undefined|null)\b/i.test(message.trim()) ||
+    /^[A-Z][a-zA-Z]+Error:/.test(message.trim())
+  )
+}
+
+/**
+ * Sanitize errors for portal / kiosk / PDA / TV / sign.
+ * Known patient-facing copy is allowed; everything else becomes `fallback`.
+ */
 export function publicChannelSafeError(
   error: string | null | undefined,
   fallback: string
 ): string {
   if (!error) return fallback
-  if (isPublicIntakeSchemaError(error) || error.includes(PUBLIC_INTAKE_SQL_HINT)) {
-    return fallback
-  }
-  return error
-}
-
-function isTechnicalQueueCodeError(message: string): boolean {
-  const lower = message.toLowerCase()
-  return (
-    lower.includes("_next_queue_display_code") ||
-    lower.includes("queue_display_code") ||
-    (lower.includes("function") && lower.includes("is not unique"))
-  )
+  const trimmed = error.trim()
+  if (!trimmed) return fallback
+  if (isTechnicalPublicChannelError(trimmed)) return fallback
+  if (trimmed.includes("\n") || trimmed.length > 180) return fallback
+  return trimmed
 }
 
 /** Hide raw Postgres errors from kiosk/portal patients. */
@@ -113,7 +140,7 @@ export function kioskCheckInSafeError(
   fallback: string
 ): string {
   if (!error) return fallback
-  if (isTechnicalQueueCodeError(error)) {
+  if (isTechnicalPublicChannelError(error)) {
     return fallback
   }
   const trimmed = error.trim()
@@ -122,7 +149,9 @@ export function kioskCheckInSafeError(
     trimmed.startsWith("Please see the front desk") ||
     trimmed.startsWith("You are already checked in") ||
     trimmed.startsWith("Phone and last name") ||
-    trimmed.startsWith("Kiosk session expired")
+    trimmed.startsWith("Kiosk session expired") ||
+    trimmed.startsWith("Your registration") ||
+    trimmed.includes("REGISTRATION_PENDING")
   ) {
     return trimmed
   }

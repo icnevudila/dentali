@@ -39,7 +39,7 @@ function DisplayContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get("token") ?? ""
   const theme = parseDisplayTheme(searchParams.get("theme"))
-  const showNames = parseDisplayFlag(searchParams.get("names"), true)
+  const showNames = parseDisplayFlag(searchParams.get("names"), false)
   const voiceFromUrl = parseDisplayFlag(searchParams.get("voice"), true)
   const { t, locale } = useLocale()
   const liveNow = useLiveClock()

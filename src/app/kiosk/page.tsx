@@ -436,7 +436,11 @@ function KioskContent() {
   const finishCheckInSuccess = () => {
     setStep("success")
     const spelledCode = queueCode.split("").join(" ")
-    const announcementText = `Sayın ${lastName}, girişiniz yapıldı. Sıra numaranız: ${spelledCode}. Lütfen bekleme alanına geçiniz.`
+    // Queue code only — never speak last name (PHI) on a public kiosk speaker
+    const announcementText = t(
+      "kiosk.speechCheckedIn",
+      "You are checked in. Your queue number is {code}. Please take a seat."
+    ).replace("{code}", spelledCode)
     playSuccessSound(announcementText)
   }
 

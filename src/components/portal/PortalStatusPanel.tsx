@@ -56,13 +56,20 @@ export function PortalStatusPanel({
   const [loading, setLoading] = React.useState(true)
   const [signingSlug, setSigningSlug] = React.useState<string | null>(null)
   const [paying, setPaying] = React.useState(false)
+  const [payStubBanner, setPayStubBanner] = React.useState(false)
+  const [loadError, setLoadError] = React.useState<string | null>(null)
 
   const load = React.useCallback(async () => {
     setLoading(true)
     const { data, error } = await fetchPortalSnapshot(sessionId, phone, lastName)
     setSnapshot(data)
     setLoading(false)
-    if (error) notify.error(error)
+    if (error) {
+      setLoadError(error)
+      notify.error(error)
+    } else {
+      setLoadError(null)
+    }
   }, [sessionId, phone, lastName])
 
   React.useEffect(() => {
@@ -115,13 +122,17 @@ export function PortalStatusPanel({
       return
     }
     if (data.dry_run) {
+      setPayStubBanner(true)
       notify.info(
         t(
           "portal.payStub",
           "Online checkout is in demo mode for this clinic. Please settle at the front desk, or ask staff to send a PayMongo link."
         )
       )
+      // Demo mode: do not open a fake checkout URL as if live PayMongo succeeded
+      return
     }
+    setPayStubBanner(false)
     if (data.checkout_url) {
       window.open(data.checkout_url, "_blank", "noopener,noreferrer")
     }
@@ -158,6 +169,33 @@ export function PortalStatusPanel({
         <p className="text-sm text-neutral-700">
           {t("portal.statusGreeting", "Hello, {name}").replace("{name}", snapshot.patient_name)}
         </p>
+      ) : null}
+
+      {loadError && !snapshot ? (
+        <div
+          role="alert"
+          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+        >
+          {loadError}
+        </div>
+      ) : null}
+
+      {payStubBanner ? (
+        <div
+          role="status"
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+          data-testid="portal-paymongo-stub-banner"
+        >
+          <p className="font-semibold">
+            {t("portal.payStubTitle", "PayMongo is not live for this clinic")}
+          </p>
+          <p className="mt-1 text-amber-900/90">
+            {t(
+              "portal.payStub",
+              "Online checkout is in demo mode for this clinic. Please settle at the front desk, or ask staff to send a PayMongo link."
+            )}
+          </p>
+        </div>
       ) : null}
 
       <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">

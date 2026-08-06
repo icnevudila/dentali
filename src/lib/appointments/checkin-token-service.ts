@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client"
+import { publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
 
 export type CheckInTokenPreview = {
   ok: true
@@ -9,6 +10,16 @@ export type CheckInTokenPreview = {
   scheduled_at: string
   appointment_status: string
   expires_at: string
+}
+
+const CHECKIN_FALLBACK = "Check-in could not be completed. Please see the front desk."
+
+function mapCheckInRpcError(raw: string | null | undefined): string {
+  const code = (raw ?? "").trim().toLowerCase()
+  if (code === "invalid" || code === "expired" || code === "already_used" || code === "redeem_failed") {
+    return code
+  }
+  return "invalid"
 }
 
 export async function createAppointmentCheckInToken(
@@ -44,10 +55,15 @@ export async function fetchCheckInByToken(
   const { data, error } = await supabase.rpc("get_appointment_checkin_by_token", {
     p_token: token,
   })
-  if (error) return { data: null, error: error.message }
+  if (error) {
+    return {
+      data: null,
+      error: mapCheckInRpcError(publicChannelSafeError(error.message, "invalid")),
+    }
+  }
   const raw = data as Record<string, unknown>
   if (!raw?.ok) {
-    return { data: null, error: String(raw?.error ?? "invalid") }
+    return { data: null, error: mapCheckInRpcError(String(raw?.error ?? "invalid")) }
   }
   return {
     data: {
@@ -74,10 +90,15 @@ export async function redeemCheckInToken(
   const { data, error } = await supabase.rpc("redeem_appointment_checkin_token", {
     p_token: token,
   })
-  if (error) return { data: null, error: error.message }
+  if (error) {
+    return {
+      data: null,
+      error: mapCheckInRpcError(publicChannelSafeError(error.message, "redeem_failed")),
+    }
+  }
   const raw = data as Record<string, unknown>
   if (!raw?.ok) {
-    return { data: null, error: String(raw?.error ?? "redeem_failed") }
+    return { data: null, error: mapCheckInRpcError(String(raw?.error ?? "redeem_failed")) }
   }
   return {
     data: {
@@ -86,4 +107,15 @@ export async function redeemCheckInToken(
     },
     error: null,
   }
+}
+
+/** Patient-facing copy for known check-in error codes (no raw plumbing). */
+export function checkInPublicErrorMessage(code: string | null | undefined): string {
+  const map: Record<string, string> = {
+    invalid: "This check-in link is invalid.",
+    expired: "This check-in link has expired. Please see the front desk.",
+    already_used: "This check-in link was already used.",
+    redeem_failed: CHECKIN_FALLBACK,
+  }
+  return map[code ?? ""] ?? CHECKIN_FALLBACK
 }

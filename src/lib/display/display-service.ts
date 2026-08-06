@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client"
+import { publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
 
 export type PublicQueueDisplayItem = {
   display_code: string
@@ -16,13 +17,21 @@ export interface PublicQueueDisplay {
   updated_at: string
 }
 
+const DISPLAY_FALLBACK =
+  "Unable to load the queue display. Please check with the front desk."
+
 export async function fetchPublicQueueDisplay(
   token: string
 ): Promise<{ data: PublicQueueDisplay | null; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("get_public_queue_display", { p_token: token })
 
-  if (error) return { data: null, error: error.message }
+  if (error) {
+    return {
+      data: null,
+      error: publicChannelSafeError(error.message, DISPLAY_FALLBACK),
+    }
+  }
   return { data: data as PublicQueueDisplay, error: null }
 }
 
