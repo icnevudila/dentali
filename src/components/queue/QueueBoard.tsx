@@ -319,6 +319,7 @@ export function QueueBoard({
   highlightAppointmentId,
   apptCheckInId,
   onArrivalCheckIn,
+  onPatientArrival,
   branchId,
   actionId,
   onAction,
@@ -331,6 +332,8 @@ export function QueueBoard({
   highlightAppointmentId?: string | null
   apptCheckInId?: string | null
   onArrivalCheckIn: (appointmentId: string) => void
+  /** Opens walk-in / registered patient arrival dialog when Check-in column is empty. */
+  onPatientArrival?: () => void
   branchId: string
   actionId: string | null
   onAction: (entryId: string, status: QueueStatus | "announce") => void
@@ -454,12 +457,39 @@ export function QueueBoard({
                 <div className="space-y-2">
                   {column.id === "arrivals" ? (
                     arrivals.length === 0 ? (
-                      <p className="text-xs text-neutral-400 py-4 text-center border border-dashed rounded-md px-2">
-                        {t(
-                          "queue.arrivalsColumnEmptyOperational",
-                          "No scheduled arrivals waiting for check-in. Use Patient arrival for registered walk-ins, or New walk-in patient for first-time patients."
-                        )}
-                      </p>
+                      <div className="space-y-2 rounded-md border border-dashed px-2 py-4 text-center">
+                        <p className="text-xs text-neutral-500">
+                          {t(
+                            "queue.arrivalsColumnEmptyOperational",
+                            "No scheduled arrivals waiting for check-in."
+                          )}
+                        </p>
+                        {!readOnly ? (
+                          <div className="flex flex-col gap-1.5">
+                            {onPatientArrival ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="w-full gap-1.5"
+                                onClick={onPatientArrival}
+                              >
+                                <UserCheck className="h-3.5 w-3.5" />
+                                {t("queue.patientArrival", "Patient arrival")}
+                              </Button>
+                            ) : null}
+                            <Button type="button" size="sm" variant="outline" className="w-full gap-1.5" asChild>
+                              <Link href="/patients/new?returnTo=queue">
+                                {t("queue.newWalkInShort", "New patient")}
+                              </Link>
+                            </Button>
+                            <Button type="button" size="sm" variant="ghost" className="w-full text-xs" asChild>
+                              <Link href="/appointments">
+                                {t("queue.openSchedule", "Open schedule")}
+                              </Link>
+                            </Button>
+                          </div>
+                        ) : null}
+                      </div>
                     ) : (
                       arrivals.map(({ appointment: appt, tone, minutesUntil }) => (
                         <ArrivalCardInner

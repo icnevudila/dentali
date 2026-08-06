@@ -755,7 +755,7 @@ function AppointmentsPageContent() {
                 )}
               </p>
               <Button variant="outline" size="sm" className="mt-2 border-amber-300 bg-white" asChild>
-                <Link href="/queue">{t("appointments.openQueueCheckIn", "Open Queue to check in")}</Link>
+                <Link href="/queue?focus=checkin">{t("appointments.openQueueCheckIn", "Open Queue to check in")}</Link>
               </Button>
             </div>
           ) : canCheckIn ? (
@@ -770,7 +770,7 @@ function AppointmentsPageContent() {
                 )}
               </p>
               <Button variant="outline" size="sm" className="mt-2" asChild>
-                <Link href="/queue">{t("appointments.openQueue", "Open queue board")}</Link>
+                <Link href="/queue?focus=checkin">{t("appointments.openQueue", "Open queue board")}</Link>
               </Button>
             </div>
           ) : null}
