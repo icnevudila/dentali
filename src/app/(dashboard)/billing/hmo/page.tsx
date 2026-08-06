@@ -31,6 +31,7 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
+import { IntegrationEnvBanner } from "@/components/layout/IntegrationEnvBanner"
 
 const STATUS_VARIANT: Record<
   string,
@@ -119,10 +120,14 @@ function HmoClaimsPageContent() {
     if (err) {
       setError(err)
     } else {
+      const refSuffix = data?.provider_ref ? ` Ref: ${data.provider_ref}` : ""
       setSubmitNote(
-        data?.provider_ref
-          ? `${t("billing.hmoSubmitted", "Claim submitted.")} Ref: ${data.provider_ref}`
-          : t("billing.hmoSubmitted", "Claim submitted.")
+        data?.dry_run
+          ? `${t(
+              "billing.hmoSubmittedDryRun",
+              "Dry-run only — claim status updated locally. No HMO clearinghouse was contacted."
+            )}${refSuffix}`
+          : `${t("billing.hmoSubmitted", "Claim submitted.")}${refSuffix}`
       )
       void load()
     }
@@ -220,6 +225,15 @@ function HmoClaimsPageContent() {
         panel={false}
       >
         <div className="space-y-6">
+          <IntegrationEnvBanner
+            title={t("billing.hmoIntegration", "HMO provider submit")}
+            tone="warning"
+            description={t(
+              "billing.hmoBanner",
+              "Submit updates claim status in the clinic queue and generates a local reference. No live HMO clearinghouse API is connected yet — treat submissions as dry-run until a provider integration is configured."
+            )}
+          />
+
           {activeBranch ? (
             <ReportDrillLink
               title={t("hmo.reportsTitle", "HMO pipeline analytics")}
