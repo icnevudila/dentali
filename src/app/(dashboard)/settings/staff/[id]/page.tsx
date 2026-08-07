@@ -252,7 +252,7 @@ export default function StaffDetailPage() {
 
         {canManageStaff ? (
         <Card className="border-0 shadow-none">
-          <CardHeader><CardTitle className="text-base">Branch Assignments</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t("settings.staffAssignmentsTitle", "Branch Assignments")}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             {member.assignments.length === 0 ? (
               <EmptyState
