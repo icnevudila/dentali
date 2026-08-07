@@ -22,6 +22,7 @@ import { useLocale } from "@/hooks/use-locale"
 import type { ProcedureCategory, ProcedureRecord } from "@/lib/billing/procedure-service"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
+import { EmptyState } from "@/components/ui/empty-state"
 import { ProcedureBomEditor } from "@/components/settings/ProcedureBomEditor"
 import { ListOrdered } from "lucide-react"
 import {
@@ -390,11 +391,25 @@ export default function ProceduresSettingsPage() {
         {loading ? (
           <PageLoadingSkeleton variant="block" className="h-32" />
         ) : visibleProcedures.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center text-neutral-500">
-              No procedures. Click Load Defaults to seed common dental procedures.
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={ListOrdered}
+            className="border-dashed bg-neutral-50/60 py-10"
+            title={t("settings.proceduresEmptyTitle", "No procedures yet")}
+            description={t(
+              "settings.proceduresEmptyHint",
+              "Load Defaults to seed common dental procedures, or add one manually."
+            )}
+            action={
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button size="sm" variant="outline" onClick={() => void handleSeed()}>
+                  {t("settings.loadDefaults", "Load Defaults")}
+                </Button>
+                <Button size="sm" onClick={() => setShowForm(true)}>
+                  {t("settings.addProcedure", "Add Procedure")}
+                </Button>
+              </div>
+            }
+          />
         ) : (
           <Card>
             <CardContent className="p-0 overflow-x-auto">

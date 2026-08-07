@@ -27,6 +27,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { createClient } from "@/lib/supabase/client"
 import { notify } from "@/lib/ui/notify"
+import { useLocale } from "@/hooks/use-locale"
 
 export default function PatientMedicalCertificatesPage({
   params,
@@ -35,6 +36,7 @@ export default function PatientMedicalCertificatesPage({
 }) {
   const { id: patientId } = use(params)
   const { activeBranch } = useBranch()
+  const { t } = useLocale()
   const [certificates, setCertificates] = useState<MedicalCertificateRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -114,13 +116,23 @@ export default function PatientMedicalCertificatesPage({
         ) : certificates.length === 0 ? (
           <EmptyState
             icon={FileText}
-            title="No rest certificates yet"
-            description="Create an official rest certificate when the patient needs documented leave from work or school."
+            title={t("medicalCert.emptyTitle", "No rest certificates yet")}
+            description={t(
+              "medicalCert.emptyHint",
+              "Create an official rest certificate when the patient needs documented leave from work or school."
+            )}
             action={
-              <Button size="sm" onClick={() => setIsModalOpen(true)} className="gap-1.5">
-                <Plus className="h-4 w-4" />
-                Create certificate
-              </Button>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button size="sm" onClick={() => setIsModalOpen(true)} className="gap-1.5">
+                  <Plus className="h-4 w-4" aria-hidden />
+                  {t("medicalCert.create", "Create certificate")}
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                  <Link href={`/patients/${patientId}/medical-certificate`}>
+                    {t("medicalCert.fitToWork", "Fit-to-work letter")}
+                  </Link>
+                </Button>
+              </div>
             }
           />
         ) : (
