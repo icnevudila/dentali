@@ -17,6 +17,7 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { EmptyState } from "@/components/ui/empty-state"
 import {
   fetchNotificationLogs,
   type NotificationLog,
@@ -169,15 +170,27 @@ export default function InboxPage() {
                   ) : logsError ? (
                     <p className="text-sm text-red-600">{logsError}</p>
                   ) : logs.length === 0 ? (
-                    <div className="flex flex-col items-start gap-2 rounded-lg border border-dashed border-neutral-200 bg-neutral-50/60 px-4 py-6">
-                      <Inbox className="h-5 w-5 text-neutral-400" aria-hidden />
-                      <p className="text-sm text-neutral-600">
-                        {t(
-                          "inbox.noOutreachYet",
-                          "No outreach logged yet. Open a patient profile and use WhatsApp, or send from Notifications."
-                        )}
-                      </p>
-                    </div>
+                    <EmptyState
+                      icon={Inbox}
+                      className="border-dashed bg-neutral-50/60 py-8"
+                      title={t("inbox.noOutreachTitle", "No outreach logged yet")}
+                      description={t(
+                        "inbox.noOutreachYet",
+                        "Open a patient profile and use WhatsApp, or send from Notification settings."
+                      )}
+                      action={
+                        <div className="flex flex-wrap items-center justify-center gap-2">
+                          <Button asChild size="sm">
+                            <Link href="/patients">{t("inbox.ctaPatients", "Patients")}</Link>
+                          </Button>
+                          <Button asChild size="sm" variant="outline">
+                            <Link href="/settings/notifications">
+                              {t("inbox.ctaNotifications", "Notifications")}
+                            </Link>
+                          </Button>
+                        </div>
+                      }
+                    />
                   ) : (
                     <ul className="divide-y divide-neutral-100 rounded-lg border border-neutral-200">
                       {logs.map((log) => (
