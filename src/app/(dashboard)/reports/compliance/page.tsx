@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { EmptyState } from "@/components/ui/empty-state"
 import { cn } from "@/lib/utils"
 import {
   CYCLE_METHOD_OPTIONS,
@@ -474,19 +475,27 @@ export default function CompliancePage() {
         {loading ? (
           <PageLoadingSkeleton variant="inline" />
         ) : cycles.length === 0 ? (
-          <Card>
-            <CardContent className="space-y-3 py-12 text-center">
-              <p className="text-sm font-medium text-neutral-800">
-                {t("compliance.emptyTitle", "No sterilization cycles in this period")}
-              </p>
-              <p className="text-sm text-neutral-500">
-                {t(
-                  "compliance.emptyBody",
-                  "Log each autoclave run with load details and indicator results. Records cannot be edited after save."
-                )}
-              </p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Shield}
+            className="border-dashed bg-neutral-50/60 py-10"
+            title={t("compliance.emptyTitle", "No sterilization cycles in this period")}
+            description={t(
+              "compliance.emptyBody",
+              "Log each autoclave run with load details and indicator results. Records cannot be edited after save."
+            )}
+            action={
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button size="sm" variant="outline" asChild>
+                  <Link href="/settings/audit">
+                    {t("compliance.viewAudit", "Audit log")}
+                  </Link>
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                  <Link href="/reports">{t("reports.backToHub", "Reports hub")}</Link>
+                </Button>
+              </div>
+            }
+          />
         ) : (
           <Card>
             <CardContent className="overflow-x-auto p-0">
