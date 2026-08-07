@@ -18,11 +18,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { EmptyState } from "@/components/ui/empty-state"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useRouteParams } from "@/hooks/use-route-params"
 import { useAuth } from "@/hooks/use-auth"
 import { useBranch } from "@/hooks/use-branch"
+import { useLocale } from "@/hooks/use-locale"
 import { usePermission } from "@/hooks/use-permission"
 import { fetchOrganization, fetchStaffProfile } from "@/lib/auth/auth-service"
 import { getPatient } from "@/lib/patients/patient-service"
@@ -118,6 +120,7 @@ function PrescriptionsPage() {
   const presetParam = searchParams.get("preset")
   const { user } = useAuth()
   const { activeBranch } = useBranch()
+  const { t } = useLocale()
   const { hasPermission } = usePermission()
   const canWrite = hasPermission(PERMISSIONS.PRESCRIPTIONS_WRITE)
 
@@ -569,7 +572,15 @@ function PrescriptionsPage() {
               </CardHeader>
               <CardContent>
                 {history.length === 0 ? (
-                  <p className="text-sm text-neutral-500 py-6 text-center">No prescriptions yet.</p>
+                  <EmptyState
+                    icon={Pill}
+                    className="border-0 bg-transparent py-6"
+                    title={t("prescriptions.emptyTitle", "No prescriptions yet")}
+                    description={t(
+                      "prescriptions.emptyHint",
+                      "Issue an e-Rx from a patient record or use a protocol preset above."
+                    )}
+                  />
                 ) : (
                   <ul className="divide-y">
                     {history.map((rx) => (

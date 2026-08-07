@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useLocale } from "@/hooks/use-locale"
@@ -13,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { EmptyState } from "@/components/ui/empty-state"
 import { ConsentPreviewFrame } from "@/components/consent/ConsentPreviewFrame"
 import { ConsentFieldEditor } from "@/components/consent/ConsentFieldEditor"
 import { parseConsentFields, type ConsentField } from "@/lib/consent/consent-field-types"
@@ -121,23 +123,25 @@ export default function ConsentTemplatesSettingsPage() {
         {loading ? (
           <PageLoadingSkeleton variant="inline" />
         ) : slugs.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="py-12 text-center text-neutral-500">
-              <FileSignature className="mx-auto h-10 w-10 text-neutral-300 mb-3" />
-              <p className="font-medium text-neutral-700">
-                {t("settings.consentEmptyTitle", "No consent templates yet")}
-              </p>
-              <p className="text-sm mt-1 max-w-md mx-auto">
-                {t(
-                  "settings.consentEmptyHint",
-                  "Run the paper consent migration in Supabase, then refresh. Global templates will appear here for org overrides."
-                )}
-              </p>
-              <Button variant="outline" size="sm" className="mt-4" onClick={load}>
-                {t("common.retry", "Refresh")}
-              </Button>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={FileSignature}
+            className="border-dashed bg-neutral-50/60 py-10"
+            title={t("settings.consentEmptyTitle", "No consent templates yet")}
+            description={t(
+              "settings.consentEmptyHint",
+              "Run the paper consent migration in Supabase, then refresh. Global templates will appear here for org overrides."
+            )}
+            action={
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => void load()}>
+                  {t("common.retry", "Refresh")}
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/patients">{t("inbox.ctaPatients", "Patients")}</Link>
+                </Button>
+              </div>
+            }
+          />
         ) : (
           <div className="grid gap-4">
             {slugs.map((slug) => {

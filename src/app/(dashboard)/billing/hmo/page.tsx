@@ -23,6 +23,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { EmptyState } from "@/components/ui/empty-state"
 import { Input } from "@/components/ui/input"
 import { Building2, Plus, RotateCcw } from "lucide-react"
 import { HmoClaimDrawer } from "@/components/billing/HmoClaimDrawer"
@@ -275,34 +276,43 @@ function HmoClaimsPageContent() {
               {loading ? (
                 <PageLoadingSkeleton variant="inline" />
               ) : displayedClaims.length === 0 ? (
-                <div className="py-12 text-center">
-                  <Building2 className="mx-auto h-10 w-10 text-neutral-300" aria-hidden />
-                  <p className="mt-3 font-medium text-neutral-700">
-                    {statusFilter === "draft"
+                <EmptyState
+                  icon={Building2}
+                  className="border-0 bg-transparent py-8"
+                  title={
+                    statusFilter === "draft"
                       ? t("billing.noHmoDraftClaims", "No draft HMO claims")
                       : statusFilter === "pending"
                         ? t("billing.noHmoPendingClaims", "No in-progress HMO claims")
-                        : t("billing.noHmoClaimsTitle", "No HMO claims yet")}
-                  </p>
-                  <p className="mx-auto mt-1 max-w-sm text-sm text-neutral-500">
-                    {statusFilter === "draft" || statusFilter === "pending" ? (
-                      <Link href="/billing/hmo" className="text-primary-600 hover:underline">
-                        {t("billing.clearFilter", "Clear filter")}
-                      </Link>
-                    ) : (
-                      t(
-                        "billing.noHmoClaimsHint",
-                        "Draft a claim for a patient with active HMO coverage, then submit for review."
-                      )
-                    )}
-                  </p>
-                  {canWrite ? (
-                    <Button className="mt-4 gap-2" onClick={() => setDrawerOpen(true)}>
-                      <Plus className="h-4 w-4" />
-                      {t("billing.newClaim", "New claim")}
-                    </Button>
-                  ) : null}
-                </div>
+                        : t("billing.noHmoClaimsTitle", "No HMO claims yet")
+                  }
+                  description={
+                    statusFilter === "draft" || statusFilter === "pending"
+                      ? t("billing.clearFilterHint", "Clear the status filter to see all claims.")
+                      : t(
+                          "billing.noHmoClaimsHint",
+                          "Draft a claim for a patient with active HMO coverage, then submit for review."
+                        )
+                  }
+                  action={
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      {statusFilter === "draft" || statusFilter === "pending" ? (
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href="/billing/hmo">{t("billing.clearFilter", "Clear filter")}</Link>
+                        </Button>
+                      ) : null}
+                      {canWrite ? (
+                        <Button size="sm" className="gap-2" onClick={() => setDrawerOpen(true)}>
+                          <Plus className="h-4 w-4" aria-hidden />
+                          {t("billing.newClaim", "New claim")}
+                        </Button>
+                      ) : null}
+                      <Button size="sm" variant="outline" asChild>
+                        <Link href="/patients">{t("billing.goToPatients", "Go to Patients")}</Link>
+                      </Button>
+                    </div>
+                  }
+                />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-0 text-sm sm:min-w-[780px]">

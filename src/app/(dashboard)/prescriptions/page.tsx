@@ -30,8 +30,9 @@ import {
   fetchBranchPrescriptions,
   type BranchPrescriptionSummary,
 } from "@/lib/clinical/prescription-service"
-import { SelectPatientForRxModal } from "@/components/clinical/SelectPatientForRxModal"
 import { EmptyState } from "@/components/ui/empty-state"
+import { SelectPatientForRxModal } from "@/components/clinical/SelectPatientForRxModal"
+import { useLocale } from "@/hooks/use-locale"
 
 function patientLabel(rx: BranchPrescriptionSummary) {
   const name = [rx.patient_first_name, rx.patient_last_name].filter(Boolean).join(" ").trim()
@@ -40,6 +41,7 @@ function patientLabel(rx: BranchPrescriptionSummary) {
 
 export default function GlobalPrescriptionsPage() {
   const { activeBranch, hasActiveBranch } = useBranch()
+  const { t } = useLocale()
   const [searchQuery, setSearchQuery] = React.useState("")
   const [modalOpen, setModalOpen] = React.useState(false)
   const [selectedPreset, setSelectedPreset] = React.useState<{ name: string; diagnosis: string } | null>(null)
@@ -223,17 +225,29 @@ export default function GlobalPrescriptionsPage() {
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={Pill}
-              title={rows.length === 0 ? "No prescriptions yet" : "No matches"}
+              title={
+                rows.length === 0
+                  ? t("prescriptions.emptyTitle", "No prescriptions yet")
+                  : t("prescriptions.noMatches", "No matches")
+              }
               description={
                 rows.length === 0
-                  ? "Issue an e-Rx from a patient record or use a protocol preset above."
-                  : "Try a different search term."
+                  ? t(
+                      "prescriptions.emptyHint",
+                      "Issue an e-Rx from a patient record or use a protocol preset above."
+                    )
+                  : t("prescriptions.noMatchesHint", "Try a different search term.")
               }
               action={
                 rows.length === 0 ? (
-                  <Button size="sm" onClick={() => openModalWithPreset()}>
-                    Issue new e-Rx
-                  </Button>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <Button size="sm" onClick={() => openModalWithPreset()}>
+                      {t("prescriptions.issueNew", "Issue new e-Rx")}
+                    </Button>
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href="/patients">{t("inbox.ctaPatients", "Patients")}</Link>
+                    </Button>
+                  </div>
                 ) : undefined
               }
             />

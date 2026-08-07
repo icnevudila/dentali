@@ -20,6 +20,7 @@ import {
 import { ManualInvoiceDrawer } from "@/components/billing/ManualInvoiceDrawer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/ui/empty-state"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { BillingOpsSummary } from "@/components/billing/BillingOpsSummary"
 import { ContentPanel } from "@/components/layout/ContentPanel"
@@ -266,11 +267,12 @@ function BillingPageContent() {
                 ))}
               </div>
             ) : filteredInvoices.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/60 px-6 py-14 text-center animate-fade-rise">
-                <Receipt className="mx-auto mb-3 h-10 w-10 text-neutral-300" aria-hidden />
-                <p className="text-neutral-600">{t("billing.empty", "No invoices yet.")}</p>
-                <p className="mt-2 text-sm text-neutral-500">
-                  {patientFilter
+              <EmptyState
+                icon={Receipt}
+                className="border-dashed bg-neutral-50/60 py-10"
+                title={t("billing.emptyTitle", "No invoices yet")}
+                description={
+                  patientFilter
                     ? t(
                         "billing.emptyPatientHint",
                         "This patient has no invoices yet. Start from the treatment plan or create a manual invoice."
@@ -278,37 +280,39 @@ function BillingPageContent() {
                     : t(
                         "billing.emptyHint",
                         "Approve a treatment plan and convert it to an invoice."
-                      )}
-                </p>
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                  {patientFilter ? (
-                    <>
-                      <Button onClick={() => setShowCreate(true)}>
-                        {t("billing.createInvoice", "New invoice")}
-                      </Button>
-                      <Button variant="outline" asChild>
-                        <Link href={`/patients/${patientFilter}/treatment-plan`}>
-                          {t("billing.openTreatmentPlan", "Open treatment plan")}
-                        </Link>
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button variant="outline" asChild>
-                        <Link href="/patients">{t("billing.goToPatients", "Go to Patients")}</Link>
-                      </Button>
-                      <Button onClick={() => setShowCreate(true)}>
-                        {t("billing.createInvoice", "New invoice")}
-                      </Button>
-                    </>
-                  )}
-                  <Button variant="ghost" asChild>
-                    <Link href="/settings/workflow">
-                      {t("billing.workflowSettings", "Automation settings")}
-                    </Link>
-                  </Button>
-                </div>
-              </div>
+                      )
+                }
+                action={
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {patientFilter ? (
+                      <>
+                        <Button size="sm" onClick={() => setShowCreate(true)}>
+                          {t("billing.createInvoice", "New invoice")}
+                        </Button>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href={`/patients/${patientFilter}/treatment-plan`}>
+                            {t("billing.openTreatmentPlan", "Open treatment plan")}
+                          </Link>
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button size="sm" onClick={() => setShowCreate(true)}>
+                          {t("billing.createInvoice", "New invoice")}
+                        </Button>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href="/patients">{t("billing.goToPatients", "Go to Patients")}</Link>
+                        </Button>
+                      </>
+                    )}
+                    <Button size="sm" variant="ghost" asChild>
+                      <Link href="/settings/workflow">
+                        {t("billing.workflowSettings", "Automation settings")}
+                      </Link>
+                    </Button>
+                  </div>
+                }
+              />
             ) : (
               <div className="space-y-2">
                 {filteredInvoices.map((inv, index) => {

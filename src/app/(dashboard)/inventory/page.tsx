@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { createPortal } from "react-dom"
 import { useSearchParams, useRouter } from "next/navigation"
 import { PermissionGate } from "@/components/auth/PermissionGate"
@@ -27,6 +28,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { EmptyState } from "@/components/ui/empty-state"
 import { Plus, Package, MapPin, AlertTriangle, Edit } from "lucide-react"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
@@ -495,14 +497,39 @@ function InventoryPageContent() {
             {loading ? (
               <PageLoadingSkeleton variant="inline" />
             ) : displayedItems.length === 0 ? (
-              <div className="text-center py-16 text-neutral-500">
-                <Package className="h-10 w-10 mx-auto mb-3 text-neutral-300" />
-                <p>
-                  {alertsFilter
+              <EmptyState
+                icon={Package}
+                className="border-0 bg-transparent py-12"
+                title={
+                  alertsFilter
+                    ? t("inventory.noAlertsTitle", "No low-stock alerts")
+                    : t("inventory.emptyTitle", "No inventory items yet")
+                }
+                description={
+                  alertsFilter
                     ? t("inventory.noAlerts", "No low-stock alerts right now.")
-                    : t("inventory.empty", "No inventory items yet.")}
-                </p>
-              </div>
+                    : t("inventory.empty", "No inventory items yet.")
+                }
+                action={
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {!alertsFilter ? (
+                      <Button size="sm" className="gap-2" onClick={() => setShowAdd(true)}>
+                        <Plus className="h-4 w-4" aria-hidden />
+                        {t("inventory.addItem", "Add item")}
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={() => router.push("/inventory")}>
+                        {t("inventory.itemList", "All items")}
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href="/reports?focus=compliance#compliance">
+                        {t("inventory.openReports", "Open inventory reports")}
+                      </Link>
+                    </Button>
+                  </div>
+                }
+              />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">

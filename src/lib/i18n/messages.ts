@@ -280,6 +280,10 @@ export const messagesEnPh: MessageTree = {
     linkInventoryDesc: "Stock levels and low-stock alerts",
     auditPermissionNote: "Audit log access depends on your role permissions.",
     backDashboard: "Back to dashboard",
+    devicesEyebrow: "Patient-facing",
+    backToHub: "Reports hub",
+    linkSatisfaction: "Check-in satisfaction",
+    panelSatisfactionTitle: "Check-in satisfaction",
   },
   inbox: {
     pageEyebrow: "Front desk",
@@ -294,8 +298,25 @@ export const messagesEnPh: MessageTree = {
     noOutreachYet:
       "Open a patient profile and use WhatsApp, or send from Notification settings.",
     ctaPatients: "Patients",
+    ctaQueue: "Queue",
     ctaNotifications: "Notifications",
     manualOutreach: "Manual outreach",
+  },
+  satisfaction: {
+    title: "Check-in satisfaction",
+    subtitle: "Kiosk star ratings and optional comments after check-in. No patient names are shown.",
+    avgLabel: "Average rating ({days}d)",
+    totalLabel: "Responses ({days}d)",
+    distribution: "Rating distribution",
+    loadError: "Could not load satisfaction feedback. Check report permissions.",
+    openFull: "Open satisfaction report",
+    recentTitle: "Recent responses",
+    emptyTitle: "No responses yet",
+    empty:
+      "No satisfaction responses in this period yet. They appear after kiosk check-in surveys.",
+    openKioskSettings: "Open kiosk settings",
+    ctaReports: "Reports hub",
+    noComment: "No comment",
   },
   closeout: {
     readinessTitle: "Closeout readiness",
@@ -883,6 +904,70 @@ export const messagesEnPh: MessageTree = {
     bulkImport: "Bulk import",
     closeImport: "Close import",
     loadDefaults: "Load Defaults",
+    attentionRulesTitle: "Dashboard — Needs attention",
+    attentionRulesHint: "Toggle which KPI alerts appear on the owner dashboard for this branch.",
+    staffEmptyTitle: "No staff members yet",
+    staffEmptyHint:
+      "Sign in as the clinic owner to bootstrap your organization, then invite teammates.",
+    branchesEmptyTitle: "No branches yet",
+    branchesEmptyHint:
+      "Create your first clinic location to enable queue, kiosk, and staff assignment.",
+    createFirstBranch: "Create your first branch",
+    proceduresEmptyTitle: "No procedures yet",
+    proceduresEmptyHint: "Load Defaults to seed common dental procedures, or add one manually.",
+    auditEmptyTitle: "No audit events",
+    notificationsNoTemplatesTitle: "No templates yet",
+    notificationsNoLogsTitle: "No messages logged yet",
+    attentionRule: {
+      overdue_invoices: {
+        label: "Overdue invoices",
+        description: "Past-due balances on the billing board",
+      },
+      low_stock: {
+        label: "Low stock alerts",
+        description: "Inventory SKUs at or below reorder threshold",
+      },
+      pending_consents: {
+        label: "Pending consents",
+        description: "Unsigned required consent forms",
+      },
+      pending_intake_drafts: {
+        label: "Pending intake drafts",
+        description: "Kiosk or portal registrations awaiting review",
+      },
+      appointments_awaiting_checkin: {
+        label: "Awaiting check-in",
+        description: "Check in on the Queue board — Today's arrivals",
+      },
+      open_encounters_stale: {
+        label: "Open visits from prior days",
+        description: "Encounters still open after the visit day — close or continue treatment",
+      },
+      missing_notes: {
+        label: "Missing clinical notes",
+        description: "Completed appointments without a linked note (7 days)",
+      },
+      open_invoices: {
+        label: "Open invoices",
+        description: "Issued invoices with outstanding balance",
+      },
+      hmo_draft: {
+        label: "HMO draft claims",
+        description: "Claims not yet submitted to the payer",
+      },
+      queue_waiting: {
+        label: "Queue waiting",
+        description: "Patients in clinic today (waiting, called, or in chair)",
+      },
+      waitlist_waiting: {
+        label: "Waitlist pending",
+        description: "Entries awaiting contact or an open slot",
+      },
+      philhealth_pending: {
+        label: "PhilHealth pending",
+        description: "Claims awaiting submission or payer response",
+      },
+    },
   },
   dentist: {
     registryEyebrow: "Clinical",
@@ -1128,6 +1213,12 @@ export const messagesEnPh: MessageTree = {
     active: "Active",
     history: "History",
     empty: "No patients on the waitlist.",
+    emptyActiveTitle: "No active entries",
+    emptyActiveHint: "Each row shows urgency, contact progress, and quick actions.",
+    emptyHistoryTitle: "No history",
+    emptyHistoryHint: "Booked, cancelled, and expired entries appear here.",
+    addFirst: "Add first entry",
+    ctaAppointments: "Appointments",
     slotAlertSent: "Slot alert sent",
     contactLogged: "Contact attempt recorded",
     booked: "Appointment booked from waitlist",
@@ -1438,6 +1529,8 @@ export const messagesEnPh: MessageTree = {
     eyebrow: "Operations",
     description: "Branch-only staff messages for quick coordination during clinic hours.",
     empty: "No messages yet. Start the conversation for this branch.",
+    emptyTitle: "No messages yet",
+    emptyHint: "Type below to post the first message.",
     placeholder: "Message the team…",
     send: "Send",
     sendFailed: "Could not send message",
@@ -1463,6 +1556,20 @@ export const messagesEnPh: MessageTree = {
     emptyHint: "Clock in above to start your shift, or open Staff to review team schedules.",
     ctaStaff: "Staff",
     open: "Open",
+  },
+  prescriptions: {
+    emptyTitle: "No prescriptions yet",
+    emptyHint: "Issue an e-Rx from a patient record or use a protocol preset above.",
+    noMatches: "No matches",
+    noMatchesHint: "Try a different search term.",
+    issueNew: "Issue new e-Rx",
+  },
+  medicalCert: {
+    emptyTitle: "No rest certificates yet",
+    emptyHint:
+      "Create an official rest certificate when the patient needs documented leave from work or school.",
+    create: "Create certificate",
+    fitToWork: "Fit-to-work letter",
   },
   checkin: {
     copyLink: "Check-in link",
@@ -2029,8 +2136,25 @@ export const messagesTr: MessageTree = {
     noOutreachYet:
       "Hasta profilinden WhatsApp kullanın veya Bildirim ayarlarından gönderin.",
     ctaPatients: "Hastalar",
+    ctaQueue: "Kuyruk",
     ctaNotifications: "Bildirimler",
     manualOutreach: "Manuel iletişim",
+  },
+  satisfaction: {
+    title: "Check-in memnuniyeti",
+    subtitle: "Kiosk yıldız puanları ve isteğe bağlı yorumlar. Hasta adları gösterilmez.",
+    avgLabel: "Ortalama puan ({days}g)",
+    totalLabel: "Yanıtlar ({days}g)",
+    distribution: "Puan dağılımı",
+    loadError: "Memnuniyet geri bildirimi yüklenemedi. Rapor izinlerini kontrol edin.",
+    openFull: "Memnuniyet raporunu aç",
+    recentTitle: "Son yanıtlar",
+    emptyTitle: "Henüz yanıt yok",
+    empty:
+      "Bu dönemde henüz memnuniyet yanıtı yok. Kiosk check-in anketlerinden sonra görünür.",
+    openKioskSettings: "Kiosk ayarlarını aç",
+    ctaReports: "Rapor merkezi",
+    noComment: "Yorum yok",
   },
   closeout: {
     readinessTitle: "Kapanış hazırlığı",
@@ -2617,6 +2741,70 @@ export const messagesTr: MessageTree = {
     bulkImport: "Toplu içe aktar",
     closeImport: "İçe aktarmayı kapat",
     loadDefaults: "Varsayılanları Yükle",
+    attentionRulesTitle: "Panel — Dikkat gerektiren",
+    attentionRulesHint: "Bu şube için sahip kontrol panelinde hangi KPI uyarılarının görüneceğini değiştirin.",
+    staffEmptyTitle: "Henüz personel yok",
+    staffEmptyHint:
+      "Organizasyonu başlatmak için klinik sahibi olarak giriş yapın, ardından ekip davet edin.",
+    branchesEmptyTitle: "Henüz şube yok",
+    branchesEmptyHint:
+      "Kuyruk, kiosk ve personel ataması için ilk klinik lokasyonunu oluşturun.",
+    createFirstBranch: "İlk şubenizi oluşturun",
+    proceduresEmptyTitle: "Henüz prosedür yok",
+    proceduresEmptyHint: "Yaygın diş prosedürlerini eklemek için Varsayılanları Yükle’yi kullanın veya manuel ekleyin.",
+    auditEmptyTitle: "Denetim olayı yok",
+    notificationsNoTemplatesTitle: "Henüz şablon yok",
+    notificationsNoLogsTitle: "Henüz mesaj kaydı yok",
+    attentionRule: {
+      overdue_invoices: {
+        label: "Vadesi geçmiş faturalar",
+        description: "Faturalama tahtasındaki gecikmiş bakiyeler",
+      },
+      low_stock: {
+        label: "Düşük stok uyarıları",
+        description: "Yeniden sipariş eşiğinde veya altında olan SKU’lar",
+      },
+      pending_consents: {
+        label: "Bekleyen onamlar",
+        description: "İmzalanmamış zorunlu onam formları",
+      },
+      pending_intake_drafts: {
+        label: "Bekleyen kayıt taslakları",
+        description: "İnceleme bekleyen kiosk veya portal kayıtları",
+      },
+      appointments_awaiting_checkin: {
+        label: "Check-in bekleyenler",
+        description: "Kuyruk tahtasında check-in — Bugünün gelişleri",
+      },
+      open_encounters_stale: {
+        label: "Önceki günlerden açık ziyaretler",
+        description: "Ziyaret gününden sonra hâlâ açık karşılaşmalar — kapatın veya tedaviye devam edin",
+      },
+      missing_notes: {
+        label: "Eksik klinik notlar",
+        description: "Bağlı notu olmayan tamamlanmış randevular (7 gün)",
+      },
+      open_invoices: {
+        label: "Açık faturalar",
+        description: "Bakiyesi kalan kesilmiş faturalar",
+      },
+      hmo_draft: {
+        label: "HMO taslak talepleri",
+        description: "Ödeyiciye henüz gönderilmemiş talepler",
+      },
+      queue_waiting: {
+        label: "Kuyrukta bekleyenler",
+        description: "Bugün klinikteki hastalar (bekliyor, çağrıldı veya koltukta)",
+      },
+      waitlist_waiting: {
+        label: "Bekleme listesi",
+        description: "İletişim veya açık slot bekleyen kayıtlar",
+      },
+      philhealth_pending: {
+        label: "PhilHealth beklemede",
+        description: "Gönderim veya ödeyici yanıtı bekleyen talepler",
+      },
+    },
   },
   dentist: {
     registryEyebrow: "Klinik",
@@ -2861,6 +3049,12 @@ export const messagesTr: MessageTree = {
     active: "Aktif",
     history: "Geçmiş",
     empty: "Bekleme listesinde hasta yok.",
+    emptyActiveTitle: "Aktif kayıt yok",
+    emptyActiveHint: "Her satırda aciliyet, iletişim ilerlemesi ve hızlı aksiyonlar görünür.",
+    emptyHistoryTitle: "Geçmiş yok",
+    emptyHistoryHint: "Randevu verilen, iptal edilen ve süresi dolan kayıtlar burada görünür.",
+    addFirst: "İlk kaydı ekle",
+    ctaAppointments: "Randevular",
     slotAlertSent: "Slot uyarısı gönderildi",
     contactLogged: "İletişim kaydı oluşturuldu",
     booked: "Bekleme listesinden randevu oluşturuldu",
@@ -3171,6 +3365,8 @@ export const messagesTr: MessageTree = {
     eyebrow: "Operasyon",
     description: "Şube içi personel mesajları — klinik saatlerinde hızlı koordinasyon.",
     empty: "Henüz mesaj yok. Bu şube için sohbeti başlatın.",
+    emptyTitle: "Henüz mesaj yok",
+    emptyHint: "İlk mesajı göndermek için aşağıya yazın.",
     placeholder: "Ekibe mesaj yazın…",
     send: "Gönder",
     sendFailed: "Mesaj gönderilemedi",
@@ -3196,6 +3392,20 @@ export const messagesTr: MessageTree = {
     emptyHint: "Vardiyayı başlatmak için yukarıdan mesaiye girin veya ekip programı için Personel’i açın.",
     ctaStaff: "Personel",
     open: "Açık",
+  },
+  prescriptions: {
+    emptyTitle: "Henüz reçete yok",
+    emptyHint: "Hasta kaydından e-Rx düzenleyin veya yukarıdaki protokol şablonunu kullanın.",
+    noMatches: "Eşleşme yok",
+    noMatchesHint: "Farklı bir arama terimi deneyin.",
+    issueNew: "Yeni e-Rx düzenle",
+  },
+  medicalCert: {
+    emptyTitle: "Henüz istirahat raporu yok",
+    emptyHint:
+      "Hasta iş veya okul için belgelenmiş izin gerektiğinde resmi istirahat raporu oluşturun.",
+    create: "Rapor oluştur",
+    fitToWork: "İşe dönüş yazısı",
   },
   checkin: {
     copyLink: "Check-in bağlantısı",
@@ -3810,13 +4020,32 @@ export const messagesFil: MessageTree = {
     noOutreachYet:
       "Buksan ang patient profile at gamitin ang WhatsApp, o magpadala mula sa Notification settings.",
     ctaPatients: "Patients",
+    ctaQueue: "Queue",
     ctaNotifications: "Notifications",
     manualOutreach: "Manual outreach",
+  },
+  satisfaction: {
+    title: "Check-in satisfaction",
+    subtitle: "Kiosk star ratings at optional comments pagkatapos ng check-in. Walang patient names.",
+    avgLabel: "Average rating ({days}d)",
+    totalLabel: "Responses ({days}d)",
+    distribution: "Rating distribution",
+    loadError: "Hindi ma-load ang satisfaction feedback. Suriin ang report permissions.",
+    openFull: "Buksan ang satisfaction report",
+    recentTitle: "Recent responses",
+    emptyTitle: "Wala pang responses",
+    empty:
+      "Wala pang satisfaction responses sa period na ito. Lilitaw pagkatapos ng kiosk check-in surveys.",
+    openKioskSettings: "Buksan ang kiosk settings",
+    ctaReports: "Reports hub",
+    noComment: "Walang comment",
   },
   teamChat: {
     eyebrow: "Operations",
     description: "Staff messages sa branch lang — para sa mabilis na koordinasyon sa clinic hours.",
     empty: "Wala pang mensahe. Simulan ang usapan para sa branch na ito.",
+    emptyTitle: "Wala pang mensahe",
+    emptyHint: "Mag-type sa ibaba para sa unang mensahe.",
     placeholder: "Mag-message sa team…",
     send: "Ipadala",
     sendFailed: "Hindi maipadala ang mensahe",
@@ -3842,6 +4071,20 @@ export const messagesFil: MessageTree = {
     emptyHint: "Mag-clock in sa itaas para simulan ang shift, o buksan ang Staff para sa team schedules.",
     ctaStaff: "Staff",
     open: "Open",
+  },
+  prescriptions: {
+    emptyTitle: "Wala pang reseta",
+    emptyHint: "Mag-issue ng e-Rx mula sa patient record o gamitin ang protocol preset sa itaas.",
+    noMatches: "Walang tugma",
+    noMatchesHint: "Subukan ang ibang search term.",
+    issueNew: "Mag-issue ng bagong e-Rx",
+  },
+  medicalCert: {
+    emptyTitle: "Wala pang rest certificate",
+    emptyHint:
+      "Gumawa ng opisyal na rest certificate kapag kailangan ng documented leave ang pasyente.",
+    create: "Gumawa ng certificate",
+    fitToWork: "Fit-to-work letter",
   },
   closeout: {
     readinessTitle: "Closeout readiness",
@@ -4134,6 +4377,70 @@ export const messagesFil: MessageTree = {
     bulkImport: "Bulk import",
     closeImport: "Isara ang import",
     loadDefaults: "I-load ang defaults",
+    attentionRulesTitle: "Dashboard — Needs attention",
+    attentionRulesHint: "I-toggle kung aling KPI alerts ang lilitaw sa owner dashboard para sa branch na ito.",
+    staffEmptyTitle: "Wala pang staff",
+    staffEmptyHint:
+      "Mag-sign in bilang clinic owner para i-bootstrap ang organization, tapos mag-invite ng teammates.",
+    branchesEmptyTitle: "Wala pang branches",
+    branchesEmptyHint:
+      "Gumawa ng unang clinic location para sa queue, kiosk, at staff assignment.",
+    createFirstBranch: "Gumawa ng unang branch",
+    proceduresEmptyTitle: "Wala pang procedures",
+    proceduresEmptyHint: "I-load ang Defaults para sa common dental procedures, o magdagdag manually.",
+    auditEmptyTitle: "Walang audit events",
+    notificationsNoTemplatesTitle: "Wala pang templates",
+    notificationsNoLogsTitle: "Wala pang message logs",
+    attentionRule: {
+      overdue_invoices: {
+        label: "Overdue invoices",
+        description: "Past-due balances sa billing board",
+      },
+      low_stock: {
+        label: "Low stock alerts",
+        description: "Inventory SKUs at o below reorder threshold",
+      },
+      pending_consents: {
+        label: "Pending consents",
+        description: "Unsigned required consent forms",
+      },
+      pending_intake_drafts: {
+        label: "Pending intake drafts",
+        description: "Kiosk o portal registrations na naghihintay ng review",
+      },
+      appointments_awaiting_checkin: {
+        label: "Awaiting check-in",
+        description: "Mag-check in sa Queue board — Today's arrivals",
+      },
+      open_encounters_stale: {
+        label: "Open visits from prior days",
+        description: "Encounters na bukas pa pagkatapos ng visit day — isara o ituloy ang treatment",
+      },
+      missing_notes: {
+        label: "Missing clinical notes",
+        description: "Completed appointments na walang linked note (7 days)",
+      },
+      open_invoices: {
+        label: "Open invoices",
+        description: "Issued invoices na may outstanding balance",
+      },
+      hmo_draft: {
+        label: "HMO draft claims",
+        description: "Claims na hindi pa naipasa sa payer",
+      },
+      queue_waiting: {
+        label: "Queue waiting",
+        description: "Patients sa clinic ngayon (waiting, called, o in chair)",
+      },
+      waitlist_waiting: {
+        label: "Waitlist pending",
+        description: "Entries na naghihintay ng contact o open slot",
+      },
+      philhealth_pending: {
+        label: "PhilHealth pending",
+        description: "Claims na naghihintay ng submission o payer response",
+      },
+    },
   },
   dentist: {
     title: "Mga pasyente sa upuan",
@@ -4253,6 +4560,12 @@ export const messagesFil: MessageTree = {
     active: "Active",
     history: "History",
     empty: "Walang pasyente sa waitlist.",
+    emptyActiveTitle: "Walang active entries",
+    emptyActiveHint: "Makikita sa bawat row ang urgency, contact progress, at quick actions.",
+    emptyHistoryTitle: "Walang history",
+    emptyHistoryHint: "Booked, cancelled, at expired entries ang lilitaw dito.",
+    addFirst: "Magdagdag ng unang entry",
+    ctaAppointments: "Appointments",
     slotAlertSent: "Naipadala ang slot alert",
   },
   billing: {

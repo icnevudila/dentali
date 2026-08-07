@@ -112,11 +112,20 @@ export function SatisfactionAnalyticsPanel({
       </div>
 
       {showLink ? (
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/reports/satisfaction">
-            {t("satisfaction.openFull", "Open satisfaction report")}
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/reports/satisfaction">
+              {t("satisfaction.openFull", "Open satisfaction report")}
+            </Link>
+          </Button>
+          {!isLoading && display.total === 0 ? (
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/settings/kiosk">
+                {t("satisfaction.openKioskSettings", "Open kiosk settings")}
+              </Link>
+            </Button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   )

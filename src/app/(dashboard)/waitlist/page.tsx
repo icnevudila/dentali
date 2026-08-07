@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useBranch } from "@/hooks/use-branch"
@@ -28,6 +29,7 @@ import { Clock, Plus, MapPin } from "lucide-react"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
+import { EmptyState } from "@/components/ui/empty-state"
 import { StatusPipeline, waitlistPipelineSteps } from "@/components/visual/StatusPipeline"
 import { WaitlistEntryList } from "@/components/waitlist/WaitlistEntryList"
 import { WaitlistBookDialog } from "@/components/waitlist/WaitlistBookDialog"
@@ -331,23 +333,48 @@ export default function WaitlistPage() {
             {loading ? (
               <PageLoadingSkeleton variant="inline" />
             ) : entries.length === 0 ? (
-              <div className="py-8">
-                <div className="text-center">
-                  <Clock className="mx-auto h-10 w-10 text-neutral-300" aria-hidden />
-                  <p className="mt-3 font-semibold text-neutral-900">
-                    {tab === "active" ? t("waitlist.emptyActiveTitle", "No active entries") : t("waitlist.emptyHistoryTitle", "No history")}
-                  </p>
-                  <p className="text-sm mt-1 max-w-md mx-auto">
-                    {tab === "active"
-                      ? t("waitlist.emptyActiveHint", "Each row shows urgency, contact progress, and quick actions.")
-                      : t("waitlist.emptyHistoryHint", "Booked, cancelled, and expired entries appear here.")}
-                  </p>
-                  {tab === "active" && canWriteAppointments ? (
-                    <Button variant="outline" className="mt-4 gap-2" onClick={() => setShowAdd(true)}>
-                      <Plus className="h-4 w-4" /> {t("waitlist.addFirst", "Add first entry")}
-                    </Button>
-                  ) : null}
-                </div>
+              <div className="py-4">
+                <EmptyState
+                  icon={Clock}
+                  className="border-dashed bg-neutral-50/60 py-8"
+                  title={
+                    tab === "active"
+                      ? t("waitlist.emptyActiveTitle", "No active entries")
+                      : t("waitlist.emptyHistoryTitle", "No history")
+                  }
+                  description={
+                    tab === "active"
+                      ? t(
+                          "waitlist.emptyActiveHint",
+                          "Each row shows urgency, contact progress, and quick actions."
+                        )
+                      : t(
+                          "waitlist.emptyHistoryHint",
+                          "Booked, cancelled, and expired entries appear here."
+                        )
+                  }
+                  action={
+                    tab === "active" && canWriteAppointments ? (
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <Button size="sm" className="gap-2" onClick={() => setShowAdd(true)}>
+                          <Plus className="h-4 w-4" aria-hidden />
+                          {t("waitlist.addFirst", "Add first entry")}
+                        </Button>
+                        <Button asChild size="sm" variant="outline">
+                          <Link href="/appointments">{t("waitlist.ctaAppointments", "Appointments")}</Link>
+                        </Button>
+                      </div>
+                    ) : tab === "active" ? (
+                      <Button asChild size="sm" variant="outline">
+                        <Link href="/appointments">{t("waitlist.ctaAppointments", "Appointments")}</Link>
+                      </Button>
+                    ) : (
+                      <Button asChild size="sm" variant="outline">
+                        <Link href="/queue">{t("inbox.ctaQueue", "Queue")}</Link>
+                      </Button>
+                    )
+                  }
+                />
                 {tab === "active" ? (
                   <div className="mt-12 mx-auto max-w-xl rounded-xl border border-dashed border-neutral-200 bg-neutral-50/80 p-4 pointer-events-none select-none">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400 mb-3">

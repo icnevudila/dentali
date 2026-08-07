@@ -182,6 +182,7 @@ export const ATTENTION_RULES: AttentionRuleDef[] = [
   },
 ]
 
+/** English fallbacks — UI must resolve via t(labelKey / descriptionKey). */
 const ATTENTION_RULE_COPY: Record<string, { label: string; description: string }> = {
   overdue_invoices: {
     label: "Overdue invoices",
@@ -233,12 +234,28 @@ const ATTENTION_RULE_COPY: Record<string, { label: string; description: string }
   },
 }
 
-/** Branch settings keys + copy for workflow settings UI */
-export const ATTENTION_RULE_UI = ATTENTION_RULES.map((rule) => {
+export type AttentionRuleUiItem = {
+  key: string
+  id: string
+  /** i18n key: settings.attentionRule.<id>.label */
+  labelKey: string
+  /** i18n key: settings.attentionRule.<id>.description */
+  descriptionKey: string
+  /** English fallback for t() */
+  label: string
+  /** English fallback for t() */
+  description: string
+  workflowKey?: string
+}
+
+/** Branch settings keys + i18n keys for workflow settings UI */
+export const ATTENTION_RULE_UI: AttentionRuleUiItem[] = ATTENTION_RULES.map((rule) => {
   const copy = ATTENTION_RULE_COPY[rule.id]
   return {
     key: rule.settingsKey ?? attentionShowKey(rule.id),
     id: rule.id,
+    labelKey: `settings.attentionRule.${rule.id}.label`,
+    descriptionKey: `settings.attentionRule.${rule.id}.description`,
     label: copy?.label ?? rule.id.replace(/_/g, " "),
     description: copy?.description ?? "Dashboard Needs attention item",
     workflowKey: rule.workflowKey,

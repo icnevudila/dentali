@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useBranch } from "@/hooks/use-branch"
@@ -25,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { EmptyState } from "@/components/ui/empty-state"
 import { AlertTriangle, MessageSquare, RotateCcw, Send } from "lucide-react"
 import { useLocale } from "@/hooks/use-locale"
 import { SmsPreviewBubble, VariableChips } from "@/components/notifications/SmsPreviewBubble"
@@ -370,7 +372,25 @@ export default function NotificationsSettingsPage() {
           <PageLoadingSkeleton variant="inline" />
         ) : tab === "templates" ? (
           templates.length === 0 ? (
-            <p className="text-neutral-500 text-center py-12">{t("settings.notificationsNoTemplates", "No templates yet.")}</p>
+            <EmptyState
+              icon={MessageSquare}
+              className="border-dashed bg-neutral-50/60 py-10"
+              title={t("settings.notificationsNoTemplatesTitle", "No templates yet")}
+              description={t(
+                "settings.notificationsNoTemplates",
+                "No templates yet."
+              )}
+              action={
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setTab("channels")}>
+                    {t("settings.notificationsChannels", "Channels")}
+                  </Button>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href="/inbox">{t("nav.inbox", "Inbox")}</Link>
+                  </Button>
+                </div>
+              }
+            />
           ) : (
             <div className="grid gap-6 lg:grid-cols-2">
               <Card>
@@ -548,9 +568,20 @@ export default function NotificationsSettingsPage() {
             </div>
           )
         ) : logs.length === 0 ? (
-          <p className="text-center py-12 text-neutral-500">
-            {t("settings.notificationsNoLogs", "No messages logged yet. Send a test from Templates.")}
-          </p>
+          <EmptyState
+            icon={MessageSquare}
+            className="border-dashed bg-neutral-50/60 py-10"
+            title={t("settings.notificationsNoLogsTitle", "No messages logged yet")}
+            description={t(
+              "settings.notificationsNoLogs",
+              "No messages logged yet. Send a test from Templates."
+            )}
+            action={
+              <Button size="sm" onClick={() => setTab("templates")}>
+                {t("settings.notificationsTemplates", "Templates")}
+              </Button>
+            }
+          />
         ) : (
           <Card>
             <CardContent className="pt-6">

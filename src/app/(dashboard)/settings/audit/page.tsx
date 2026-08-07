@@ -16,6 +16,7 @@ import { auditPeriodToSince, type AuditPeriod } from "@/lib/audit/audit-filters"
 import { useBranch } from "@/hooks/use-branch"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { EmptyState } from "@/components/ui/empty-state"
 import { Download, RefreshCw, ScrollText, Search, Shield } from "lucide-react"
 import { useLocale } from "@/hooks/use-locale"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
@@ -227,11 +228,23 @@ export default function AuditLogPage() {
         {loading ? (
           <PageLoadingSkeleton variant="inline" />
         ) : logs.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center text-neutral-500">
-              {t("settings.auditEmpty", "No audit events match your filters.")}
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={ScrollText}
+            className="border-dashed bg-neutral-50/60 py-10"
+            title={t("settings.auditEmptyTitle", "No audit events")}
+            description={t("settings.auditEmpty", "No audit events match your filters.")}
+            action={
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button size="sm" variant="outline" onClick={() => void load()}>
+                  <RefreshCw className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                  {t("common.refresh", "Refresh")}
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                  <Link href="/reports">{t("reports.backToHub", "Reports hub")}</Link>
+                </Button>
+              </div>
+            }
+          />
         ) : (
           <Card>
             <CardContent className="overflow-x-auto p-0">

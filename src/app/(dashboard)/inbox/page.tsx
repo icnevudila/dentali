@@ -126,6 +126,8 @@ export default function InboxPage() {
                 labels={{
                   title: t("dashboard.needsAttention", "Needs attention"),
                   allClear: t("dashboard.attentionClear", "Nothing urgent right now"),
+                  allClearCta: t("inbox.ctaQueue", "Queue"),
+                  allClearHref: "/queue",
                   pendingConsents: t("dashboard.attnConsents", "Pending consents"),
                   pendingIntakeDrafts: t("dashboard.attnIntake", "Pending intake drafts"),
                   appointmentsAwaitingCheckin: t(
@@ -168,7 +170,17 @@ export default function InboxPage() {
                   {logsLoading ? (
                     <p className="text-sm text-neutral-500">{t("common.loading", "Loading…")}</p>
                   ) : logsError ? (
-                    <p className="text-sm text-red-600">{logsError}</p>
+                    <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 text-center">
+                      <p className="text-sm text-red-700">{logsError}</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        onClick={() => void loadLogs()}
+                      >
+                        {t("common.retry", "Retry")}
+                      </Button>
+                    </div>
                   ) : logs.length === 0 ? (
                     <EmptyState
                       icon={Inbox}
@@ -182,6 +194,9 @@ export default function InboxPage() {
                         <div className="flex flex-wrap items-center justify-center gap-2">
                           <Button asChild size="sm">
                             <Link href="/patients">{t("inbox.ctaPatients", "Patients")}</Link>
+                          </Button>
+                          <Button asChild size="sm" variant="outline">
+                            <Link href="/queue">{t("inbox.ctaQueue", "Queue")}</Link>
                           </Button>
                           <Button asChild size="sm" variant="outline">
                             <Link href="/settings/notifications">

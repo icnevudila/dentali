@@ -9,9 +9,11 @@ import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
+import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { EmptyState } from "@/components/ui/empty-state"
 import { SatisfactionAnalyticsPanel } from "@/components/analytics/SatisfactionAnalyticsPanel"
 import {
   downloadSatisfactionCsv,
@@ -53,25 +55,28 @@ export default function SatisfactionReportPage() {
   if (!activeBranch) {
     return (
       <PermissionGate anyOf={[...ACCESS]}>
-        <ModulePageShell
-          icon={Star}
-          eyebrow={t("reports.devicesEyebrow", "Patient-facing")}
-          title={t("satisfaction.title", "Check-in satisfaction")}
-          description={t(
-            "satisfaction.subtitle",
-            "Kiosk star ratings and optional comments after check-in."
-          )}
-        >
-          <p className="text-sm text-neutral-500">
-            {t("dashboard.selectBranch", "Select a branch to continue.")}
-          </p>
-        </ModulePageShell>
+        <DirectionalTransition>
+          <ModulePageShell
+            icon={Star}
+            eyebrow={t("reports.devicesEyebrow", "Patient-facing")}
+            title={t("satisfaction.title", "Check-in satisfaction")}
+            description={t(
+              "satisfaction.subtitle",
+              "Kiosk star ratings and optional comments after check-in."
+            )}
+          >
+            <p className="text-sm text-neutral-500">
+              {t("dashboard.selectBranch", "Select a branch to continue.")}
+            </p>
+          </ModulePageShell>
+        </DirectionalTransition>
       </PermissionGate>
     )
   }
 
   return (
     <PermissionGate anyOf={[...ACCESS]}>
+      <DirectionalTransition>
       <ModulePageShell
         icon={Star}
         eyebrow={t("reports.devicesEyebrow", "Patient-facing")}
@@ -152,19 +157,29 @@ export default function SatisfactionReportPage() {
               </CardHeader>
               <CardContent>
                 {!summary?.recent.length ? (
-                  <div className="flex flex-col items-center gap-3 py-8 text-center">
-                    <p className="text-sm text-neutral-500">
-                      {t(
-                        "satisfaction.empty",
-                        "No satisfaction responses in this period yet. They appear after kiosk check-in surveys."
-                      )}
-                    </p>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href="/settings/kiosk">
-                        {t("satisfaction.openKioskSettings", "Open kiosk settings")}
-                      </Link>
-                    </Button>
-                  </div>
+                  <EmptyState
+                    icon={Star}
+                    className="border-dashed bg-neutral-50/60 py-8"
+                    title={t("satisfaction.emptyTitle", "No responses yet")}
+                    description={t(
+                      "satisfaction.empty",
+                      "No satisfaction responses in this period yet. They appear after kiosk check-in surveys."
+                    )}
+                    action={
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <Button size="sm" asChild>
+                          <Link href="/settings/kiosk">
+                            {t("satisfaction.openKioskSettings", "Open kiosk settings")}
+                          </Link>
+                        </Button>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href="/reports?focus=devices#devices">
+                            {t("satisfaction.ctaReports", "Reports hub")}
+                          </Link>
+                        </Button>
+                      </div>
+                    }
+                  />
                 ) : (
                   <ul className="divide-y divide-neutral-100">
                     {summary.recent.map((row) => (
@@ -203,6 +218,7 @@ export default function SatisfactionReportPage() {
           </div>
         )}
       </ModulePageShell>
+      </DirectionalTransition>
     </PermissionGate>
   )
 }
