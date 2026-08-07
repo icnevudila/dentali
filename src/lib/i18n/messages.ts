@@ -741,6 +741,14 @@ export const messagesEnPh: MessageTree = {
     adding: "Adding…",
     addAll: "Add all suggestions",
   },
+  encounter: {
+    carryForwardNoteTitle: "Copy from previous visit?",
+    carryForwardSource: "Source:",
+    noSoapContent: "Previous note has no SOAP content to copy.",
+    copying: "Copying…",
+    copyFromLast: "Copy from last visit",
+    startBlank: "Start blank",
+  },
   consent: {
     formNotFound: "Form not found",
     patientId: "Patient ID",
