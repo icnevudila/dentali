@@ -148,6 +148,8 @@ export const TR_UI_STRINGS: Record<string, string> = {
   "Bypass invitation emails and add the profile directly to testing/production branch.": "Davet e-postalarını atlayıp profili doğrudan test/üretim şubesine ekleyin.",
   "The invitee will receive a link to join your organization with the selected role.": "Davetli, seçilen rolle organizasyonunuza katılmak için bir bağlantı alacaktır.",
   "Add Staff Member": "Personel ekle",
+  "Staff invite error": "Personel davet hatası",
+  "Back to invite": "Davete dön",
   "Analysis of average times patients spend in the waiting room and dental chair.": "Hastaların bekleme odasında ve dişçi koltuğunda geçirdikleri ortalama sürelerin analizi.",
   "Analytics": "Analitik",
   "Analytics · AI": "Analitik · AI",

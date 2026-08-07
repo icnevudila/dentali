@@ -737,8 +737,8 @@ export default function InvoiceDetailPage() {
                             </td>
                             <td className="py-2 px-1 text-right w-24">
                               <Input
-                                type="number"
-                                step="0.01"
+                                type="text"
+                                inputMode="decimal"
                                 value={editPrice}
                                 onChange={(e) => setEditPrice(e.target.value)}
                                 className="h-8 text-xs text-right bg-white"
@@ -746,12 +746,11 @@ export default function InvoiceDetailPage() {
                             </td>
                             <td className="py-2 px-1 text-right w-20">
                               <Input
-                                type="number"
-                                step="0.01"
+                                type="text"
+                                inputMode="decimal"
                                 value={editDiscount}
                                 onChange={(e) => setEditDiscount(e.target.value)}
                                 className="h-8 text-xs text-right bg-white"
-                                min="0"
                               />
                             </td>
                             <td className="py-2 pl-2 text-right">
@@ -860,8 +859,8 @@ export default function InvoiceDetailPage() {
                   required
                 />
                 <Input
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   placeholder={t("billing.unitPrice", "Unit")}
                   value={newPrice}
                   onChange={(e) => setNewPrice(e.target.value)}
@@ -907,9 +906,8 @@ export default function InvoiceDetailPage() {
                 <div className="space-y-1">
                   <p className="text-neutral-500 text-xs">{t("billing.invoiceDiscount", "Invoice discount (₱)")}</p>
                   <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
                     value={invoiceDiscount}
                     onChange={(e) => setInvoiceDiscount(e.target.value)}
                     className="h-9 w-32"
@@ -968,11 +966,9 @@ export default function InvoiceDetailPage() {
               <form onSubmit={handlePayment} className="grid gap-3 sm:grid-cols-3">
                 <div className="relative">
                   <Input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    max={balance}
-                    placeholder="Amount (PHP)"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={t("billing.amountPhp", "Amount (PHP)")}
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     required
@@ -1019,11 +1015,12 @@ export default function InvoiceDetailPage() {
               />
               <div className="flex flex-wrap gap-2 items-end">
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  max={balance}
-                  placeholder={`Amount (max ₱${balance.toLocaleString()})`}
+                  type="text"
+                  inputMode="decimal"
+                  placeholder={t(
+                    "billing.onlineAmountMax",
+                    "Amount (max ₱{max})"
+                  ).replace("{max}", balance.toLocaleString("en-PH"))}
                   value={onlineAmount}
                   onChange={(e) => setOnlineAmount(e.target.value)}
                   className="max-w-xs"
