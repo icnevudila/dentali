@@ -29,6 +29,7 @@
     "db:bundle:all": "npm run db:bundle:patient && npm run db:bundle:multi-branch && npm run db:bundle:consent-signing",
     "db:bundle:master": "powershell -ExecutionPolicy Bypass -File scripts/bundle-apply-master.ps1",
     "verify:attention": "npx tsx scripts/verify-attention-rules.ts",
+    "verify:php-money": "npx tsx scripts/verify-php-money.ts",
     "verify:mask": "npx tsx scripts/verify-mask-patient-name.ts",
     "verify:pending-arrivals": "npx tsx scripts/verify-pending-arrivals.ts",
     "verify:encounter-journey": "npx tsx scripts/verify-encounter-journey.ts",

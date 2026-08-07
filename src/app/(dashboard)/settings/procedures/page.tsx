@@ -28,6 +28,10 @@ import { ListOrdered } from "lucide-react"
 import {
   fetchOrganizationPreferences,
 } from "@/lib/settings/org-preferences-service"
+import {
+  centavosToPesoMajor,
+  parseMoneyToCentavos,
+} from "@/lib/money/php-money"
 
 const PROCEDURE_TEMPLATES = [
   { code: "EXAM", name: "Oral Examination", price: "500", category: "preventive" },
@@ -115,12 +119,24 @@ export default function ProceduresSettingsPage() {
   const handleCreate = async () => {
     const org = await fetchOrganization()
     if (!org || !name.trim()) return
+    const priceCentavos = price.trim()
+      ? parseMoneyToCentavos(price)
+      : 0
+    if (priceCentavos === null || priceCentavos < 0) {
+      setError(
+        t(
+          "billing.invalidMoneyAmount",
+          "Enter a valid amount in PHP (up to 2 decimal places)."
+        )
+      )
+      return
+    }
     setCreating(true)
     const { error: err } = await createProcedure({
       organizationId: org.id,
       name: name.trim(),
       code: code.trim() || undefined,
-      basePrice: parseFloat(price) || 0,
+      basePrice: centavosToPesoMajor(priceCentavos),
     })
     setCreating(false)
     if (err) setError(err)
@@ -147,9 +163,14 @@ export default function ProceduresSettingsPage() {
       if (err) setError(err)
       else await load()
     } else {
-      const val = parseFloat(raw)
-      if (Number.isNaN(val) || val < 0) {
-        setError("Enter a valid price.")
+      const priceCentavos = parseMoneyToCentavos(raw)
+      if (priceCentavos === null || priceCentavos < 0) {
+        setError(
+          t(
+            "billing.invalidMoneyAmount",
+            "Enter a valid amount in PHP (up to 2 decimal places)."
+          )
+        )
         setSavingId(null)
         return
       }
@@ -157,7 +178,7 @@ export default function ProceduresSettingsPage() {
         organizationId: org.id,
         branchId: selectedBranchId,
         procedureId: procedure.id,
-        priceOverride: val,
+        priceOverride: centavosToPesoMajor(priceCentavos),
         userId: user.id,
       })
       if (err) setError(err)
@@ -357,7 +378,13 @@ export default function ProceduresSettingsPage() {
               <div className="grid gap-3 sm:grid-cols-4">
                 <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
                 <Input placeholder="Code" value={code} onChange={(e) => setCode(e.target.value)} />
-                <Input placeholder="Base price (PHP)" type="number" value={price} onChange={(e) => setPrice(e.target.value)} />
+                <Input
+                  placeholder="Base price (PHP)"
+                  type="text"
+                  inputMode="decimal"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
                 <Button onClick={handleCreate} disabled={creating}>
                   Save
                 </Button>
@@ -439,7 +466,8 @@ export default function ProceduresSettingsPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Input
-                          type="number"
+                          type="text"
+                          inputMode="decimal"
                           className="h-8 w-28 ml-auto text-right"
                           placeholder="—"
                           value={editPrices[p.id] ?? ""}

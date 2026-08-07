@@ -11,6 +11,10 @@ import { fetchPatientInsuranceProfiles } from "@/lib/patients/insurance-service"
 import { createHmoClaim } from "@/lib/billing/hmo-service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  centavosToPesoMajor,
+  parseMoneyToCentavos,
+} from "@/lib/money/php-money"
 
 export function HmoClaimDrawer({
   open,
@@ -98,13 +102,19 @@ export function HmoClaimDrawer({
       setSaving(false)
       return
     }
+    const claimedCentavos = parseMoneyToCentavos(amount)
+    if (claimedCentavos === null || claimedCentavos <= 0) {
+      setError("Enter a valid amount in PHP (up to 2 decimal places).")
+      setSaving(false)
+      return
+    }
     const { error: err } = await createHmoClaim({
       organizationId: org.id,
       branchId: activeBranch.id,
       patientId: selectedPatientId,
       providerId,
       memberId: memberId || undefined,
-      claimedAmount: parseFloat(amount) || 0,
+      claimedAmount: centavosToPesoMajor(claimedCentavos),
       userId: user.id,
     })
     setSaving(false)
@@ -222,9 +232,8 @@ export function HmoClaimDrawer({
               Claimed amount (PHP)
             </label>
             <Input
-              type="number"
-              step="0.01"
-              min="0.01"
+              type="text"
+              inputMode="decimal"
               placeholder="Amount (PHP)"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
