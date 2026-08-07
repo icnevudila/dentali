@@ -1430,6 +1430,7 @@ export const messagesEnPh: MessageTree = {
     noAdjustmentsTitle: "No adjustments logged yet",
     noAdjustmentsHint: "Log wire changes and visit procedures as the case progresses.",
     logAdjustment: "Log adjustment",
+    openFullRecord: "Open full ortho record",
   },
   print: {
     loading: "Loading…",
@@ -1584,9 +1585,14 @@ export const messagesEnPh: MessageTree = {
   prescriptions: {
     emptyTitle: "No prescriptions yet",
     emptyHint: "Issue an e-Rx from a patient record or use a protocol preset above.",
+    emptyHintShort: "No prescriptions yet.",
+    countOnRecord: "{count} prescription(s) on record.",
+    new: "New Prescription",
+    writeFirst: "Write first prescription",
     noMatches: "No matches",
     noMatchesHint: "Try a different search term.",
     issueNew: "Issue new e-Rx",
+    noMedications: "No medications recorded on this prescription.",
   },
   medicalCert: {
     emptyTitle: "No rest certificates yet",
@@ -3294,6 +3300,7 @@ export const messagesTr: MessageTree = {
     noAdjustmentsTitle: "Henüz ayarlama kaydı yok",
     noAdjustmentsHint: "Vaka ilerledikçe tel değişikliklerini ve ziyaret işlemlerini kaydedin.",
     logAdjustment: "Ayarlama kaydet",
+    openFullRecord: "Tam ortho kaydını aç",
   },
   print: {
     loading: "Yükleniyor…",
@@ -3448,9 +3455,14 @@ export const messagesTr: MessageTree = {
   prescriptions: {
     emptyTitle: "Henüz reçete yok",
     emptyHint: "Hasta kaydından e-Rx düzenleyin veya yukarıdaki protokol şablonunu kullanın.",
+    emptyHintShort: "Henüz reçete yok.",
+    countOnRecord: "Kayıtta {count} reçete.",
+    new: "Yeni reçete",
+    writeFirst: "İlk reçeteyi yaz",
     noMatches: "Eşleşme yok",
     noMatchesHint: "Farklı bir arama terimi deneyin.",
     issueNew: "Yeni e-Rx düzenle",
+    noMedications: "Bu reçetede ilaç kaydı yok.",
   },
   medicalCert: {
     emptyTitle: "Henüz istirahat raporu yok",
@@ -4131,9 +4143,14 @@ export const messagesFil: MessageTree = {
   prescriptions: {
     emptyTitle: "Wala pang reseta",
     emptyHint: "Mag-issue ng e-Rx mula sa patient record o gamitin ang protocol preset sa itaas.",
+    emptyHintShort: "Wala pang reseta.",
+    countOnRecord: "{count} prescription(s) on record.",
+    new: "Bagong reseta",
+    writeFirst: "Sumulat ng unang reseta",
     noMatches: "Walang tugma",
     noMatchesHint: "Subukan ang ibang search term.",
     issueNew: "Mag-issue ng bagong e-Rx",
+    noMedications: "Walang medications sa reseta na ito.",
   },
   medicalCert: {
     emptyTitle: "Wala pang rest certificate",
@@ -4806,6 +4823,7 @@ export const messagesFil: MessageTree = {
     noAdjustmentsTitle: "Wala pang adjustments na naitala",
     noAdjustmentsHint: "I-log ang wire changes at visit procedures habang umuusad ang case.",
     logAdjustment: "I-log ang adjustment",
+    openFullRecord: "Buksan ang buong ortho record",
   },
   inventory: {
     title: "Inventory & Supplies",
