@@ -409,6 +409,10 @@ export const messagesEnPh: MessageTree = {
     documentsTitle: "Patient Documents",
     documentsSubtitle: "X-rays, IDs, referrals, and other files (private storage).",
     documentsEmpty: "No documents uploaded yet.",
+    insuranceSelfPayTitle: "Self-pay",
+    insuranceSelfPayHint: "Self-pay — no insurance on file.",
+    noTreatmentPlans: "No treatment plans yet.",
+    createTreatmentPlan: "Create treatment plan",
     docUpload: "Upload file",
     docUploading: "Uploading…",
     docDropHint: "Drag a file here or use Upload — max {max}",
@@ -712,6 +716,7 @@ export const messagesEnPh: MessageTree = {
     clinicalRiskOutro:
       "Review the medical history in detail before planning surgical procedures.",
     noProcedures: "No procedures added yet.",
+    noProceduresTitle: "No procedures yet",
     addFromChart: "Add findings from dental chart",
   },
   chartFindings: {
@@ -1697,6 +1702,9 @@ export const messagesEnPh: MessageTree = {
     openTreatmentPlan: "Open plans",
     quickUtilities: "Quick Charting Utilities",
     markThirdMolarsMissing: "Mark All 3rd Molars Missing",
+    noToothFindingTitle: "No active finding",
+    noToothFindingHint: "No active finding recorded for this tooth.",
+    editInChart: "Edit in Chart",
   },
   display: {
     invalidLink: "Invalid display link. Please contact the front desk.",
@@ -2263,6 +2271,10 @@ export const messagesTr: MessageTree = {
     documentsTitle: "Hasta Belgeleri",
     documentsSubtitle: "Röntgen, kimlik, sevk ve diğer dosyalar (özel depolama).",
     documentsEmpty: "Henüz belge yüklenmedi.",
+    insuranceSelfPayTitle: "Özel ödeme",
+    insuranceSelfPayHint: "Özel ödeme — dosyada sigorta yok.",
+    noTreatmentPlans: "Henüz tedavi planı yok.",
+    createTreatmentPlan: "Tedavi planı oluştur",
     docUpload: "Dosya yükle",
     docUploading: "Yükleniyor…",
     docDropHint: "Dosyayı sürükleyin veya Yükle'yi kullanın — en fazla {max}",
@@ -2565,6 +2577,7 @@ export const messagesTr: MessageTree = {
     clinicalRiskOutro:
       "Cerrahi işlem planlamadan önce lütfen tıbbi geçmişini detaylı inceleyiniz.",
     noProcedures: "Henüz işlem eklenmedi.",
+    noProceduresTitle: "Henüz işlem yok",
     addFromChart: "Diş kartından bulgu ekle",
   },
   chartFindings: {
@@ -3549,6 +3562,9 @@ export const messagesTr: MessageTree = {
     openTreatmentPlan: "Planları aç",
     quickUtilities: "Hızlı çizim araçları",
     markThirdMolarsMissing: "Tüm yirmilikleri eksik işaretle",
+    noToothFindingTitle: "Aktif bulgu yok",
+    noToothFindingHint: "Bu diş için aktif bulgu kaydı yok.",
+    editInChart: "Chart’ta düzenle",
   },
   display: {
     invalidLink: "Geçersiz ekran bağlantısı. Resepsiyonla iletişime geçin.",
@@ -4156,6 +4172,10 @@ export const messagesFil: MessageTree = {
     documentsTitle: "Mga Dokumento ng Pasyente",
     documentsSubtitle: "X-ray, ID, referral, at iba pang files (private storage).",
     documentsEmpty: "Walang na-upload na dokumento pa.",
+    insuranceSelfPayTitle: "Self-pay",
+    insuranceSelfPayHint: "Self-pay — walang insurance sa file.",
+    noTreatmentPlans: "Wala pang treatment plans.",
+    createTreatmentPlan: "Gumawa ng treatment plan",
     docUpload: "Mag-upload ng file",
     docUploading: "Nag-a-upload…",
     docDropHint: "I-drag ang file dito o gamitin ang Upload — max {max}",
@@ -4334,6 +4354,7 @@ export const messagesFil: MessageTree = {
     clinicalRiskOutro:
       "Suriin nang detalyado ang medical history bago magplano ng surgical procedure.",
     noProcedures: "Wala pang procedures na naidagdag.",
+    noProceduresTitle: "Wala pang procedures",
     addFromChart: "Magdagdag ng findings mula sa dental chart",
   },
   consent: {
@@ -4841,6 +4862,9 @@ export const messagesFil: MessageTree = {
     openTreatmentPlan: "Buksan ang plans",
     quickUtilities: "Quick Charting Utilities",
     markThirdMolarsMissing: "Mark All 3rd Molars Missing",
+    noToothFindingTitle: "Walang active finding",
+    noToothFindingHint: "Walang active finding para sa tooth na ito.",
+    editInChart: "I-edit sa Chart",
   },
   display: {
     invalidLink: "Invalid display link. Makipag-ugnayan sa front desk.",
