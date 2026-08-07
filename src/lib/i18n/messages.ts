@@ -906,6 +906,18 @@ export const messagesEnPh: MessageTree = {
     loadDefaults: "Load Defaults",
     attentionRulesTitle: "Dashboard — Needs attention",
     attentionRulesHint: "Toggle which KPI alerts appear on the owner dashboard for this branch.",
+    staffEmptyTitle: "No staff members yet",
+    staffEmptyHint:
+      "Sign in as the clinic owner to bootstrap your organization, then invite teammates.",
+    branchesEmptyTitle: "No branches yet",
+    branchesEmptyHint:
+      "Create your first clinic location to enable queue, kiosk, and staff assignment.",
+    createFirstBranch: "Create your first branch",
+    proceduresEmptyTitle: "No procedures yet",
+    proceduresEmptyHint: "Load Defaults to seed common dental procedures, or add one manually.",
+    auditEmptyTitle: "No audit events",
+    notificationsNoTemplatesTitle: "No templates yet",
+    notificationsNoLogsTitle: "No messages logged yet",
     attentionRule: {
       overdue_invoices: {
         label: "Overdue invoices",
@@ -1544,6 +1556,20 @@ export const messagesEnPh: MessageTree = {
     emptyHint: "Clock in above to start your shift, or open Staff to review team schedules.",
     ctaStaff: "Staff",
     open: "Open",
+  },
+  prescriptions: {
+    emptyTitle: "No prescriptions yet",
+    emptyHint: "Issue an e-Rx from a patient record or use a protocol preset above.",
+    noMatches: "No matches",
+    noMatchesHint: "Try a different search term.",
+    issueNew: "Issue new e-Rx",
+  },
+  medicalCert: {
+    emptyTitle: "No rest certificates yet",
+    emptyHint:
+      "Create an official rest certificate when the patient needs documented leave from work or school.",
+    create: "Create certificate",
+    fitToWork: "Fit-to-work letter",
   },
   checkin: {
     copyLink: "Check-in link",
@@ -2717,6 +2743,18 @@ export const messagesTr: MessageTree = {
     loadDefaults: "Varsayılanları Yükle",
     attentionRulesTitle: "Panel — Dikkat gerektiren",
     attentionRulesHint: "Bu şube için sahip kontrol panelinde hangi KPI uyarılarının görüneceğini değiştirin.",
+    staffEmptyTitle: "Henüz personel yok",
+    staffEmptyHint:
+      "Organizasyonu başlatmak için klinik sahibi olarak giriş yapın, ardından ekip davet edin.",
+    branchesEmptyTitle: "Henüz şube yok",
+    branchesEmptyHint:
+      "Kuyruk, kiosk ve personel ataması için ilk klinik lokasyonunu oluşturun.",
+    createFirstBranch: "İlk şubenizi oluşturun",
+    proceduresEmptyTitle: "Henüz prosedür yok",
+    proceduresEmptyHint: "Yaygın diş prosedürlerini eklemek için Varsayılanları Yükle’yi kullanın veya manuel ekleyin.",
+    auditEmptyTitle: "Denetim olayı yok",
+    notificationsNoTemplatesTitle: "Henüz şablon yok",
+    notificationsNoLogsTitle: "Henüz mesaj kaydı yok",
     attentionRule: {
       overdue_invoices: {
         label: "Vadesi geçmiş faturalar",
@@ -3354,6 +3392,20 @@ export const messagesTr: MessageTree = {
     emptyHint: "Vardiyayı başlatmak için yukarıdan mesaiye girin veya ekip programı için Personel’i açın.",
     ctaStaff: "Personel",
     open: "Açık",
+  },
+  prescriptions: {
+    emptyTitle: "Henüz reçete yok",
+    emptyHint: "Hasta kaydından e-Rx düzenleyin veya yukarıdaki protokol şablonunu kullanın.",
+    noMatches: "Eşleşme yok",
+    noMatchesHint: "Farklı bir arama terimi deneyin.",
+    issueNew: "Yeni e-Rx düzenle",
+  },
+  medicalCert: {
+    emptyTitle: "Henüz istirahat raporu yok",
+    emptyHint:
+      "Hasta iş veya okul için belgelenmiş izin gerektiğinde resmi istirahat raporu oluşturun.",
+    create: "Rapor oluştur",
+    fitToWork: "İşe dönüş yazısı",
   },
   checkin: {
     copyLink: "Check-in bağlantısı",
@@ -4020,6 +4072,20 @@ export const messagesFil: MessageTree = {
     ctaStaff: "Staff",
     open: "Open",
   },
+  prescriptions: {
+    emptyTitle: "Wala pang reseta",
+    emptyHint: "Mag-issue ng e-Rx mula sa patient record o gamitin ang protocol preset sa itaas.",
+    noMatches: "Walang tugma",
+    noMatchesHint: "Subukan ang ibang search term.",
+    issueNew: "Mag-issue ng bagong e-Rx",
+  },
+  medicalCert: {
+    emptyTitle: "Wala pang rest certificate",
+    emptyHint:
+      "Gumawa ng opisyal na rest certificate kapag kailangan ng documented leave ang pasyente.",
+    create: "Gumawa ng certificate",
+    fitToWork: "Fit-to-work letter",
+  },
   closeout: {
     readinessTitle: "Closeout readiness",
     readinessHint: "Ayusin muna ang operational exceptions bago i-finalize ang araw.",
@@ -4313,6 +4379,18 @@ export const messagesFil: MessageTree = {
     loadDefaults: "I-load ang defaults",
     attentionRulesTitle: "Dashboard — Needs attention",
     attentionRulesHint: "I-toggle kung aling KPI alerts ang lilitaw sa owner dashboard para sa branch na ito.",
+    staffEmptyTitle: "Wala pang staff",
+    staffEmptyHint:
+      "Mag-sign in bilang clinic owner para i-bootstrap ang organization, tapos mag-invite ng teammates.",
+    branchesEmptyTitle: "Wala pang branches",
+    branchesEmptyHint:
+      "Gumawa ng unang clinic location para sa queue, kiosk, at staff assignment.",
+    createFirstBranch: "Gumawa ng unang branch",
+    proceduresEmptyTitle: "Wala pang procedures",
+    proceduresEmptyHint: "I-load ang Defaults para sa common dental procedures, o magdagdag manually.",
+    auditEmptyTitle: "Walang audit events",
+    notificationsNoTemplatesTitle: "Wala pang templates",
+    notificationsNoLogsTitle: "Wala pang message logs",
     attentionRule: {
       overdue_invoices: {
         label: "Overdue invoices",
