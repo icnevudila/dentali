@@ -10,6 +10,10 @@ import { Input } from "@/components/ui/input"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
+import {
+  centavosToPesoMajor,
+  parseMoneyToCentavos,
+} from "@/lib/money/php-money"
 
 interface NewLabCaseDialogProps {
   open: boolean
@@ -92,6 +96,18 @@ export function NewLabCaseDialog({ open, onOpenChange, onSuccess, defaultPatient
     }
 
     setSubmitting(true)
+    const costCentavos = cost.trim() ? parseMoneyToCentavos(cost) : 0
+    if (costCentavos === null || costCentavos < 0) {
+      setSubmitting(false)
+      toast.error(
+        t(
+          "billing.invalidMoneyAmount",
+          "Enter a valid amount in PHP (up to 2 decimal places)."
+        )
+      )
+      return
+    }
+
     const { data, error } = await createLabCase({
       branch_id: activeBranch.id,
       patient_id: patientId,
@@ -101,7 +117,7 @@ export function NewLabCaseDialog({ open, onOpenChange, onSuccess, defaultPatient
       sent_date: sentDate,
       expected_date: expectedDate || null,
       received_date: null,
-      cost: parseFloat(cost) || 0,
+      cost: centavosToPesoMajor(costCentavos),
       notes: notes || null,
     })
     setSubmitting(false)
@@ -219,8 +235,8 @@ export function NewLabCaseDialog({ open, onOpenChange, onSuccess, defaultPatient
                 {t("labcases.field.cost", "Lab Cost (₱)")}
               </label>
               <Input
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={cost}
                 onChange={(e) => setCost(e.target.value)}
                 placeholder="0.00"
