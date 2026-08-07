@@ -43,6 +43,7 @@ import { OpenEncounterCheckInDialog } from "@/components/queue/OpenEncounterChec
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { EmptyState } from "@/components/ui/empty-state"
 import { AlertTriangle, CheckCircle2, Loader2, Megaphone, Plus, ShieldCheck, Users, MapPin, Clock, UserCheck } from "lucide-react"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { OpsStatusRow } from "@/components/layout/OpsStatusRow"
@@ -1697,11 +1698,29 @@ function QueuePageContent() {
             ) : null}
           </div>
         ) : boardDisplayEntries.length === 0 ? (
-          <p className="text-center py-12 text-neutral-500">
-            {isToday
-              ? t("queue.noHistoryToday", "No completed queue entries today.")
-              : t("queue.noHistoryDay", "No queue entries on this clinic day.")}
-          </p>
+          <EmptyState
+            icon={Clock}
+            className="border-dashed bg-neutral-50/60 py-10"
+            title={
+              isToday
+                ? t("queue.noHistoryToday", "No completed queue entries today.")
+                : t("queue.noHistoryDay", "No queue entries on this clinic day.")
+            }
+            description={t(
+              "queue.historyEmptyHint",
+              "Served and cancelled visits appear here after check-in on the live board."
+            )}
+            action={
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button size="sm" onClick={() => setTab("board")}>
+                  {t("queue.backToBoard", "Back to board")}
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                  <Link href="/appointments">{t("waitlist.ctaAppointments", "Appointments")}</Link>
+                </Button>
+              </div>
+            }
+          />
         ) : (
           <Card>
             <CardContent className="pt-6">
