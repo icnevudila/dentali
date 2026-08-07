@@ -184,6 +184,9 @@ export default function InboxPage() {
                             <Link href="/patients">{t("inbox.ctaPatients", "Patients")}</Link>
                           </Button>
                           <Button asChild size="sm" variant="outline">
+                            <Link href="/queue">{t("inbox.ctaQueue", "Queue")}</Link>
+                          </Button>
+                          <Button asChild size="sm" variant="outline">
                             <Link href="/settings/notifications">
                               {t("inbox.ctaNotifications", "Notifications")}
                             </Link>

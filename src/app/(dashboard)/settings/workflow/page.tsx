@@ -208,8 +208,12 @@ export default function WorkflowSettingsPage() {
                 {ATTENTION_RULE_UI.map((item) => (
                   <li key={item.key} className="flex items-start justify-between gap-4 px-4 py-3">
                     <div className="min-w-0 space-y-0.5">
-                      <p className="text-sm font-medium text-neutral-900">{item.label}</p>
-                      <p className="text-xs text-neutral-500">{item.description}</p>
+                      <p className="text-sm font-medium text-neutral-900">
+                        {t(item.labelKey, item.label)}
+                      </p>
+                      <p className="text-xs text-neutral-500">
+                        {t(item.descriptionKey, item.description)}
+                      </p>
                     </div>
                     <Button
                       type="button"

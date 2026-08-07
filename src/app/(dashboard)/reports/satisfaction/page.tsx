@@ -12,6 +12,7 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { EmptyState } from "@/components/ui/empty-state"
 import { SatisfactionAnalyticsPanel } from "@/components/analytics/SatisfactionAnalyticsPanel"
 import {
   downloadSatisfactionCsv,
@@ -152,19 +153,29 @@ export default function SatisfactionReportPage() {
               </CardHeader>
               <CardContent>
                 {!summary?.recent.length ? (
-                  <div className="flex flex-col items-center gap-3 py-8 text-center">
-                    <p className="text-sm text-neutral-500">
-                      {t(
-                        "satisfaction.empty",
-                        "No satisfaction responses in this period yet. They appear after kiosk check-in surveys."
-                      )}
-                    </p>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href="/settings/kiosk">
-                        {t("satisfaction.openKioskSettings", "Open kiosk settings")}
-                      </Link>
-                    </Button>
-                  </div>
+                  <EmptyState
+                    icon={Star}
+                    className="border-dashed bg-neutral-50/60 py-8"
+                    title={t("satisfaction.emptyTitle", "No responses yet")}
+                    description={t(
+                      "satisfaction.empty",
+                      "No satisfaction responses in this period yet. They appear after kiosk check-in surveys."
+                    )}
+                    action={
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <Button size="sm" asChild>
+                          <Link href="/settings/kiosk">
+                            {t("satisfaction.openKioskSettings", "Open kiosk settings")}
+                          </Link>
+                        </Button>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href="/reports?focus=devices#devices">
+                            {t("satisfaction.ctaReports", "Reports hub")}
+                          </Link>
+                        </Button>
+                      </div>
+                    }
+                  />
                 ) : (
                   <ul className="divide-y divide-neutral-100">
                     {summary.recent.map((row) => (

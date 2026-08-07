@@ -102,6 +102,12 @@ function run() {
   const queue = escalated.find((i) => i.id === "queue_waiting")
   assert.equal(queue?.tone, "amber", "queue escalates at 8+")
 
+  for (const item of ATTENTION_RULE_UI) {
+    assert.ok(item.labelKey.startsWith("settings.attentionRule."), `labelKey for ${item.id}`)
+    assert.ok(item.descriptionKey.endsWith(".description"), `descriptionKey for ${item.id}`)
+    assert.ok(item.label.length > 0, `EN fallback label for ${item.id}`)
+  }
+
   console.log("verify-attention-rules: OK")
 }
 
