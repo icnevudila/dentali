@@ -1598,6 +1598,7 @@ export const messagesEnPh: MessageTree = {
     noMatchesHint: "Try a different search term.",
     issueNew: "Issue new e-Rx",
     noMedications: "No medications recorded on this prescription.",
+    noMatchingDrugs: "No matching drugs in template shortcuts",
   },
   medicalCert: {
     emptyTitle: "No rest certificates yet",
@@ -3489,6 +3490,7 @@ export const messagesTr: MessageTree = {
     noMatchesHint: "Farklı bir arama terimi deneyin.",
     issueNew: "Yeni e-Rx düzenle",
     noMedications: "Bu reçetede ilaç kaydı yok.",
+    noMatchingDrugs: "Şablon kısayollarında eşleşen ilaç yok",
   },
   medicalCert: {
     emptyTitle: "Henüz istirahat raporu yok",
@@ -4193,6 +4195,7 @@ export const messagesFil: MessageTree = {
     noMatchesHint: "Subukan ang ibang search term.",
     issueNew: "Mag-issue ng bagong e-Rx",
     noMedications: "Walang medications sa reseta na ito.",
+    noMatchingDrugs: "Walang matching drugs sa template shortcuts",
   },
   medicalCert: {
     emptyTitle: "Wala pang rest certificate",
