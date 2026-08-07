@@ -11,10 +11,9 @@ import { Button } from "@/components/ui/button"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
 
 /**
- * Hygiene / recare worklist skeleton.
- * CareStack / Dentrix Ascend / Dentally expose a first-class recall list;
- * we currently only have a workflow SMS toggle — this page is the nav home
- * until due-date query + outreach actions ship.
+ * Hygiene / recare worklist home.
+ * Due-date query + outreach actions will land here; until then we route staff
+ * to appointments / waitlist without fabricating patient rows.
  */
 export default function RecarePage() {
   const { t } = useLocale()
@@ -38,14 +37,13 @@ export default function RecarePage() {
               </Link>
             </Button>
           }
-          panel={false}
         >
           <EmptyState
             icon={CalendarHeart}
-            title={t("recare.emptyTitle", "Recare worklist coming next")}
+            title={t("recare.emptyTitle", "No recall patients yet")}
             description={t(
               "recare.emptyDescription",
-              "This skeleton reserves the route and nav for a Dentrix Ascend–style recall queue. Due patients, last visit, and outreach actions will land here — no fake PHI in the meantime."
+              "When hygiene recall is due, patients will appear here. Meanwhile, book from appointments or park them on the waitlist."
             )}
             action={
               <div className="flex flex-wrap items-center justify-center gap-2">
