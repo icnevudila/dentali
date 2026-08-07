@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { EmptyState } from "@/components/ui/empty-state"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { fetchOrgBranchesForSettings, createBranch } from "@/lib/org/branch-service"
@@ -151,12 +152,20 @@ export default function BranchesSettingsPage() {
         )}
 
         {branches.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-neutral-600 mb-4">No branches yet.</p>
-              <Button onClick={() => setShowForm(true)}>Create your first branch</Button>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Building2}
+            className="border-dashed bg-neutral-50/60 py-10"
+            title={t("settings.branchesEmptyTitle", "No branches yet")}
+            description={t(
+              "settings.branchesEmptyHint",
+              "Create your first clinic location to enable queue, kiosk, and staff assignment."
+            )}
+            action={
+              <Button size="sm" onClick={() => setShowForm(true)}>
+                {t("settings.createFirstBranch", "Create your first branch")}
+              </Button>
+            }
+          />
         ) : (
           <div className="grid gap-4">
             {branches.map((branch) => (

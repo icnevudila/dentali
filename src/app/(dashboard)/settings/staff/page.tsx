@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { EmptyState } from "@/components/ui/empty-state"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import {
@@ -232,11 +233,23 @@ export default function StaffSettingsPage() {
         )}
 
         {staff.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center text-neutral-500">
-              No staff members found. Sign in as the clinic owner to bootstrap your organization.
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Users}
+            className="border-dashed bg-neutral-50/60 py-10"
+            title={t("settings.staffEmptyTitle", "No staff members yet")}
+            description={t(
+              "settings.staffEmptyHint",
+              "Sign in as the clinic owner to bootstrap your organization, then invite teammates."
+            )}
+            action={
+              <Button asChild size="sm" className="gap-2">
+                <Link href="/settings/staff/invite">
+                  <UserPlus className="h-4 w-4" aria-hidden />
+                  {t("settings.inviteStaff", "Invite Staff Member")}
+                </Link>
+              </Button>
+            }
+          />
         ) : (
           <Card>
             <CardContent className="p-0">
