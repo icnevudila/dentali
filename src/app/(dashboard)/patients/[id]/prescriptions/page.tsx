@@ -477,7 +477,12 @@ function PrescriptionsPage() {
                             {COMMON_DENTAL_MEDS.filter((tmpl) =>
                               tmpl.drug_name.toLowerCase().includes(medFilter.toLowerCase())
                             ).length === 0 && (
-                              <span className="text-xs text-neutral-400">No matching drugs in template shortcuts</span>
+                              <span className="text-xs text-neutral-400">
+                                {t(
+                                  "prescriptions.noMatchingDrugs",
+                                  "No matching drugs in template shortcuts"
+                                )}
+                              </span>
                             )}
                           </div>
                         </div>
