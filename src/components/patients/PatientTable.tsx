@@ -466,6 +466,9 @@ function QueueRowActionButton({
   onAction: (entry: QueueEntry, action: QueueRowAction) => void
   t: (key: string, fallback: string) => string
 }) {
+  const { hasPermission, loading: permissionLoading } = usePermission()
+  const canManageQueue =
+    !permissionLoading && hasPermission(PERMISSIONS.QUEUE_MANAGE)
   const isInChair = entry.status === "in_chair"
   const isServed = entry.status === "served"
   const canStart = START_TREATMENT_STATUSES.includes(entry.status)
@@ -477,27 +480,30 @@ function QueueRowActionButton({
     : t("dentist.startTreatment", "Start treatment")
   const Icon = isServed || isInChair ? DoorClosed : Armchair
   const emphasizeFinish = isInChair || isServed
+  const deniedTooltip = t(
+    "dentist.queueManageDeniedTooltip",
+    "You need queue.manage to change queue status"
+  )
+  const allowedTitle = isServed
+    ? t(
+        "dentist.finishVisitServedHint",
+        "Treatment is done — confirm note, billing, and close the visit"
+      )
+    : isInChair
+      ? t(
+          "dentist.finishVisitChairHint",
+          "Mark treatment done and open Finish visit checklist"
+        )
+      : t("dentist.startTreatment", "Start treatment")
 
   return (
     <Button
       type="button"
       size="sm"
       variant={emphasizeFinish ? "default" : "outline"}
-      disabled={busy}
+      disabled={busy || !canManageQueue}
       aria-label={label}
-      title={
-        isServed
-          ? t(
-              "dentist.finishVisitServedHint",
-              "Treatment is done — confirm note, billing, and close the visit"
-            )
-          : isInChair
-            ? t(
-                "dentist.finishVisitChairHint",
-                "Mark treatment done and open Finish visit checklist"
-              )
-            : t("dentist.startTreatment", "Start treatment")
-      }
+      title={canManageQueue ? allowedTitle : deniedTooltip}
       className={cn(
         "h-8 shrink-0 gap-1.5 px-2.5 text-xs",
         emphasizeFinish && "bg-emerald-600 hover:bg-emerald-700"
@@ -505,7 +511,7 @@ function QueueRowActionButton({
       onClick={(e) => {
         e.preventDefault()
         e.stopPropagation()
-        if (busy) return
+        if (busy || !canManageQueue) return
         onAction(entry, action)
       }}
     >

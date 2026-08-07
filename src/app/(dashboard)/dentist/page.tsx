@@ -39,6 +39,7 @@ import {
   type DentistBoardFilter,
 } from "@/lib/clinical/dentist-board"
 import { useAuth } from "@/hooks/use-auth"
+import { usePermission } from "@/hooks/use-permission"
 import { useStaffRole } from "@/hooks/use-staff-role"
 import { fetchOrgStaff, type StaffMember } from "@/lib/staff/staff-service"
 import type { PatientRecord } from "@/lib/patients/patient-service"
@@ -85,6 +86,9 @@ function DentistPageContent() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
   const { roleName } = useStaffRole()
+  const { hasPermission, loading: permissionLoading } = usePermission()
+  const canManageQueue =
+    !permissionLoading && hasPermission(PERMISSIONS.QUEUE_MANAGE)
   const { activeBranch, hasActiveBranch } = useBranch()
   const { t } = useLocale()
   const { clinicDay, isToday, formattedDay } = useClinicDay()
@@ -337,6 +341,15 @@ function DentistPageContent() {
 
   const handleQueueAction = React.useCallback(
     async (entry: QueueEntry, action: QueueRowAction) => {
+      if (!canManageQueue) {
+        notify.error(
+          t(
+            "dentist.queueManageDenied",
+            "You need queue.manage permission to start treatment or finish visits from this board."
+          )
+        )
+        return
+      }
       if (queueActionId) return
       setQueueActionId(entry.id)
       try {
@@ -390,7 +403,7 @@ function DentistPageContent() {
         void loadPatients({ silent: true })
       }
     },
-    [queueActionId, loadPatients, t, activeBranch?.id]
+    [canManageQueue, queueActionId, loadPatients, t, activeBranch?.id]
   )
 
   React.useEffect(() => {
@@ -550,6 +563,20 @@ function DentistPageContent() {
                 : null
             }
           />
+
+          {!permissionLoading && !canManageQueue ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-950">
+              <p className="font-medium">
+                {t("dentist.queueManageDeniedTitle", "Queue actions restricted")}
+              </p>
+              <p className="mt-1 text-amber-900/90">
+                {t(
+                  "dentist.queueManageDenied",
+                  "You need queue.manage permission to start treatment or finish visits from this board."
+                )}
+              </p>
+            </div>
+          ) : null}
 
           {activeBranch ? (
             <div className="flex flex-wrap items-center gap-2 animate-fade-rise">

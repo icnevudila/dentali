@@ -967,6 +967,10 @@ export const messagesEnPh: MessageTree = {
     servedShort: "treatment done",
     startTreatment: "Start treatment",
     startFinishVisit: "Finish visit",
+    queueManageDeniedTitle: "Queue actions restricted",
+    queueManageDenied:
+      "You need queue.manage permission to start treatment or finish visits from this board.",
+    queueManageDeniedTooltip: "You need queue.manage to change queue status",
   },
   queue: {
     title: "Queue Board",
@@ -1080,6 +1084,9 @@ export const messagesEnPh: MessageTree = {
     checkoutClosePrompt:
       "This closes today’s visit. The patient leaves the open-visit list. If billing or notes are incomplete, leave it open and return from Queue or Patient Visits.",
     closeVisit: "Finish visit",
+    queueManageDenied:
+      "You need queue.manage permission to finish visits.",
+    queueManageDeniedTooltip: "You need queue.manage to finish this visit",
     viewEncounterRecord: "View visit record",
     checkoutDischargeCta: "Finish visit",
     checkoutDischargeHint: "Finish today’s visit: note → bill → pay → close",
@@ -2671,6 +2678,10 @@ export const messagesTr: MessageTree = {
     servedShort: "tedavi bitti",
     startTreatment: "Tedaviyi başlat",
     startFinishVisit: "Ziyareti bitir",
+    queueManageDeniedTitle: "Sıra işlemleri kısıtlı",
+    queueManageDenied:
+      "Bu panodan tedavi başlatmak veya ziyareti bitirmek için queue.manage izni gerekir.",
+    queueManageDeniedTooltip: "Sıra durumunu değiştirmek için queue.manage gerekir",
   },
   queue: {
     title: "Sıra Panosu",
@@ -2784,6 +2795,8 @@ export const messagesTr: MessageTree = {
     checkoutClosePrompt:
       "Bu işlem bugünkü ziyareti kapatır. Hasta açık ziyaret listesinden çıkar. Fatura veya not eksikse açık bırakıp Kuyruk veya Hasta Ziyaretleri ekranından dönün.",
     closeVisit: "Ziyareti bitir",
+    queueManageDenied: "Ziyareti bitirmek için queue.manage izni gerekir.",
+    queueManageDeniedTooltip: "Bu ziyareti bitirmek için queue.manage gerekir",
     viewEncounterRecord: "Ziyaret kaydını gör",
     checkoutDischargeCta: "Ziyareti bitir",
     checkoutDischargeHint: "Bugünkü ziyareti bitir: not → fatura → ödeme → kapat",
@@ -4009,6 +4022,10 @@ export const messagesFil: MessageTree = {
       "Ang served patients ay wala sa aktibong pila. Buksan ang filter para sa buong history.",
     viewCompletedToday: "Tingnan lahat ng natapos",
     servedShort: "served",
+    queueManageDeniedTitle: "Nakareserba ang queue actions",
+    queueManageDenied:
+      "Kailangan mo ng queue.manage permission para mag-start ng treatment o mag-finish ng visit mula sa board na ito.",
+    queueManageDeniedTooltip: "Kailangan ng queue.manage para baguhin ang queue status",
   },
   queue: {
     title: "Queue Board",
@@ -4055,6 +4072,9 @@ export const messagesFil: MessageTree = {
     gateStepReturn: "Bumalik dito pagkatapos ayusin ang blocker",
     gateStepFinish: "Pagkatapos, tapusin ang check-in",
     cancelEntry: "Cancel",
+    queueManageDenied:
+      "Kailangan mo ng queue.manage permission para tapusin ang mga visit.",
+    queueManageDeniedTooltip: "Kailangan ng queue.manage para tapusin ang visit na ito",
   },
   workflow: {
     automationSettings: "Mga setting ng automation",
