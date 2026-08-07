@@ -95,6 +95,9 @@ export const codeMessagesTrOverrides: MessageTree = {
   },
   consent: {
     notStarted: "Başlamadı",
+    manageDeniedTitle: "Onam işlemleri kısıtlı",
+    manageDenied:
+      "Onam formu oluşturmak veya göndermek için consents.manage izni gerekir.",
   },
   patient: {
     balanceCleared: "Bakiye kapatıldı",

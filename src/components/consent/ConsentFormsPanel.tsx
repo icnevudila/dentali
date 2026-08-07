@@ -38,6 +38,8 @@ import { cn } from "@/lib/utils"
 import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 import { ConsentScanUploadButton } from "@/components/consent/ConsentScanUploadButton"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
+import { usePermission } from "@/hooks/use-permission"
+import { PERMISSIONS } from "@/lib/auth/permissions"
 
 type FormStatus = "not_started" | "pending" | "signed" | "voided"
 
@@ -64,6 +66,9 @@ export function ConsentFormsPanel({
   const router = useRouter()
   const { activeBranch } = useBranch()
   const { t } = useLocale()
+  const { hasPermission, loading: permissionLoading } = usePermission()
+  const canManageConsents =
+    !permissionLoading && hasPermission(PERMISSIONS.CONSENTS_MANAGE)
   const [catalog, setCatalog] = React.useState<ConsentCatalogItem[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -108,6 +113,15 @@ export function ConsentFormsPanel({
   }
 
   const handleFillNow = async (template: ConsentCatalogItem) => {
+    if (!canManageConsents) {
+      toast.error(
+        t(
+          "consent.manageDenied",
+          "You need consents.manage permission to create or send consent forms."
+        )
+      )
+      return
+    }
     setBusySlug(template.slug)
     setError(null)
     const consentId = await ensureAndGetConsentId(template)
@@ -117,6 +131,15 @@ export function ConsentFormsPanel({
   }
 
   const handlePatientLink = async (template: ConsentCatalogItem) => {
+    if (!canManageConsents) {
+      toast.error(
+        t(
+          "consent.manageDenied",
+          "You need consents.manage permission to create or send consent forms."
+        )
+      )
+      return
+    }
     setBusySlug(template.slug)
     setError(null)
     const consentId = await ensureAndGetConsentId(template)
@@ -180,6 +203,19 @@ export function ConsentFormsPanel({
 
   return (
     <div className="space-y-6">
+      {!permissionLoading && !canManageConsents ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-950">
+          <p className="font-medium">
+            {t("consent.manageDeniedTitle", "Consent actions restricted")}
+          </p>
+          <p className="mt-1 text-amber-900/90">
+            {t(
+              "consent.manageDenied",
+              "You need consents.manage permission to create or send consent forms."
+            )}
+          </p>
+        </div>
+      ) : null}
       {blockingSlug && blockingTemplate ? (
         <div className="rounded-xl border border-amber-300 bg-amber-50/90 px-4 py-3 shadow-sm">
           <p className="text-sm font-semibold text-amber-950">
@@ -196,15 +232,17 @@ export function ConsentFormsPanel({
               {t("consent.awaitingSignature", "Awaiting signature")}
             </Badge>
             <span className="text-sm font-medium text-neutral-900">{blockingTemplate.name}</span>
-            <Button
-              size="sm"
-              className="ml-auto gap-1"
-              disabled={busySlug === blockingSlug}
-              onClick={() => void handleFillNow(blockingTemplate)}
-            >
-              <PenLine className="h-3.5 w-3.5" />
-              {t("consent.fillRequiredNow", "Sign now")}
-            </Button>
+            {canManageConsents ? (
+              <Button
+                size="sm"
+                className="ml-auto gap-1"
+                disabled={busySlug === blockingSlug}
+                onClick={() => void handleFillNow(blockingTemplate)}
+              >
+                <PenLine className="h-3.5 w-3.5" />
+                {t("consent.fillRequiredNow", "Sign now")}
+              </Button>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -318,68 +356,72 @@ export function ConsentFormsPanel({
               </div>
 
               <div className="mt-auto flex flex-col gap-2 pt-4">
-                <div className="flex flex-wrap gap-2">
-                  {status === "signed" ? (
-                    <Button size="sm" variant="outline" className="gap-1 w-full" asChild>
-                      <Link
-                        href={`/patients/${patientId}/consents/${template.slug}/view`}
-                        transitionTypes={NAV_FORWARD_TRANSITION}
-                      >
-                        <ShieldCheck className="h-3.5 w-3.5" />
-                        View & export
-                      </Link>
-                    </Button>
-                  ) : (
-                    <>
-                      <Button
-                        size="sm"
-                        className="gap-1 flex-1"
+                {canManageConsents ? (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      {status === "signed" ? (
+                        <Button size="sm" variant="outline" className="gap-1 w-full" asChild>
+                          <Link
+                            href={`/patients/${patientId}/consents/${template.slug}/view`}
+                            transitionTypes={NAV_FORWARD_TRANSITION}
+                          >
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            View & export
+                          </Link>
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            size="sm"
+                            className="gap-1 flex-1"
+                            disabled={isBusy}
+                            onClick={() => void handleFillNow(template)}
+                          >
+                            <PenLine className="h-3.5 w-3.5" />
+                            Fill now
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1 flex-1"
+                            disabled={isBusy}
+                            onClick={() => void handlePatientLink(template)}
+                          >
+                            <Link2 className="h-3.5 w-3.5" />
+                            {linkCopiedSlug === template.slug ? "Copied!" : "Patient link"}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                    {orgId && consentRecord && status !== "voided" ? (
+                      <ConsentScanUploadButton
+                        organizationId={orgId}
+                        patientId={patientId}
+                        consentId={consentRecord.id}
+                        templateSlug={template.slug}
+                        onUploaded={onConsentsChange}
                         disabled={isBusy}
-                        onClick={() => void handleFillNow(template)}
-                      >
-                        <PenLine className="h-3.5 w-3.5" />
-                        Fill now
-                      </Button>
+                      />
+                    ) : status !== "signed" ? (
                       <Button
                         size="sm"
                         variant="outline"
-                        className="gap-1 flex-1"
+                        className="gap-1 w-full"
                         disabled={isBusy}
-                        onClick={() => void handlePatientLink(template)}
+                        onClick={async () => {
+                          const consentId = await ensureAndGetConsentId(template)
+                          if (!consentId || !orgId) return
+                          // consent created — parent refresh enables upload on next render
+                          onConsentsChange?.()
+                        }}
                       >
-                        <Link2 className="h-3.5 w-3.5" />
-                        {linkCopiedSlug === template.slug ? "Copied!" : "Patient link"}
+                        Prepare for paper upload
                       </Button>
-                    </>
-                  )}
-                </div>
-                {orgId && consentRecord && status !== "voided" ? (
-                  <ConsentScanUploadButton
-                    organizationId={orgId}
-                    patientId={patientId}
-                    consentId={consentRecord.id}
-                    templateSlug={template.slug}
-                    onUploaded={onConsentsChange}
-                    disabled={isBusy}
-                  />
-                ) : status !== "signed" ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-1 w-full"
-                    disabled={isBusy}
-                    onClick={async () => {
-                      const consentId = await ensureAndGetConsentId(template)
-                      if (!consentId || !orgId) return
-                      // consent created — parent refresh enables upload on next render
-                      onConsentsChange?.()
-                    }}
-                  >
-                    Prepare for paper upload
-                  </Button>
+                    ) : null}
+                  </>
                 ) : null}
 
-                {activeLinks[template.slug] && (
+                {activeLinks[template.slug] && canManageConsents ? (
                   <div className="mt-1 p-2 bg-neutral-50 rounded-lg border border-neutral-200 flex items-center justify-between gap-2 text-xs">
                     <span className="font-mono truncate text-neutral-600 flex-1 select-all">
                       {activeLinks[template.slug]}
@@ -398,7 +440,7 @@ export function ConsentFormsPanel({
                       {linkCopiedSlug === template.slug ? "Copied!" : "Copy"}
                     </Button>
                   </div>
-                )}
+                ) : null}
               </div>
             </article>
           )
@@ -418,39 +460,43 @@ export function ConsentFormsPanel({
                 >
                   <span>{c.template_name}</span>
                   <div className="flex items-center gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 gap-1 text-xs text-neutral-600 hover:text-neutral-900"
-                      onClick={async () => {
-                        const { token, error: linkErr } = await createConsentSigningToken({
-                          consentId: c.id,
-                          channel: "qr",
-                        })
-                        if (linkErr || !token) {
-                          toast.error(linkErr ?? "Could not create patient link")
-                          return
-                        }
-                        const url = `${window.location.origin}/sign/${token}`
-                        await navigator.clipboard.writeText(url)
-                        setActiveLinks((prev) => ({ ...prev, [c.template_slug]: url }))
-                        setLinkCopiedSlug(c.template_slug)
-                        toast.success("Link copied!")
-                        setTimeout(() => setLinkCopiedSlug(null), 2000)
-                      }}
-                    >
-                      <Link2 className="h-3 w-3" />
-                      {linkCopiedSlug === c.template_slug ? "Copied!" : "Patient link"}
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" asChild>
-                      <Link
-                        href={resolveConsentFormHref(patientId, c.template_slug)}
-                        transitionTypes={NAV_FORWARD_TRANSITION}
-                      >
-                        Continue
-                        <ExternalLink className="h-3 w-3" />
-                      </Link>
-                    </Button>
+                    {canManageConsents ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 gap-1 text-xs text-neutral-600 hover:text-neutral-900"
+                          onClick={async () => {
+                            const { token, error: linkErr } = await createConsentSigningToken({
+                              consentId: c.id,
+                              channel: "qr",
+                            })
+                            if (linkErr || !token) {
+                              toast.error(linkErr ?? "Could not create patient link")
+                              return
+                            }
+                            const url = `${window.location.origin}/sign/${token}`
+                            await navigator.clipboard.writeText(url)
+                            setActiveLinks((prev) => ({ ...prev, [c.template_slug]: url }))
+                            setLinkCopiedSlug(c.template_slug)
+                            toast.success("Link copied!")
+                            setTimeout(() => setLinkCopiedSlug(null), 2000)
+                          }}
+                        >
+                          <Link2 className="h-3 w-3" />
+                          {linkCopiedSlug === c.template_slug ? "Copied!" : "Patient link"}
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" asChild>
+                          <Link
+                            href={resolveConsentFormHref(patientId, c.template_slug)}
+                            transitionTypes={NAV_FORWARD_TRANSITION}
+                          >
+                            Continue
+                            <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        </Button>
+                      </>
+                    ) : null}
                   </div>
                 </li>
               ))}

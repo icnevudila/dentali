@@ -711,6 +711,9 @@ export const messagesEnPh: MessageTree = {
     acknowledge: "I have read and understood this document and consent to the terms.",
     signing: "Signing…",
     signAndSave: "Sign & Save",
+    manageDeniedTitle: "Consent actions restricted",
+    manageDenied:
+      "You need consents.manage permission to create or send consent forms.",
   },
   settings: {
     title: "Settings",
@@ -2412,6 +2415,9 @@ export const messagesTr: MessageTree = {
     acknowledge: "Bu belgeyi okudum ve anladım; şartları kabul ediyorum.",
     signing: "İmzalanıyor…",
     signAndSave: "İmzala ve Kaydet",
+    manageDeniedTitle: "Onam işlemleri kısıtlı",
+    manageDenied:
+      "Onam formu oluşturmak veya göndermek için consents.manage izni gerekir.",
   },
   settings: {
     title: "Ayarlar",
@@ -3893,6 +3899,9 @@ export const messagesFil: MessageTree = {
     acknowledge: "Nabasa at naintindihan ko ang dokumento at sumasang-ayon ako sa mga tuntunin.",
     signing: "Nagpi-pirma…",
     signAndSave: "Pirmahan at I-save",
+    manageDeniedTitle: "Nakareserba ang consent actions",
+    manageDenied:
+      "Kailangan mo ng consents.manage permission para gumawa o magpadala ng consent forms.",
   },
   settings: {
     title: "Settings",
