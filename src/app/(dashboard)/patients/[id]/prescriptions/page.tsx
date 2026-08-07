@@ -711,7 +711,12 @@ function PrescriptionsPage() {
                               </div>
                             ))
                           ) : (
-                            <p className="text-xs text-neutral-500 italic py-2">No medications recorded on this prescription.</p>
+                            <p className="text-xs text-neutral-500 italic py-2">
+                              {t(
+                                "prescriptions.noMedications",
+                                "No medications recorded on this prescription."
+                              )}
+                            </p>
                           )}
                         </div>
                       </div>
