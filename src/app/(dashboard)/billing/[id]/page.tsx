@@ -28,6 +28,7 @@ import { useLocale } from "@/hooks/use-locale"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/ui/empty-state"
 import { Input } from "@/components/ui/input"
 import { IntegrationEnvBanner } from "@/components/layout/IntegrationEnvBanner"
 import { PatientVisitActionRail } from "@/components/patients/PatientVisitActionRail"
@@ -1002,7 +1003,19 @@ export default function InvoiceDetailPage() {
           <CardHeader><CardTitle className="text-base">{t("billing.paymentHistory", "Payment History")}</CardTitle></CardHeader>
           <CardContent>
             {payments.length === 0 ? (
-              <p className="text-sm text-neutral-500">{t("billing.noPayments", "No payments recorded yet.")}</p>
+              <EmptyState
+                icon={Receipt}
+                className="border-0 bg-transparent py-6"
+                title={t("billing.noPaymentsTitle", "No payments yet")}
+                description={t("billing.noPayments", "No payments recorded yet.")}
+                action={
+                  canWriteBilling ? (
+                    <p className="text-xs text-neutral-500">
+                      {t("billing.noPaymentsHint", "Use Record Payment above to post the first payment.")}
+                    </p>
+                  ) : undefined
+                }
+              />
             ) : (
               <ul className="divide-y text-sm">
                 {payments.map((p) => (

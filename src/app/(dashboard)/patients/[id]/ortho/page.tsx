@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { AlertTriangle, CalendarDays, Plus, Lock, Receipt, FileSignature, Pencil, Printer } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Button } from "@/components/ui/button"
@@ -229,16 +230,23 @@ export default function OrthoRecordPage() {
         {loading ? (
           <PageLoadingSkeleton variant="inline" />
         ) : !orthoCase ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-neutral-500 mb-4">No active orthodontic case for this branch.</p>
-              {canWrite && (
-                <Button onClick={() => setShowNewCase(true)} className="gap-2">
-                  <Plus className="h-4 w-4" /> Start ortho case
+          <EmptyState
+            icon={CalendarDays}
+            className="border-dashed bg-neutral-50/60 py-10"
+            title={t("ortho.emptyTitle", "No active orthodontic case")}
+            description={t(
+              "ortho.emptyHint",
+              "Start an ortho case for this branch to track appliances, visits, and adjustments."
+            )}
+            action={
+              canWrite ? (
+                <Button size="sm" onClick={() => setShowNewCase(true)} className="gap-2">
+                  <Plus className="h-4 w-4" aria-hidden />
+                  {t("ortho.startCase", "Start ortho case")}
                 </Button>
-              )}
-            </CardContent>
-          </Card>
+              ) : undefined
+            }
+          />
         ) : (
           <>
             <Card>
