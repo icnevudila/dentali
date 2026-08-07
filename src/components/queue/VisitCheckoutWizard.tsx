@@ -16,9 +16,11 @@ import {
 } from "lucide-react"
 import { useLocale } from "@/hooks/use-locale"
 import { useBranch } from "@/hooks/use-branch"
+import { usePermission } from "@/hooks/use-permission"
 import { Button } from "@/components/ui/button"
 import type { PatientBillingGate } from "@/lib/billing/invoice-service"
 import { closePatientEncounter, fetchActiveEncounter } from "@/lib/clinical/encounter-service"
+import { PERMISSIONS } from "@/lib/auth/permissions"
 import { notify } from "@/lib/ui/notify"
 import { cn } from "@/lib/utils"
 
@@ -108,6 +110,9 @@ export function VisitCheckoutWizard({
 }: VisitCheckoutWizardProps) {
   const { t } = useLocale()
   const { activeBranch } = useBranch()
+  const { hasPermission, loading: permissionLoading } = usePermission()
+  const canManageQueue =
+    !permissionLoading && hasPermission(PERMISSIONS.QUEUE_MANAGE)
   const [closingEncounter, setClosingEncounter] = React.useState(false)
   const [encounterClosed, setEncounterClosed] = React.useState(false)
   const [encounterId, setEncounterId] = React.useState<string | null>(encounterIdProp ?? null)
@@ -154,6 +159,15 @@ export function VisitCheckoutWizard({
   }, [open, encounterIdProp, activeBranch?.id, patientId, t])
 
   const handleCloseEncounter = async () => {
+    if (!canManageQueue) {
+      notify.error(
+        t(
+          "queue.queueManageDenied",
+          "You need queue.manage permission to finish visits."
+        )
+      )
+      return
+    }
     if (!encounterId || closingEncounter) return
     setClosingEncounter(true)
     const { error } = await closePatientEncounter(encounterId)
@@ -349,11 +363,27 @@ export function VisitCheckoutWizard({
                       )}
                     </p>
                   ) : null}
+                  {!permissionLoading && !canManageQueue ? (
+                    <p className="mt-1 text-[11px] font-medium text-amber-700">
+                      {t(
+                        "queue.queueManageDenied",
+                        "You need queue.manage permission to finish visits."
+                      )}
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <Button
                 className="mt-3 w-full gap-2"
-                disabled={closingEncounter || encounterClosed}
+                disabled={closingEncounter || encounterClosed || !canManageQueue}
+                title={
+                  canManageQueue
+                    ? undefined
+                    : t(
+                        "queue.queueManageDeniedTooltip",
+                        "You need queue.manage to finish this visit"
+                      )
+                }
                 onClick={() => void handleCloseEncounter()}
               >
                 {closingEncounter ? (
