@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { EmptyState } from "@/components/ui/empty-state"
 import { FileHeart, Plus, RotateCcw } from "lucide-react"
 import { IntegrationEnvBanner } from "@/components/layout/IntegrationEnvBanner"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
@@ -270,32 +271,42 @@ function PhilHealthPageContent() {
               {loading ? (
                 <PageLoadingSkeleton variant="inline" />
               ) : displayedClaims.length === 0 ? (
-                <div className="py-10 text-center">
-                  <FileHeart className="mx-auto h-10 w-10 text-neutral-300" aria-hidden />
-                  <p className="mt-3 font-medium text-neutral-700">
-                    {statusFilter === "pending"
+                <EmptyState
+                  icon={FileHeart}
+                  className="border-0 bg-transparent py-8"
+                  title={
+                    statusFilter === "pending"
                       ? t("billing.noPhilhealthPendingClaims", "No pending PhilHealth claims")
-                      : t("billing.noPhilhealthClaimsTitle", "No PhilHealth claims yet")}
-                  </p>
-                  <p className="mt-1 text-sm text-neutral-500 max-w-sm mx-auto">
-                    {statusFilter === "pending" ? (
-                      <Link href="/billing/philhealth" className="text-primary-600 hover:underline">
-                        {t("billing.clearFilter", "Clear filter")}
-                      </Link>
-                    ) : (
-                      t(
-                        "billing.noPhilhealthClaimsHint",
-                        "Prepare a claim with patient PhilHealth ID and case rate, then complete the checklist before sync."
-                      )
-                    )}
-                  </p>
-                  {statusFilter !== "pending" ? (
-                    <Button className="mt-4 gap-2" onClick={() => setDrawerOpen(true)}>
-                      <Plus className="h-4 w-4" />
-                      {t("billing.newClaimPrep", "New claim prep")}
-                    </Button>
-                  ) : null}
-                </div>
+                      : t("billing.noPhilhealthClaimsTitle", "No PhilHealth claims yet")
+                  }
+                  description={
+                    statusFilter === "pending"
+                      ? t("billing.clearFilterHint", "Clear the status filter to see all claims.")
+                      : t(
+                          "billing.noPhilhealthClaimsHint",
+                          "Prepare a claim with patient PhilHealth ID and case rate, then complete the checklist before sync."
+                        )
+                  }
+                  action={
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      {statusFilter === "pending" ? (
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href="/billing/philhealth">
+                            {t("billing.clearFilter", "Clear filter")}
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button size="sm" className="gap-2" onClick={() => setDrawerOpen(true)}>
+                          <Plus className="h-4 w-4" aria-hidden />
+                          {t("billing.newClaimPrep", "New claim prep")}
+                        </Button>
+                      )}
+                      <Button size="sm" variant="outline" asChild>
+                        <Link href="/patients">{t("billing.goToPatients", "Go to Patients")}</Link>
+                      </Button>
+                    </div>
+                  }
+                />
               ) : (
                 <ul className="divide-y">
                   {displayedClaims.map((c) => (
