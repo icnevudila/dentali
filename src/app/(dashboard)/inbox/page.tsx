@@ -126,6 +126,8 @@ export default function InboxPage() {
                 labels={{
                   title: t("dashboard.needsAttention", "Needs attention"),
                   allClear: t("dashboard.attentionClear", "Nothing urgent right now"),
+                  allClearCta: t("inbox.ctaQueue", "Queue"),
+                  allClearHref: "/queue",
                   pendingConsents: t("dashboard.attnConsents", "Pending consents"),
                   pendingIntakeDrafts: t("dashboard.attnIntake", "Pending intake drafts"),
                   appointmentsAwaitingCheckin: t(

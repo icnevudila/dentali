@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { AlertCircle, ArrowRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { DashboardStats } from "@/lib/dashboard/dashboard-service"
 import { buildAttentionItems } from "@/lib/dashboard/attention-items"
@@ -15,6 +16,9 @@ type AttentionPanelProps = {
   labels: {
     title: string
     allClear: string
+    /** Optional empty-state CTA (e.g. Queue) when nothing needs attention */
+    allClearCta?: string
+    allClearHref?: string
     pendingConsents: string
     pendingIntakeDrafts: string
     appointmentsAwaitingCheckin: string
@@ -68,7 +72,14 @@ export function AttentionPanel({
       </div>
 
       {items.length === 0 ? (
-        <p className="text-sm text-neutral-500">{labels.allClear}</p>
+        <div className="space-y-3">
+          <p className="text-sm text-neutral-500">{labels.allClear}</p>
+          {interactive && labels.allClearHref && labels.allClearCta ? (
+            <Button asChild size="sm" variant="outline">
+              <Link href={labels.allClearHref}>{labels.allClearCta}</Link>
+            </Button>
+          ) : null}
+        </div>
       ) : (
         <ul className="space-y-2">
           {items.map((item) => {
