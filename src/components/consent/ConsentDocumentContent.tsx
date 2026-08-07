@@ -7,6 +7,7 @@ import {
   interpolateConsentFields,
   type ConsentTemplateVariables,
 } from "@/lib/consent/consent-template-render"
+import { useLocale } from "@/hooks/use-locale"
 import { cn } from "@/lib/utils"
 
 /**
@@ -43,6 +44,7 @@ export function ConsentDocumentContent({
   version?: string
   showHeader?: boolean
 }) {
+  const { t } = useLocale()
   const trimmedBody = body.trim()
   const hasStructuredFields = fields.length > 0
   const hasParagraphSections = fields.some((f) => f.type === "paragraph")
@@ -76,7 +78,9 @@ export function ConsentDocumentContent({
         ) : null}
         <div className="whitespace-pre-wrap text-sm text-neutral-700 leading-relaxed rounded-lg border border-neutral-200 bg-white px-4 py-4">
           {trimmedBody || (
-            <p className="text-neutral-500 italic">No document text configured for this form.</p>
+            <p className="text-neutral-500 italic">
+              {t("consent.noDocumentText", "No document text configured for this form.")}
+            </p>
           )}
         </div>
       </div>

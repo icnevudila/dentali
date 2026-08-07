@@ -744,6 +744,7 @@ export const messagesEnPh: MessageTree = {
   consent: {
     formNotFound: "Form not found",
     patientId: "Patient ID",
+    noDocumentText: "No document text configured for this form.",
     readBeforeSign: "Please read carefully before signing.",
     endOfDocument: "End of Document",
     scrollToSign: "Please scroll to the bottom of the document to sign.",
@@ -2635,6 +2636,7 @@ export const messagesTr: MessageTree = {
   consent: {
     formNotFound: "Form bulunamadı",
     patientId: "Hasta ID",
+    noDocumentText: "Bu form için belge metni yapılandırılmamış.",
     readBeforeSign: "İmzalamadan önce dikkatlice okuyun.",
     endOfDocument: "Belge Sonu",
     scrollToSign: "İmzalamak için belgenin sonuna kaydırın.",
@@ -4436,6 +4438,7 @@ export const messagesFil: MessageTree = {
   consent: {
     formNotFound: "Hindi nahanap ang form",
     patientId: "Patient ID",
+    noDocumentText: "Walang document text na naka-configure para sa form na ito.",
     readBeforeSign: "Basahin nang mabuti bago pumirma.",
     endOfDocument: "Dulo ng Dokumento",
     scrollToSign: "Mag-scroll sa dulo ng dokumento para pumirma.",
