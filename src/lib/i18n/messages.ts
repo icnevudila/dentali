@@ -1229,9 +1229,9 @@ export const messagesEnPh: MessageTree = {
     description:
       "Patients due for hygiene or recall visits. Book, message, or snooze from one worklist.",
     openWorkflow: "Hygiene recall settings",
-    emptyTitle: "Recare worklist coming next",
+    emptyTitle: "No recall patients yet",
     emptyDescription:
-      "This skeleton reserves the route and nav for a Dentrix Ascend–style recall queue. Due patients, last visit, and outreach actions will land here — no fake PHI in the meantime.",
+      "When hygiene recall is due, patients will appear here. Meanwhile, book from appointments or park them on the waitlist.",
     openAppointments: "Open appointments",
     openWaitlist: "Open waitlist",
   },
@@ -1245,9 +1245,9 @@ export const messagesEnPh: MessageTree = {
     collectionsTitle: "Collections",
     collectionsDescription:
       "Accounts-receivable chase worklist — aging, reminders, and settlement follow-ups in one place.",
-    collectionsEmptyTitle: "AR worklist coming next",
+    collectionsEmptyTitle: "No collections queue yet",
     collectionsEmptyDescription:
-      "This skeleton reserves the route and billing nav for a CareStack-style collections queue. Open balances and aging actions will land here — no invented AR rows or patient data until then.",
+      "Open balances and aging follow-ups will appear here. Until then, review finance reports or open invoices.",
     collectionsOpenReports: "Open finance reports",
     collectionsOpenInvoices: "Open invoices",
     title: "Billing & Invoices",
@@ -3065,9 +3065,9 @@ export const messagesTr: MessageTree = {
     description:
       "Hijyen veya recall için zamanı gelen hastalar. Tek listeden randevu, mesaj veya erteleme.",
     openWorkflow: "Hijyen recall ayarları",
-    emptyTitle: "Recare listesi yakında",
+    emptyTitle: "Henüz recall hastası yok",
     emptyDescription:
-      "Bu iskelet, Dentrix Ascend tarzı recall kuyruğu için rota ve menüyü ayırır. Vadesi gelen hastalar ve iletişim aksiyonları buraya gelecek — şimdilik sahte PHI yok.",
+      "Hijyen recall zamanı gelince hastalar burada listelenir. Şimdilik randevulardan rezervasyon yapın veya bekleme listesine ekleyin.",
     openAppointments: "Randevuları aç",
     openWaitlist: "Bekleme listesini aç",
   },
@@ -3081,9 +3081,9 @@ export const messagesTr: MessageTree = {
     collectionsTitle: "Tahsilat",
     collectionsDescription:
       "Alacak takip iş listesi — yaşlandırma, hatırlatmalar ve kapanış takipleri tek yerde.",
-    collectionsEmptyTitle: "AR iş listesi sırada",
+    collectionsEmptyTitle: "Henüz tahsilat kuyruğu yok",
     collectionsEmptyDescription:
-      "Bu iskelet, CareStack tarzı tahsilat kuyruğu için rota ve faturalama menüsünü ayırır. Açık bakiyeler ve yaşlandırma aksiyonları buraya gelecek — şimdilik uydurma AR satırı veya hasta verisi yok.",
+      "Açık bakiyeler ve yaşlandırma takipleri burada görünecek. Şimdilik finans raporlarına veya faturalara bakın.",
     collectionsOpenReports: "Finans raporlarını aç",
     collectionsOpenInvoices: "Faturaları aç",
     title: "Faturalama ve Faturalar",

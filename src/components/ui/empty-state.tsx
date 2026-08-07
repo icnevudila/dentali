@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react"
 import type { ReactNode } from "react"
+import { cn } from "@/lib/utils"
 
 type EmptyStateProps = {
   icon?: LucideIcon
@@ -9,30 +10,35 @@ type EmptyStateProps = {
   className?: string
 }
 
-/** Shared empty-state block for list/module surfaces. */
+/**
+ * Shared empty-state for dashboard modules.
+ * Matches light clinic chrome (ContentPanel / waitlist / billing) —
+ * no dark-mode navy blotches on light pages.
+ */
 export function EmptyState({
   icon: Icon,
   title,
   description,
   action,
-  className = "",
+  className,
 }: EmptyStateProps) {
   return (
     <div
-      className={`flex flex-col items-center justify-center text-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-12 dark:border-slate-800 dark:bg-slate-900 ${className}`}
+      className={cn(
+        "flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-neutral-200 bg-neutral-50/60 px-6 py-14 text-center animate-fade-rise",
+        className
+      )}
     >
       {Icon ? (
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-100 text-neutral-400">
           <Icon className="h-6 w-6" aria-hidden />
         </div>
       ) : null}
-      <div className="space-y-1 max-w-md">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
-        {description ? (
-          <p className="text-xs text-slate-500 dark:text-slate-400">{description}</p>
-        ) : null}
+      <div className="max-w-md space-y-1">
+        <h3 className="text-sm font-medium text-neutral-700">{title}</h3>
+        {description ? <p className="text-sm text-neutral-500">{description}</p> : null}
       </div>
-      {action ? <div className="mt-1">{action}</div> : null}
+      {action ? <div className="mt-2">{action}</div> : null}
     </div>
   )
 }
