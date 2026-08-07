@@ -718,6 +718,7 @@ export const messagesEnPh: MessageTree = {
     noProcedures: "No procedures added yet.",
     noProceduresTitle: "No procedures yet",
     addFromChart: "Add findings from dental chart",
+    noPhaseProcedures: "No procedure in this phase.",
   },
   chartFindings: {
     title: "Suggested from chart findings",
@@ -1705,6 +1706,8 @@ export const messagesEnPh: MessageTree = {
     noToothFindingTitle: "No active finding",
     noToothFindingHint: "No active finding recorded for this tooth.",
     editInChart: "Edit in Chart",
+    noToothHistoryTitle: "No tooth history yet",
+    noToothHistoryHint: "No historical procedures or SOAP notes found for this tooth.",
   },
   display: {
     invalidLink: "Invalid display link. Please contact the front desk.",
@@ -2579,6 +2582,7 @@ export const messagesTr: MessageTree = {
     noProcedures: "Henüz işlem eklenmedi.",
     noProceduresTitle: "Henüz işlem yok",
     addFromChart: "Diş kartından bulgu ekle",
+    noPhaseProcedures: "Bu aşamada işlem yok.",
   },
   chartFindings: {
     title: "Chart bulgularından öneriler",
@@ -3565,6 +3569,8 @@ export const messagesTr: MessageTree = {
     noToothFindingTitle: "Aktif bulgu yok",
     noToothFindingHint: "Bu diş için aktif bulgu kaydı yok.",
     editInChart: "Chart’ta düzenle",
+    noToothHistoryTitle: "Henüz diş geçmişi yok",
+    noToothHistoryHint: "Bu diş için geçmiş prosedür veya SOAP notu bulunamadı.",
   },
   display: {
     invalidLink: "Geçersiz ekran bağlantısı. Resepsiyonla iletişime geçin.",
@@ -4356,6 +4362,7 @@ export const messagesFil: MessageTree = {
     noProcedures: "Wala pang procedures na naidagdag.",
     noProceduresTitle: "Wala pang procedures",
     addFromChart: "Magdagdag ng findings mula sa dental chart",
+    noPhaseProcedures: "Walang procedure sa phase na ito.",
   },
   consent: {
     formNotFound: "Hindi nahanap ang form",
@@ -4865,6 +4872,8 @@ export const messagesFil: MessageTree = {
     noToothFindingTitle: "Walang active finding",
     noToothFindingHint: "Walang active finding para sa tooth na ito.",
     editInChart: "I-edit sa Chart",
+    noToothHistoryTitle: "Wala pang tooth history",
+    noToothHistoryHint: "Walang historical procedures o SOAP notes para sa tooth na ito.",
   },
   display: {
     invalidLink: "Invalid display link. Makipag-ugnayan sa front desk.",

@@ -1084,7 +1084,9 @@ function TreatmentPlanContent() {
                           </div>
                         </div>
                         {phase.items.length === 0 ? (
-                          <p className="px-3 py-3 text-xs text-neutral-400">No procedure in this phase.</p>
+                          <p className="px-3 py-3 text-xs text-neutral-400">
+                            {t("treatmentPlan.noPhaseProcedures", "No procedure in this phase.")}
+                          </p>
                         ) : (
                           <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left border-collapse">
