@@ -196,9 +196,22 @@ export default function ToothDetailPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-neutral-500 text-center py-8">
-                  No historical procedures or SOAP notes found for Tooth {toothId}.
-                </p>
+                <EmptyState
+                  icon={Smile}
+                  className="border-0 bg-transparent py-6"
+                  title={t("chart.noToothHistoryTitle", "No tooth history yet")}
+                  description={t(
+                    "chart.noToothHistoryHint",
+                    "No historical procedures or SOAP notes found for this tooth."
+                  )}
+                  action={
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href={`/patients/${patientId}/treatment-plan`}>
+                        {t("chart.openTreatmentPlan", "Open plans")}
+                      </Link>
+                    </Button>
+                  }
+                />
               )}
             </CardContent>
           </Card>
