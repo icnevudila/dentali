@@ -1069,10 +1069,18 @@ function AppointmentsPageContent() {
                         {providers.length === 0 ? (
                           <div className="mt-1 space-y-1">
                             <p className="text-[11px] font-medium text-amber-700">
-                              No doctors assigned to this branch yet.
+                              {t(
+                                "appointments.noProvidersAssigned",
+                                "No doctors assigned to this branch yet."
+                              )}
                             </p>
                             <Button type="button" variant="outline" className="h-7 px-2 text-[10px]" asChild>
-                              <Link href="/settings/staff">Assign dentist in staff settings</Link>
+                              <Link href="/settings/staff">
+                                {t(
+                                  "appointments.assignDentistCta",
+                                  "Assign dentist in staff settings"
+                                )}
+                              </Link>
                             </Button>
                           </div>
                         ) : null}

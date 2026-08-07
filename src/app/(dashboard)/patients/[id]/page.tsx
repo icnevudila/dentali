@@ -1295,7 +1295,19 @@ export default function PatientProfilePage() {
                     <tbody className="divide-y divide-neutral-200">
                       {treatmentPlans.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-4 py-8 text-center text-neutral-500">No treatment plans yet.</td>
+                          <td colSpan={5} className="px-4 py-8 text-center">
+                            <p className="text-neutral-500">
+                              {t("patients.noTreatmentPlans", "No treatment plans yet.")}
+                            </p>
+                            <Button size="sm" className="mt-3" asChild>
+                              <Link
+                                href={`/patients/${patientId}/treatment-plan`}
+                                transitionTypes={NAV_FORWARD_TRANSITION}
+                              >
+                                {t("patients.createTreatmentPlan", "Create treatment plan")}
+                              </Link>
+                            </Button>
+                          </td>
                         </tr>
                       ) : (
                         treatmentPlans.map((plan) => (
