@@ -11,6 +11,11 @@ import { fetchOrganization } from "@/lib/auth/auth-service"
 import { searchPatients } from "@/lib/patients/patient-service"
 import { createManualInvoice } from "@/lib/billing/invoice-service"
 import { notify } from "@/lib/ui/notify"
+import {
+  centavosToPesoMajor,
+  formatCentavosAsPhp,
+  parseMoneyToCentavos,
+} from "@/lib/money/php-money"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -85,17 +90,35 @@ export function ManualInvoiceDrawer({
     }
   }
 
+  const amountCentavos = parseMoneyToCentavos(amount)
+  const hmoCentavos = hmoShare.trim() ? parseMoneyToCentavos(hmoShare) : 0
+  const philHealthCentavos = philHealthShare.trim()
+    ? parseMoneyToCentavos(philHealthShare)
+    : 0
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user || !activeBranch || !selectedPatientId) return
-    const totalAmount = parseFloat(amount)
-    if (!totalAmount || totalAmount <= 0) return
+    const totalCentavos = parseMoneyToCentavos(amount)
+    if (totalCentavos === null || totalCentavos <= 0) {
+      const msg = t(
+        "billing.invalidMoneyAmount",
+        "Enter a valid amount in PHP (up to 2 decimal places)."
+      )
+      notify.error(msg)
+      setError(msg)
+      return
+    }
+    const totalAmount = centavosToPesoMajor(totalCentavos)
 
     let finalInvoiceNumber = customInvoiceNumber.trim()
     if (!finalInvoiceNumber) {
       const generated = `${series}-${Date.now().toString(36).toUpperCase()}`
       const confirmed = await notify.confirm(
-        `No invoice number entered. Auto-generate as "${generated}"?`
+        t(
+          "billing.autoInvoiceNumberConfirm",
+          'No invoice number entered. Auto-generate as "{number}"?'
+        ).replace("{number}", generated)
       )
       if (!confirmed) return
       finalInvoiceNumber = generated
@@ -105,7 +128,7 @@ export function ManualInvoiceDrawer({
     setError(null)
     const org = await fetchOrganization()
     if (!org) {
-      setError("Organization not found")
+      setError(t("billing.organizationNotFound", "Organization not found"))
       setCreating(false)
       return
     }
@@ -128,7 +151,7 @@ export function ManualInvoiceDrawer({
       return
     }
 
-    notify.success("Invoice created successfully")
+    notify.success(t("billing.invoiceCreated", "Invoice created successfully"))
     close()
     if (data?.id) {
       onCreated?.(data.id)
@@ -180,7 +203,9 @@ export function ManualInvoiceDrawer({
               autoComplete="off"
             />
             {defaultPatientId ? (
-              <p className="text-[10px] text-neutral-400">Patient locked to current chart.</p>
+              <p className="text-[10px] text-neutral-400">
+                {t("billing.patientLockedHint", "Patient locked to current chart.")}
+              </p>
             ) : null}
             {patientResults.length > 0 && !defaultPatientId ? (
               <ul className="absolute left-0 right-0 z-20 mt-1 max-h-48 divide-y overflow-y-auto rounded-md border border-neutral-200 bg-white shadow-lg">
@@ -203,36 +228,40 @@ export function ManualInvoiceDrawer({
               </ul>
             ) : null}
             {selectedPatientId ? (
-              <p className="text-xs text-emerald-700">Patient selected.</p>
+              <p className="text-xs text-emerald-700">
+                {t("billing.patientSelected", "Patient selected.")}
+              </p>
             ) : patientSearch.length >= 2 ? (
-              <p className="text-xs text-neutral-400">Pick a patient from the list.</p>
+              <p className="text-xs text-neutral-400">
+                {t("billing.pickPatientFromList", "Pick a patient from the list.")}
+              </p>
             ) : null}
           </div>
 
           <div className="space-y-1">
             <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-              Invoice series
+              {t("billing.invoiceSeries", "Invoice series")}
             </label>
             <select
               className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none"
               value={series}
               onChange={(e) => setSeries(e.target.value)}
             >
-              <option value="INV">INV (Default)</option>
-              <option value="OR">OR (Official Receipt)</option>
-              <option value="A">Series A</option>
-              <option value="B">Series B</option>
-              <option value="C">Series C</option>
-              <option value="REC">REC (Receipt)</option>
+              <option value="INV">{t("billing.seriesInv", "INV (Default)")}</option>
+              <option value="OR">{t("billing.seriesOr", "OR (Official Receipt)")}</option>
+              <option value="A">{t("billing.seriesA", "Series A")}</option>
+              <option value="B">{t("billing.seriesB", "Series B")}</option>
+              <option value="C">{t("billing.seriesC", "Series C")}</option>
+              <option value="REC">{t("billing.seriesRec", "REC (Receipt)")}</option>
             </select>
           </div>
 
           <div className="space-y-1">
             <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-              Invoice number (optional)
+              {t("billing.invoiceNumberOptional", "Invoice number (optional)")}
             </label>
             <Input
-              placeholder="e.g. INV-00201"
+              placeholder={t("billing.invoiceNumberPlaceholder", "e.g. INV-00201")}
               value={customInvoiceNumber}
               onChange={(e) => setCustomInvoiceNumber(e.target.value)}
             />
@@ -246,30 +275,39 @@ export function ManualInvoiceDrawer({
               {t("billing.invoiceAmountLabel", "Invoice amount (PHP)")}
             </label>
             <Input
-              type="number"
-              step="0.01"
-              min="0.01"
+              type="text"
+              inputMode="decimal"
               placeholder={t("billing.invoiceAmount", "Amount (PHP)")}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               required
+              aria-invalid={Boolean(amount.trim()) && amountCentavos === null}
             />
+            {amount.trim() && amountCentavos === null ? (
+              <p className="text-[10px] text-red-600">
+                {t(
+                  "billing.invalidMoneyAmount",
+                  "Enter a valid amount in PHP (up to 2 decimal places)."
+                )}
+              </p>
+            ) : null}
           </div>
 
           {/* DYNAMIC PAY-SHARE ALLOCATION CALCULATOR */}
-          {parseFloat(amount) > 0 && (
+          {amountCentavos !== null && amountCentavos > 0 ? (
             <div className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-4 space-y-4 animate-fade-rise">
               <div className="text-xs font-bold text-neutral-600 uppercase tracking-wide">
-                HMO &amp; PhilHealth Pay-Share Breakdown
+                {t("billing.payShareBreakdown", "HMO & PhilHealth Pay-Share Breakdown")}
               </div>
-              
+
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-neutral-500 uppercase">HMO Coverage (₱)</label>
+                  <label className="text-[10px] font-semibold text-neutral-500 uppercase">
+                    {t("billing.hmoCoverage", "HMO Coverage (₱)")}
+                  </label>
                   <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="₱0.00"
                     value={hmoShare}
                     onChange={(e) => setHmoShare(e.target.value)}
@@ -277,11 +315,12 @@ export function ManualInvoiceDrawer({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-neutral-500 uppercase">PhilHealth (₱)</label>
+                  <label className="text-[10px] font-semibold text-neutral-500 uppercase">
+                    {t("billing.philHealthShare", "PhilHealth (₱)")}
+                  </label>
                   <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="₱0.00"
                     value={philHealthShare}
                     onChange={(e) => setPhilHealthShare(e.target.value)}
@@ -290,13 +329,13 @@ export function ManualInvoiceDrawer({
                 </div>
               </div>
 
-              {/* Dynamic Stacked Bar */}
+              {/* Dynamic Stacked Bar — integer centavos only */}
               {(() => {
-                const total = parseFloat(amount) || 0
-                const hmo = parseFloat(hmoShare) || 0
-                const ph = parseFloat(philHealthShare) || 0
+                const total = amountCentavos
+                const hmo = hmoCentavos ?? 0
+                const ph = philHealthCentavos ?? 0
                 const patient = Math.max(0, total - hmo - ph)
-                
+
                 const hmoPct = total > 0 ? (hmo / total) * 100 : 0
                 const phPct = total > 0 ? (ph / total) * 100 : 0
                 const patientPct = total > 0 ? (patient / total) * 100 : 100
@@ -304,52 +343,52 @@ export function ManualInvoiceDrawer({
                 return (
                   <div className="space-y-2">
                     <div className="flex h-3 w-full overflow-hidden rounded-full bg-neutral-200 shadow-inner">
-                      {hmoPct > 0 && (
+                      {hmoPct > 0 ? (
                         <div
                           className="bg-teal-500 transition-all duration-300"
                           style={{ width: `${hmoPct}%` }}
-                          title={`HMO: ₱${hmo.toLocaleString()}`}
+                          title={`HMO: ${formatCentavosAsPhp(hmo)}`}
                         />
-                      )}
-                      {phPct > 0 && (
+                      ) : null}
+                      {phPct > 0 ? (
                         <div
                           className="bg-amber-500 transition-all duration-300"
                           style={{ width: `${phPct}%` }}
-                          title={`PhilHealth: ₱${ph.toLocaleString()}`}
+                          title={`PhilHealth: ${formatCentavosAsPhp(ph)}`}
                         />
-                      )}
-                      {patientPct > 0 && (
+                      ) : null}
+                      {patientPct > 0 ? (
                         <div
                           className="bg-primary-500 transition-all duration-300"
                           style={{ width: `${patientPct}%` }}
-                          title={`Patient: ₱${patient.toLocaleString()}`}
+                          title={`Patient: ${formatCentavosAsPhp(patient)}`}
                         />
-                      )}
+                      ) : null}
                     </div>
-                    
+
                     <div className="flex flex-wrap justify-between text-[10px] text-neutral-500 font-medium">
                       <span className="flex items-center gap-1">
                         <span className="w-2 h-2 rounded-full bg-primary-500" />
-                        Patient: ₱{patient.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {t("billing.patientShare", "Patient")}: {formatCentavosAsPhp(patient)}
                       </span>
-                      {hmo > 0 && (
+                      {hmo > 0 ? (
                         <span className="flex items-center gap-1">
                           <span className="w-2 h-2 rounded-full bg-teal-500" />
-                          HMO: ₱{hmo.toLocaleString()}
+                          HMO: {formatCentavosAsPhp(hmo)}
                         </span>
-                      )}
-                      {ph > 0 && (
+                      ) : null}
+                      {ph > 0 ? (
                         <span className="flex items-center gap-1">
                           <span className="w-2 h-2 rounded-full bg-amber-500" />
-                          PhilHealth: ₱{ph.toLocaleString()}
+                          PhilHealth: {formatCentavosAsPhp(ph)}
                         </span>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 )
               })()}
             </div>
-          )}
+          ) : null}
 
           <div className="space-y-1">
             <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
