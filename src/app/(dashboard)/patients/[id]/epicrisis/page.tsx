@@ -20,11 +20,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
-import { Printer, FileText, CheckCircle2 } from "lucide-react"
+import { Printer, FileText, CheckCircle2, ClipboardList, FileSignature, Activity } from "lucide-react"
 import Link from "next/link"
 import { fetchOrganization, fetchStaffProfile } from "@/lib/auth/auth-service"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
+import { EmptyState } from "@/components/ui/empty-state"
+import { useLocale } from "@/hooks/use-locale"
 
 function SectionPreview({
   title,
@@ -52,6 +54,7 @@ export default function EpicrisisPage() {
   const { id: patientId } = useRouteParams<{ id: string }>()
   const { activeBranch } = useBranch()
   const { user } = useAuth()
+  const { t } = useLocale()
 
   const [data, setData] = React.useState<EpicrisisData | null>(null)
   const [loading, setLoading] = React.useState(true)
@@ -241,13 +244,37 @@ export default function EpicrisisPage() {
                   </p>
                 </>
               ) : (
-                <p>No medical history on file.</p>
+                <EmptyState
+                  icon={ClipboardList}
+                  className="border-0 bg-transparent py-3"
+                  title={t("epicrisis.noMedicalHistoryTitle", "No medical history")}
+                  description={t("epicrisis.noMedicalHistory", "No medical history on file.")}
+                  action={
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href={`/patients/${patientId}/medical-history`}>
+                        {t("epicrisis.openMedicalHistory", "Open medical history")}
+                      </Link>
+                    </Button>
+                  }
+                />
               )}
             </SectionPreview>
 
             <SectionPreview title="3. Consents" count={data.consents.length}>
               {data.consents.length === 0 ? (
-                <p>No consent forms.</p>
+                <EmptyState
+                  icon={FileSignature}
+                  className="border-0 bg-transparent py-3"
+                  title={t("epicrisis.noConsentsTitle", "No consent forms")}
+                  description={t("epicrisis.noConsents", "No consent forms.")}
+                  action={
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href={`/patients/${patientId}/consents`}>
+                        {t("epicrisis.openConsents", "Open consents")}
+                      </Link>
+                    </Button>
+                  }
+                />
               ) : (
                 <ul className="space-y-1 text-xs">
                   {data.consents.slice(0, 6).map((c) => (
@@ -268,7 +295,19 @@ export default function EpicrisisPage() {
 
             <SectionPreview title="6. Treatment procedures" count={data.treatmentItems.length}>
               {data.treatmentItems.length === 0 ? (
-                <p>No treatment plan items.</p>
+                <EmptyState
+                  icon={ClipboardList}
+                  className="border-0 bg-transparent py-3"
+                  title={t("epicrisis.noTreatmentTitle", "No treatment items")}
+                  description={t("epicrisis.noTreatment", "No treatment plan items.")}
+                  action={
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href={`/patients/${patientId}/treatment-plan`}>
+                        {t("epicrisis.openTreatmentPlan", "Open treatment plan")}
+                      </Link>
+                    </Button>
+                  }
+                />
               ) : (
                 <ul className="space-y-1 text-xs max-h-32 overflow-y-auto">
                   {data.treatmentItems.slice(0, 8).map((item) => (
@@ -296,7 +335,22 @@ export default function EpicrisisPage() {
                   {Number(data.orthoBalance?.balance ?? 0).toLocaleString()} balance
                 </p>
               ) : (
-                <p>No active ortho case for this branch.</p>
+                <EmptyState
+                  icon={Activity}
+                  className="border-0 bg-transparent py-3"
+                  title={t("epicrisis.noOrthoTitle", "No active ortho case")}
+                  description={t(
+                    "epicrisis.noOrtho",
+                    "No active ortho case for this branch."
+                  )}
+                  action={
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href={`/patients/${patientId}/ortho`}>
+                        {t("ortho.openFullRecord", "Open full ortho record")}
+                      </Link>
+                    </Button>
+                  }
+                />
               )}
             </SectionPreview>
 

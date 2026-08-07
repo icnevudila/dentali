@@ -15,6 +15,7 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { EmptyState } from "@/components/ui/empty-state"
 import { PatientOdontogramSummary } from "@/components/patients/PatientOdontogramSummary"
 import { PatientAvatar } from "@/components/patients/PatientAvatar"
 import { ClinicalNotesWorkspace } from "@/components/clinical/ClinicalNotesWorkspace"
@@ -1444,7 +1445,17 @@ export default function PatientProfilePage() {
                       <tbody className="divide-y divide-neutral-200">
                         {appointments.length === 0 ? (
                           <tr>
-                            <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">No appointments scheduled.</td>
+                            <td colSpan={4} className="px-4 py-4">
+                              <EmptyState
+                                icon={Calendar}
+                                className="border-0 bg-transparent py-6"
+                                title={t("patients.noAppointmentsTitle", "No appointments yet")}
+                                description={t(
+                                  "patients.noAppointments",
+                                  "No appointments scheduled."
+                                )}
+                              />
+                            </td>
                           </tr>
                         ) : (
                           appointments.map((appt) => (
