@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Clock, LogIn, LogOut, RefreshCw } from "lucide-react"
+import Link from "next/link"
+import { Clock, LogIn, LogOut, RefreshCw, Users } from "lucide-react"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
@@ -10,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { EmptyState } from "@/components/ui/empty-state"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
 import { PERMISSIONS } from "@/lib/auth/permissions"
@@ -178,7 +180,38 @@ export default function TimesheetPage() {
                 </CardHeader>
                 <CardContent>
                   {history.length === 0 ? (
-                    <p className="text-sm text-neutral-500">{t("timesheet.empty", "No timesheet entries yet.")}</p>
+                    <EmptyState
+                      icon={Clock}
+                      className="border-dashed bg-neutral-50/60 py-8"
+                      title={t("timesheet.emptyTitle", "No timesheet entries yet")}
+                      description={t(
+                        "timesheet.emptyHint",
+                        "Clock in above to start your shift, or open Staff to review team schedules."
+                      )}
+                      action={
+                        <div className="flex flex-wrap items-center justify-center gap-2">
+                          {!isClockedIn ? (
+                            <Button
+                              size="sm"
+                              className="gap-2"
+                              disabled={busy != null || !activeBranch}
+                              onClick={() => void handleClockIn()}
+                            >
+                              <LogIn className="h-4 w-4" aria-hidden />
+                              {busy === "in"
+                                ? t("common.saving", "Saving…")
+                                : t("timesheet.clockIn", "Clock in")}
+                            </Button>
+                          ) : null}
+                          <Button asChild size="sm" variant="outline" className="gap-2">
+                            <Link href="/settings/staff">
+                              <Users className="h-4 w-4" aria-hidden />
+                              {t("timesheet.ctaStaff", "Staff")}
+                            </Link>
+                          </Button>
+                        </div>
+                      }
+                    />
                   ) : (
                     <ul className="divide-y text-sm">
                       {history.map((entry) => (

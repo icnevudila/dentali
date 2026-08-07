@@ -290,8 +290,11 @@ export const messagesEnPh: MessageTree = {
     recentOutreach: "Recent outreach",
     recentOutreachHint: "SMS, WhatsApp opens, and test sends logged for this branch.",
     openNotifications: "Notification settings",
+    noOutreachTitle: "No outreach logged yet",
     noOutreachYet:
-      "No outreach logged yet. Open a patient profile and use WhatsApp, or send from Notifications.",
+      "Open a patient profile and use WhatsApp, or send from Notification settings.",
+    ctaPatients: "Patients",
+    ctaNotifications: "Notifications",
     manualOutreach: "Manual outreach",
   },
   closeout: {
@@ -1456,6 +1459,9 @@ export const messagesEnPh: MessageTree = {
     clockedOut: "Clocked out",
     recent: "Recent entries",
     empty: "No timesheet entries yet.",
+    emptyTitle: "No timesheet entries yet",
+    emptyHint: "Clock in above to start your shift, or open Staff to review team schedules.",
+    ctaStaff: "Staff",
     open: "Open",
   },
   checkin: {
@@ -2019,8 +2025,11 @@ export const messagesTr: MessageTree = {
     recentOutreach: "Son iletişim",
     recentOutreachHint: "Bu şube için SMS, WhatsApp açılışları ve test gönderimleri.",
     openNotifications: "Bildirim ayarları",
+    noOutreachTitle: "Henüz iletişim kaydı yok",
     noOutreachYet:
-      "Henüz iletişim kaydı yok. Hasta profilinden WhatsApp kullanın veya Bildirimler’den gönderin.",
+      "Hasta profilinden WhatsApp kullanın veya Bildirim ayarlarından gönderin.",
+    ctaPatients: "Hastalar",
+    ctaNotifications: "Bildirimler",
     manualOutreach: "Manuel iletişim",
   },
   closeout: {
@@ -2173,7 +2182,7 @@ export const messagesTr: MessageTree = {
     outputsContextBadge: "Hasta bağlamı",
     outputPdaChart: "PDA diş chart",
     outputPdaChartHint: "PDA formatında chart ve yazdırma görünümü",
-    outputPerioChart: "Periodontal chart",
+    outputPerioChart: "Periodontal grafik",
     outputPerioChartHint: "Etkileşimli perio chart (sırada) ve yazdırma önizlemesi",
     outputConsents: "İmzalı onamlar",
     outputConsentsHint: "Onam imzalama ve yasal formlar",
@@ -2186,7 +2195,7 @@ export const messagesTr: MessageTree = {
     outputEpicrisis: "Epikriz / taburcu",
     outputEpicrisisHint: "Ziyaret, ortho, reçete ve faturalama teslim özeti",
     perioEyebrow: "Klinik",
-    perioTitle: "Periodontal chart",
+    perioTitle: "Periodontal grafik",
     perioDescription:
       "Bu hasta için etkileşimli probing haritası — tam editör gelene kadar ayrılmış rota.",
     perioEmptyTitle: "Etkileşimli perio chart sırada",
@@ -3183,6 +3192,9 @@ export const messagesTr: MessageTree = {
     clockedOut: "Mesaiden çıkıldı",
     recent: "Son kayıtlar",
     empty: "Henüz mesai kaydı yok.",
+    emptyTitle: "Henüz mesai kaydı yok",
+    emptyHint: "Vardiyayı başlatmak için yukarıdan mesaiye girin veya ekip programı için Personel’i açın.",
+    ctaStaff: "Personel",
     open: "Açık",
   },
   checkin: {
@@ -3191,7 +3203,7 @@ export const messagesTr: MessageTree = {
     linkFailed: "Check-in bağlantısı oluşturulamadı",
     copyFailed: "Bağlantı kopyalanamadı",
     whatsapp: "WhatsApp",
-    qrTitle: "Check-in QR",
+    qrTitle: "Check-in QR kodu",
     qrAlt: "Check-in QR kodu",
     qrPrintHint: "Hasta check-in sayfasını açmak için tarayın.",
     printQr: "QR yazdır",
@@ -3794,8 +3806,11 @@ export const messagesFil: MessageTree = {
     recentOutreach: "Recent outreach",
     recentOutreachHint: "SMS, WhatsApp opens, at test sends na naka-log para sa branch na ito.",
     openNotifications: "Notification settings",
+    noOutreachTitle: "Wala pang outreach na naka-log",
     noOutreachYet:
-      "Wala pang outreach na naka-log. Buksan ang patient profile at gamitin ang WhatsApp, o magpadala mula sa Notifications.",
+      "Buksan ang patient profile at gamitin ang WhatsApp, o magpadala mula sa Notification settings.",
+    ctaPatients: "Patients",
+    ctaNotifications: "Notifications",
     manualOutreach: "Manual outreach",
   },
   teamChat: {
@@ -3823,6 +3838,9 @@ export const messagesFil: MessageTree = {
     clockedOut: "Naka-clock out",
     recent: "Mga recent entry",
     empty: "Wala pang timesheet entry.",
+    emptyTitle: "Wala pang timesheet entry",
+    emptyHint: "Mag-clock in sa itaas para simulan ang shift, o buksan ang Staff para sa team schedules.",
+    ctaStaff: "Staff",
     open: "Open",
   },
   closeout: {
