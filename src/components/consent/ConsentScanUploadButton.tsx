@@ -5,6 +5,8 @@ import { Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { uploadScannedConsent } from "@/lib/patients/consent-service"
 import { toast } from "sonner"
+import { usePermission } from "@/hooks/use-permission"
+import { PERMISSIONS } from "@/lib/auth/permissions"
 
 export function ConsentScanUploadButton({
   organizationId,
@@ -23,6 +25,11 @@ export function ConsentScanUploadButton({
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = React.useState(false)
+  const { hasPermission, loading: permissionLoading } = usePermission()
+  const canManageConsents =
+    !permissionLoading && hasPermission(PERMISSIONS.CONSENTS_MANAGE)
+
+  if (!canManageConsents) return null
 
   const handleFile = async (file: File | null) => {
     if (!file) return

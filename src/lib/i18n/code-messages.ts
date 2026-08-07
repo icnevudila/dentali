@@ -292,6 +292,9 @@ export const codeMessagesEn: MessageTree = {
     requiredForCheckIn: "Required for check-in",
     requiredForCheckInBody: "Complete and sign this form first — queue check-in stays blocked until it is signed.",
     requiredForCheckInTitle: "Required before check-in",
+    manageDeniedTitle: "Consent actions restricted",
+    manageDenied:
+      "You need consents.manage permission to create or send consent forms.",
     signHere: "Sign here",
     signSuccessCloseHint: "You may close this page or return to the front desk.",
     signSuccessKioskHint: "Return to the kiosk to finish check-in.",
@@ -1427,6 +1430,9 @@ export const codeMessagesTr: MessageTree = {
     requiredForCheckIn: "Check-in için gerekli",
     requiredForCheckInBody: "Önce bu formu doldurun ve imzalayın. Kuyruktaki girişler, imzalanıncaya kadar engellenir.",
     requiredForCheckInTitle: "Check-in öncesi gerekli",
+    manageDeniedTitle: "Onam işlemleri kısıtlı",
+    manageDenied:
+      "Onam formu oluşturmak veya göndermek için consents.manage izni gerekir.",
     signHere: "Buraya imzala",
     signSuccessCloseHint: "Bu sayfayı kapatabilir veya resepsiyona dönebilirsiniz.",
     signSuccessKioskHint: "Giriş işlemini tamamlamak için büfeye geri dönün.",
