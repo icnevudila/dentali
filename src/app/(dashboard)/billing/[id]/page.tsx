@@ -616,7 +616,15 @@ export default function InvoiceDetailPage() {
           <CardHeader><CardTitle className="text-base">{t("billing.lineItems", "Line items")}</CardTitle></CardHeader>
           <CardContent>
             {lineItems.length === 0 ? (
-              <p className="text-sm text-neutral-500">{t("billing.noLineItems", "No line items on this invoice.")}</p>
+              <EmptyState
+                icon={Receipt}
+                className="border-0 bg-transparent py-4"
+                title={t("billing.noLineItemsTitle", "No line items yet")}
+                description={t(
+                  "billing.noLineItems",
+                  "No line items on this invoice."
+                )}
+              />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
