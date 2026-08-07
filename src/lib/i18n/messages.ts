@@ -920,6 +920,14 @@ export const messagesEnPh: MessageTree = {
     staffNoAssignmentsTitle: "No branch assignments yet",
     staffNoAssignmentsHint:
       "Assign this staff member to a branch and role using the form below.",
+    staffAssignmentsTitle: "Branch Assignments",
+    hmoProvidersEmptyTitle: "No HMO providers yet",
+    hmoProvidersEmptyHint:
+      "Add Maxicare, Intellicare, and other payers used for claim drafts.",
+    hmoProvidersAdd: "Add HMO provider",
+    securityNoLogsTitle: "No login history yet",
+    securityNoLogs:
+      "No login history yet. Future sign-ins will appear here.",
     branchesEmptyTitle: "No branches yet",
     branchesEmptyHint:
       "Create your first clinic location to enable queue, kiosk, and staff assignment.",
@@ -2802,6 +2810,14 @@ export const messagesTr: MessageTree = {
     staffNoAssignmentsTitle: "Henüz şube ataması yok",
     staffNoAssignmentsHint:
       "Aşağıdaki formla bu personeli bir şube ve role atayın.",
+    staffAssignmentsTitle: "Şube atamaları",
+    hmoProvidersEmptyTitle: "Henüz HMO sağlayıcı yok",
+    hmoProvidersEmptyHint:
+      "Talep taslakları için Maxicare, Intellicare ve diğer ödeyenleri ekleyin.",
+    hmoProvidersAdd: "HMO sağlayıcı ekle",
+    securityNoLogsTitle: "Henüz giriş geçmişi yok",
+    securityNoLogs:
+      "Henüz giriş geçmişi yok. Sonraki oturum açmalar burada görünür.",
     branchesEmptyTitle: "Henüz şube yok",
     branchesEmptyHint:
       "Kuyruk, kiosk ve personel ataması için ilk klinik lokasyonunu oluşturun.",
@@ -4488,6 +4504,14 @@ export const messagesFil: MessageTree = {
     staffNoAssignmentsTitle: "Wala pang branch assignments",
     staffNoAssignmentsHint:
       "I-assign ang staff na ito sa isang branch at role gamit ang form sa ibaba.",
+    staffAssignmentsTitle: "Branch Assignments",
+    hmoProvidersEmptyTitle: "Wala pang HMO providers",
+    hmoProvidersEmptyHint:
+      "Idagdag ang Maxicare, Intellicare, at iba pang payers para sa claim drafts.",
+    hmoProvidersAdd: "Magdagdag ng HMO provider",
+    securityNoLogsTitle: "Wala pang login history",
+    securityNoLogs:
+      "Wala pang login history. Lalabas dito ang susunod na sign-ins.",
     branchesEmptyTitle: "Wala pang branches",
     branchesEmptyHint:
       "Gumawa ng unang clinic location para sa queue, kiosk, at staff assignment.",
