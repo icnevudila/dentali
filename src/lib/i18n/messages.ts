@@ -685,6 +685,8 @@ export const messagesEnPh: MessageTree = {
     reasonOther: "Other",
     reasonOtherPlaceholder: "Please specify your reason",
     slotFull: "Full",
+    noDoctorsTitle: "No doctors available",
+    noDoctors: "No doctor is currently available.",
   },
   treatmentPlan: {
     addProcedure: "Add procedure",
@@ -1731,6 +1733,8 @@ export const messagesEnPh: MessageTree = {
     editInChart: "Edit in Chart",
     noToothHistoryTitle: "No tooth history yet",
     noToothHistoryHint: "No historical procedures or SOAP notes found for this tooth.",
+    noChartedConditions: "No charted conditions yet",
+    openFullChart: "Open full chart",
   },
   display: {
     invalidLink: "Invalid display link. Please contact the front desk.",
@@ -2573,6 +2577,8 @@ export const messagesTr: MessageTree = {
     reasonOther: "Diğer",
     reasonOtherPlaceholder: "Lütfen randevu nedeninizi belirtin",
     slotFull: "Dolu",
+    noDoctorsTitle: "Hekim yok",
+    noDoctors: "Şu an müsait hekim yok.",
   },
   treatmentPlan: {
     addProcedure: "Tedavi ekle",
@@ -3617,6 +3623,8 @@ export const messagesTr: MessageTree = {
     editInChart: "Chart’ta düzenle",
     noToothHistoryTitle: "Henüz diş geçmişi yok",
     noToothHistoryHint: "Bu diş için geçmiş prosedür veya SOAP notu bulunamadı.",
+    noChartedConditions: "Henüz chart bulgusu yok",
+    openFullChart: "Tam chart’ı aç",
   },
   display: {
     invalidLink: "Geçersiz ekran bağlantısı. Resepsiyonla iletişime geçin.",
@@ -4943,6 +4951,8 @@ export const messagesFil: MessageTree = {
     editInChart: "I-edit sa Chart",
     noToothHistoryTitle: "Wala pang tooth history",
     noToothHistoryHint: "Walang historical procedures o SOAP notes para sa tooth na ito.",
+    noChartedConditions: "Wala pang charted conditions",
+    openFullChart: "Buksan ang full chart",
   },
   display: {
     invalidLink: "Invalid display link. Makipag-ugnayan sa front desk.",
