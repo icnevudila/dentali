@@ -438,7 +438,23 @@ export default function OrthoRecordPage() {
               </CardHeader>
               <CardContent>
                 {adjustments.length === 0 ? (
-                  <p className="text-center py-8 text-neutral-500 text-sm">No adjustments logged yet.</p>
+                  <EmptyState
+                    icon={CalendarDays}
+                    className="border-0 bg-transparent py-6"
+                    title={t("ortho.noAdjustmentsTitle", "No adjustments logged yet")}
+                    description={t(
+                      "ortho.noAdjustmentsHint",
+                      "Log wire changes and visit procedures as the case progresses."
+                    )}
+                    action={
+                      canWrite && orthoCase.status === "active" ? (
+                        <Button size="sm" onClick={() => setShowAddRow(true)} className="gap-2">
+                          <Plus className="h-4 w-4" aria-hidden />
+                          {t("ortho.logAdjustment", "Log adjustment")}
+                        </Button>
+                      ) : undefined
+                    }
+                  />
                 ) : (
                   <table className="w-full text-sm">
                     <thead>

@@ -711,6 +711,8 @@ export const messagesEnPh: MessageTree = {
     clinicalRiskIntro: "Critical warnings in the patient's medical history:",
     clinicalRiskOutro:
       "Review the medical history in detail before planning surgical procedures.",
+    noProcedures: "No procedures added yet.",
+    addFromChart: "Add findings from dental chart",
   },
   chartFindings: {
     title: "Suggested from chart findings",
@@ -909,6 +911,9 @@ export const messagesEnPh: MessageTree = {
     staffEmptyTitle: "No staff members yet",
     staffEmptyHint:
       "Sign in as the clinic owner to bootstrap your organization, then invite teammates.",
+    staffNoAssignmentsTitle: "No branch assignments yet",
+    staffNoAssignmentsHint:
+      "Assign this staff member to a branch and role using the form below.",
     branchesEmptyTitle: "No branches yet",
     branchesEmptyHint:
       "Create your first clinic location to enable queue, kiosk, and staff assignment.",
@@ -1305,6 +1310,7 @@ export const messagesEnPh: MessageTree = {
     paymentHistory: "Payment History",
     lineItems: "Line items",
     noLineItems: "No line items on this invoice.",
+    noLineItemsTitle: "No line items yet",
     description: "Description",
     qty: "Qty",
     unitPrice: "Unit",
@@ -1377,6 +1383,7 @@ export const messagesEnPh: MessageTree = {
     resubmitPhilhealth: "Resubmit to eClaims",
     syncHistory: "Sync history",
     noSyncLogs: "No sync attempts yet.",
+    noSyncLogsTitle: "No sync attempts yet",
     searchPatient: "Search patient…",
     paymentReminderLogging: "Logging...",
     whatsAppReminder: "WhatsApp reminder",
@@ -1420,6 +1427,9 @@ export const messagesEnPh: MessageTree = {
     closeWarnings: "{count} warning(s)",
     ready: "Ready",
     openBookingAfterSave: "Open appointment booking after saving this visit",
+    noAdjustmentsTitle: "No adjustments logged yet",
+    noAdjustmentsHint: "Log wire changes and visit procedures as the case progresses.",
+    logAdjustment: "Log adjustment",
   },
   print: {
     loading: "Loading…",
@@ -2566,6 +2576,8 @@ export const messagesTr: MessageTree = {
     clinicalRiskIntro: "Hastanın tıbbi geçmişinde kritik uyarılar bulunmaktadır:",
     clinicalRiskOutro:
       "Cerrahi işlem planlamadan önce lütfen tıbbi geçmişini detaylı inceleyiniz.",
+    noProcedures: "Henüz işlem eklenmedi.",
+    addFromChart: "Diş kartından bulgu ekle",
   },
   chartFindings: {
     title: "Chart bulgularından öneriler",
@@ -2764,6 +2776,9 @@ export const messagesTr: MessageTree = {
     staffEmptyTitle: "Henüz personel yok",
     staffEmptyHint:
       "Organizasyonu başlatmak için klinik sahibi olarak giriş yapın, ardından ekip davet edin.",
+    staffNoAssignmentsTitle: "Henüz şube ataması yok",
+    staffNoAssignmentsHint:
+      "Aşağıdaki formla bu personeli bir şube ve role atayın.",
     branchesEmptyTitle: "Henüz şube yok",
     branchesEmptyHint:
       "Kuyruk, kiosk ve personel ataması için ilk klinik lokasyonunu oluşturun.",
@@ -3159,6 +3174,7 @@ export const messagesTr: MessageTree = {
     paymentHistory: "Ödeme Geçmişi",
     lineItems: "Kalemler",
     noLineItems: "Bu faturada kalem yok.",
+    noLineItemsTitle: "Henüz kalem yok",
     description: "Açıklama",
     qty: "Adet",
     unitPrice: "Birim",
@@ -3231,6 +3247,7 @@ export const messagesTr: MessageTree = {
     resubmitPhilhealth: "eClaims'e yeniden gönder",
     syncHistory: "Senkron geçmişi",
     noSyncLogs: "Henüz senkron denemesi yok.",
+    noSyncLogsTitle: "Henüz senkron denemesi yok",
     searchPatient: "Hasta ara…",
     paymentReminderLogging: "Kaydediliyor...",
     whatsAppReminder: "WhatsApp hatırlatma",
@@ -3274,6 +3291,9 @@ export const messagesTr: MessageTree = {
     closeWarnings: "{count} uyarı",
     ready: "Hazır",
     openBookingAfterSave: "Bu ziyareti kaydettikten sonra randevu oluşturmayı aç",
+    noAdjustmentsTitle: "Henüz ayarlama kaydı yok",
+    noAdjustmentsHint: "Vaka ilerledikçe tel değişikliklerini ve ziyaret işlemlerini kaydedin.",
+    logAdjustment: "Ayarlama kaydet",
   },
   print: {
     loading: "Yükleniyor…",
@@ -4332,6 +4352,8 @@ export const messagesFil: MessageTree = {
     clinicalRiskIntro: "May kritikal na babala sa medical history ng pasyente:",
     clinicalRiskOutro:
       "Suriin nang detalyado ang medical history bago magplano ng surgical procedure.",
+    noProcedures: "Wala pang procedures na naidagdag.",
+    addFromChart: "Magdagdag ng findings mula sa dental chart",
   },
   consent: {
     formNotFound: "Hindi nahanap ang form",
@@ -4418,6 +4440,9 @@ export const messagesFil: MessageTree = {
     staffEmptyTitle: "Wala pang staff",
     staffEmptyHint:
       "Mag-sign in bilang clinic owner para i-bootstrap ang organization, tapos mag-invite ng teammates.",
+    staffNoAssignmentsTitle: "Wala pang branch assignments",
+    staffNoAssignmentsHint:
+      "I-assign ang staff na ito sa isang branch at role gamit ang form sa ibaba.",
     branchesEmptyTitle: "Wala pang branches",
     branchesEmptyHint:
       "Gumawa ng unang clinic location para sa queue, kiosk, at staff assignment.",
@@ -4663,6 +4688,7 @@ export const messagesFil: MessageTree = {
     paymentHistory: "Payment history",
     lineItems: "Line items",
     noLineItems: "Walang line items sa invoice na ito.",
+    noLineItemsTitle: "Wala pang line items",
     description: "Description",
     qty: "Qty",
     unitPrice: "Unit",
@@ -4733,6 +4759,7 @@ export const messagesFil: MessageTree = {
     resubmitPhilhealth: "I-resubmit sa eClaims",
     syncHistory: "Sync history",
     noSyncLogs: "Walang sync attempts pa.",
+    noSyncLogsTitle: "Walang sync attempts pa",
     searchPatient: "Maghanap ng pasyente…",
     paymentReminderLogging: "Nilo-log...",
     whatsAppReminder: "WhatsApp reminder",
@@ -4776,6 +4803,9 @@ export const messagesFil: MessageTree = {
     closeWarnings: "{count} warning(s)",
     ready: "Ready",
     openBookingAfterSave: "Buksan ang appointment booking pagkatapos i-save ang visit na ito",
+    noAdjustmentsTitle: "Wala pang adjustments na naitala",
+    noAdjustmentsHint: "I-log ang wire changes at visit procedures habang umuusad ang case.",
+    logAdjustment: "I-log ang adjustment",
   },
   inventory: {
     title: "Inventory & Supplies",
