@@ -2122,6 +2122,10 @@ export const messagesTr: MessageTree = {
     linkInventoryDesc: "Stok seviyeleri ve düşük stok uyarıları",
     auditPermissionNote: "Denetim kaydına erişim rol izinlerinize bağlıdır.",
     backDashboard: "Panele dön",
+    devicesEyebrow: "Hasta ekranları",
+    backToHub: "Rapor merkezi",
+    linkSatisfaction: "Check-in memnuniyeti",
+    panelSatisfactionTitle: "Check-in memnuniyeti",
   },
   inbox: {
     pageEyebrow: "Resepsiyon",
@@ -4005,6 +4009,10 @@ export const messagesFil: MessageTree = {
     linkInventoryDesc: "Stock levels at low-stock alerts",
     auditPermissionNote: "Depende sa role permissions ang access sa audit log.",
     backDashboard: "Bumalik sa dashboard",
+    devicesEyebrow: "Patient-facing",
+    backToHub: "Reports hub",
+    linkSatisfaction: "Check-in satisfaction",
+    panelSatisfactionTitle: "Check-in satisfaction",
   },
   inbox: {
     pageEyebrow: "Front desk",
