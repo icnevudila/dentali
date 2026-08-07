@@ -36,6 +36,13 @@ import { logManualWhatsAppNotification } from "@/lib/notifications/notification-
 import { buildWhatsAppSendUrl } from "@/lib/notifications/whatsapp"
 import { rememberVisitPatientContext } from "@/lib/patients/visit-patient-context"
 import { notifyVisitAutoClosed } from "@/lib/billing/notify-visit-auto-closed"
+import {
+  centavosToInputValue,
+  centavosToPesoMajor,
+  formatCentavosAsPhp,
+  parseMoneyToCentavos,
+  pesoMajorToCentavos,
+} from "@/lib/money/php-money"
 
 export default function InvoiceDetailPage() {
   const params = useParams()
@@ -80,9 +87,20 @@ export default function InvoiceDetailPage() {
 
   const handleAddLineItem = async (e: React.FormEvent) => {
     e.preventDefault()
-    const price = parseFloat(newPrice)
+    const priceCentavos = parseMoneyToCentavos(newPrice)
     const qty = parseInt(newQty, 10)
-    if (!newDesc.trim() || isNaN(price) || isNaN(qty) || qty <= 0) return
+    if (!newDesc.trim() || priceCentavos === null || isNaN(qty) || qty <= 0) {
+      if (newPrice.trim() && priceCentavos === null) {
+        notify.error(
+          t(
+            "billing.invalidMoneyAmount",
+            "Enter a valid amount in PHP (up to 2 decimal places)."
+          )
+        )
+      }
+      return
+    }
+    const price = centavosToPesoMajor(priceCentavos)
 
     // 1. Duplicate Line Item Prevention
     const isDuplicate = lineItems.some(
@@ -99,14 +117,17 @@ export default function InvoiceDetailPage() {
     const matchedProc = procedures.find(
       (p) => p.name.toLowerCase().trim() === newDesc.toLowerCase().trim()
     )
-    if (matchedProc && price < matchedProc.base_price) {
+    if (
+      matchedProc &&
+      priceCentavos < pesoMajorToCentavos(matchedProc.base_price)
+    ) {
       const confirmPriceUnder = await notify.confirm(
         t(
           "billing.belowBasePriceWarning",
           "Warning: The entered unit price (₱{price}) is below the standard base price (₱{basePrice}) for this procedure. Do you want to authorize this discount?"
         )
-          .replace("{price}", price.toLocaleString())
-          .replace("{basePrice}", matchedProc.base_price.toLocaleString())
+          .replace("{price}", price.toLocaleString("en-PH", { minimumFractionDigits: 2 }))
+          .replace("{basePrice}", Number(matchedProc.base_price).toLocaleString("en-PH", { minimumFractionDigits: 2 }))
       )
       if (!confirmPriceUnder) return
     }
@@ -133,9 +154,33 @@ export default function InvoiceDetailPage() {
   }
 
   const handleUpdateLineItem = async (itemId: string) => {
-    const price = parseFloat(editPrice)
+    const priceCentavos = parseMoneyToCentavos(editPrice)
     const qty = parseInt(editQty, 10)
-    if (isNaN(price) || isNaN(qty) || qty <= 0 || !editDesc.trim()) return
+    if (priceCentavos === null || isNaN(qty) || qty <= 0 || !editDesc.trim()) {
+      if (editPrice.trim() && priceCentavos === null) {
+        notify.error(
+          t(
+            "billing.invalidMoneyAmount",
+            "Enter a valid amount in PHP (up to 2 decimal places)."
+          )
+        )
+      }
+      return
+    }
+    const price = centavosToPesoMajor(priceCentavos)
+    const discountCentavos = editDiscount.trim()
+      ? parseMoneyToCentavos(editDiscount)
+      : 0
+    if (discountCentavos === null) {
+      notify.error(
+        t(
+          "billing.invalidMoneyAmount",
+          "Enter a valid amount in PHP (up to 2 decimal places)."
+        )
+      )
+      return
+    }
+    const discountAmount = centavosToPesoMajor(discountCentavos)
 
     // 1. Duplicate Line Item Prevention
     const isDuplicate = lineItems.some(
@@ -152,14 +197,17 @@ export default function InvoiceDetailPage() {
     const matchedProc = procedures.find(
       (p) => p.name.toLowerCase().trim() === editDesc.toLowerCase().trim()
     )
-    if (matchedProc && price < matchedProc.base_price) {
+    if (
+      matchedProc &&
+      priceCentavos < pesoMajorToCentavos(matchedProc.base_price)
+    ) {
       const confirmPriceUnder = await notify.confirm(
         t(
           "billing.belowBasePriceWarning",
           "Warning: The entered unit price (₱{price}) is below the standard base price (₱{basePrice}) for this procedure. Do you want to authorize this discount?"
         )
-          .replace("{price}", price.toLocaleString())
-          .replace("{basePrice}", matchedProc.base_price.toLocaleString())
+          .replace("{price}", price.toLocaleString("en-PH", { minimumFractionDigits: 2 }))
+          .replace("{basePrice}", Number(matchedProc.base_price).toLocaleString("en-PH", { minimumFractionDigits: 2 }))
       )
       if (!confirmPriceUnder) return
     }
@@ -172,7 +220,7 @@ export default function InvoiceDetailPage() {
       description: editDesc.trim(),
       unitPrice: price,
       quantity: qty,
-      discountAmount: parseFloat(editDiscount) || 0,
+      discountAmount,
     })
     setSaving(false)
     if (updateErr) {
@@ -193,7 +241,9 @@ export default function InvoiceDetailPage() {
     setLineItems(result.lineItems)
     setError(result.error)
     if (result.data) {
-      setInvoiceDiscount(String(result.data.discount_amount ?? 0))
+      setInvoiceDiscount(
+        centavosToInputValue(pesoMajorToCentavos(result.data.discount_amount ?? 0))
+      )
     }
     const pending = await fetchPendingIntents(invoiceId)
     setPendingIntents(pending.data)
@@ -216,8 +266,17 @@ export default function InvoiceDetailPage() {
   const balance = invoice ? invoice.total_amount - invoice.paid_amount : 0
 
   const handleSaveInvoiceDiscount = async () => {
-    const discount = parseFloat(invoiceDiscount)
-    if (isNaN(discount) || discount < 0) return
+    const discountCentavos = parseMoneyToCentavos(invoiceDiscount)
+    if (discountCentavos === null || discountCentavos < 0) {
+      notify.error(
+        t(
+          "billing.invalidMoneyAmount",
+          "Enter a valid amount in PHP (up to 2 decimal places)."
+        )
+      )
+      return
+    }
+    const discount = centavosToPesoMajor(discountCentavos)
     setSavingDiscount(true)
     const { error: discErr } = await updateInvoiceDiscount(invoiceId, discount)
     setSavingDiscount(false)
@@ -232,8 +291,17 @@ export default function InvoiceDetailPage() {
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault()
-    const payAmount = parseFloat(amount)
-    if (!payAmount || payAmount <= 0) return
+    const payCentavos = parseMoneyToCentavos(amount)
+    if (payCentavos === null || payCentavos <= 0) {
+      notify.error(
+        t(
+          "billing.invalidMoneyAmount",
+          "Enter a valid amount in PHP (up to 2 decimal places)."
+        )
+      )
+      return
+    }
+    const payAmount = centavosToPesoMajor(payCentavos)
     setSaving(true)
     setError(null)
 
@@ -284,8 +352,24 @@ export default function InvoiceDetailPage() {
   }
 
   const handleCreateIntent = async (provider: "gcash" | "paymongo") => {
-    const payAmount = parseFloat(onlineAmount || String(balance))
-    if (!payAmount || payAmount <= 0 || payAmount > balance) return
+    const balanceCentavos = pesoMajorToCentavos(balance)
+    const payCentavos = onlineAmount.trim()
+      ? parseMoneyToCentavos(onlineAmount)
+      : balanceCentavos
+    if (
+      payCentavos === null ||
+      payCentavos <= 0 ||
+      payCentavos > balanceCentavos
+    ) {
+      notify.error(
+        t(
+          "billing.invalidMoneyAmount",
+          "Enter a valid amount in PHP (up to 2 decimal places)."
+        )
+      )
+      return
+    }
+    const payAmount = centavosToPesoMajor(payCentavos)
     setGatewayLoading(provider)
     setError(null)
     const { data, error: err, dryRun } = await createPaymentIntent({
@@ -695,7 +779,10 @@ export default function InvoiceDetailPage() {
                       const matchedProc = procedures.find(
                         (p) => p.name.toLowerCase().trim() === item.description.toLowerCase().trim()
                       )
-                      const isUnderpriced = matchedProc && item.unit_price < matchedProc.base_price
+                      const isUnderpriced =
+                        matchedProc &&
+                        pesoMajorToCentavos(item.unit_price) <
+                          pesoMajorToCentavos(matchedProc.base_price)
 
                       return (
                         <tr key={item.id} className="group hover:bg-neutral-50/20">
@@ -729,9 +816,17 @@ export default function InvoiceDetailPage() {
                                 onClick={() => {
                                   setEditingLineId(item.id)
                                   setEditDesc(item.description)
-                                  setEditPrice(String(item.unit_price))
+                                  setEditPrice(
+                                    centavosToInputValue(
+                                      pesoMajorToCentavos(item.unit_price)
+                                    )
+                                  )
                                   setEditQty(String(item.quantity))
-                                  setEditDiscount(String(item.discount_amount ?? 0))
+                                  setEditDiscount(
+                                    centavosToInputValue(
+                                      pesoMajorToCentavos(item.discount_amount ?? 0)
+                                    )
+                                  )
                                 }}
                                 title="Edit Item"
                               >
@@ -843,18 +938,31 @@ export default function InvoiceDetailPage() {
                   variant="outline"
                   size="sm"
                   className="text-xs h-7 border-emerald-200 bg-emerald-50 text-emerald-950 hover:bg-emerald-100"
-                  onClick={() => setAmount(String(balance))}
+                  onClick={() =>
+                    setAmount(centavosToInputValue(pesoMajorToCentavos(balance)))
+                  }
                 >
-                  Pay Full (₱{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })})
+                  {t("billing.payFull", "Pay Full")} (
+                  {formatCentavosAsPhp(pesoMajorToCentavos(balance))})
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   className="text-xs h-7 border-neutral-200 bg-neutral-50 hover:bg-neutral-100"
-                  onClick={() => setAmount(String(balance / 2))}
+                  onClick={() =>
+                    setAmount(
+                      centavosToInputValue(
+                        Math.floor(pesoMajorToCentavos(balance) / 2)
+                      )
+                    )
+                  }
                 >
-                  Pay Half (₱{(balance / 2).toLocaleString(undefined, { minimumFractionDigits: 2 })})
+                  {t("billing.payHalf", "Pay Half")} (
+                  {formatCentavosAsPhp(
+                    Math.floor(pesoMajorToCentavos(balance) / 2)
+                  )}
+                  )
                 </Button>
               </div>
               <form onSubmit={handlePayment} className="grid gap-3 sm:grid-cols-3">
