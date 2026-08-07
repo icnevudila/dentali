@@ -12,6 +12,7 @@ import { fetchOrganization } from "@/lib/auth/auth-service"
 import { useLocale } from "@/hooks/use-locale"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
+import { EmptyState } from "@/components/ui/empty-state"
 import { Plus, ShieldAlert, Check, X, ShieldCheck } from "lucide-react"
 
 interface HmoProvider {
@@ -225,8 +226,22 @@ export default function HmoProvidersSettingsPage() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="p-8 text-center text-neutral-400">
-                        No HMO Providers configured.
+                      <td colSpan={5} className="p-4">
+                        <EmptyState
+                          icon={ShieldCheck}
+                          className="border-0 bg-transparent py-6"
+                          title={t("settings.hmoProvidersEmptyTitle", "No HMO providers yet")}
+                          description={t(
+                            "settings.hmoProvidersEmptyHint",
+                            "Add Maxicare, Intellicare, and other payers used for claim drafts."
+                          )}
+                          action={
+                            <Button size="sm" className="gap-2" onClick={() => setShowForm(true)}>
+                              <Plus className="h-4 w-4" aria-hidden />
+                              {t("settings.hmoProvidersAdd", "Add HMO provider")}
+                            </Button>
+                          }
+                        />
                       </td>
                     </tr>
                   )}

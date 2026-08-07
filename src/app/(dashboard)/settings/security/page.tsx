@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
+import { EmptyState } from "@/components/ui/empty-state"
 import {
   Shield,
   Lock,
@@ -534,12 +535,15 @@ export default function SecuritySettingsPage() {
                     )}
                   </p>
                 ) : logs.length === 0 ? (
-                  <p className="py-2 text-sm text-neutral-500">
-                    {t(
+                  <EmptyState
+                    icon={Clock}
+                    className="border-0 bg-transparent py-4"
+                    title={t("settings.securityNoLogsTitle", "No login history yet")}
+                    description={t(
                       "settings.securityNoLogs",
                       "No login history yet. Future sign-ins will appear here."
                     )}
-                  </p>
+                  />
                 ) : (
                   <ul className="divide-y divide-neutral-100">
                     {logs.map((entry) => (

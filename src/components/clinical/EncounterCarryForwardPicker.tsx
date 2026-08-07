@@ -3,6 +3,7 @@
 import { Copy, FileText, ListChecks, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useLocale } from "@/hooks/use-locale"
 import type { CarryForwardNote, CarryForwardPlan } from "@/lib/clinical/encounter-carry-forward"
 
 type PickerActions = {
@@ -19,6 +20,7 @@ function NoteCarryForwardPicker({
   onDismiss,
   loading,
 }: { source: CarryForwardNote } & PickerActions) {
+  const { t } = useLocale()
   return (
     <Card className="border-primary-200 bg-primary-50/40">
       <CardHeader className="pb-2">
@@ -26,10 +28,10 @@ function NoteCarryForwardPicker({
           <div className="space-y-1">
             <CardTitle className="text-base flex items-center gap-2">
               <FileText className="h-4 w-4 text-primary-600" />
-              Copy from previous visit?
+              {t("encounter.carryForwardNoteTitle", "Copy from previous visit?")}
             </CardTitle>
             <CardDescription>
-              Source: {source.sourceLabel} · {source.title}
+              {t("encounter.carryForwardSource", "Source:")} {source.sourceLabel} · {source.title}
             </CardDescription>
           </div>
           {onDismiss ? (
@@ -66,16 +68,20 @@ function NoteCarryForwardPicker({
             </p>
           ) : null}
           {!source.subjective && !source.objective && !source.assessment && !source.plan ? (
-            <p className="text-neutral-500">Previous note has no SOAP content to copy.</p>
+            <p className="text-neutral-500">
+              {t("encounter.noSoapContent", "Previous note has no SOAP content to copy.")}
+            </p>
           ) : null}
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <Button type="button" onClick={onCopy} disabled={loading} className="gap-2">
             <Copy className="h-4 w-4" />
-            {loading ? "Copying…" : "Copy from last visit"}
+            {loading
+              ? t("encounter.copying", "Copying…")
+              : t("encounter.copyFromLast", "Copy from last visit")}
           </Button>
           <Button type="button" variant="outline" onClick={onBlank} disabled={loading}>
-            Start blank
+            {t("encounter.startBlank", "Start blank")}
           </Button>
         </div>
       </CardContent>

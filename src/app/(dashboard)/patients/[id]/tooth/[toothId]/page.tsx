@@ -2,7 +2,9 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { Smile } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/ui/empty-state"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -11,6 +13,7 @@ import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useRouteParams } from "@/hooks/use-route-params"
 import { useBranch } from "@/hooks/use-branch"
+import { useLocale } from "@/hooks/use-locale"
 import { getPatientOdontogram } from "@/lib/odontogram/dental-chart-service"
 import { getPatient } from "@/lib/patients/patient-service"
 import { createClient } from "@/lib/supabase/client"
@@ -27,6 +30,7 @@ interface ToothHistoryEvent {
 export default function ToothDetailPage() {
   const { id: patientId, toothId } = useRouteParams<{ id: string; toothId: string }>()
   const { activeBranch } = useBranch()
+  const { t } = useLocale()
   const [finding, setFinding] = React.useState<ToothFinding | null>(null)
   const [patientName, setPatientName] = React.useState("")
   const [history, setHistory] = React.useState<ToothHistoryEvent[]>([])
@@ -134,13 +138,30 @@ export default function ToothDetailPage() {
                   <p><span className="font-medium text-neutral-600">Notes:</span> {finding.notes ?? "—"}</p>
                 </>
               ) : (
-                <p className="text-neutral-500">No active finding recorded for this tooth.</p>
+                <EmptyState
+                  icon={Smile}
+                  className="border-0 bg-transparent py-4"
+                  title={t("chart.noToothFindingTitle", "No active finding")}
+                  description={t(
+                    "chart.noToothFindingHint",
+                    "No active finding recorded for this tooth."
+                  )}
+                  action={
+                    <Button size="sm" asChild>
+                      <Link href={`/patients/${patientId}/chart`}>
+                        {t("chart.editInChart", "Edit in Chart")}
+                      </Link>
+                    </Button>
+                  }
+                />
               )}
+              {finding ? (
               <div className="pt-2">
                 <Button asChild>
-                  <Link href={`/patients/${patientId}/chart`}>Edit in Chart</Link>
+                  <Link href={`/patients/${patientId}/chart`}>{t("chart.editInChart", "Edit in Chart")}</Link>
                 </Button>
               </div>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -175,9 +196,22 @@ export default function ToothDetailPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-neutral-500 text-center py-8">
-                  No historical procedures or SOAP notes found for Tooth {toothId}.
-                </p>
+                <EmptyState
+                  icon={Smile}
+                  className="border-0 bg-transparent py-6"
+                  title={t("chart.noToothHistoryTitle", "No tooth history yet")}
+                  description={t(
+                    "chart.noToothHistoryHint",
+                    "No historical procedures or SOAP notes found for this tooth."
+                  )}
+                  action={
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href={`/patients/${patientId}/treatment-plan`}>
+                        {t("chart.openTreatmentPlan", "Open plans")}
+                      </Link>
+                    </Button>
+                  }
+                />
               )}
             </CardContent>
           </Card>

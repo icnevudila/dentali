@@ -10,6 +10,8 @@ import { ContentPanel } from "@/components/layout/ContentPanel"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { EmptyState } from "@/components/ui/empty-state"
+import { useLocale } from "@/hooks/use-locale"
 import { PermissionDenied } from "@/components/auth/PermissionDenied"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useAuth } from "@/hooks/use-auth"
@@ -32,6 +34,7 @@ export default function StaffDetailPage() {
   const profileId = params.id as string
   const { user, loading: authLoading } = useAuth()
   const { hasPermission, loading: permLoading } = usePermission()
+  const { t } = useLocale()
   const canManageStaff = hasPermission(PERMISSIONS.STAFF_MANAGE)
   const isSelf = user?.id === profileId
   const [member, setMember] = useState<Awaited<ReturnType<typeof getStaffMember>>["data"]>(null)
@@ -249,10 +252,18 @@ export default function StaffDetailPage() {
 
         {canManageStaff ? (
         <Card className="border-0 shadow-none">
-          <CardHeader><CardTitle className="text-base">Branch Assignments</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t("settings.staffAssignmentsTitle", "Branch Assignments")}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             {member.assignments.length === 0 ? (
-              <p className="text-sm text-neutral-500">No branch assignments yet.</p>
+              <EmptyState
+                icon={UserCog}
+                className="border-0 bg-transparent py-4"
+                title={t("settings.staffNoAssignmentsTitle", "No branch assignments yet")}
+                description={t(
+                  "settings.staffNoAssignmentsHint",
+                  "Assign this staff member to a branch and role using the form below."
+                )}
+              />
             ) : (
               <ul className="divide-y text-sm">
                 {member.assignments.map((a) => (
