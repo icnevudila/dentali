@@ -8,6 +8,7 @@ import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { EmptyState } from "@/components/ui/empty-state"
 import { Input } from "@/components/ui/input"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
@@ -134,9 +135,20 @@ export default function TeamChatPage() {
                   className="max-h-[min(52vh,28rem)] space-y-3 overflow-y-auto rounded-lg border border-neutral-200 bg-neutral-50/60 p-3"
                 >
                   {messages.length === 0 ? (
-                    <p className="py-8 text-center text-sm text-neutral-500">
-                      {t("teamChat.empty", "No messages yet. Start the conversation for this branch.")}
-                    </p>
+                    <EmptyState
+                      icon={MessageSquare}
+                      className="border-dashed bg-white py-8"
+                      title={t("teamChat.emptyTitle", "No messages yet")}
+                      description={t(
+                        "teamChat.empty",
+                        "No messages yet. Start the conversation for this branch."
+                      )}
+                      action={
+                        <p className="text-xs text-neutral-500">
+                          {t("teamChat.emptyHint", "Type below to post the first message.")}
+                        </p>
+                      }
+                    />
                   ) : (
                     messages.map((message) => (
                       <article key={message.id} className="rounded-lg border border-neutral-200 bg-white px-3 py-2">

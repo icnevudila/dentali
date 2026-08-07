@@ -9,6 +9,7 @@ import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
 import { ModulePageShell } from "@/components/layout/ModulePageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
+import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -54,25 +55,28 @@ export default function SatisfactionReportPage() {
   if (!activeBranch) {
     return (
       <PermissionGate anyOf={[...ACCESS]}>
-        <ModulePageShell
-          icon={Star}
-          eyebrow={t("reports.devicesEyebrow", "Patient-facing")}
-          title={t("satisfaction.title", "Check-in satisfaction")}
-          description={t(
-            "satisfaction.subtitle",
-            "Kiosk star ratings and optional comments after check-in."
-          )}
-        >
-          <p className="text-sm text-neutral-500">
-            {t("dashboard.selectBranch", "Select a branch to continue.")}
-          </p>
-        </ModulePageShell>
+        <DirectionalTransition>
+          <ModulePageShell
+            icon={Star}
+            eyebrow={t("reports.devicesEyebrow", "Patient-facing")}
+            title={t("satisfaction.title", "Check-in satisfaction")}
+            description={t(
+              "satisfaction.subtitle",
+              "Kiosk star ratings and optional comments after check-in."
+            )}
+          >
+            <p className="text-sm text-neutral-500">
+              {t("dashboard.selectBranch", "Select a branch to continue.")}
+            </p>
+          </ModulePageShell>
+        </DirectionalTransition>
       </PermissionGate>
     )
   }
 
   return (
     <PermissionGate anyOf={[...ACCESS]}>
+      <DirectionalTransition>
       <ModulePageShell
         icon={Star}
         eyebrow={t("reports.devicesEyebrow", "Patient-facing")}
@@ -214,6 +218,7 @@ export default function SatisfactionReportPage() {
           </div>
         )}
       </ModulePageShell>
+      </DirectionalTransition>
     </PermissionGate>
   )
 }

@@ -168,7 +168,17 @@ export default function InboxPage() {
                   {logsLoading ? (
                     <p className="text-sm text-neutral-500">{t("common.loading", "Loading…")}</p>
                   ) : logsError ? (
-                    <p className="text-sm text-red-600">{logsError}</p>
+                    <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 text-center">
+                      <p className="text-sm text-red-700">{logsError}</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        onClick={() => void loadLogs()}
+                      >
+                        {t("common.retry", "Retry")}
+                      </Button>
+                    </div>
                   ) : logs.length === 0 ? (
                     <EmptyState
                       icon={Inbox}
