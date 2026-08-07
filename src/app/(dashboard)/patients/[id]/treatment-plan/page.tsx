@@ -1057,9 +1057,13 @@ function TreatmentPlanContent() {
               <CardContent>
                 {items.length === 0 ? (
                   <div className="space-y-2 text-sm">
-                    <p className="text-neutral-500">No procedures added yet.</p>
+                    <p className="text-neutral-500">
+                      {t("treatmentPlan.noProcedures", "No procedures added yet.")}
+                    </p>
                     <Button variant="outline" size="sm" asChild>
-                      <Link href={`/patients/${patientId}/chart`}>Add findings from dental chart</Link>
+                      <Link href={`/patients/${patientId}/chart`}>
+                        {t("treatmentPlan.addFromChart", "Add findings from dental chart")}
+                      </Link>
                     </Button>
                   </div>
                 ) : (
