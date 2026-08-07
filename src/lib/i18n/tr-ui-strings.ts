@@ -124,6 +124,7 @@ export const TR_UI_STRINGS: Record<string, string> = {
   "Already have an account?": "Zaten hesabınız var mı?",
   "Amount": "Tutar",
   "Amount (PHP)": "Tutar (PHP)",
+  "Amount (max ₱{max})": "Tutar (maks. ₱{max})",
   "Enter a valid amount in PHP (up to 2 decimal places).": "Geçerli bir PHP tutarı girin (en fazla 2 ondalık basamak).",
   "Pay Full": "Tamamı",
   "Pay Half": "Yarısı",
