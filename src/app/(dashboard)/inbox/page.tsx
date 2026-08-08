@@ -124,26 +124,33 @@ export default function InboxPage() {
                 permissions={permissions}
                 workflowSettings={workflowSettings}
                 labels={{
-                  title: t("dashboard.needsAttention", "Needs attention"),
-                  allClear: t("dashboard.attentionClear", "Nothing urgent right now"),
+                  title: t("dashboard.attentionTitle", "Needs attention"),
+                  allClear: t("dashboard.attentionClear", "All clear — nothing urgent right now."),
                   allClearCta: t("inbox.ctaQueue", "Queue"),
                   allClearHref: "/queue",
-                  pendingConsents: t("dashboard.attnConsents", "Pending consents"),
-                  pendingIntakeDrafts: t("dashboard.attnIntake", "Pending intake drafts"),
+                  pendingConsents: t("dashboard.pendingConsents", "Pending Consents"),
+                  pendingIntakeDrafts: t("dashboard.pendingIntakeDrafts", "Pending intake drafts"),
                   appointmentsAwaitingCheckin: t(
-                    "dashboard.attnCheckin",
-                    "Appointments awaiting check-in"
+                    "dashboard.awaitingCheckin",
+                    "Awaiting check-in"
                   ),
-                  queueWaiting: t("dashboard.attnQueue", "Patients waiting in queue"),
-                  waitlistWaiting: t("dashboard.attnWaitlist", "Waitlist entries"),
-                  openInvoices: t("dashboard.attnInvoices", "Open invoices"),
-                  lowStock: t("dashboard.attnStock", "Low stock items"),
-                  missingNotes: t("dashboard.attnNotes", "Missing clinical notes"),
-                  overdueInvoices: t("dashboard.attnOverdue", "Overdue invoices"),
-                  hmoDraft: t("dashboard.attnHmo", "HMO draft claims"),
-                  philhealthPending: t("dashboard.attnPhilhealth", "PhilHealth pending"),
-                  openEncountersStale: t("dashboard.attnStale", "Stale open visits"),
-                  recareDue: t("dashboard.attnRecare", "Recare due"),
+                  queueWaiting: t("dashboard.queueWaiting", "Queue Waiting"),
+                  waitlistWaiting: t("dashboard.waitlistWaiting", "Waitlist pending"),
+                  openInvoices: t("dashboard.openInvoices", "Open Invoices"),
+                  lowStock: t("dashboard.lowStockItems", "Low Stock Items"),
+                  missingNotes: t("dashboard.missingNotes", "Missing clinical notes"),
+                  overdueInvoices: t("dashboard.overdueInvoices", "Overdue invoices"),
+                  hmoDraft: t("dashboard.hmoDraft", "HMO draft claims"),
+                  philhealthPending: t("dashboard.philhealthPending", "PhilHealth pending"),
+                  openEncountersStale: t(
+                    "dashboard.openEncountersStale",
+                    "Open visits from prior days"
+                  ),
+                  manualActionHint: t(
+                    "dashboard.attentionManualHint",
+                    "Automation off — staff action required"
+                  ),
+                  recareDue: t("dashboard.recareDue", "Recare due"),
                 }}
               />
 

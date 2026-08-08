@@ -210,6 +210,8 @@ export default function DashboardPage() {
               labels={{
                 title: t("dashboard.attentionTitle", "Needs attention"),
                 allClear: t("dashboard.attentionClear", "All clear — nothing urgent right now."),
+                allClearCta: t("dashboard.openQueue", "Queue"),
+                allClearHref: "/queue",
                 pendingConsents: t("dashboard.pendingConsents", "Pending Consents"),
                 pendingIntakeDrafts: t("dashboard.pendingIntakeDrafts", "Pending intake drafts"),
                 appointmentsAwaitingCheckin: t(
