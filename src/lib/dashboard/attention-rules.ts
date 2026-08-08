@@ -1,6 +1,7 @@
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import type { DashboardStats } from "@/lib/dashboard/dashboard-service"
 import type { AttentionItem, AttentionLabels, AttentionTone } from "@/lib/dashboard/attention-items"
+import type { WorkflowSettingsMap } from "@/lib/analytics/analytics-service"
 
 export type AttentionRuleContext = {
   stats: DashboardStats
@@ -8,7 +9,7 @@ export type AttentionRuleContext = {
   /** Permission keys the current user holds for the active branch */
   permissions: ReadonlySet<string>
   /** Branch workflow toggles; null while loading — rules still run, hints omitted */
-  workflowSettings: Record<string, boolean> | null
+  workflowSettings: WorkflowSettingsMap | null
 }
 
 type AttentionRuleDef = {
@@ -274,7 +275,7 @@ function resolveTone(rule: AttentionRuleDef, count: number): AttentionTone {
 }
 
 function isWorkflowEnabled(
-  settings: Record<string, boolean> | null,
+  settings: WorkflowSettingsMap | null,
   key: string | undefined
 ): boolean | null {
   if (!key || settings == null) return null

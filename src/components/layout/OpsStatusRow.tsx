@@ -5,7 +5,10 @@ import { AlertTriangle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
-import { fetchWorkflowSettings } from "@/lib/analytics/analytics-service"
+import {
+  fetchWorkflowSettings,
+  type WorkflowSettingsMap,
+} from "@/lib/analytics/analytics-service"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { cn } from "@/lib/utils"
 
@@ -28,7 +31,7 @@ type OpsStatusRowProps = {
 export function OpsStatusRow({ workflowItems = [], extra, className }: OpsStatusRowProps) {
   const { activeBranch } = useBranch()
   const { t } = useLocale()
-  const [settings, setSettings] = React.useState<Record<string, boolean> | null>(null)
+  const [settings, setSettings] = React.useState<WorkflowSettingsMap | null>(null)
 
   React.useEffect(() => {
     if (!activeBranch || workflowItems.length === 0) return
