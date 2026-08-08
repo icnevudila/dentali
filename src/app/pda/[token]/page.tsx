@@ -13,7 +13,7 @@ import {
 } from "@/lib/pda/pda-intake-schema"
 import { buildPdaIntakePrefill } from "@/lib/pda/pda-intake-prefill"
 import { fetchPdaIntakeByToken, submitPdaIntakeViaToken } from "@/lib/pda/pda-intake-service"
-import { publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
+import { ERROR_COPY, publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
 import { notify } from "@/lib/ui/notify"
 
 export default function PublicPdaIntakePage() {
@@ -35,7 +35,7 @@ export default function PublicPdaIntakePage() {
         setError(
           publicChannelSafeError(
             err,
-            "This link is invalid or has expired. Please ask the clinic for a new form link."
+            ERROR_COPY.pdaLinkInvalid
           )
         )
         setLoading(false)
@@ -74,7 +74,7 @@ export default function PublicPdaIntakePage() {
     if (submitErr) {
       const safe = publicChannelSafeError(
         submitErr,
-        "We could not submit your form. Please try again or see the front desk."
+        ERROR_COPY.pdaSubmitFailed
       )
       setError(safe)
       notify.error(safe)

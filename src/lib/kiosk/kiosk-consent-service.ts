@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client"
+import { ERROR_COPY, publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
 import {
   fetchPortalSnapshot,
   type PortalConsentItem,
@@ -39,7 +40,12 @@ export async function createKioskConsentSignToken(
     p_template_slug: templateSlug,
   })
 
-  if (error) return { data: null, error: error.message }
+  if (error) {
+    return {
+      data: null,
+      error: publicChannelSafeError(error.message, ERROR_COPY.consentSignFailed),
+    }
+  }
   const raw = data as Record<string, unknown>
   if (raw.already_signed) {
     return {

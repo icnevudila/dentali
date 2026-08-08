@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client"
-import { publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
+import { ERROR_COPY, publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
 
 export type CheckInTokenPreview = {
   ok: true
@@ -12,7 +12,7 @@ export type CheckInTokenPreview = {
   expires_at: string
 }
 
-const CHECKIN_FALLBACK = "Check-in could not be completed. Please see the front desk."
+const CHECKIN_FALLBACK = ERROR_COPY.checkInFailed
 
 function mapCheckInRpcError(raw: string | null | undefined): string {
   const code = (raw ?? "").trim().toLowerCase()

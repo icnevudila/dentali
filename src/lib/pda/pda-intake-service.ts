@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client"
 import { fetchOrganization } from "@/lib/auth/auth-service"
+import { ERROR_COPY, publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
 import type { PdaIntakeResponses, PdaIntakeStatus } from "@/lib/pda/pda-intake-schema"
 import { parsePdaIntakeResponses } from "@/lib/pda/pda-intake-schema"
 
@@ -207,7 +208,12 @@ export async function fetchPdaIntakeByToken(
 ): Promise<{ data: PdaIntakeTokenContext | null; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("get_pda_intake_by_token", { p_token: token })
-  if (error) return { data: null, error: error.message }
+  if (error) {
+    return {
+      data: null,
+      error: publicChannelSafeError(error.message, ERROR_COPY.pdaLinkInvalid),
+    }
+  }
   const row = data as Record<string, unknown>
   return {
     data: {
@@ -231,5 +237,8 @@ export async function submitPdaIntakeViaToken(
     p_token: token,
     p_responses: responses,
   })
-  return { error: error?.message ?? null }
+  if (!error) return { error: null }
+  return {
+    error: publicChannelSafeError(error.message, ERROR_COPY.pdaSubmitFailed),
+  }
 }

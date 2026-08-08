@@ -275,6 +275,11 @@ export function PortalStatusPanel({
           {t("portal.consentSection", "Required forms")}
         </h2>
         <ul className="mt-3 space-y-2">
+          {(snapshot?.consents ?? []).length === 0 ? (
+            <li className="rounded-lg border border-dashed border-neutral-200 px-3 py-4 text-sm text-neutral-600">
+              {t("portal.noConsents", "No forms are required right now.")}
+            </li>
+          ) : null}
           {(snapshot?.consents ?? []).map((item) => {
             const signed = item.status === "signed"
             const pending = item.status === "pending" || item.status === "not_started"
@@ -309,7 +314,11 @@ export function PortalStatusPanel({
             )
           })}
         </ul>
-        {snapshot?.ready_for_checkin ? (
+        {!(snapshot?.consents ?? []).length ? (
+          <p className="mt-3 text-xs text-neutral-600">
+            {t("portal.noConsentsHint", "Nothing to sign for this visit.")}
+          </p>
+        ) : snapshot?.ready_for_checkin ? (
           <p className="mt-3 text-xs text-emerald-800">
             {t("portal.consentsReady", "Intake forms complete — you're ready for check-in.")}
           </p>
