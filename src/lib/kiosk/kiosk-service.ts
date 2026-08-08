@@ -1,4 +1,18 @@
 import { createClient } from "@/lib/supabase/client"
+import {
+  ERROR_COPY,
+  PUBLIC_INTAKE_SQL_HINT,
+  isPublicIntakeSchemaError,
+  kioskCheckInSafeError,
+  publicChannelSafeError,
+} from "@/lib/kiosk/public-channel-errors"
+
+export {
+  ERROR_COPY,
+  isTechnicalPublicChannelError,
+  kioskCheckInSafeError,
+  publicChannelSafeError,
+} from "@/lib/kiosk/public-channel-errors"
 
 export interface KioskSession {
   session_id: string
@@ -13,7 +27,12 @@ export async function createKioskSession(
   const supabase = createClient()
   const { data, error } = await supabase.rpc("create_kiosk_session", { p_token: token })
 
-  if (error) return { data: null, error: error.message }
+  if (error) {
+    return {
+      data: null,
+      error: publicChannelSafeError(error.message, ERROR_COPY.sessionFailed),
+    }
+  }
   return { data: data as KioskSession, error: null }
 }
 
@@ -29,7 +48,12 @@ export async function submitKioskCheckin(
     p_last_name: lastName,
   })
 
-  if (error) return { data: null, error: error.message }
+  if (error) {
+    return {
+      data: null,
+      error: kioskCheckInSafeError(error.message, ERROR_COPY.checkInFailed),
+    }
+  }
   const result = data as { display_code: string; entry_id: string }
   return { data: { display_code: result.display_code, entry_id: result.entry_id }, error: null }
 }
@@ -71,91 +95,6 @@ export type KioskIntakePayload = {
   emergency_contact_phone?: string
   medical_alerts?: string
   intake_profile?: Record<string, unknown>
-}
-
-function isPublicIntakeSchemaError(message: string): boolean {
-  const lower = message.toLowerCase()
-  return (
-    lower.includes("intake_profile") ||
-    lower.includes("submit_kiosk_intake") ||
-    lower.includes("schema cache") ||
-    lower.includes("could not find the function") ||
-    lower.includes("pgrst202")
-  )
-}
-
-const PUBLIC_INTAKE_SQL_HINT =
-  "Portal/kiosk intake SQL is not fully applied. Run supabase/scripts/APPLY_PUBLIC_INTAKE_PROFILE_HARDENING.sql in Supabase SQL Editor, then retry."
-
-/** True when a message looks like Postgres / PostgREST / network plumbing — never show on public devices. */
-export function isTechnicalPublicChannelError(message: string): boolean {
-  const lower = message.toLowerCase()
-  return (
-    isPublicIntakeSchemaError(message) ||
-    message.includes(PUBLIC_INTAKE_SQL_HINT) ||
-    lower.includes("pgrst") ||
-    lower.includes("postgrest") ||
-    lower.includes("postgres") ||
-    lower.includes("sqlstate") ||
-    lower.includes("jwt") ||
-    lower.includes("failed to fetch") ||
-    lower.includes("networkerror") ||
-    lower.includes("typeerror") ||
-    lower.includes("edge function") ||
-    lower.includes("functions.invoke") ||
-    lower.includes("row-level security") ||
-    lower.includes("permission denied") ||
-    lower.includes("relation ") ||
-    lower.includes("column ") ||
-    lower.includes("syntax error") ||
-    lower.includes("rpc ") ||
-    lower.includes("supabase") ||
-    lower.includes("_next_queue_display_code") ||
-    lower.includes("queue_display_code") ||
-    (lower.includes("function") && lower.includes("is not unique")) ||
-    /^(error|exception|stack|undefined|null)\b/i.test(message.trim()) ||
-    /^[A-Z][a-zA-Z]+Error:/.test(message.trim())
-  )
-}
-
-/**
- * Sanitize errors for portal / kiosk / PDA / TV / sign.
- * Known patient-facing copy is allowed; everything else becomes `fallback`.
- */
-export function publicChannelSafeError(
-  error: string | null | undefined,
-  fallback: string
-): string {
-  if (!error) return fallback
-  const trimmed = error.trim()
-  if (!trimmed) return fallback
-  if (isTechnicalPublicChannelError(trimmed)) return fallback
-  if (trimmed.includes("\n") || trimmed.length > 180) return fallback
-  return trimmed
-}
-
-/** Hide raw Postgres errors from kiosk/portal patients. */
-export function kioskCheckInSafeError(
-  error: string | null | undefined,
-  fallback: string
-): string {
-  if (!error) return fallback
-  if (isTechnicalPublicChannelError(error)) {
-    return fallback
-  }
-  const trimmed = error.trim()
-  if (
-    trimmed.startsWith("We could not find") ||
-    trimmed.startsWith("Please see the front desk") ||
-    trimmed.startsWith("You are already checked in") ||
-    trimmed.startsWith("Phone and last name") ||
-    trimmed.startsWith("Kiosk session expired") ||
-    trimmed.startsWith("Your registration") ||
-    trimmed.includes("REGISTRATION_PENDING")
-  ) {
-    return trimmed
-  }
-  return fallback
 }
 
 export async function submitKioskIntake(

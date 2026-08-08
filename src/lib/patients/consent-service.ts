@@ -1,19 +1,13 @@
 import { createClient } from "@/lib/supabase/client"
+import { ERROR_COPY, publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
 
-const CONSENT_TOKEN_FALLBACK = "This signing link is invalid or has expired."
+const CONSENT_TOKEN_FALLBACK = ERROR_COPY.signLinkInvalid
 
 function normalizeConsentRpcError(message: string): string {
-  if (
-    /get_consent_by_signing_token|lock_consent_via_signing_token|schema cache|could not find the function/i.test(
-      message
-    )
-  ) {
-    return CONSENT_TOKEN_FALLBACK
-  }
   if (/invalid or expired signing link/i.test(message)) {
     return CONSENT_TOKEN_FALLBACK
   }
-  return message
+  return publicChannelSafeError(message, CONSENT_TOKEN_FALLBACK)
 }
 
 export interface PatientConsent {

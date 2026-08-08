@@ -35,7 +35,7 @@ import { ConsentFieldProgress } from "@/components/consent/ConsentFieldProgress"
 import { useConsentScrollGate } from "@/hooks/use-consent-scroll-gate"
 import { readPortalSignReturn } from "@/lib/portal/portal-sign-return"
 import { readKioskSignReturn } from "@/lib/kiosk/kiosk-sign-return"
-import { publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
+import { ERROR_COPY, publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
 import { useLocale } from "@/hooks/use-locale"
 
 export default function PublicConsentSignPage() {
@@ -74,7 +74,7 @@ export default function PublicConsentSignPage() {
     fetchConsentBySigningToken(token).then(({ data, error: err }) => {
       if (err || !data) {
         setError(
-          publicChannelSafeError(err, "This signing link is invalid or has expired.")
+          publicChannelSafeError(err, ERROR_COPY.signLinkInvalid)
         )
         setLoading(false)
         return

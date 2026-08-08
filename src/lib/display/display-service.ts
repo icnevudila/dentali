@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client"
-import { publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
+import { ERROR_COPY, publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
 
 export type PublicQueueDisplayItem = {
   display_code: string
@@ -17,8 +17,7 @@ export interface PublicQueueDisplay {
   updated_at: string
 }
 
-const DISPLAY_FALLBACK =
-  "Unable to load the queue display. Please check with the front desk."
+const DISPLAY_FALLBACK = ERROR_COPY.displayFailed
 
 export async function fetchPublicQueueDisplay(
   token: string

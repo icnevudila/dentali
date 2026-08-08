@@ -10,6 +10,7 @@ import {
   hasPendingKioskConsents,
   type PortalSnapshot,
 } from "@/lib/kiosk/kiosk-consent-service"
+import { ERROR_COPY } from "@/lib/kiosk/kiosk-service"
 import { saveKioskSignReturn } from "@/lib/kiosk/kiosk-sign-return"
 import { notify } from "@/lib/ui/notify"
 
@@ -37,14 +38,17 @@ export function KioskConsentStep({
   const { t } = useLocale()
   const [snapshot, setSnapshot] = React.useState<PortalSnapshot | null>(initialSnapshot)
   const [loading, setLoading] = React.useState(!initialSnapshot)
+  const [loadError, setLoadError] = React.useState<string | null>(null)
   const [signingSlug, setSigningSlug] = React.useState<string | null>(null)
 
   const load = React.useCallback(async () => {
     setLoading(true)
+    setLoadError(null)
     const { data, error } = await fetchKioskConsentSnapshot(sessionId, phone, lastName)
     setSnapshot(data)
     setLoading(false)
     if (error) {
+      setLoadError(error)
       notify.error(error)
       return
     }
@@ -93,6 +97,32 @@ export function KioskConsentStep({
     )
   }
 
+  if (loadError && !snapshot) {
+    return (
+      <div className="space-y-4 rounded-[2rem] border border-white bg-white/70 p-10 text-center shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl">
+        <p className="text-base text-red-700" role="alert">
+          {loadError || ERROR_COPY.generic}
+        </p>
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="h-12 min-w-[8rem] rounded-xl bg-primary-600 px-6 text-sm font-bold text-white shadow-md"
+        >
+          {t("common.retry", "Retry")}
+        </button>
+        <button
+          type="button"
+          onClick={onBack}
+          className="block w-full h-12 text-base font-bold text-neutral-500"
+        >
+          {t("kiosk.back", "Back")}
+        </button>
+      </div>
+    )
+  }
+
+  const consents = snapshot?.consents ?? []
+
   return (
     <div className="rounded-[2rem] border border-white bg-white/70 p-10 shadow-[0_8px_40px_rgb(0,0,0,0.08)] backdrop-blur-2xl animate-in slide-in-from-bottom-4 duration-500">
       <div className="mb-8 text-center">
@@ -111,43 +141,49 @@ export function KioskConsentStep({
         <p className="mt-1 text-sm font-medium text-primary-700">{branchName}</p>
       </div>
 
-      <ul className="space-y-3">
-        {(snapshot?.consents ?? []).map((item) => {
-          const signed = item.status === "signed"
-          const pending = item.status === "pending" || item.status === "not_started"
-          return (
-            <li
-              key={item.slug}
-              className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-100 bg-white/90 px-4 py-4 shadow-sm"
-            >
-              <span className="text-base font-medium text-neutral-800">{item.name}</span>
-              {signed ? (
-                <Badge variant="success" className="gap-1 px-3 py-1 text-sm">
-                  <CheckCircle2 className="h-4 w-4" aria-hidden />
-                  {t("consent.signed", "Signed")}
-                </Badge>
-              ) : pending ? (
-                <button
-                  type="button"
-                  disabled={signingSlug === item.slug}
-                  onClick={() => void handleSign(item.slug)}
-                  className="h-12 min-w-[7rem] rounded-xl bg-primary-600 px-4 text-sm font-bold text-white shadow-md transition active:scale-[0.98] disabled:opacity-60"
-                >
-                  {signingSlug === item.slug ? (
-                    <Loader2 className="mx-auto h-5 w-5 animate-spin" />
-                  ) : (
-                    t("kiosk.signForm", "Sign")
-                  )}
-                </button>
-              ) : (
-                <Badge variant="outline">{item.status}</Badge>
-              )}
-            </li>
-          )
-        })}
-      </ul>
+      {consents.length === 0 ? (
+        <p className="rounded-2xl border border-neutral-100 bg-white/90 px-4 py-6 text-center text-sm text-neutral-600">
+          {t("kiosk.noConsents", "No forms are required right now. You can continue.")}
+        </p>
+      ) : (
+        <ul className="space-y-3">
+          {consents.map((item) => {
+            const signed = item.status === "signed"
+            const pending = item.status === "pending" || item.status === "not_started"
+            return (
+              <li
+                key={item.slug}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-100 bg-white/90 px-4 py-4 shadow-sm"
+              >
+                <span className="text-base font-medium text-neutral-800">{item.name}</span>
+                {signed ? (
+                  <Badge variant="success" className="gap-1 px-3 py-1 text-sm">
+                    <CheckCircle2 className="h-4 w-4" aria-hidden />
+                    {t("consent.signed", "Signed")}
+                  </Badge>
+                ) : pending ? (
+                  <button
+                    type="button"
+                    disabled={signingSlug === item.slug}
+                    onClick={() => void handleSign(item.slug)}
+                    className="h-12 min-w-[7rem] rounded-xl bg-primary-600 px-4 text-sm font-bold text-white shadow-md transition active:scale-[0.98] disabled:opacity-60"
+                  >
+                    {signingSlug === item.slug ? (
+                      <Loader2 className="mx-auto h-5 w-5 animate-spin" />
+                    ) : (
+                      t("kiosk.signForm", "Sign")
+                    )}
+                  </button>
+                ) : (
+                  <Badge variant="outline">{item.status}</Badge>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
 
-      {snapshot?.ready_for_checkin ? (
+      {snapshot?.ready_for_checkin || consents.length === 0 ? (
         <p className="mt-6 text-center text-sm font-semibold text-emerald-800">
           {t("kiosk.consentsComplete", "All forms signed — continuing check-in…")}
         </p>
