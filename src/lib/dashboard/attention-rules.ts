@@ -49,7 +49,7 @@ const TONE_PRIORITY: Record<AttentionTone, number> = {
  * Overdue AR chase deep-link.
  * Prefer Collections worklist when that route exists; billing board remains the fallback.
  */
-export const OVERDUE_BILLING_ATTENTION_HREF = "/billing/collections"
+export const OVERDUE_BILLING_ATTENTION_HREF = "/billing/collections?focus=overdue"
 export const OVERDUE_BILLING_ATTENTION_FALLBACK_HREF = "/billing?focus=overdue"
 
 /** Resolves overdue attention href (Collections when available). */
