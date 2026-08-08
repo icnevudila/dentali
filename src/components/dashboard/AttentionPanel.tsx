@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { DashboardStats } from "@/lib/dashboard/dashboard-service"
 import { buildAttentionItems } from "@/lib/dashboard/attention-items"
+import type { WorkflowSettingsMap } from "@/lib/analytics/analytics-service"
 
 type AttentionPanelProps = {
   stats: DashboardStats
   permissions?: ReadonlySet<string>
-  workflowSettings?: Record<string, boolean> | null
+  workflowSettings?: WorkflowSettingsMap | null
   /** When false, shows counts only — no navigation (dashboard mode). */
   interactive?: boolean
   labels: {

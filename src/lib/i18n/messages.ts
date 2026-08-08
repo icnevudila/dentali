@@ -805,6 +805,12 @@ export const messagesEnPh: MessageTree = {
     saveChanges: "Save Changes",
     saving: "Saving…",
     workflowSaved: "Workflow setting updated",
+    wfHygieneRecallMonthsTitle: "Hygiene recall interval",
+    wfHygieneRecallMonthsLabel: "Months between hygiene recalls",
+    wfHygieneRecallMonthsDesc:
+      "Used by the Recare worklist and hygiene recall SMS cron. Clinic default is {months} months when unset.",
+    wfHygieneRecallMonthsField: "Months",
+    wfHygieneRecallMonthsInvalid: "Enter a whole number between {min} and {max} months.",
     organizationTitle: "Organization Profile",
     organizationSubtitle: "Update your clinic's primary information.",
     organizationSubtitleReadonly: "Read-only organization details for your clinic.",
@@ -1255,11 +1261,12 @@ export const messagesEnPh: MessageTree = {
     contactLogged: "Contact attempt recorded",
     booked: "Appointment booked from waitlist",
     cancelled: "Waitlist entry cancelled",
+    selectedPatient: "Selected patient",
   },
   recare: {
     eyebrow: "Front desk",
     description:
-      "Patients due for hygiene or recall visits. Book, message, or snooze from one worklist.",
+      "Patients due for hygiene or recall visits. Book or park on the waitlist from one worklist.",
     openWorkflow: "Hygiene recall settings",
     emptyTitle: "No patients due right now",
     emptyDescription:
@@ -1271,6 +1278,10 @@ export const messagesEnPh: MessageTree = {
     openWaitlist: "Open waitlist",
     intervalBadge: "{months}-month recall",
     intervalHint: "Based on last visit + {months}-month hygiene recall interval.",
+    intervalHintDefault:
+      "Based on last visit + clinic default {months}-month hygiene recall (Settings → Workflow).",
+    intervalHintConfigured:
+      "Based on last visit + {months}-month interval from Settings → Workflow.",
     dueCount: "{count} due",
     asOf: "As of {date}",
     lastVisit: "Last visit",
@@ -2725,6 +2736,12 @@ export const messagesTr: MessageTree = {
     saveChanges: "Değişiklikleri Kaydet",
     saving: "Kaydediliyor…",
     workflowSaved: "İş akışı ayarı güncellendi",
+    wfHygieneRecallMonthsTitle: "Hijyen recall aralığı",
+    wfHygieneRecallMonthsLabel: "Hijyen recall arası (ay)",
+    wfHygieneRecallMonthsDesc:
+      "Recare listesi ve hijyen recall SMS cron bu değeri kullanır. Ayarlanmazsa klinik varsayılanı {months} aydır.",
+    wfHygieneRecallMonthsField: "Ay",
+    wfHygieneRecallMonthsInvalid: "{min} ile {max} arasında tam sayı girin.",
     organizationTitle: "Organizasyon Profili",
     organizationSubtitle: "Kliniğinizin temel bilgilerini güncelleyin.",
     organizationSubtitleReadonly: "Kliniğiniz için salt okunur organizasyon bilgileri.",
@@ -3174,11 +3191,12 @@ export const messagesTr: MessageTree = {
     contactLogged: "İletişim kaydı oluşturuldu",
     booked: "Bekleme listesinden randevu oluşturuldu",
     cancelled: "Bekleme listesi kaydı iptal edildi",
+    selectedPatient: "Seçili hasta",
   },
   recare: {
     eyebrow: "Resepsiyon",
     description:
-      "Hijyen veya recall için zamanı gelen hastalar. Tek listeden randevu, mesaj veya erteleme.",
+      "Hijyen veya recall için zamanı gelen hastalar. Tek listeden randevu alın veya bekleme listesine ekleyin.",
     openWorkflow: "Hijyen recall ayarları",
     emptyTitle: "Şu an due hasta yok",
     emptyDescription:
@@ -3190,6 +3208,10 @@ export const messagesTr: MessageTree = {
     openWaitlist: "Bekleme listesini aç",
     intervalBadge: "{months} aylık recall",
     intervalHint: "Son ziyaret + {months} aylık hijyen recall aralığına göre.",
+    intervalHintDefault:
+      "Son ziyaret + klinik varsayılan {months} aylık hijyen recall (Ayarlar → İş akışı).",
+    intervalHintConfigured:
+      "Son ziyaret + Ayarlar → İş akışındaki {months} aylık aralığa göre.",
     dueCount: "{count} hasta zamanı geldi",
     asOf: "{date} itibarıyla",
     lastVisit: "Son ziyaret",
@@ -4552,6 +4574,13 @@ export const messagesFil: MessageTree = {
     consentActive: "Active",
     saveChanges: "I-save ang changes",
     saving: "Nagse-save…",
+    workflowSaved: "Na-update ang workflow setting",
+    wfHygieneRecallMonthsTitle: "Hygiene recall interval",
+    wfHygieneRecallMonthsLabel: "Buwan sa pagitan ng hygiene recall",
+    wfHygieneRecallMonthsDesc:
+      "Ginagamit ng Recare worklist at hygiene recall SMS cron. Default ng clinic ay {months} buwan kung walang setting.",
+    wfHygieneRecallMonthsField: "Buwan",
+    wfHygieneRecallMonthsInvalid: "Maglagay ng buong numero mula {min} hanggang {max}.",
     organizationTitle: "Organization Profile",
     organizationSubtitle: "I-update ang primary info ng clinic.",
     organizationSubtitleReadonly: "Read-only organization details para sa clinic.",
@@ -4782,11 +4811,12 @@ export const messagesFil: MessageTree = {
     addFirst: "Magdagdag ng unang entry",
     ctaAppointments: "Appointments",
     slotAlertSent: "Naipadala ang slot alert",
+    selectedPatient: "Selected patient",
   },
   recare: {
     eyebrow: "Front desk",
     description:
-      "Mga pasyenteng due para sa hygiene o recall visit. Mag-book, mag-message, o i-snooze mula sa isang worklist.",
+      "Mga pasyenteng due para sa hygiene o recall visit. Mag-book o i-park sa waitlist mula sa isang worklist.",
     openWorkflow: "Mga setting ng hygiene recall",
     emptyTitle: "Walang due na pasyente ngayon",
     emptyDescription:
@@ -4798,6 +4828,10 @@ export const messagesFil: MessageTree = {
     openWaitlist: "Buksan ang waitlist",
     intervalBadge: "{months}-buwang recall",
     intervalHint: "Batay sa huling bisita + {months}-buwang hygiene recall interval.",
+    intervalHintDefault:
+      "Batay sa huling bisita + clinic default {months}-buwang hygiene recall (Settings → Workflow).",
+    intervalHintConfigured:
+      "Batay sa huling bisita + {months}-buwang interval mula sa Settings → Workflow.",
     dueCount: "{count} ang due",
     asOf: "Hanggang {date}",
     lastVisit: "Huling bisita",

@@ -1,7 +1,17 @@
 import { createClient } from "@/lib/supabase/client"
+import {
+  DEFAULT_RECARE_INTERVAL_MONTHS,
+  resolveRecareIntervalMonthsFromSettings,
+} from "@/lib/recare/recare-interval"
 
-/** Default matches hygiene recall SMS cron / enqueue_hygiene_recalls. */
-export const DEFAULT_RECARE_INTERVAL_MONTHS = 6
+export {
+  DEFAULT_RECARE_INTERVAL_MONTHS,
+  HYGIENE_RECALL_MONTHS_KEY,
+  MAX_RECARE_INTERVAL_MONTHS,
+  MIN_RECARE_INTERVAL_MONTHS,
+  parseRecareIntervalMonths,
+  resolveRecareIntervalMonthsFromSettings,
+} from "@/lib/recare/recare-interval"
 
 export type RecareDuePatient = {
   patient_id: string
@@ -69,20 +79,56 @@ function emptyList(intervalMonths: number): RecareDueList {
 }
 
 /**
+ * Read hygiene_recall_months from branch workflow settings when present.
+ * Does not log patient identifiers. Falls back to clinic default (6).
+ */
+export async function fetchConfiguredRecareIntervalMonths(
+  branchId: string
+): Promise<{ months: number; error: string | null }> {
+  if (!branchId) {
+    return { months: DEFAULT_RECARE_INTERVAL_MONTHS, error: "Branch is required" }
+  }
+
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("get_branch_workflow_settings", {
+    p_branch_id: branchId,
+  })
+
+  if (error) {
+    return { months: DEFAULT_RECARE_INTERVAL_MONTHS, error: error.message }
+  }
+
+  return {
+    months: resolveRecareIntervalMonthsFromSettings(
+      data && typeof data === "object" ? (data as Record<string, unknown>) : null
+    ),
+    error: null,
+  }
+}
+
+/**
  * Due-for-recall worklist for a branch.
  * Backend enforces appointments.read; client must still gate UI with PermissionGate.
+ * Interval months come from workflow settings (hygiene_recall_months) when set, else 6.
  * Does not log patient identifiers.
  */
 export async function fetchRecareDueList(
   branchId: string,
   options?: { months?: number; limit?: number }
 ): Promise<{ data: RecareDueList; error: string | null }> {
-  const months = Math.max(options?.months ?? DEFAULT_RECARE_INTERVAL_MONTHS, 1)
   const limit = Math.min(Math.max(options?.limit ?? 50, 1), 100)
 
   if (!branchId) {
-    return { data: emptyList(months), error: "Branch is required" }
+    return { data: emptyList(DEFAULT_RECARE_INTERVAL_MONTHS), error: "Branch is required" }
   }
+
+  let months = options?.months
+  if (months == null) {
+    const configured = await fetchConfiguredRecareIntervalMonths(branchId)
+    months = configured.months
+    // Soft-fail on settings read: still load due list with default months.
+  }
+  months = Math.max(months, 1)
 
   const supabase = createClient()
   const { data, error } = await supabase.rpc("list_recare_due_patients", {
@@ -113,4 +159,13 @@ export async function fetchRecareDueList(
 
 export function recarePatientDisplayName(row: RecareDuePatient): string {
   return `${row.first_name} ${row.last_name}`.trim()
+}
+
+/** Waitlist deep-link with patient prefill (matches appointments query params). */
+export function recareWaitlistHref(patientId: string, displayName: string): string {
+  const params = new URLSearchParams({
+    patient: patientId,
+    patientName: displayName,
+  })
+  return `/waitlist?${params.toString()}`
 }

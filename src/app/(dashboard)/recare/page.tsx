@@ -17,6 +17,7 @@ import {
   DEFAULT_RECARE_INTERVAL_MONTHS,
   fetchRecareDueList,
   recarePatientDisplayName,
+  recareWaitlistHref,
   type RecareDueList,
 } from "@/lib/recare/recare-service"
 
@@ -34,7 +35,8 @@ function formatClinicDate(isoDate: string, locale: string): string {
 
 /**
  * Hygiene / recare worklist home.
- * Due patients come from last visit + clinic recall interval (default 6 months).
+ * Due patients come from last visit + clinic recall interval
+ * (workflow setting hygiene_recall_months, default 6 months).
  */
 export default function RecarePage() {
   const { t, locale } = useLocale()
@@ -67,6 +69,7 @@ export default function RecarePage() {
 
   const intervalMonths = list?.interval_months ?? DEFAULT_RECARE_INTERVAL_MONTHS
   const rows = list?.rows ?? []
+  const usesClinicDefault = intervalMonths === DEFAULT_RECARE_INTERVAL_MONTHS
 
   return (
     <PermissionGate permission={PERMISSIONS.APPOINTMENTS_READ}>
@@ -77,7 +80,7 @@ export default function RecarePage() {
           title={t("nav.recare", "Recare")}
           description={t(
             "recare.description",
-            "Patients due for hygiene or recall visits. Book, message, or snooze from one worklist."
+            "Patients due for hygiene or recall visits. Book or park on the waitlist from one worklist."
           )}
           actions={
             <div className="flex flex-wrap items-center gap-2">
@@ -166,16 +169,22 @@ export default function RecarePage() {
                     : null}
                 </p>
                 <p className="text-neutral-500">
-                  {t(
-                    "recare.intervalHint",
-                    "Based on last visit + {months}-month hygiene recall interval."
-                  ).replace("{months}", String(intervalMonths))}
+                  {usesClinicDefault
+                    ? t(
+                        "recare.intervalHintDefault",
+                        "Based on last visit + clinic default {months}-month hygiene recall (Settings → Workflow)."
+                      ).replace("{months}", String(intervalMonths))
+                    : t(
+                        "recare.intervalHintConfigured",
+                        "Based on last visit + {months}-month interval from Settings → Workflow."
+                      ).replace("{months}", String(intervalMonths))}
                 </p>
               </div>
               <ul className="divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200 bg-white">
                 {rows.map((row) => {
                   const name = recarePatientDisplayName(row)
                   const bookHref = `/appointments?patient=${row.patient_id}&patientName=${encodeURIComponent(name)}`
+                  const waitlistHref = recareWaitlistHref(row.patient_id, name)
                   return (
                     <li
                       key={row.patient_id}
@@ -216,7 +225,7 @@ export default function RecarePage() {
                           </Link>
                         </Button>
                         <Button asChild variant="outline" size="sm" className="gap-1.5">
-                          <Link href="/waitlist">
+                          <Link href={waitlistHref}>
                             <ListPlus className="h-3.5 w-3.5" aria-hidden />
                             {t("recare.addWaitlist", "Waitlist")}
                           </Link>

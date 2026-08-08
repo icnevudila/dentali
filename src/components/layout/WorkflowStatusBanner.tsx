@@ -4,7 +4,10 @@ import * as React from "react"
 import { Badge } from "@/components/ui/badge"
 import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
-import { fetchWorkflowSettings } from "@/lib/analytics/analytics-service"
+import {
+  fetchWorkflowSettings,
+  type WorkflowSettingsMap,
+} from "@/lib/analytics/analytics-service"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 
 type WorkflowStatusItem = {
@@ -27,7 +30,7 @@ export function WorkflowStatusBanner({
   const { t } = useLocale()
   const [settingsState, setSettingsState] = React.useState<{
     branchId: string | null
-    data: Record<string, boolean> | null
+    data: WorkflowSettingsMap | null
   }>({
     branchId: null,
     data: null,

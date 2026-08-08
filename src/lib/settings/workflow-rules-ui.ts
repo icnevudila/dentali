@@ -193,10 +193,10 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
         {
           key: "auto_hygiene_recall",
           honesty: "live",
-          label: t("settings.wfHygieneRecallLabel", "Hygiene recall SMS (6 months)"),
+          label: t("settings.wfHygieneRecallLabel", "Hygiene recall SMS"),
           description: t(
             "settings.wfHygieneRecallDesc",
-            "Patients due for check-up receive SMS with booking link via recall-reminder-cron."
+            "Patients due for check-up receive SMS with booking link via recall-reminder-cron. Interval months are set below (default 6) and also drive the Recare worklist."
           ),
         },
         {

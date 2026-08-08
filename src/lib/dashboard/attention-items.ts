@@ -1,5 +1,6 @@
 import type { DashboardStats } from "@/lib/dashboard/dashboard-service"
 import { PERMISSIONS } from "@/lib/auth/permissions"
+import type { WorkflowSettingsMap } from "@/lib/analytics/analytics-service"
 import {
   evaluateAttentionRules,
   type AttentionRuleContext,
@@ -35,7 +36,7 @@ export type AttentionLabels = {
 
 export type BuildAttentionOptions = {
   permissions?: ReadonlySet<string>
-  workflowSettings?: Record<string, boolean> | null
+  workflowSettings?: WorkflowSettingsMap | null
 }
 
 const PERMISSIVE_PERMISSIONS = new Set<string>([

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { useBranch } from "@/hooks/use-branch"
@@ -47,6 +48,17 @@ import { WaitlistContactDrawer } from "@/components/waitlist/WaitlistContactDraw
 type TabFilter = "active" | "history"
 
 export default function WaitlistPage() {
+  return (
+    <React.Suspense fallback={<PageLoadingSkeleton variant="listRows" />}>
+      <WaitlistPageContent />
+    </React.Suspense>
+  )
+}
+
+function WaitlistPageContent() {
+  const searchParams = useSearchParams()
+  const patientParam = searchParams.get("patient")
+  const patientNameParam = searchParams.get("patientName")
   const { activeBranch } = useBranch()
   const { user } = useAuth()
   const { t } = useLocale()
@@ -97,6 +109,21 @@ export default function WaitlistPage() {
     }, 300)
     return () => clearTimeout(timer)
   }, [patientQuery, activeBranch])
+
+  // Deep-link from Recare (and similar): /waitlist?patient=&patientName=
+  React.useEffect(() => {
+    if (!patientParam) return
+    const id = window.setTimeout(() => {
+      setSelectedPatientId(patientParam)
+      setPatientQuery(patientNameParam ?? t("waitlist.selectedPatient", "Selected patient"))
+      setPatients([])
+      setTab("active")
+      if (canWriteAppointments) {
+        setShowAdd(true)
+      }
+    }, 0)
+    return () => window.clearTimeout(id)
+  }, [canWriteAppointments, patientNameParam, patientParam, t])
 
 
 
