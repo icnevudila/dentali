@@ -9,6 +9,12 @@ import { BulletTextList } from "@/components/ui/BulletTextList"
 import { useLocale } from "@/hooks/use-locale"
 import { toStoredBulletText } from "@/lib/text/bullet-text"
 import type { TreatmentPlanItem } from "@/lib/clinical/treatment-plan-service"
+import {
+  centavosToInputValue,
+  centavosToPesoMajor,
+  parseMoneyToCentavos,
+  pesoMajorToCentavos,
+} from "@/lib/money/php-money"
 
 export function TreatmentPlanItemRow({
   item,
@@ -35,22 +41,37 @@ export function TreatmentPlanItemRow({
   const { t } = useLocale()
   const [editing, setEditing] = React.useState(false)
   const [description, setDescription] = React.useState(item.description)
-  const [price, setPrice] = React.useState(String(item.estimated_price))
+  const [price, setPrice] = React.useState(
+    centavosToInputValue(pesoMajorToCentavos(Number(item.estimated_price || 0)))
+  )
   const [tooth, setTooth] = React.useState(item.tooth_number ?? "")
   const [priority, setPriority] = React.useState(item.priority ?? "phase_1")
+  const [formError, setFormError] = React.useState<string | null>(null)
 
   const beginEditing = () => {
     setDescription(item.description)
-    setPrice(String(item.estimated_price))
+    setPrice(centavosToInputValue(pesoMajorToCentavos(Number(item.estimated_price || 0))))
     setTooth(item.tooth_number ?? "")
     setPriority(item.priority ?? "phase_1")
+    setFormError(null)
     setEditing(true)
   }
 
   const handleSave = async () => {
+    const priceCentavos = parseMoneyToCentavos(price)
+    if (priceCentavos === null || priceCentavos < 0) {
+      setFormError(
+        t(
+          "billing.invalidMoneyAmount",
+          "Enter a valid amount in PHP (up to 2 decimal places)."
+        )
+      )
+      return
+    }
+    setFormError(null)
     await onSave({
       description: toStoredBulletText(description.trim()),
-      estimatedPrice: parseFloat(price) || 0,
+      estimatedPrice: centavosToPesoMajor(priceCentavos),
       toothNumber: tooth.trim() || null,
       priority,
     })
@@ -103,12 +124,11 @@ export function TreatmentPlanItemRow({
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-neutral-400 uppercase">Price (₱)</label>
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   placeholder={t("treatmentPlan.patientPrice", "Price (₱)")}
-                  min="0"
-                  step="0.01"
                   disabled={saving}
                 />
               </div>
@@ -136,6 +156,11 @@ export function TreatmentPlanItemRow({
                 </Button>
               </div>
             </div>
+            {formError ? (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {formError}
+              </div>
+            ) : null}
           </div>
         </td>
       </tr>

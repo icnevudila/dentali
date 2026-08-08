@@ -58,6 +58,10 @@ import { ChartFindingSuggestionsCard } from "@/components/clinical/ChartFindingS
 import { TreatmentPlanItemRow } from "@/components/clinical/TreatmentPlanItemRow"
 import { toStoredBulletText } from "@/lib/text/bullet-text"
 import { cn } from "@/lib/utils"
+import {
+  centavosToPesoMajor,
+  parseMoneyToCentavos,
+} from "@/lib/money/php-money"
 
 const PROCEDURE_TEMPLATES = [
   { code: "EXAM", name: "Oral Examination" },
@@ -316,12 +320,23 @@ function TreatmentPlanContent() {
       return
     }
 
-    const parsedPrice = parseFloat(itemPrice)
-    if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
-      setError(t("treatmentPlan.priceInvalid", "Enter a valid price (0 or greater)."))
-      notify.error(t("treatmentPlan.priceInvalid", "Enter a valid price (0 or greater)."))
+    const priceCentavos = parseMoneyToCentavos(itemPrice)
+    if (priceCentavos === null || priceCentavos < 0) {
+      setError(
+        t(
+          "billing.invalidMoneyAmount",
+          "Enter a valid amount in PHP (up to 2 decimal places)."
+        )
+      )
+      notify.error(
+        t(
+          "billing.invalidMoneyAmount",
+          "Enter a valid amount in PHP (up to 2 decimal places)."
+        )
+      )
       return
     }
+    const parsedPrice = centavosToPesoMajor(priceCentavos)
 
     setSaving(true)
     setError(null)
@@ -430,11 +445,17 @@ function TreatmentPlanContent() {
       return
     }
 
-    const parsedPrice = parseFloat(qcPrice)
-    if (!qcPrice.trim() || Number.isNaN(parsedPrice) || parsedPrice < 0) {
-      notify.error("Enter a valid price (0 or more).")
+    const priceCentavos = parseMoneyToCentavos(qcPrice)
+    if (!qcPrice.trim() || priceCentavos === null || priceCentavos < 0) {
+      notify.error(
+        t(
+          "billing.invalidMoneyAmount",
+          "Enter a valid amount in PHP (up to 2 decimal places)."
+        )
+      )
       return
     }
+    const parsedPrice = centavosToPesoMajor(priceCentavos)
 
     setSaving(true)
     setError(null)
@@ -927,9 +948,8 @@ function TreatmentPlanContent() {
                         Amount collected (₱)
                       </label>
                       <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         placeholder="0.00"
                         value={qcPrice}
                         onChange={(e) => setQcPrice(e.target.value)}
@@ -1346,9 +1366,8 @@ function TreatmentPlanContent() {
                       {t("treatmentPlan.patientPrice", "Patient price (₱)")}
                     </label>
                     <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="e.g. 2500"
                       value={itemPrice}
                       onChange={(e) => setItemPrice(e.target.value)}
