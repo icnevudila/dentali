@@ -2660,6 +2660,14 @@ export const messagesTr: MessageTree = {
     adding: "Ekleniyor…",
     addAll: "Tüm önerileri ekle",
   },
+  encounter: {
+    carryForwardNoteTitle: "Önceki ziyaretten kopyalansın mı?",
+    carryForwardSource: "Kaynak:",
+    noSoapContent: "Önceki notta kopyalanacak SOAP içeriği yok.",
+    copying: "Kopyalanıyor…",
+    copyFromLast: "Son ziyaretten kopyala",
+    startBlank: "Boş başla",
+  },
   consent: {
     formNotFound: "Form bulunamadı",
     patientId: "Hasta ID",
@@ -4481,6 +4489,14 @@ export const messagesFil: MessageTree = {
     noProceduresTitle: "Wala pang procedures",
     addFromChart: "Magdagdag ng findings mula sa dental chart",
     noPhaseProcedures: "Walang procedure sa phase na ito.",
+  },
+  encounter: {
+    carryForwardNoteTitle: "Kopyahin mula sa previous visit?",
+    carryForwardSource: "Source:",
+    noSoapContent: "Walang SOAP content na kokopyahin mula sa previous note.",
+    copying: "Kinokopya…",
+    copyFromLast: "Kopyahin mula sa huling bisita",
+    startBlank: "Magsimula nang blangko",
   },
   consent: {
     formNotFound: "Hindi nahanap ang form",
