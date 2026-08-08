@@ -121,7 +121,7 @@ export async function createHmoClaim(params: {
  */
 export async function submitHmoClaim(
   claimId: string
-): Promise<{ data: { provider_ref: string; dry_run: true } | null; error: string | null }> {
+): Promise<{ data: { provider_ref: string; dry_run: boolean } | null; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("submit_hmo_claim", { p_claim_id: claimId })
   if (error) return { data: null, error: error.message }
