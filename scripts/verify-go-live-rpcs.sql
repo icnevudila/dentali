@@ -48,6 +48,7 @@ WITH expected(name) AS (
     ,('delete_procedure_bom_line_guarded')
     ,('create_plan_invoice_guarded')
     ,('resync_draft_invoice_from_plan_guarded')
+    ,('list_recare_due_patients')
     ,('create_appointment_checkin_token')
     ,('get_appointment_checkin_by_token')
     ,('redeem_appointment_checkin_token')
