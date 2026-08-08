@@ -39,7 +39,8 @@ import { PhilHealthClaimDrawer } from "@/components/billing/PhilHealthClaimDrawe
 const STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "danger" | "info" | "outline"> = {
   checklist_incomplete: "warning",
   ready: "info",
-  submitted: "success",
+  // Submitted can be dry-run; avoid success green that looks like live clearinghouse.
+  submitted: "info",
   sync_failed: "danger",
   draft: "outline",
   acknowledged: "success",
@@ -76,6 +77,9 @@ function PhilHealthPageContent() {
   const [syncing, setSyncing] = React.useState(false)
   const [retrying, setRetrying] = React.useState(false)
   const [syncNote, setSyncNote] = React.useState<string | null>(null)
+  const [syncNoteTone, setSyncNoteTone] = React.useState<"dry_run" | "live">("dry_run")
+  /** null = secrets unknown / assume missing; false = last sync was dry-run; true = live */
+  const [eclaimsLive, setEclaimsLive] = React.useState<boolean | null>(null)
 
   const load = React.useCallback(() => {
     if (!activeBranch) return
@@ -132,13 +136,17 @@ function PhilHealthPageContent() {
     setSyncing(false)
     if (err) setError(err)
     else {
+      // Only celebrate live when the service explicitly reports a non-dry-run result.
+      const isLive = data?.dry_run === false && !data?.stub_fallback
+      setEclaimsLive(isLive)
+      setSyncNoteTone(isLive ? "live" : "dry_run")
       setSyncNote(
         data?.stub_fallback
           ? t(
               "billing.philhealthStubFallback",
               "PhilHealth API is not configured — a local dry-run log was recorded only. Configure PHILHEALTH_ECLAIMS_API_URL for live submission."
             )
-          : data?.dry_run
+          : !isLive
             ? t(
                 "billing.philhealthDryRun",
                 "Dry-run sync recorded — configure PhilHealth API secrets for live submission."
@@ -216,7 +224,7 @@ function PhilHealthPageContent() {
         title={t("billing.philhealthTitle", "PhilHealth Claims")}
         description={t(
           "billing.philhealthSubtitle",
-          "Readiness checklist and sync logs for eClaims submissions."
+          "Readiness checklist — edge sync with dry-run fallback when eClaims secrets are missing."
         )}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -243,11 +251,18 @@ function PhilHealthPageContent() {
         <div className="space-y-6">
         <IntegrationEnvBanner
           title={t("billing.philhealthIntegration", "PhilHealth eClaims sync")}
-          tone="warning"
-          description={t(
-            "billing.philhealthBanner",
-            "Submissions use the sync-philhealth-claim edge function. Without PHILHEALTH_ECLAIMS_API_URL and related secrets, sync runs in dry-run mode and records a log only."
-          )}
+          tone={eclaimsLive === true ? "ready" : "empty"}
+          description={
+            eclaimsLive === true
+              ? t(
+                  "billing.philhealthBannerLive",
+                  "Live PhilHealth eClaims secrets appear configured. Submissions contact the clearinghouse API."
+                )
+              : t(
+                  "billing.philhealthBanner",
+                  "Submissions use the sync-philhealth-claim edge function. Without PHILHEALTH_ECLAIMS_API_URL and related secrets, sync runs in dry-run mode and records a log only — not a live clearinghouse submit."
+                )
+          }
         />
 
         {activeBranch ? (
@@ -314,6 +329,12 @@ function PhilHealthPageContent() {
                       <button type="button" className={`w-full text-left px-2 py-3 hover:bg-neutral-50 rounded ${selected?.id === c.id ? "bg-primary-50" : ""}`} onClick={() => setSelected(c)}>
                         <span className="font-medium">{c.patient_name}</span>
                         <Badge className="ml-2" variant={STATUS_VARIANT[c.status] ?? "outline"}>{c.status}</Badge>
+                        {(c.status === "submitted" || c.status === "acknowledged") &&
+                        (!c.provider_ref || /^(DRY|STUB)-/i.test(c.provider_ref)) ? (
+                          <Badge className="ml-1 font-normal" variant="warning">
+                            {t("billing.dryRunBadge", "Dry-run")}
+                          </Badge>
+                        ) : null}
                         {c.provider_ref && (
                           <span className="block text-xs text-neutral-500 mt-1">Ref: {c.provider_ref}</span>
                         )}
@@ -342,16 +363,31 @@ function PhilHealthPageContent() {
                     </p>
                   )}
                   {syncNote && (
-                    <p className="text-sm text-neutral-600 bg-neutral-50 border rounded-md px-3 py-2">{syncNote}</p>
+                    <p
+                      className={
+                        syncNoteTone === "live"
+                          ? "text-sm text-emerald-900 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2"
+                          : "text-sm text-amber-950 bg-amber-50 border border-amber-200 rounded-md px-3 py-2"
+                      }
+                      role="status"
+                      data-testid="philhealth-sync-note"
+                      data-dry-run={syncNoteTone === "dry_run" ? "true" : "false"}
+                    >
+                      {syncNote}
+                    </p>
                   )}
                   <div className="flex flex-wrap gap-2 mt-4">
                     {(selected.status === "ready" || selected.status === "sync_failed") && (
                       <Button disabled={syncing} onClick={handleSubmit}>
                         {syncing
                           ? t("billing.submitting", "Submitting…")
-                          : selected.status === "sync_failed"
-                            ? t("billing.resubmitPhilhealth", "Resubmit to eClaims")
-                            : t("billing.submitPhilhealth", "Submit to eClaims")}
+                          : eclaimsLive === true
+                            ? selected.status === "sync_failed"
+                              ? t("billing.resubmitPhilhealth", "Resubmit to eClaims")
+                              : t("billing.submitPhilhealth", "Submit to eClaims")
+                            : selected.status === "sync_failed"
+                              ? t("billing.resubmitPhilhealthDryRun", "Retry dry-run sync")
+                              : t("billing.submitPhilhealthDryRun", "Record dry-run sync")}
                       </Button>
                     )}
                     {selected.status === "sync_failed" && (
@@ -378,13 +414,29 @@ function PhilHealthPageContent() {
                     />
                   ) : (
                     <ul className="space-y-2 text-sm">
-                      {syncLogs.map((log) => (
+                      {syncLogs.map((log) => {
+                        const isDryRunLog =
+                          log.mode === "dry_run" ||
+                          (!log.mode && /dry-run|stub|not configured/i.test(log.response_summary ?? ""))
+                        return (
                         <li key={log.id} className="border border-neutral-100 rounded-md px-3 py-2">
                           <div className="flex items-center gap-2">
-                            <Badge variant={log.status === "success" ? "success" : log.status === "failed" ? "danger" : "outline"}>
-                              {log.status}
+                            <Badge
+                              variant={
+                                isDryRunLog
+                                  ? "warning"
+                                  : log.status === "success"
+                                    ? "success"
+                                    : log.status === "failed"
+                                      ? "danger"
+                                      : "outline"
+                              }
+                            >
+                              {isDryRunLog ? t("billing.dryRunBadge", "Dry-run") : log.status}
                             </Badge>
-                            {log.mode && <span className="text-xs text-neutral-500">{log.mode}</span>}
+                            {log.mode && !isDryRunLog ? (
+                              <span className="text-xs text-neutral-500">{log.mode}</span>
+                            ) : null}
                             <span className="text-xs text-neutral-400 ml-auto">
                               {new Date(log.created_at).toLocaleString()}
                             </span>
@@ -393,7 +445,8 @@ function PhilHealthPageContent() {
                             <p className="text-xs text-neutral-600 mt-1">{log.response_summary}</p>
                           )}
                         </li>
-                      ))}
+                        )
+                      })}
                     </ul>
                   )}
                 </CardContent>

@@ -127,12 +127,22 @@ export async function syncPhilHealthClaim(
     })
 
     if (!error && data) {
-      const payload = data as { error?: string; success?: boolean; dry_run?: boolean; provider_ref?: string; sync_log_id?: string }
+      const payload = data as {
+        error?: string
+        success?: boolean
+        dry_run?: boolean
+        mode?: string
+        provider_ref?: string
+        sync_log_id?: string
+      }
       if (payload?.error) return { data: null, error: payload.error }
+
+      // Honesty default: treat as dry-run unless the edge explicitly reports live.
+      const isLive = payload.dry_run === false && payload.mode === "live"
 
       return {
         data: {
-          dry_run: payload.dry_run,
+          dry_run: !isLive,
           provider_ref: payload.provider_ref,
           sync_log_id: payload.sync_log_id,
         },
