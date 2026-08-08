@@ -25,6 +25,7 @@ import {
   type PublicIntakeFormState,
 } from "@/lib/patients/public-intake-form"
 import { notify } from "@/lib/ui/notify"
+import { EmptyState } from "@/components/ui/empty-state"
 import { 
   Calendar as CalendarIcon, 
   Clock, 
@@ -770,9 +771,17 @@ function PortalPageContent() {
                   <ChevronRight className="ml-auto h-5 w-5 text-neutral-400 group-hover:translate-x-1 transition-transform" />
                 </button>
               ))}
-              {providers.length === 0 && (
-                <p className="text-center text-sm text-neutral-500 py-4">No doctor is currently available.</p>
-              )}
+              {providers.length === 0 ? (
+                <EmptyState
+                  icon={User}
+                  className="border-0 bg-transparent py-6"
+                  title={t("portal.noDoctorsTitle", "No doctors available")}
+                  description={t(
+                    "portal.noDoctors",
+                    "No doctor is currently available."
+                  )}
+                />
+              ) : null}
             </div>
 
             <button 

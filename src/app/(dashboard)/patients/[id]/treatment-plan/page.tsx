@@ -4,12 +4,13 @@ import * as React from "react"
 import { Suspense } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Plus, CheckCircle, Sparkles, Undo2, Lock } from "lucide-react"
+import { Plus, CheckCircle, Sparkles, Undo2, Lock, ClipboardList } from "lucide-react"
 import { useLocale } from "@/hooks/use-locale"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { EmptyState } from "@/components/ui/empty-state"
 import { Input } from "@/components/ui/input"
 import { BulletTextarea } from "@/components/ui/BulletTextarea"
 import { Badge } from "@/components/ui/badge"
@@ -1056,12 +1057,19 @@ function TreatmentPlanContent() {
               </CardHeader>
               <CardContent>
                 {items.length === 0 ? (
-                  <div className="space-y-2 text-sm">
-                    <p className="text-neutral-500">No procedures added yet.</p>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/patients/${patientId}/chart`}>Add findings from dental chart</Link>
-                    </Button>
-                  </div>
+                  <EmptyState
+                    icon={ClipboardList}
+                    className="border-0 bg-transparent py-6"
+                    title={t("treatmentPlan.noProceduresTitle", "No procedures yet")}
+                    description={t("treatmentPlan.noProcedures", "No procedures added yet.")}
+                    action={
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/patients/${patientId}/chart`}>
+                          {t("treatmentPlan.addFromChart", "Add findings from dental chart")}
+                        </Link>
+                      </Button>
+                    }
+                  />
                 ) : (
                   <div className="space-y-3">
                     {phaseGroups.map((phase) => (
@@ -1076,7 +1084,9 @@ function TreatmentPlanContent() {
                           </div>
                         </div>
                         {phase.items.length === 0 ? (
-                          <p className="px-3 py-3 text-xs text-neutral-400">No procedure in this phase.</p>
+                          <p className="px-3 py-3 text-xs text-neutral-400">
+                            {t("treatmentPlan.noPhaseProcedures", "No procedure in this phase.")}
+                          </p>
                         ) : (
                           <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left border-collapse">

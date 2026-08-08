@@ -1,14 +1,17 @@
 "use client"
 
 import * as React from "react"
+import { Shield } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { EmptyState } from "@/components/ui/empty-state"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { fetchOrganization } from "@/lib/auth/auth-service"
+import { useLocale } from "@/hooks/use-locale"
 import {
   fetchPatientInsuranceProfiles,
   upsertPatientInsuranceProfile,
@@ -27,6 +30,7 @@ interface PatientInsurancePanelProps {
 }
 
 export function PatientInsurancePanel({ patientId }: PatientInsurancePanelProps) {
+  const { t } = useLocale()
   const [profiles, setProfiles] = React.useState<PatientInsuranceProfile[]>([])
   const [loading, setLoading] = React.useState(true)
   const [editing, setEditing] = React.useState(false)
@@ -144,7 +148,15 @@ export function PatientInsurancePanel({ patientId }: PatientInsurancePanelProps)
             {primary.plan_name && <p><span className="text-neutral-500">Plan:</span> {primary.plan_name}</p>}
           </div>
         ) : (
-          <p className="text-sm text-neutral-500">Self-pay — no insurance on file.</p>
+          <EmptyState
+            icon={Shield}
+            className="border-0 bg-transparent py-4"
+            title={t("patients.insuranceSelfPayTitle", "Self-pay")}
+            description={t(
+              "patients.insuranceSelfPayHint",
+              "Self-pay — no insurance on file."
+            )}
+          />
         )}
       </CardContent>
     </Card>

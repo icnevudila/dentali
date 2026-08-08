@@ -4,9 +4,11 @@ import * as React from "react"
 import Link from "next/link"
 import { Activity } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { EmptyState } from "@/components/ui/empty-state"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Button } from "@/components/ui/button"
 import { useBranch } from "@/hooks/use-branch"
+import { useLocale } from "@/hooks/use-locale"
 import {
   fetchOrthoAdjustments,
   fetchOrthoBalance,
@@ -19,6 +21,7 @@ import { OrthoCaseTimelinePanel } from "@/components/clinical/OrthoCaseTimelineP
 
 export function OrthoRecordSummary({ patientId }: { patientId: string }) {
   const { activeBranch } = useBranch()
+  const { t } = useLocale()
   const [orthoCase, setOrthoCase] = React.useState<OrthoCase | null>(null)
   const [adjustments, setAdjustments] = React.useState<OrthoAdjustment[]>([])
   const [balance, setBalance] = React.useState<OrthoBalance | null>(null)
@@ -147,11 +150,21 @@ export function OrthoRecordSummary({ patientId }: { patientId: string }) {
         </div>
         </>
       ) : (
-        <p className="text-sm text-neutral-500">No adjustment rows logged yet.</p>
+        <EmptyState
+          icon={Activity}
+          className="border-0 bg-transparent py-4"
+          title={t("ortho.noAdjustmentsTitle", "No adjustments logged yet")}
+          description={t(
+            "ortho.noAdjustmentsHint",
+            "Log wire changes and visit procedures as the case progresses."
+          )}
+        />
       )}
 
       <Button variant="outline" size="sm" asChild>
-        <Link href={`/patients/${patientId}/ortho`}>Open full ortho record</Link>
+        <Link href={`/patients/${patientId}/ortho`}>
+          {t("ortho.openFullRecord", "Open full ortho record")}
+        </Link>
       </Button>
     </div>
   )

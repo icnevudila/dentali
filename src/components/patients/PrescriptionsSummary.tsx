@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Pill, Printer, Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/ui/empty-state"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { fetchPatientPrescriptions, getPrescription, type PrescriptionRecord } from "@/lib/clinical/prescription-service"
@@ -14,6 +15,7 @@ import { getPatient } from "@/lib/patients/patient-service"
 import { getLatestMedicalHistory } from "@/lib/patients/medical-history-service"
 import { fetchOrganizationPreferences } from "@/lib/settings/org-preferences-service"
 import { useBranch } from "@/hooks/use-branch"
+import { useLocale } from "@/hooks/use-locale"
 import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 
 interface PrescriptionsSummaryProps {
@@ -29,6 +31,7 @@ function formatPatientGender(gender: string | null | undefined): string | null {
 
 export function PrescriptionsSummary({ patientId }: PrescriptionsSummaryProps) {
   const { activeBranch } = useBranch()
+  const { t } = useLocale()
   const [history, setHistory] = React.useState<PrescriptionRecord[]>([])
   const [loading, setLoading] = React.useState(true)
   const [patientName, setPatientName] = React.useState("")
@@ -99,33 +102,40 @@ export function PrescriptionsSummary({ patientId }: PrescriptionsSummaryProps) {
       <div className="flex items-center justify-between">
         <p className="text-sm text-neutral-500">
           {history.length === 0
-            ? "No prescriptions yet."
-            : `${history.length} prescription${history.length !== 1 ? "s" : ""} on record.`}
+            ? t("prescriptions.emptyHintShort", "No prescriptions yet.")
+            : t("prescriptions.countOnRecord", "{count} prescription(s) on record.").replace(
+                "{count}",
+                String(history.length)
+              )}
         </p>
         <PermissionGate permission={PERMISSIONS.PRESCRIPTIONS_WRITE}>
           <Button size="sm" className="gap-1" asChild>
             <Link href={`/patients/${patientId}/prescriptions`} transitionTypes={NAV_FORWARD_TRANSITION}>
-              <Plus className="h-3.5 w-3.5" /> New Prescription
+              <Plus className="h-3.5 w-3.5" /> {t("prescriptions.new", "New Prescription")}
             </Link>
           </Button>
         </PermissionGate>
       </div>
 
       {history.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-neutral-200 py-10 text-center">
-          <Pill className="mb-2 h-8 w-8 text-neutral-300" />
-          <p className="text-sm font-medium text-neutral-500">No prescriptions</p>
-          <p className="mt-1 text-xs text-neutral-400">
-            Prescriptions written for this patient will appear here.
-          </p>
-          <PermissionGate permission={PERMISSIONS.PRESCRIPTIONS_WRITE}>
-            <Button size="sm" variant="outline" className="mt-3 gap-1" asChild>
-              <Link href={`/patients/${patientId}/prescriptions`} transitionTypes={NAV_FORWARD_TRANSITION}>
-                <Plus className="h-3.5 w-3.5" /> Write first prescription
-              </Link>
-            </Button>
-          </PermissionGate>
-        </div>
+        <EmptyState
+          icon={Pill}
+          title={t("prescriptions.emptyTitle", "No prescriptions yet")}
+          description={t(
+            "prescriptions.emptyHint",
+            "Prescriptions written for this patient will appear here."
+          )}
+          action={
+            <PermissionGate permission={PERMISSIONS.PRESCRIPTIONS_WRITE}>
+              <Button size="sm" variant="outline" className="gap-1" asChild>
+                <Link href={`/patients/${patientId}/prescriptions`} transitionTypes={NAV_FORWARD_TRANSITION}>
+                  <Plus className="h-3.5 w-3.5" />{" "}
+                  {t("prescriptions.writeFirst", "Write first prescription")}
+                </Link>
+              </Button>
+            </PermissionGate>
+          }
+        />
       ) : (
         <ul className="divide-y divide-neutral-100 rounded-xl border border-neutral-200">
           {history.slice(0, 5).map((rx) => (

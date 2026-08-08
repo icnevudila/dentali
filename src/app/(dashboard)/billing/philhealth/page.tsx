@@ -370,7 +370,12 @@ function PhilHealthPageContent() {
                   {logsLoading ? (
                     <PageLoadingSkeleton variant="inline" className="max-w-none" />
                   ) : syncLogs.length === 0 ? (
-                    <p className="text-sm text-neutral-500">{t("billing.noSyncLogs", "No sync attempts yet.")}</p>
+                    <EmptyState
+                      icon={FileHeart}
+                      className="border-0 bg-transparent py-4"
+                      title={t("billing.noSyncLogsTitle", "No sync attempts yet")}
+                      description={t("billing.noSyncLogs", "No sync attempts yet.")}
+                    />
                   ) : (
                     <ul className="space-y-2 text-sm">
                       {syncLogs.map((log) => (

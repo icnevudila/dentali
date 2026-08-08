@@ -7,6 +7,7 @@ import { ExternalLink, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useBranch } from "@/hooks/use-branch"
+import { useLocale } from "@/hooks/use-locale"
 import { getPatientOdontogram } from "@/lib/odontogram/dental-chart-service"
 import { MiniOdontogram } from "@/components/odontogram/MiniOdontogram"
 import { AnatomicOdontogramChart } from "@/components/odontogram/AnatomicOdontogramChart"
@@ -34,6 +35,7 @@ export function PatientOdontogramSummary({
 }) {
   const router = useRouter()
   const { activeBranch, branchRevision } = useBranch()
+  const { t } = useLocale()
   const [findings, setFindings] = React.useState<ToothFinding[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -77,12 +79,14 @@ export function PatientOdontogramSummary({
           {stats.restored > 0 ? <Badge variant="info">{stats.restored} restored</Badge> : null}
           {stats.missing > 0 ? <Badge variant="default">{stats.missing} missing</Badge> : null}
           {stats.total === 0 ? (
-            <span className="text-neutral-500">No charted conditions yet</span>
+            <span className="text-neutral-500">
+              {t("chart.noChartedConditions", "No charted conditions yet")}
+            </span>
           ) : null}
         </div>
         <Button variant="outline" size="sm" className="gap-1.5 shrink-0" asChild>
           <Link href={chartHref}>
-            Open full chart
+            {t("chart.openFullChart", "Open full chart")}
             <ExternalLink className="h-3.5 w-3.5" />
           </Link>
         </Button>
