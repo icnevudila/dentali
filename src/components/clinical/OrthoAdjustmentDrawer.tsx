@@ -9,6 +9,10 @@ import { BulletTextarea } from "@/components/ui/BulletTextarea"
 import { useLocale } from "@/hooks/use-locale"
 import { logOrthoAdjustment } from "@/lib/clinical/ortho-service"
 import { toStoredBulletText } from "@/lib/text/bullet-text"
+import {
+  centavosToPesoMajor,
+  parseMoneyToCentavos,
+} from "@/lib/money/php-money"
 
 interface OrthoAdjustmentDrawerProps {
   open: boolean
@@ -68,13 +72,27 @@ export function OrthoAdjustmentDrawer({
     setSaving(true)
     setError(null)
 
+    const paymentCentavos = paymentAmount.trim()
+      ? parseMoneyToCentavos(paymentAmount)
+      : 0
+    if (paymentCentavos === null || paymentCentavos < 0) {
+      setError(
+        t(
+          "billing.invalidMoneyAmount",
+          "Enter a valid amount in PHP (up to 2 decimal places)."
+        )
+      )
+      setSaving(false)
+      return
+    }
+
     const { error: err } = await logOrthoAdjustment({
       caseId,
       adjustmentDate: adjDate || new Date().toISOString().slice(0, 10),
       procedure: toStoredBulletText(procedure),
       nextProcedure: nextProcedure.trim() ? toStoredBulletText(nextProcedure) : undefined,
       nextVisitDate: nextVisitDate || undefined,
-      paymentAmount: parseFloat(paymentAmount) || 0,
+      paymentAmount: centavosToPesoMajor(paymentCentavos),
       notes: adjNotes.trim() || undefined,
     })
 
@@ -180,9 +198,8 @@ export function OrthoAdjustmentDrawer({
                 {t("ortho.visitPayment", "Payment at this visit (₱)")}
               </label>
               <Input
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 placeholder="0.00"
                 value={paymentAmount}
                 onChange={(e) => setPaymentAmount(e.target.value)}

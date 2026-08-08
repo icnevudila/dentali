@@ -16,9 +16,15 @@ const cases: Array<[string, number | null]> = [
   ["₱1234.56", 123456],
   ["PHP 100", 10000],
   ["0.01", 1],
+  ["0", 0],
+  ["0.00", 0],
+  ["₱1,000", 100000],
   ["12.345", null],
   ["abc", null],
   ["", null],
+  // leftover staff-input shapes (treatment-plan / ortho / inventory)
+  ["2500", 250000],
+  ["99.9", 9990],
 ]
 
 let failed = 0
@@ -40,6 +46,10 @@ if (centavosToPesoMajor(1) !== 0.01) {
 }
 if (centavosToInputValue(Math.floor(pesoMajorToCentavos(100.01) / 2)) !== "50.00") {
   console.error("half-balance input formatting failed")
+  failed += 1
+}
+if (centavosToPesoMajor(0) !== 0) {
+  console.error("centavosToPesoMajor(0) failed")
   failed += 1
 }
 
