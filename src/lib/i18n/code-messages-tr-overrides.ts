@@ -71,7 +71,24 @@ export const codeMessagesTrOverrides: MessageTree = {
     hmoIntegration: "HMO sağlayıcı gönderimi",
     hmoBanner:
       "Gönderim klinik kuyruğunda talep durumunu günceller ve yerel bir referans üretir. Canlı HMO clearinghouse API henüz bağlı değil — sağlayıcı entegrasyonu yapılandırılana kadar gönderimleri dry-run kabul edin.",
-    hmoSubtitle: "Sağlayıcı taleplerini tek kuyruktan hazırlayın, inceleyin ve kapatın.",
+    hmoSubtitle:
+      "Sağlayıcı taleplerini klinik kuyruğunda hazırlayın ve kapatın. Canlı HMO clearinghouse yapılandırılana kadar gönderimler dry-run'dır.",
+    dryRunBadge: "Yerel dry-run",
+    submitClaimDryRun: "Gönder (dry-run)",
+    philhealthBanner:
+      "Gönderimler sync-philhealth-claim edge fonksiyonunu kullanır. PHILHEALTH_ECLAIMS_API_URL ve ilgili secret'lar yoksa senkron dry-run modunda yalnızca log kaydeder — canlı clearinghouse gönderimi değildir.",
+    philhealthBannerLive:
+      "Canlı PhilHealth eClaims secret'ları yapılandırılmış görünüyor. Gönderimler clearinghouse API'sine gider.",
+    philhealthDryRun: "Dry-run senkron kaydedildi — canlı gönderim için PhilHealth API secret'larını yapılandırın.",
+    philhealthStubFallback:
+      "PhilHealth API yapılandırılmamış — yalnızca yerel dry-run kaydı oluşturuldu. Canlı gönderim için PHILHEALTH_ECLAIMS_API_URL ayarlayın.",
+    philhealthLiveOk: "Talep PhilHealth eClaims'e gönderildi.",
+    philhealthIntegration: "PhilHealth eClaims senkronu",
+    philhealthSubtitle: "Hazırlık kontrol listesi — eClaims secret yoksa edge sync dry-run yedekli",
+    submitPhilhealth: "eClaims'e gönder",
+    submitPhilhealthDryRun: "Dry-run senkron kaydet",
+    resubmitPhilhealth: "eClaims'e yeniden gönder",
+    resubmitPhilhealthDryRun: "Dry-run senkronu yeniden dene",
     hmoTotalClaimed: "toplam talep",
     markPaid: "Ödendi işaretle",
     memberId: "Üye ID",

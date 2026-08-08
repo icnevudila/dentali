@@ -16,12 +16,13 @@ export async function submitPhilHealthClaim(
   const apiUrl = Deno.env.get("PHILHEALTH_ECLAIMS_API_URL")
   const apiKey = Deno.env.get("PHILHEALTH_API_KEY")
 
-  if (!apiUrl || !apiKey) {
+    if (!apiUrl || !apiKey) {
     return {
       ok: true,
       mode: "dry_run",
       providerRef: `DRY-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
-      summary: "Dry-run: PhilHealth eClaims API not configured (set PHILHEALTH_ECLAIMS_API_URL + PHILHEALTH_API_KEY)",
+      summary:
+        "Dry-run only — PhilHealth eClaims API secrets missing (set PHILHEALTH_ECLAIMS_API_URL + PHILHEALTH_API_KEY). No live clearinghouse was contacted.",
     }
   }
 

@@ -74,6 +74,7 @@ function HmoClaimsPageContent() {
   const [payRef, setPayRef] = React.useState<Record<string, string>>({})
   const [actionId, setActionId] = React.useState<string | null>(null)
   const [submitNote, setSubmitNote] = React.useState<string | null>(null)
+  const [submitWasDryRun, setSubmitWasDryRun] = React.useState(false)
   const [rejectingClaimId, setRejectingClaimId] = React.useState<string | null>(null)
   const [rejectReason, setRejectReason] = React.useState("")
 
@@ -121,9 +122,13 @@ function HmoClaimsPageContent() {
     if (err) {
       setError(err)
     } else {
+      // HMO clearinghouse is not wired — service always returns dry_run.
+      // Never show a live-looking success toast.
+      const isDryRun = data?.dry_run !== false
       const refSuffix = data?.provider_ref ? ` Ref: ${data.provider_ref}` : ""
+      setSubmitWasDryRun(isDryRun)
       setSubmitNote(
-        data?.dry_run
+        isDryRun
           ? `${t(
               "billing.hmoSubmittedDryRun",
               "Dry-run only — claim status updated locally. No HMO clearinghouse was contacted."
@@ -204,7 +209,7 @@ function HmoClaimsPageContent() {
         title={t("billing.hmoTitle", "HMO Claims")}
         description={t(
           "billing.hmoSubtitle",
-          "Prepare, review, and settle provider claims from one queue."
+          "Prepare and settle provider claims in the clinic queue. Submits are dry-run until a live HMO clearinghouse is configured."
         )}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -237,7 +242,7 @@ function HmoClaimsPageContent() {
         <div className="space-y-6">
           <IntegrationEnvBanner
             title={t("billing.hmoIntegration", "HMO provider submit")}
-            tone="warning"
+            tone="empty"
             description={t(
               "billing.hmoBanner",
               "Submit updates claim status in the clinic queue and generates a local reference. No live HMO clearinghouse API is connected yet — treat submissions as dry-run until a provider integration is configured."
@@ -257,7 +262,16 @@ function HmoClaimsPageContent() {
           ) : null}
 
           {submitNote ? (
-            <p className="rounded-md border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-800 animate-fade-rise">
+            <p
+              className={
+                submitWasDryRun
+                  ? "rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-950 animate-fade-rise"
+                  : "rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-900 animate-fade-rise"
+              }
+              role="status"
+              data-testid="hmo-submit-note"
+              data-dry-run={submitWasDryRun ? "true" : "false"}
+            >
               {submitNote}
             </p>
           ) : null}
@@ -347,7 +361,14 @@ function HmoClaimsPageContent() {
                             <td className="py-2">{c.provider_name ?? "—"}</td>
                             <td className="py-2 text-right">₱{c.claimed_amount.toLocaleString()}</td>
                             <td className="py-2">
-                              <Badge variant={STATUS_VARIANT[c.status]}>{c.status}</Badge>
+                              <div className="flex flex-wrap items-center gap-1">
+                                <Badge variant={STATUS_VARIANT[c.status]}>{c.status}</Badge>
+                                {c.status === "submitted" ? (
+                                  <Badge variant="warning" className="font-normal">
+                                    {t("billing.dryRunBadge", "Dry-run")}
+                                  </Badge>
+                                ) : null}
+                              </div>
                             </td>
                             {canWrite ? (
                               <td
@@ -361,7 +382,7 @@ function HmoClaimsPageContent() {
                                     disabled={actionId === c.id}
                                     onClick={() => handleSubmit(c)}
                                   >
-                                    {t("billing.submitClaim", "Submit")}
+                                    {t("billing.submitClaimDryRun", "Submit (dry-run)")}
                                   </Button>
                                 ) : null}
                                 {c.status === "submitted" ? (
@@ -488,6 +509,11 @@ function HmoClaimsPageContent() {
                 <p>
                   <span className="text-neutral-500">{t("billing.claimStatus", "Status")}:</span>{" "}
                   <Badge variant={STATUS_VARIANT[selected.status]}>{selected.status}</Badge>
+                  {selected.status === "submitted" ? (
+                    <Badge variant="warning" className="ml-1 font-normal">
+                      {t("billing.dryRunBadge", "Dry-run")}
+                    </Badge>
+                  ) : null}
                 </p>
                 {selected.submitted_at ? (
                   <p>

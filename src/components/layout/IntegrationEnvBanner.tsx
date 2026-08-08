@@ -1,8 +1,16 @@
 "use client"
 
-import { AlertTriangle, CheckCircle2 } from "lucide-react"
+import { AlertTriangle, CheckCircle2, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+export type IntegrationEnvTone = "warning" | "ready" | "empty"
+
+/**
+ * Staff-facing honesty banner for payment / claims integrations.
+ * - warning: dry-run / sandbox / not live clearinghouse
+ * - empty: required secrets not configured (same amber treatment, distinct for tests)
+ * - ready: live secrets configured
+ */
 export function IntegrationEnvBanner({
   title,
   description,
@@ -11,12 +19,12 @@ export function IntegrationEnvBanner({
 }: {
   title: string
   description: string
-  /** warning = not connected / dry-run; ready = live secrets configured */
-  tone?: "warning" | "ready"
+  tone?: IntegrationEnvTone
   className?: string
 }) {
   const isReady = tone === "ready"
-  const Icon = isReady ? CheckCircle2 : AlertTriangle
+  const isEmpty = tone === "empty"
+  const Icon = isReady ? CheckCircle2 : isEmpty ? Info : AlertTriangle
 
   return (
     <div
@@ -28,6 +36,8 @@ export function IntegrationEnvBanner({
         className
       )}
       role="status"
+      data-tone={tone}
+      data-testid="integration-env-banner"
     >
       <Icon
         className={cn(
