@@ -38,6 +38,12 @@ import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { CollapsibleBelowFold } from "@/components/layout/CollapsibleBelowFold"
+import {
+  centavosToInputValue,
+  centavosToPesoMajor,
+  parseMoneyToCentavos,
+  pesoMajorToCentavos,
+} from "@/lib/money/php-money"
 import { StickyActionBar } from "@/components/layout/StickyActionBar"
 
 const LEVEL_VARIANT: Record<string, "default" | "success" | "warning" | "danger"> = {
@@ -119,7 +125,11 @@ function InventoryPageContent() {
     setExpiry(item.expiry_date || "")
     setSupplier(item.supplier || "")
     setBrand(item.brand || "")
-    setUnitCost(String(item.unit_cost || ""))
+    setUnitCost(
+      item.unit_cost
+        ? centavosToInputValue(pesoMajorToCentavos(Number(item.unit_cost)))
+        : ""
+    )
   }
 
 
@@ -169,6 +179,17 @@ function InventoryPageContent() {
     }
 
     if (editingItem) {
+      const unitCostCentavos = unitCost.trim() ? parseMoneyToCentavos(unitCost) : 0
+      if (unitCostCentavos === null || unitCostCentavos < 0) {
+        const msg = t(
+          "billing.invalidMoneyAmount",
+          "Enter a valid amount in PHP (up to 2 decimal places)."
+        )
+        toast.error(msg)
+        setError(msg)
+        setSaving(false)
+        return
+      }
       const { error: err } = await updateInventoryItem(editingItem.id, {
         name: name.trim(),
         sku: sku || undefined,
@@ -178,7 +199,7 @@ function InventoryPageContent() {
         expiryDate: expiry || null,
         supplier: supplier || undefined,
         brand: brand || null,
-        unitCost: parseFloat(unitCost) || 0,
+        unitCost: centavosToPesoMajor(unitCostCentavos),
       })
       setSaving(false)
       if (err) {
@@ -191,6 +212,17 @@ function InventoryPageContent() {
         load()
       }
     } else {
+      const unitCostCentavos = unitCost.trim() ? parseMoneyToCentavos(unitCost) : 0
+      if (unitCostCentavos === null || unitCostCentavos < 0) {
+        const msg = t(
+          "billing.invalidMoneyAmount",
+          "Enter a valid amount in PHP (up to 2 decimal places)."
+        )
+        toast.error(msg)
+        setError(msg)
+        setSaving(false)
+        return
+      }
       const { error: err } = await createInventoryItem({
         organizationId: org.id,
         branchId: activeBranch.id,
@@ -204,7 +236,7 @@ function InventoryPageContent() {
         userId: user.id,
         supplier: supplier || undefined,
         brand: brand || undefined,
-        unitCost: parseFloat(unitCost) || 0,
+        unitCost: centavosToPesoMajor(unitCostCentavos),
       })
       setSaving(false)
       if (err) {
@@ -434,8 +466,8 @@ function InventoryPageContent() {
                     onChange={(e) => setSupplier(e.target.value)}
                   />
                   <Input
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     placeholder={t("inventory.unitCostPlaceholder", "Unit cost (₱)")}
                     value={unitCost}
                     onChange={(e) => setUnitCost(e.target.value)}

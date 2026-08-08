@@ -10,6 +10,12 @@ import { useBranch } from "@/hooks/use-branch"
 import { useLocale } from "@/hooks/use-locale"
 import { fetchOrganization } from "@/lib/auth/auth-service"
 import { createOrthoCase, updateOrthoCase, type OrthoCase } from "@/lib/clinical/ortho-service"
+import {
+  centavosToInputValue,
+  centavosToPesoMajor,
+  parseMoneyToCentavos,
+  pesoMajorToCentavos,
+} from "@/lib/money/php-money"
 
 interface OrthoCaseDrawerProps {
   open: boolean
@@ -75,7 +81,9 @@ export function OrthoCaseDrawer({
       if (initialCase) {
         setApplianceType(initialCase.appliance_type ?? APPLIANCE_PRESETS[0])
         setStartDate(initialCase.start_date ?? "")
-        setContractAmount(String(initialCase.contract_amount))
+        setContractAmount(
+          centavosToInputValue(pesoMajorToCentavos(Number(initialCase.contract_amount)))
+        )
         setCaseNotes(initialCase.notes ?? "")
         setDiagnosis(initialCase.diagnosis ?? "")
       } else {
@@ -105,12 +113,25 @@ export function OrthoCaseDrawer({
     setSaving(true)
     setError(null)
 
+    const contractCentavos = parseMoneyToCentavos(contractAmount)
+    if (contractCentavos === null || contractCentavos < 0) {
+      setError(
+        t(
+          "billing.invalidMoneyAmount",
+          "Enter a valid amount in PHP (up to 2 decimal places)."
+        )
+      )
+      setSaving(false)
+      return
+    }
+    const contractAmountPesos = centavosToPesoMajor(contractCentavos)
+
     if (initialCase) {
       const { error: err } = await updateOrthoCase({
         caseId: initialCase.id,
         applianceType,
         startDate: startDate || new Date().toISOString().slice(0, 10),
-        contractAmount: parseFloat(contractAmount) || 0,
+        contractAmount: contractAmountPesos,
         notes: caseNotes || undefined,
         diagnosis: diagnosis || undefined,
       })
@@ -135,7 +156,7 @@ export function OrthoCaseDrawer({
         patientId,
         applianceType,
         startDate: startDate || new Date().toISOString().slice(0, 10),
-        contractAmount: parseFloat(contractAmount) || 0,
+        contractAmount: contractAmountPesos,
         notes: caseNotes || undefined,
         diagnosis: diagnosis || undefined,
         userId: user.id,
@@ -231,9 +252,8 @@ export function OrthoCaseDrawer({
                 {t("ortho.contractAmount", "Contract amount (₱)")} *
               </label>
               <Input
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 placeholder="0.00"
                 required
                 value={contractAmount}
