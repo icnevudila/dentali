@@ -143,6 +143,7 @@ export default function InboxPage() {
                   hmoDraft: t("dashboard.attnHmo", "HMO draft claims"),
                   philhealthPending: t("dashboard.attnPhilhealth", "PhilHealth pending"),
                   openEncountersStale: t("dashboard.attnStale", "Stale open visits"),
+                  recareDue: t("dashboard.attnRecare", "Recare due"),
                 }}
               />
 

@@ -28,6 +28,7 @@ const EMPTY_STATS: DashboardStats = {
   appointments_awaiting_checkin: 0,
   open_encounters_stale: 0,
   hmo_pending_claims: 0,
+  recare_due: 0,
 }
 
 export function useDashboardStats() {

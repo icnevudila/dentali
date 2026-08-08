@@ -27,6 +27,7 @@ const EMPTY_STATS: DashboardStats = {
   appointments_awaiting_checkin: 0,
   open_encounters_stale: 0,
   hmo_pending_claims: 0,
+  recare_due: 0,
 }
 
 async function resolveBranch(
@@ -79,6 +80,7 @@ function mapDashboardStats(raw: Record<string, number>): DashboardStats {
     appointments_awaiting_checkin: Number(raw.appointments_awaiting_checkin ?? 0),
     open_encounters_stale: Number(raw.open_encounters_stale ?? 0),
     hmo_pending_claims: Number(raw.hmo_pending_claims ?? 0),
+    recare_due: Number(raw.recare_due ?? 0),
   }
 }
 
@@ -267,6 +269,7 @@ async function loadStatsDirect(
     appointments_awaiting_checkin: awaitingCheckinRes.count ?? 0,
     open_encounters_stale: staleEncountersRes.count ?? 0,
     hmo_pending_claims: hmoPendingRes.count ?? 0,
+    recare_due: 0,
   })
 }
 

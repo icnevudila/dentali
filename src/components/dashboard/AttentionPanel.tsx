@@ -32,6 +32,7 @@ type AttentionPanelProps = {
     hmoDraft: string
     philhealthPending: string
     openEncountersStale: string
+    recareDue: string
     manualActionHint?: string
   }
 }
@@ -58,6 +59,7 @@ export function AttentionPanel({
       hmoDraft: labels.hmoDraft,
       philhealthPending: labels.philhealthPending,
       openEncountersStale: labels.openEncountersStale,
+      recareDue: labels.recareDue,
     },
     { permissions, workflowSettings }
   )
