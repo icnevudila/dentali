@@ -204,6 +204,8 @@ export const messagesEnPh: MessageTree = {
     attentionTitle: "Needs attention",
     attentionClear: "All clear — nothing urgent right now.",
     openEncountersStale: "Open visits from prior days",
+    recareDue: "Recare due",
+    attnRecare: "Recare due",
     subtitleLoading: "Loading today's numbers for this branch…",
     subtitleWithStats: "{branch} — {appts} appointments today, {queue} in queue, {collected} collected.",
     noCollectionsYet: "no collections yet",
@@ -953,7 +955,7 @@ export const messagesEnPh: MessageTree = {
     attentionRule: {
       overdue_invoices: {
         label: "Overdue invoices",
-        description: "Past-due balances on the billing board",
+        description: "Past-due balances on the Collections worklist",
       },
       low_stock: {
         label: "Low stock alerts",
@@ -998,6 +1000,11 @@ export const messagesEnPh: MessageTree = {
       philhealth_pending: {
         label: "PhilHealth pending",
         description: "Claims awaiting submission or payer response",
+      },
+      recare_due: {
+        label: "Recare due",
+        description:
+          "Active patients past hygiene recall interval without a future booking",
       },
     },
   },
@@ -2125,6 +2132,8 @@ export const messagesTr: MessageTree = {
     attentionTitle: "Dikkat gerektiren",
     attentionClear: "Her şey yolunda — acil bir durum yok.",
     openEncountersStale: "Önceki günlerden açık ziyaretler",
+    recareDue: "Recall zamanı gelenler",
+    attnRecare: "Recall zamanı gelenler",
     subtitleLoading: "Bu şube için bugünün rakamları yükleniyor…",
     subtitleWithStats: "{branch} — bugün {appts} randevu, sırada {queue}, tahsilat {collected}.",
     noCollectionsYet: "henüz tahsilat yok",
@@ -2873,7 +2882,7 @@ export const messagesTr: MessageTree = {
     attentionRule: {
       overdue_invoices: {
         label: "Vadesi geçmiş faturalar",
-        description: "Faturalama tahtasındaki gecikmiş bakiyeler",
+        description: "Tahsilat (Collections) iş listesindeki gecikmiş bakiyeler",
       },
       low_stock: {
         label: "Düşük stok uyarıları",
@@ -2918,6 +2927,11 @@ export const messagesTr: MessageTree = {
       philhealth_pending: {
         label: "PhilHealth beklemede",
         description: "Gönderim veya ödeyici yanıtı bekleyen talepler",
+      },
+      recare_due: {
+        label: "Recall zamanı gelenler",
+        description:
+          "Hijyen recall süresini geçmiş ve gelecek randevusu olmayan aktif hastalar",
       },
     },
   },
@@ -4112,6 +4126,9 @@ export const messagesFil: MessageTree = {
     viewReportsHub: "Buksan ang Reports Hub",
     attentionTitle: "Kailangan ng atensyon",
     attentionClear: "Clear lahat — walang urgent na item.",
+    openEncountersStale: "Open visits from prior days",
+    recareDue: "Recare due",
+    attnRecare: "Recare due",
     firstRunEyebrow: "Magsimula",
     firstRunTitle: "Tatlong hakbang papunta sa unang pasyente",
     firstRunSubtitle:
@@ -4609,7 +4626,7 @@ export const messagesFil: MessageTree = {
     attentionRule: {
       overdue_invoices: {
         label: "Overdue invoices",
-        description: "Past-due balances sa billing board",
+        description: "Past-due balances sa Collections worklist",
       },
       low_stock: {
         label: "Low stock alerts",
@@ -4654,6 +4671,11 @@ export const messagesFil: MessageTree = {
       philhealth_pending: {
         label: "PhilHealth pending",
         description: "Claims na naghihintay ng submission o payer response",
+      },
+      recare_due: {
+        label: "Recare due",
+        description:
+          "Active patients na lampas sa hygiene recall interval at walang future booking",
       },
     },
   },

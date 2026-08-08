@@ -228,6 +228,7 @@ export default function DashboardPage() {
                   "dashboard.openEncountersStale",
                   "Open visits from prior days"
                 ),
+                recareDue: t("dashboard.recareDue", "Recare due"),
                 manualActionHint: t(
                   "dashboard.attentionManualHint",
                   "Automation off — staff action required"

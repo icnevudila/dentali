@@ -31,6 +31,7 @@ export type AttentionLabels = {
   hmoDraft: string
   philhealthPending: string
   openEncountersStale: string
+  recareDue: string
 }
 
 export type BuildAttentionOptions = {

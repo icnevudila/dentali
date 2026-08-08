@@ -26,6 +26,7 @@ const labels: AttentionLabels = {
   hmoDraft: "HMO draft",
   philhealthPending: "PhilHealth pending",
   openEncountersStale: "Open visits from prior days",
+  recareDue: "Recare due",
 }
 
 const baseStats: DashboardStats = {
@@ -45,6 +46,7 @@ const baseStats: DashboardStats = {
   appointments_awaiting_checkin: 0,
   open_encounters_stale: 0,
   hmo_pending_claims: 0,
+  recare_due: 0,
 }
 
 const allPermissions = new Set<string>([
@@ -75,7 +77,26 @@ function run() {
   assert.ok(withOverdue.some((i) => i.id === "overdue_invoices"), "overdue rule fires")
   const overdueItem = withOverdue.find((i) => i.id === "overdue_invoices")
   assert.equal(overdueItem?.automationOff, true, "automation off when workflow disabled")
-  assert.equal(overdueItem?.href, "/billing?focus=overdue")
+  assert.equal(overdueItem?.href, "/billing/collections")
+
+  const withRecare = evaluateAttentionRules({
+    stats: { ...baseStats, recare_due: 4 },
+    labels,
+    permissions: allPermissions,
+    workflowSettings: { auto_hygiene_recall: false },
+  })
+  const recareItem = withRecare.find((i) => i.id === "recare_due")
+  assert.ok(recareItem, "recare_due rule fires")
+  assert.equal(recareItem?.href, "/recare")
+  assert.equal(recareItem?.automationOff, true, "recare automation off hint")
+
+  const noAppts = evaluateAttentionRules({
+    stats: { ...baseStats, recare_due: 2 },
+    labels,
+    permissions: new Set([PERMISSIONS.BILLING_READ]),
+    workflowSettings: null,
+  })
+  assert.ok(!noAppts.some((i) => i.id === "recare_due"), "recare permission gate")
 
   const hidden = evaluateAttentionRules({
     stats: { ...baseStats, pending_consents: 3 },
