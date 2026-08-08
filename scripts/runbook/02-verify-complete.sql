@@ -117,6 +117,7 @@ with expected(name) as (
     ,('delete_procedure_bom_line_guarded')
     ,('create_plan_invoice_guarded')
     ,('resync_draft_invoice_from_plan_guarded')
+    ,('list_recare_due_patients')
 )
 select
   e.name,
