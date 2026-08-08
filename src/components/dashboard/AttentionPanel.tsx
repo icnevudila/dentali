@@ -64,8 +64,7 @@ export function AttentionPanel({
     { permissions, workflowSettings }
   )
 
-  const manualHint =
-    labels.manualActionHint ?? "Automation off — staff action required"
+  const manualHint = labels.manualActionHint?.trim() || null
 
   return (
     <div className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
@@ -100,7 +99,7 @@ export function AttentionPanel({
                 <span className="min-w-0 text-neutral-700">
                   <span className="mr-2 font-bold tabular-nums text-neutral-950">{item.count}</span>
                   {item.label}
-                  {item.automationOff ? (
+                  {item.automationOff && manualHint ? (
                     <span className="mt-0.5 block text-[11px] font-medium text-amber-700">
                       {manualHint}
                     </span>
