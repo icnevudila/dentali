@@ -156,15 +156,18 @@ export async function fetchArAging(
   return { data: (data as ArAgingBucket[]) ?? [], error: null }
 }
 
+/** Branch workflow rules JSON — mostly booleans; may include numeric keys like hygiene_recall_months. */
+export type WorkflowSettingsMap = Record<string, boolean | number | string>
+
 export async function fetchWorkflowSettings(
   branchId: string
-): Promise<{ data: Record<string, boolean> | null; error: string | null }> {
+): Promise<{ data: WorkflowSettingsMap | null; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("get_branch_workflow_settings", {
     p_branch_id: branchId,
   })
   if (error) return { data: null, error: error.message }
-  return { data: (data as Record<string, boolean>) ?? null, error: null }
+  return { data: (data as WorkflowSettingsMap) ?? null, error: null }
 }
 
 export type AppointmentsAnalytics = {
@@ -309,15 +312,15 @@ export async function fetchAuditAnalytics(
 
 export async function updateWorkflowSettings(
   branchId: string,
-  patch: Record<string, boolean>
-): Promise<{ data: Record<string, boolean> | null; error: string | null }> {
+  patch: WorkflowSettingsMap
+): Promise<{ data: WorkflowSettingsMap | null; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("upsert_branch_workflow_settings", {
     p_branch_id: branchId,
     p_settings: patch,
   })
   if (error) return { data: null, error: error.message }
-  return { data: (data as Record<string, boolean>) ?? null, error: null }
+  return { data: (data as WorkflowSettingsMap) ?? null, error: null }
 }
 
 export type HmoPipelineAnalytics = {

@@ -22,7 +22,10 @@ import {
 } from "@/lib/odontogram/periodontal-service"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/ui/empty-state"
 import { cn } from "@/lib/utils"
+import { useLocale } from "@/hooks/use-locale"
+import { Activity } from "lucide-react"
 
 export function PeriodontalPocketPanel({
   patientId,
@@ -43,6 +46,7 @@ export function PeriodontalPocketPanel({
   onSelectTooth?: (tooth: number) => void
   className?: string
 }) {
+  const { t } = useLocale()
   const [chart, setChart] = React.useState<PeriodontalChartData>(() =>
     mergePeriodontalChart(null)
   )
@@ -57,7 +61,7 @@ export function PeriodontalPocketPanel({
     const local = loadPeriodontalChart(patientId, branchId)
     const { data, error } = await getPatientPeriodontal(patientId, branchId)
     if (error) {
-      setLoadError(error)
+      setLoadError("load_failed")
       setChart(local)
       setSyncState("local")
     } else if (data) {
@@ -113,7 +117,7 @@ export function PeriodontalPocketPanel({
           chart: next,
         }).then(({ error }) => {
           setSyncState(error ? "local" : "saved")
-          if (error) setLoadError(error)
+          if (error) setLoadError("save_failed")
         })
       }, 600)
     },
@@ -148,20 +152,29 @@ export function PeriodontalPocketPanel({
 
   const syncLabel =
     syncState === "saving"
-      ? "Saving…"
+      ? t("patients.perioSyncSaving", "Saving…")
       : syncState === "saved"
-        ? "Synced"
+        ? t("patients.perioSyncSaved", "Synced")
         : syncState === "local"
-          ? "Local backup"
+          ? t("patients.perioSyncLocal", "Local backup")
           : null
+
+  const showEmptyHint = !loading && stats.teethRecorded === 0 && !loadError
 
   return (
     <Card className={className} data-testid="periodontal-pocket-panel">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <CardTitle className="text-base">Periodontal pocket chart</CardTitle>
-            <CardDescription>6-site depths (mm) · auto-saves to chart record</CardDescription>
+            <CardTitle className="text-base">
+              {t("patients.perioPocketTitle", "Periodontal pocket chart")}
+            </CardTitle>
+            <CardDescription>
+              {t(
+                "patients.perioPocketDescription",
+                "6-site depths (mm) · auto-saves to chart record"
+              )}
+            </CardDescription>
           </div>
           {syncLabel ? (
             <span
@@ -177,65 +190,101 @@ export function PeriodontalPocketPanel({
           ) : null}
         </div>
         {loadError ? (
-          <p className="text-xs text-amber-800">{loadError}</p>
+          <div className="mt-2 space-y-2">
+            <p className="text-xs text-amber-800" role="alert">
+              {t(
+                "patients.perioLoadError",
+                "Could not sync with the server. Showing local backup if available."
+              )}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => void reloadFromServer()}
+            >
+              {t("common.retry", "Retry")}
+            </Button>
+          </div>
         ) : null}
         <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-medium">
           <BadgePill label="≥4mm" value={stats.pockets4Plus} tone="red" />
           <BadgePill label="BOP" value={stats.bopSites} tone="amber" />
-          <BadgePill label="Teeth" value={stats.teethRecorded} tone="neutral" />
+          <BadgePill
+            label={t("patients.perioTeethLabel", "Teeth")}
+            value={stats.teethRecorded}
+            tone="neutral"
+          />
         </div>
       </CardHeader>
       <CardContent className="max-h-[420px] min-w-0 overflow-auto p-0">
         {loading ? (
           <div className="flex h-40 items-center justify-center text-sm text-neutral-400">
-            Loading periodontal chart…
+            {t("patients.perioLoading", "Loading periodontal chart…")}
           </div>
         ) : (
-        <div className="overflow-x-auto">
-        <table className="w-full min-w-0 border-collapse text-xs sm:min-w-[520px]">
-          <thead className="sticky top-0 z-10 bg-neutral-50 text-[10px] uppercase tracking-wide text-neutral-500">
-            <tr>
-              <th className="border-b border-neutral-200 px-2 py-2 text-left">#</th>
-              {PERIO_SITES.map((site) => (
-                <th key={site} className="border-b border-neutral-200 px-1 py-2 text-center">
-                  {PERIO_SITE_LABELS[site]}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {PERMANENT_TOOTH_ORDER.map((toothNum) => {
-              const key = String(toothNum)
-              const row = chart[key] ?? {}
-              const isSelected = selectedTooth === toothNum
-              return (
-                <tr
-                  key={key}
-                  className={cn(
-                    "border-b border-neutral-100",
-                    isSelected && "bg-primary-50/80",
-                    onSelectTooth && "cursor-pointer hover:bg-neutral-50"
+          <>
+            {showEmptyHint ? (
+              <div className="border-b border-neutral-100 px-4 py-3">
+                <EmptyState
+                  icon={Activity}
+                  title={t("patients.perioNoReadingsTitle", "No probing depths yet")}
+                  description={t(
+                    "patients.perioNoReadingsDescription",
+                    "Record pocket depths below. Nothing is invented for print until you save at least one site."
                   )}
-                  onClick={() => onSelectTooth?.(toothNum)}
-                >
-                  <td className="px-2 py-1.5 font-mono font-bold text-neutral-800">{key}</td>
-                  {PERIO_SITES.map((site) => (
-                    <td key={site} className="px-1 py-1" onClick={(e) => e.stopPropagation()}>
-                      <SiteCell
-                        tooth={key}
-                        site={site}
-                        reading={row[site]}
-                        disabled={!canWrite}
-                        onChange={(patch) => updateSite(key, site, patch)}
-                      />
-                    </td>
-                  ))}
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-        </div>
+                  className="py-4"
+                />
+              </div>
+            ) : null}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-0 border-collapse text-xs sm:min-w-[520px]">
+                <thead className="sticky top-0 z-10 bg-neutral-50 text-[10px] uppercase tracking-wide text-neutral-500">
+                  <tr>
+                    <th className="border-b border-neutral-200 px-2 py-2 text-left">#</th>
+                    {PERIO_SITES.map((site) => (
+                      <th key={site} className="border-b border-neutral-200 px-1 py-2 text-center">
+                        {PERIO_SITE_LABELS[site]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {PERMANENT_TOOTH_ORDER.map((toothNum) => {
+                    const key = String(toothNum)
+                    const row = chart[key] ?? {}
+                    const isSelected = selectedTooth === toothNum
+                    return (
+                      <tr
+                        key={key}
+                        className={cn(
+                          "border-b border-neutral-100",
+                          isSelected && "bg-primary-50/80",
+                          onSelectTooth && "cursor-pointer hover:bg-neutral-50"
+                        )}
+                        onClick={() => onSelectTooth?.(toothNum)}
+                      >
+                        <td className="px-2 py-1.5 font-mono font-bold text-neutral-800">{key}</td>
+                        {PERIO_SITES.map((site) => (
+                          <td key={site} className="px-1 py-1" onClick={(e) => e.stopPropagation()}>
+                            <SiteCell
+                              tooth={key}
+                              site={site}
+                              reading={row[site]}
+                              disabled={!canWrite}
+                              depthAriaLabel={t("patients.perioDepthAria", "Pocket depth mm")}
+                              onChange={(patch) => updateSite(key, site, patch)}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </CardContent>
       <div className="border-t border-neutral-100 px-4 py-2">
@@ -246,7 +295,7 @@ export function PeriodontalPocketPanel({
           className="h-7 text-xs text-neutral-500"
           onClick={() => void reloadFromServer()}
         >
-          Reload from server
+          {t("patients.perioReload", "Reload from server")}
         </Button>
       </div>
     </Card>
@@ -258,12 +307,14 @@ function SiteCell({
   site,
   reading,
   disabled,
+  depthAriaLabel,
   onChange,
 }: {
   tooth: string
   site: PerioSite
   reading?: PerioSiteReading
   disabled?: boolean
+  depthAriaLabel: string
   onChange: (patch: Partial<PerioSiteReading>) => void
 }) {
   const depth = reading?.depth
@@ -282,7 +333,7 @@ function SiteCell({
         max={15}
         inputMode="numeric"
         data-perio={`${tooth}-${site}`}
-        aria-label="Pocket depth mm"
+        aria-label={depthAriaLabel}
         disabled={disabled}
         className={cn(
           "h-7 w-10 rounded border text-center font-mono text-[11px] focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60",

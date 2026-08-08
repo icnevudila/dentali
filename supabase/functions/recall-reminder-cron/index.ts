@@ -39,9 +39,26 @@ Deno.serve(async (req) => {
 
     let enqueued = 0
     for (const branch of branches ?? []) {
+      const { data: workflowRow } = await supabaseAdmin
+        .from("branch_workflow_settings")
+        .select("settings")
+        .eq("branch_id", branch.id)
+        .maybeSingle()
+
+      const settings = (workflowRow?.settings ?? {}) as Record<string, unknown>
+      const rawMonths = settings.hygiene_recall_months
+      let months = 6
+      if (typeof rawMonths === "number" && Number.isFinite(rawMonths)) {
+        months = Math.trunc(rawMonths)
+      } else if (typeof rawMonths === "string" && rawMonths.trim()) {
+        const parsed = Number(rawMonths.trim())
+        if (Number.isFinite(parsed)) months = Math.trunc(parsed)
+      }
+      if (months < 1 || months > 24) months = 6
+
       const { data: count } = await supabaseAdmin.rpc("enqueue_hygiene_recalls", {
         p_branch_id: branch.id,
-        p_months: 6,
+        p_months: months,
       })
       enqueued += Number(count ?? 0)
     }

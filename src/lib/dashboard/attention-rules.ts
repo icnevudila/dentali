@@ -1,6 +1,7 @@
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import type { DashboardStats } from "@/lib/dashboard/dashboard-service"
 import type { AttentionItem, AttentionLabels, AttentionTone } from "@/lib/dashboard/attention-items"
+import type { WorkflowSettingsMap } from "@/lib/analytics/analytics-service"
 
 export type AttentionRuleContext = {
   stats: DashboardStats
@@ -8,7 +9,7 @@ export type AttentionRuleContext = {
   /** Permission keys the current user holds for the active branch */
   permissions: ReadonlySet<string>
   /** Branch workflow toggles; null while loading — rules still run, hints omitted */
-  workflowSettings: Record<string, boolean> | null
+  workflowSettings: WorkflowSettingsMap | null
 }
 
 type AttentionRuleDef = {
@@ -44,13 +45,29 @@ const TONE_PRIORITY: Record<AttentionTone, number> = {
   sky: 2,
 }
 
+/**
+ * Overdue AR chase deep-link.
+ * Prefer Collections worklist when that route exists; billing board remains the fallback.
+ */
+export const OVERDUE_BILLING_ATTENTION_HREF = "/billing/collections"
+export const OVERDUE_BILLING_ATTENTION_FALLBACK_HREF = "/billing?focus=overdue"
+
+/** Resolves overdue attention href (Collections when available). */
+export function resolveOverdueBillingAttentionHref(
+  collectionsRouteExists = true
+): string {
+  return collectionsRouteExists
+    ? OVERDUE_BILLING_ATTENTION_HREF
+    : OVERDUE_BILLING_ATTENTION_FALLBACK_HREF
+}
+
 /** Declarative attention rules — evaluated in order, filtered by permission & count */
 export const ATTENTION_RULES: AttentionRuleDef[] = [
   {
     id: "overdue_invoices",
     statKey: "overdue_invoices",
     labelKey: "overdueInvoices",
-    href: "/billing?focus=overdue",
+    href: resolveOverdueBillingAttentionHref(true),
     tone: "red",
     priority: 0,
     permission: PERMISSIONS.BILLING_READ,
@@ -180,13 +197,26 @@ export const ATTENTION_RULES: AttentionRuleDef[] = [
     permission: PERMISSIONS.BILLING_READ,
     settingsKey: attentionShowKey("philhealth_pending"),
   },
+  {
+    id: "recare_due",
+    statKey: "recare_due",
+    labelKey: "recareDue",
+    href: "/recare",
+    tone: "sky",
+    priority: 12,
+    permission: PERMISSIONS.APPOINTMENTS_READ,
+    workflowKey: "auto_hygiene_recall",
+    settingsKey: attentionShowKey("recare_due"),
+    escalateAt: 20,
+    escalateTo: "amber",
+  },
 ]
 
 /** English fallbacks — UI must resolve via t(labelKey / descriptionKey). */
 const ATTENTION_RULE_COPY: Record<string, { label: string; description: string }> = {
   overdue_invoices: {
     label: "Overdue invoices",
-    description: "Past-due balances on the billing board",
+    description: "Past-due balances on the Collections worklist",
   },
   low_stock: {
     label: "Low stock alerts",
@@ -232,6 +262,10 @@ const ATTENTION_RULE_COPY: Record<string, { label: string; description: string }
     label: "PhilHealth pending",
     description: "Claims awaiting submission or payer response",
   },
+  recare_due: {
+    label: "Recare due",
+    description: "Active patients past hygiene recall interval without a future booking",
+  },
 }
 
 export type AttentionRuleUiItem = {
@@ -274,7 +308,7 @@ function resolveTone(rule: AttentionRuleDef, count: number): AttentionTone {
 }
 
 function isWorkflowEnabled(
-  settings: Record<string, boolean> | null,
+  settings: WorkflowSettingsMap | null,
   key: string | undefined
 ): boolean | null {
   if (!key || settings == null) return null

@@ -13,26 +13,46 @@ import {
   fetchWorkflowSettings,
   updateWorkflowSettings,
   type AutomationLogEntry,
+  type WorkflowSettingsMap,
 } from "@/lib/analytics/analytics-service"
 import { fetchOwnerDigestReadiness, type OwnerDigestReadiness } from "@/lib/staff/staff-service"
 import { fetchBranchSetting } from "@/lib/org/branch-context-service"
 import { getWorkflowGroups } from "@/lib/settings/workflow-rules-ui"
 import { ATTENTION_RULE_UI } from "@/lib/dashboard/attention-rules"
+import {
+  DEFAULT_RECARE_INTERVAL_MONTHS,
+  HYGIENE_RECALL_MONTHS_KEY,
+  MAX_RECARE_INTERVAL_MONTHS,
+  MIN_RECARE_INTERVAL_MONTHS,
+  parseRecareIntervalMonths,
+  resolveRecareIntervalMonthsFromSettings,
+} from "@/lib/recare/recare-interval"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
+
+function isWorkflowToggleOn(value: unknown, invertedDefault = false): boolean {
+  if (invertedDefault) return value !== false
+  if (typeof value === "boolean") return value
+  // Missing keys default to on for live automation toggles.
+  return value === undefined || value === null ? true : Boolean(value)
+}
 
 export default function WorkflowSettingsPage() {
   const { activeBranch } = useBranch()
   const { t } = useLocale()
   const workflowGroups = useMemo(() => getWorkflowGroups(t), [t])
-  const [settings, setSettings] = useState<Record<string, boolean> | null>(null)
+  const [settings, setSettings] = useState<WorkflowSettingsMap | null>(null)
   const [loading, setLoading] = useState(true)
   const [savingKey, setSavingKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [automationLog, setAutomationLog] = useState<AutomationLogEntry[]>([])
   const [digestReadiness, setDigestReadiness] = useState<OwnerDigestReadiness | null>(null)
   const [googleReviewUrl, setGoogleReviewUrl] = useState<string | null>(null)
+  const [recallMonthsDraft, setRecallMonthsDraft] = useState(
+    String(DEFAULT_RECARE_INTERVAL_MONTHS)
+  )
 
   const load = useCallback(async () => {
     if (!activeBranch) return
@@ -45,6 +65,9 @@ export default function WorkflowSettingsPage() {
       fetchBranchSetting(activeBranch.id, "google_review_url"),
     ])
     setSettings(settingsRes.data)
+    setRecallMonthsDraft(
+      String(resolveRecareIntervalMonthsFromSettings(settingsRes.data as Record<string, unknown>))
+    )
     setAutomationLog(logRes.data)
     setDigestReadiness(digestRes.data)
     setGoogleReviewUrl(reviewRes.value?.trim() || null)
@@ -59,11 +82,40 @@ export default function WorkflowSettingsPage() {
   const handleToggle = async (key: string, invertedDefault = false) => {
     if (!activeBranch || !settings) return
     const current = settings[key]
-    const isOn = invertedDefault ? current !== false : Boolean(current)
+    const isOn = isWorkflowToggleOn(current, invertedDefault)
     const next = !isOn
     setSavingKey(key)
     setError(null)
     const { error: err } = await updateWorkflowSettings(activeBranch.id, { [key]: next })
+    setSavingKey(null)
+    if (err) {
+      setError(err)
+      toast.error(err)
+    } else {
+      toast.success(t("settings.workflowSaved", "Workflow setting updated"))
+      await load()
+    }
+  }
+
+  const handleSaveRecallMonths = async () => {
+    if (!activeBranch) return
+    const parsed = parseRecareIntervalMonths(recallMonthsDraft)
+    if (parsed == null) {
+      toast.error(
+        t(
+          "settings.wfHygieneRecallMonthsInvalid",
+          "Enter a whole number between {min} and {max} months."
+        )
+          .replace("{min}", String(MIN_RECARE_INTERVAL_MONTHS))
+          .replace("{max}", String(MAX_RECARE_INTERVAL_MONTHS))
+      )
+      return
+    }
+    setSavingKey(HYGIENE_RECALL_MONTHS_KEY)
+    setError(null)
+    const { error: err } = await updateWorkflowSettings(activeBranch.id, {
+      [HYGIENE_RECALL_MONTHS_KEY]: parsed,
+    })
     setSavingKey(null)
     if (err) {
       setError(err)
@@ -180,8 +232,12 @@ export default function WorkflowSettingsPage() {
                             disabled={toggleDisabled}
                             onClick={() => void handleToggle(item.key)}
                           >
-                            <Badge variant={settings?.[item.key] !== false ? "success" : "outline"}>
-                              {settings?.[item.key] !== false
+                            <Badge
+                              variant={
+                                isWorkflowToggleOn(settings?.[item.key]) ? "success" : "outline"
+                              }
+                            >
+                              {isWorkflowToggleOn(settings?.[item.key])
                                 ? t("common.on", "On")
                                 : t("common.off", "Off")}
                             </Badge>
@@ -193,6 +249,56 @@ export default function WorkflowSettingsPage() {
                 </ul>
               </section>
             ))}
+
+            <section className="space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                {t("settings.wfHygieneRecallMonthsTitle", "Hygiene recall interval")}
+              </h3>
+              <div className="rounded-xl border border-neutral-200/80 bg-white px-4 py-3">
+                <p className="text-sm font-medium text-neutral-900">
+                  {t("settings.wfHygieneRecallMonthsLabel", "Months between hygiene recalls")}
+                </p>
+                <p className="mt-1 text-xs text-neutral-500">
+                  {t(
+                    "settings.wfHygieneRecallMonthsDesc",
+                    "Used by the Recare worklist and hygiene recall SMS cron. Clinic default is {months} months when unset."
+                  ).replace("{months}", String(DEFAULT_RECARE_INTERVAL_MONTHS))}{" "}
+                  <Link href="/recare" className="text-primary-600 hover:underline">
+                    {t("nav.recare", "Recare")}
+                  </Link>
+                </p>
+                <div className="mt-3 flex flex-wrap items-end gap-2">
+                  <div className="space-y-1">
+                    <label
+                      htmlFor="hygiene-recall-months"
+                      className="text-xs font-medium text-neutral-600"
+                    >
+                      {t("settings.wfHygieneRecallMonthsField", "Months")}
+                    </label>
+                    <Input
+                      id="hygiene-recall-months"
+                      type="number"
+                      inputMode="numeric"
+                      min={MIN_RECARE_INTERVAL_MONTHS}
+                      max={MAX_RECARE_INTERVAL_MONTHS}
+                      className="w-24 tabular-nums"
+                      value={recallMonthsDraft}
+                      onChange={(e) => setRecallMonthsDraft(e.target.value)}
+                      disabled={savingKey === HYGIENE_RECALL_MONTHS_KEY}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={savingKey === HYGIENE_RECALL_MONTHS_KEY}
+                    onClick={() => void handleSaveRecallMonths()}
+                  >
+                    {t("common.save", "Save")}
+                  </Button>
+                </div>
+              </div>
+            </section>
 
             <section className="space-y-2">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
@@ -223,8 +329,12 @@ export default function WorkflowSettingsPage() {
                       disabled={savingKey === item.key}
                       onClick={() => void handleToggle(item.key, true)}
                     >
-                      <Badge variant={settings?.[item.key] !== false ? "success" : "outline"}>
-                        {settings?.[item.key] !== false
+                      <Badge
+                        variant={
+                          isWorkflowToggleOn(settings?.[item.key], true) ? "success" : "outline"
+                        }
+                      >
+                        {isWorkflowToggleOn(settings?.[item.key], true)
                           ? t("common.on", "On")
                           : t("common.off", "Off")}
                       </Badge>

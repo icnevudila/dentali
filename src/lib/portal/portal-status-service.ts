@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client"
-import { publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
+import { ERROR_COPY, publicChannelSafeError } from "@/lib/kiosk/kiosk-service"
 
 export type PortalConsentItem = {
   slug: string
@@ -28,7 +28,7 @@ export type PortalSnapshot = {
   ready_for_checkin: boolean
 }
 
-const PORTAL_FALLBACK = "Something went wrong. Please try again or see the front desk."
+const PORTAL_FALLBACK = ERROR_COPY.generic
 
 export async function fetchPortalSnapshot(
   sessionId: string,
@@ -70,7 +70,7 @@ export async function createPortalConsentSignToken(
       data: null,
       error: publicChannelSafeError(
         error.message,
-        "Could not open the signing form. Please see the front desk."
+        ERROR_COPY.consentSignFailed
       ),
     }
   }

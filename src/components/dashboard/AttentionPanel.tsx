@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { DashboardStats } from "@/lib/dashboard/dashboard-service"
 import { buildAttentionItems } from "@/lib/dashboard/attention-items"
+import type { WorkflowSettingsMap } from "@/lib/analytics/analytics-service"
 
 type AttentionPanelProps = {
   stats: DashboardStats
   permissions?: ReadonlySet<string>
-  workflowSettings?: Record<string, boolean> | null
+  workflowSettings?: WorkflowSettingsMap | null
   /** When false, shows counts only — no navigation (dashboard mode). */
   interactive?: boolean
   labels: {
@@ -31,6 +32,7 @@ type AttentionPanelProps = {
     hmoDraft: string
     philhealthPending: string
     openEncountersStale: string
+    recareDue: string
     manualActionHint?: string
   }
 }
@@ -57,6 +59,7 @@ export function AttentionPanel({
       hmoDraft: labels.hmoDraft,
       philhealthPending: labels.philhealthPending,
       openEncountersStale: labels.openEncountersStale,
+      recareDue: labels.recareDue,
     },
     { permissions, workflowSettings }
   )

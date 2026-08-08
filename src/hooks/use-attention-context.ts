@@ -2,14 +2,17 @@
 
 import * as React from "react"
 import { usePermissionStore } from "@/stores/permission-store"
-import { fetchWorkflowSettings } from "@/lib/analytics/analytics-service"
+import {
+  fetchWorkflowSettings,
+  type WorkflowSettingsMap,
+} from "@/lib/analytics/analytics-service"
 import { useBranch } from "@/hooks/use-branch"
 
 /** Permissions + branch workflow toggles for dashboard attention rule engine */
 export function useAttentionContext() {
   const { activeBranch } = useBranch()
   const permissions = usePermissionStore((s) => s.permissions)
-  const [workflowSettings, setWorkflowSettings] = React.useState<Record<string, boolean> | null>(
+  const [workflowSettings, setWorkflowSettings] = React.useState<WorkflowSettingsMap | null>(
     null
   )
 

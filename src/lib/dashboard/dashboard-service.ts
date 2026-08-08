@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client"
 import { getShowcaseSnapshot } from "@/lib/showcase/intercept"
+import { DEFAULT_RECARE_INTERVAL_MONTHS } from "@/lib/recare/recare-service"
 
 export interface DashboardStats {
   active_patients: number
@@ -20,6 +21,22 @@ export interface DashboardStats {
   hmo_pending_claims: number
   /** Optional — filled when dashboard RPC exposes lab overdue count */
   overdue_lab_cases?: number
+  /**
+   * Patients due for hygiene/recall (integer KPI only — no PHI).
+   * Filled via count_recare_due_patients when the caller has appointments.read.
+   */
+  recare_due: number
+}
+
+async function fetchRecareDueCount(branchId: string): Promise<number> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("count_recare_due_patients", {
+    p_branch_id: branchId,
+    p_months: DEFAULT_RECARE_INTERVAL_MONTHS,
+  })
+  // Permission miss / missing RPC → treat as 0 (attention rule simply hides).
+  if (error) return 0
+  return Number(data ?? 0)
 }
 
 export async function fetchDashboardStats(
@@ -31,9 +48,14 @@ export async function fetchDashboardStats(
   }
 
   const supabase = createClient()
-  const { data, error } = await supabase.rpc("get_dashboard_stats", {
+  const statsPromise = supabase.rpc("get_dashboard_stats", {
     p_branch_id: branchId,
   })
+  const recarePromise = branchId
+    ? fetchRecareDueCount(branchId)
+    : Promise.resolve(0)
+
+  const [{ data, error }, recareDue] = await Promise.all([statsPromise, recarePromise])
 
   if (error) return { data: null, error: error.message }
 
@@ -57,6 +79,7 @@ export async function fetchDashboardStats(
       open_encounters_stale: Number(raw.open_encounters_stale ?? 0),
       hmo_pending_claims: Number(raw.hmo_pending_claims ?? 0),
       overdue_lab_cases: Number(raw.overdue_lab_cases ?? 0),
+      recare_due: recareDue,
     },
     error: null,
   }

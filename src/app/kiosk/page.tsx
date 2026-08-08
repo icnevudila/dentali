@@ -176,7 +176,12 @@ function KioskContent() {
     createKioskSession(token).then(async ({ data, error }) => {
       if (error || !data) {
         setStep("error")
-        setErrorMsg(error ?? t("kiosk.sessionFailed", "Unable to start kiosk session."))
+        setErrorMsg(
+          publicChannelSafeError(
+            error,
+            t("kiosk.sessionFailed", "Unable to start kiosk session. Please see the front desk.")
+          )
+        )
         return
       }
       setSessionId(data.session_id)

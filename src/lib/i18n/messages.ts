@@ -204,6 +204,8 @@ export const messagesEnPh: MessageTree = {
     attentionTitle: "Needs attention",
     attentionClear: "All clear — nothing urgent right now.",
     openEncountersStale: "Open visits from prior days",
+    recareDue: "Recare due",
+    attnRecare: "Recare due",
     subtitleLoading: "Loading today's numbers for this branch…",
     subtitleWithStats: "{branch} — {appts} appointments today, {queue} in queue, {collected} collected.",
     noCollectionsYet: "no collections yet",
@@ -475,7 +477,7 @@ export const messagesEnPh: MessageTree = {
     outputPdaChart: "PDA dental chart",
     outputPdaChartHint: "PDA-format chart and print view",
     outputPerioChart: "Periodontal chart",
-    outputPerioChartHint: "Interactive perio chart (coming next) and print preview",
+    outputPerioChartHint: "Interactive 6-site pocket chart and print preview",
     outputConsents: "Signed consents",
     outputConsentsHint: "Consent signing and legal forms",
     outputPrescription: "Prescription",
@@ -489,13 +491,37 @@ export const messagesEnPh: MessageTree = {
     perioEyebrow: "Clinical",
     perioTitle: "Periodontal chart",
     perioDescription:
-      "Interactive probing map for this patient — reserved route until the full editor ships.",
-    perioEmptyTitle: "Interactive perio chart coming next",
+      "Six-site pocket depths and BOP for this patient. Saves to the active dental chart — print only when measurements exist.",
+    perioEmptyTitle: "No probing depths yet",
     perioEmptyDescription:
-      "This skeleton reserves the patient perio route. Use print preview for the official probing report, or open the dental chart where pocket charting lives today — no invented clinical measurements here.",
+      "Record pocket depths on this page. Print preview stays empty until at least one site is saved — no invented clinical measurements.",
     perioOpenPrint: "Open print preview",
     perioOpenChart: "Open dental chart",
     perioBackPatient: "Back to patient",
+    perioSelectBranchTitle: "Select a branch",
+    perioSelectBranchDescription:
+      "Choose an active clinic branch to load or save periodontal measurements.",
+    perioOrgMissing: "Clinic organization could not be loaded. Retry or sign in again.",
+    perioWriteHint:
+      "Enter pocket depths in mm (0–15). Changes auto-save with chart audit history. Asia/Manila clinic time applies to print dates.",
+    perioReadOnlyHint:
+      "Read-only view. Ask a clinician with dental chart write access to record probing depths.",
+    perioPrintHonesty:
+      "Print preview shows only saved probing depths — it will stay empty until at least one site is recorded.",
+    perioPocketTitle: "Periodontal pocket chart",
+    perioPocketDescription: "6-site depths (mm) · auto-saves to chart record",
+    perioSyncSaving: "Saving…",
+    perioSyncSaved: "Synced",
+    perioSyncLocal: "Local backup",
+    perioLoadError:
+      "Could not sync with the server. Showing local backup if available.",
+    perioTeethLabel: "Teeth",
+    perioLoading: "Loading periodontal chart…",
+    perioNoReadingsTitle: "No probing depths yet",
+    perioNoReadingsDescription:
+      "Record pocket depths below. Nothing is invented for print until you save at least one site.",
+    perioDepthAria: "Pocket depth mm",
+    perioReload: "Reload from server",
     tabRecord: "Patient Record",
     tabMedicalHistory: "Medical History",
     tabDentalChart: "Dental Chart",
@@ -805,6 +831,12 @@ export const messagesEnPh: MessageTree = {
     saveChanges: "Save Changes",
     saving: "Saving…",
     workflowSaved: "Workflow setting updated",
+    wfHygieneRecallMonthsTitle: "Hygiene recall interval",
+    wfHygieneRecallMonthsLabel: "Months between hygiene recalls",
+    wfHygieneRecallMonthsDesc:
+      "Used by the Recare worklist and hygiene recall SMS cron. Clinic default is {months} months when unset.",
+    wfHygieneRecallMonthsField: "Months",
+    wfHygieneRecallMonthsInvalid: "Enter a whole number between {min} and {max} months.",
     organizationTitle: "Organization Profile",
     organizationSubtitle: "Update your clinic's primary information.",
     organizationSubtitleReadonly: "Read-only organization details for your clinic.",
@@ -953,7 +985,7 @@ export const messagesEnPh: MessageTree = {
     attentionRule: {
       overdue_invoices: {
         label: "Overdue invoices",
-        description: "Past-due balances on the billing board",
+        description: "Past-due balances on the Collections worklist",
       },
       low_stock: {
         label: "Low stock alerts",
@@ -998,6 +1030,11 @@ export const messagesEnPh: MessageTree = {
       philhealth_pending: {
         label: "PhilHealth pending",
         description: "Claims awaiting submission or payer response",
+      },
+      recare_due: {
+        label: "Recare due",
+        description:
+          "Active patients past hygiene recall interval without a future booking",
       },
     },
   },
@@ -1255,11 +1292,12 @@ export const messagesEnPh: MessageTree = {
     contactLogged: "Contact attempt recorded",
     booked: "Appointment booked from waitlist",
     cancelled: "Waitlist entry cancelled",
+    selectedPatient: "Selected patient",
   },
   recare: {
     eyebrow: "Front desk",
     description:
-      "Patients due for hygiene or recall visits. Book, message, or snooze from one worklist.",
+      "Patients due for hygiene or recall visits. Book or park on the waitlist from one worklist.",
     openWorkflow: "Hygiene recall settings",
     emptyTitle: "No patients due right now",
     emptyDescription:
@@ -1271,6 +1309,10 @@ export const messagesEnPh: MessageTree = {
     openWaitlist: "Open waitlist",
     intervalBadge: "{months}-month recall",
     intervalHint: "Based on last visit + {months}-month hygiene recall interval.",
+    intervalHintDefault:
+      "Based on last visit + clinic default {months}-month hygiene recall (Settings → Workflow).",
+    intervalHintConfigured:
+      "Based on last visit + {months}-month interval from Settings → Workflow.",
     dueCount: "{count} due",
     asOf: "As of {date}",
     lastVisit: "Last visit",
@@ -2132,6 +2174,8 @@ export const messagesTr: MessageTree = {
     attentionTitle: "Dikkat gerektiren",
     attentionClear: "Her şey yolunda — acil bir durum yok.",
     openEncountersStale: "Önceki günlerden açık ziyaretler",
+    recareDue: "Recall zamanı gelenler",
+    attnRecare: "Recall zamanı gelenler",
     subtitleLoading: "Bu şube için bugünün rakamları yükleniyor…",
     subtitleWithStats: "{branch} — bugün {appts} randevu, sırada {queue}, tahsilat {collected}.",
     noCollectionsYet: "henüz tahsilat yok",
@@ -2403,7 +2447,7 @@ export const messagesTr: MessageTree = {
     outputPdaChart: "PDA diş chart",
     outputPdaChartHint: "PDA formatında chart ve yazdırma görünümü",
     outputPerioChart: "Periodontal grafik",
-    outputPerioChartHint: "Etkileşimli perio chart (sırada) ve yazdırma önizlemesi",
+    outputPerioChartHint: "Etkileşimli 6-nokta cep tablosu ve yazdırma önizlemesi",
     outputConsents: "İmzalı onamlar",
     outputConsentsHint: "Onam imzalama ve yasal formlar",
     outputPrescription: "Reçete",
@@ -2417,13 +2461,37 @@ export const messagesTr: MessageTree = {
     perioEyebrow: "Klinik",
     perioTitle: "Periodontal grafik",
     perioDescription:
-      "Bu hasta için etkileşimli probing haritası — tam editör gelene kadar ayrılmış rota.",
-    perioEmptyTitle: "Etkileşimli perio chart sırada",
+      "Bu hasta için 6-nokta cep derinliği ve BOP. Aktif diş chartına kaydeder — yazdırma yalnızca ölçüm varken.",
+    perioEmptyTitle: "Henüz probing derinliği yok",
     perioEmptyDescription:
-      "Bu iskelet hasta perio rotasını ayırır. Resmi probing raporu için yazdırma önizlemesini kullanın; ceb ölçümü bugün diş chartında — burada uydurma klinik ölçüm yok.",
+      "Cep derinliklerini bu sayfada kaydedin. En az bir site kaydedilmeden yazdırma boş kalır — uydurma klinik ölçüm yok.",
     perioOpenPrint: "Yazdırma önizlemesini aç",
     perioOpenChart: "Diş chartını aç",
     perioBackPatient: "Hastaya dön",
+    perioSelectBranchTitle: "Şube seçin",
+    perioSelectBranchDescription:
+      "Periodontal ölçümleri yüklemek veya kaydetmek için aktif klinik şubesini seçin.",
+    perioOrgMissing: "Klinik organizasyonu yüklenemedi. Yeniden deneyin veya tekrar oturum açın.",
+    perioWriteHint:
+      "Cep derinliklerini mm cinsinden girin (0–15). Değişiklikler chart denetim geçmişiyle otomatik kaydolur. Yazdırma tarihleri Asia/Manila kullanır.",
+    perioReadOnlyHint:
+      "Salt okunur görünüm. Probing kaydı için dental chart yazma yetkisi olan bir klinisyene sorun.",
+    perioPrintHonesty:
+      "Yazdırma önizlemesi yalnızca kaydedilmiş probing derinliklerini gösterir — en az bir site girilene kadar boş kalır.",
+    perioPocketTitle: "Periodontal cep tablosu",
+    perioPocketDescription: "6-nokta derinlik (mm) · chart kaydına otomatik kaydeder",
+    perioSyncSaving: "Kaydediliyor…",
+    perioSyncSaved: "Senkron",
+    perioSyncLocal: "Yerel yedek",
+    perioLoadError:
+      "Sunucuyla senkron olunamadı. Varsa yerel yedek gösteriliyor.",
+    perioTeethLabel: "Diş",
+    perioLoading: "Periodontal grafik yükleniyor…",
+    perioNoReadingsTitle: "Henüz probing derinliği yok",
+    perioNoReadingsDescription:
+      "Aşağıya cep derinliklerini girin. En az bir site kaydedilene kadar yazdırma için veri uydurulmaz.",
+    perioDepthAria: "Cep derinliği mm",
+    perioReload: "Sunucudan yeniden yükle",
     tabRecord: "Hasta kaydı",
     tabMedicalHistory: "Medikal geçmiş",
     tabDentalChart: "Diş chartı",
@@ -2732,6 +2800,12 @@ export const messagesTr: MessageTree = {
     saveChanges: "Değişiklikleri Kaydet",
     saving: "Kaydediliyor…",
     workflowSaved: "İş akışı ayarı güncellendi",
+    wfHygieneRecallMonthsTitle: "Hijyen recall aralığı",
+    wfHygieneRecallMonthsLabel: "Hijyen recall arası (ay)",
+    wfHygieneRecallMonthsDesc:
+      "Recare listesi ve hijyen recall SMS cron bu değeri kullanır. Ayarlanmazsa klinik varsayılanı {months} aydır.",
+    wfHygieneRecallMonthsField: "Ay",
+    wfHygieneRecallMonthsInvalid: "{min} ile {max} arasında tam sayı girin.",
     organizationTitle: "Organizasyon Profili",
     organizationSubtitle: "Kliniğinizin temel bilgilerini güncelleyin.",
     organizationSubtitleReadonly: "Kliniğiniz için salt okunur organizasyon bilgileri.",
@@ -2880,7 +2954,7 @@ export const messagesTr: MessageTree = {
     attentionRule: {
       overdue_invoices: {
         label: "Vadesi geçmiş faturalar",
-        description: "Faturalama tahtasındaki gecikmiş bakiyeler",
+        description: "Tahsilat (Collections) iş listesindeki gecikmiş bakiyeler",
       },
       low_stock: {
         label: "Düşük stok uyarıları",
@@ -2925,6 +2999,11 @@ export const messagesTr: MessageTree = {
       philhealth_pending: {
         label: "PhilHealth beklemede",
         description: "Gönderim veya ödeyici yanıtı bekleyen talepler",
+      },
+      recare_due: {
+        label: "Recall zamanı gelenler",
+        description:
+          "Hijyen recall süresini geçmiş ve gelecek randevusu olmayan aktif hastalar",
       },
     },
   },
@@ -3181,11 +3260,12 @@ export const messagesTr: MessageTree = {
     contactLogged: "İletişim kaydı oluşturuldu",
     booked: "Bekleme listesinden randevu oluşturuldu",
     cancelled: "Bekleme listesi kaydı iptal edildi",
+    selectedPatient: "Seçili hasta",
   },
   recare: {
     eyebrow: "Resepsiyon",
     description:
-      "Hijyen veya recall için zamanı gelen hastalar. Tek listeden randevu, mesaj veya erteleme.",
+      "Hijyen veya recall için zamanı gelen hastalar. Tek listeden randevu alın veya bekleme listesine ekleyin.",
     openWorkflow: "Hijyen recall ayarları",
     emptyTitle: "Şu an due hasta yok",
     emptyDescription:
@@ -3197,6 +3277,10 @@ export const messagesTr: MessageTree = {
     openWaitlist: "Bekleme listesini aç",
     intervalBadge: "{months} aylık recall",
     intervalHint: "Son ziyaret + {months} aylık hijyen recall aralığına göre.",
+    intervalHintDefault:
+      "Son ziyaret + klinik varsayılan {months} aylık hijyen recall (Ayarlar → İş akışı).",
+    intervalHintConfigured:
+      "Son ziyaret + Ayarlar → İş akışındaki {months} aylık aralığa göre.",
     dueCount: "{count} hasta zamanı geldi",
     asOf: "{date} itibarıyla",
     lastVisit: "Son ziyaret",
@@ -4126,6 +4210,9 @@ export const messagesFil: MessageTree = {
     viewReportsHub: "Buksan ang Reports Hub",
     attentionTitle: "Kailangan ng atensyon",
     attentionClear: "Clear lahat — walang urgent na item.",
+    openEncountersStale: "Open visits from prior days",
+    recareDue: "Recare due",
+    attnRecare: "Recare due",
     firstRunEyebrow: "Magsimula",
     firstRunTitle: "Tatlong hakbang papunta sa unang pasyente",
     firstRunSubtitle:
@@ -4381,7 +4468,7 @@ export const messagesFil: MessageTree = {
     outputPdaChart: "PDA dental chart",
     outputPdaChartHint: "PDA-format chart at print view",
     outputPerioChart: "Periodontal chart",
-    outputPerioChartHint: "Interactive perio chart (coming next) at print preview",
+    outputPerioChartHint: "Interactive 6-site pocket chart at print preview",
     outputConsents: "Signed consents",
     outputConsentsHint: "Consent signing at legal forms",
     outputPrescription: "Prescription",
@@ -4395,13 +4482,38 @@ export const messagesFil: MessageTree = {
     perioEyebrow: "Clinical",
     perioTitle: "Periodontal chart",
     perioDescription:
-      "Interactive probing map para sa patient na ito — reserved route hanggang sa dumating ang full editor.",
-    perioEmptyTitle: "Interactive perio chart coming next",
+      "Six-site pocket depths at BOP para sa patient na ito. Sina-save sa active dental chart — print kapag may measurements lang.",
+    perioEmptyTitle: "Wala pang probing depths",
     perioEmptyDescription:
-      "This skeleton reserves the patient perio route. Gamitin ang print preview para sa official probing report, o buksan ang dental chart kung nasaan ang pocket charting ngayon — walang invented clinical measurements dito.",
+      "I-record ang pocket depths sa page na ito. Mananatiling empty ang print hanggang may na-save na site — walang invented clinical measurements.",
     perioOpenPrint: "Open print preview",
     perioOpenChart: "Open dental chart",
     perioBackPatient: "Back to patient",
+    perioSelectBranchTitle: "Select a branch",
+    perioSelectBranchDescription:
+      "Pumili ng active clinic branch para i-load o i-save ang periodontal measurements.",
+    perioOrgMissing: "Hindi ma-load ang clinic organization. Subukan ulit o mag-sign in muli.",
+    perioWriteHint:
+      "Ilagay ang pocket depths sa mm (0–15). Auto-save with chart audit history. Asia/Manila ang oras sa print dates.",
+    perioReadOnlyHint:
+      "Read-only view. Humingi sa clinician na may dental chart write access para mag-record ng probing depths.",
+    perioPrintHonesty:
+      "Ang print preview ay nagpapakita lang ng saved probing depths — empty ito hanggang may na-record na site.",
+    perioPocketTitle: "Periodontal pocket chart",
+    perioPocketDescription: "6-site depths (mm) · auto-saves sa chart record",
+    perioSyncSaving: "Saving…",
+    perioSyncSaved: "Synced",
+    perioSyncLocal: "Local backup",
+    perioLoadError:
+      "Hindi ma-sync sa server. Ipinapakita ang local backup kung available.",
+    perioTeethLabel: "Teeth",
+    perioLoading: "Loading periodontal chart…",
+    perioNoReadingsTitle: "Wala pang probing depths",
+    perioNoReadingsDescription:
+      "I-record ang pocket depths sa ibaba. Walang invented data para sa print hanggang may na-save na site.",
+    perioDepthAria: "Pocket depth mm",
+    perioReload: "Reload from server",
+
   },
   appointments: {
     title: "Mga appointment",
@@ -4566,6 +4678,13 @@ export const messagesFil: MessageTree = {
     consentActive: "Active",
     saveChanges: "I-save ang changes",
     saving: "Nagse-save…",
+    workflowSaved: "Na-update ang workflow setting",
+    wfHygieneRecallMonthsTitle: "Hygiene recall interval",
+    wfHygieneRecallMonthsLabel: "Buwan sa pagitan ng hygiene recall",
+    wfHygieneRecallMonthsDesc:
+      "Ginagamit ng Recare worklist at hygiene recall SMS cron. Default ng clinic ay {months} buwan kung walang setting.",
+    wfHygieneRecallMonthsField: "Buwan",
+    wfHygieneRecallMonthsInvalid: "Maglagay ng buong numero mula {min} hanggang {max}.",
     organizationTitle: "Organization Profile",
     organizationSubtitle: "I-update ang primary info ng clinic.",
     organizationSubtitleReadonly: "Read-only organization details para sa clinic.",
@@ -4623,7 +4742,7 @@ export const messagesFil: MessageTree = {
     attentionRule: {
       overdue_invoices: {
         label: "Overdue invoices",
-        description: "Past-due balances sa billing board",
+        description: "Past-due balances sa Collections worklist",
       },
       low_stock: {
         label: "Low stock alerts",
@@ -4668,6 +4787,11 @@ export const messagesFil: MessageTree = {
       philhealth_pending: {
         label: "PhilHealth pending",
         description: "Claims na naghihintay ng submission o payer response",
+      },
+      recare_due: {
+        label: "Recare due",
+        description:
+          "Active patients na lampas sa hygiene recall interval at walang future booking",
       },
     },
   },
@@ -4796,11 +4920,12 @@ export const messagesFil: MessageTree = {
     addFirst: "Magdagdag ng unang entry",
     ctaAppointments: "Appointments",
     slotAlertSent: "Naipadala ang slot alert",
+    selectedPatient: "Selected patient",
   },
   recare: {
     eyebrow: "Front desk",
     description:
-      "Mga pasyenteng due para sa hygiene o recall visit. Mag-book, mag-message, o i-snooze mula sa isang worklist.",
+      "Mga pasyenteng due para sa hygiene o recall visit. Mag-book o i-park sa waitlist mula sa isang worklist.",
     openWorkflow: "Mga setting ng hygiene recall",
     emptyTitle: "Walang due na pasyente ngayon",
     emptyDescription:
@@ -4812,6 +4937,10 @@ export const messagesFil: MessageTree = {
     openWaitlist: "Buksan ang waitlist",
     intervalBadge: "{months}-buwang recall",
     intervalHint: "Batay sa huling bisita + {months}-buwang hygiene recall interval.",
+    intervalHintDefault:
+      "Batay sa huling bisita + clinic default {months}-buwang hygiene recall (Settings → Workflow).",
+    intervalHintConfigured:
+      "Batay sa huling bisita + {months}-buwang interval mula sa Settings → Workflow.",
     dueCount: "{count} ang due",
     asOf: "Hanggang {date}",
     lastVisit: "Huling bisita",

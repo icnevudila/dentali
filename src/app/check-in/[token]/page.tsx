@@ -16,7 +16,8 @@ export default function PublicCheckInPage() {
   const { token } = useRouteParams<{ token: string }>()
   const [loading, setLoading] = React.useState(true)
   const [redeeming, setRedeeming] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
+  const [loadError, setLoadError] = React.useState<string | null>(null)
+  const [redeemError, setRedeemError] = React.useState<string | null>(null)
   const [preview, setPreview] = React.useState<CheckInTokenPreview | null>(null)
   const [done, setDone] = React.useState<{
     displayCode?: string
@@ -27,7 +28,7 @@ export default function PublicCheckInPage() {
     if (!token) return
     void fetchCheckInByToken(token).then(({ data, error: err }) => {
       if (err || !data) {
-        setError(checkInPublicErrorMessage(err ?? "invalid"))
+        setLoadError(checkInPublicErrorMessage(err ?? "invalid"))
         setLoading(false)
         return
       }
@@ -39,11 +40,11 @@ export default function PublicCheckInPage() {
   const handleCheckIn = async () => {
     if (!token) return
     setRedeeming(true)
-    setError(null)
+    setRedeemError(null)
     const { data, error: err } = await redeemCheckInToken(token)
     setRedeeming(false)
     if (err || !data) {
-      setError(checkInPublicErrorMessage(err ?? "redeem_failed"))
+      setRedeemError(checkInPublicErrorMessage(err ?? "redeem_failed"))
       return
     }
     setDone({
@@ -79,12 +80,12 @@ export default function PublicCheckInPage() {
     )
   }
 
-  if (error || !preview) {
+  if (loadError || !preview) {
     return (
       <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-3 p-6 text-center">
         <QrCode className="mx-auto h-10 w-10 text-neutral-400" aria-hidden />
         <h1 className="text-lg font-semibold text-neutral-900">Check-in unavailable</h1>
-        <p className="text-sm text-neutral-600">{error ?? checkInPublicErrorMessage("invalid")}</p>
+        <p className="text-sm text-neutral-600">{loadError ?? checkInPublicErrorMessage("invalid")}</p>
         <p className="text-xs text-neutral-500">
           Please see the front desk — they can check you in on the queue board.
         </p>
@@ -119,6 +120,15 @@ export default function PublicCheckInPage() {
         <p className="mt-3 text-sm text-neutral-500">Appointment</p>
         <p className="text-sm font-medium text-neutral-800">{when}</p>
       </div>
+
+      {redeemError ? (
+        <p
+          role="alert"
+          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+        >
+          {redeemError}
+        </p>
+      ) : null}
 
       <Button
         type="button"
