@@ -7,7 +7,6 @@ import {
 } from "@/lib/odontogram/periodontal-types"
 import { createClient } from "@/lib/supabase/client"
 import { fetchBranchContext } from "@/lib/org/branch-context-service"
-import { loadPeriodontalChart } from "@/lib/odontogram/periodontal-storage"
 
 export type PerioToothSummary = {
   tooth: number
@@ -104,35 +103,11 @@ export async function fetchPerioPrintData(
   ])
 
   if (patientError) return { data: null, error: patientError.message }
-  if (perioResult.error) {
-    // Fall back to local draft chart if server fails
-    const local = loadPeriodontalChart(patientId, branchId)
-    const alerts = countPerioAlerts(local)
-    if (alerts.teethRecorded === 0) {
-      return { data: null, error: perioResult.error }
-    }
-    const summary = summarizeChart(local)
-    return {
-      data: {
-        patient_name: formatPatientName(patient),
-        clinic_name: branchResult.data?.branch_name?.trim() || "Clinic",
-        chart: local,
-        teeth: summary.teeth,
-        avgPocketMm: summary.avgPocketMm,
-        bopSiteCount: summary.bopSites,
-        bopPercent:
-          summary.totalSites > 0
-            ? Math.round((summary.bopSites / summary.totalSites) * 1000) / 10
-            : null,
-        pockets4Plus: alerts.pockets4Plus,
-        teethRecorded: alerts.teethRecorded,
-      },
-      error: null,
-    }
-  }
+  // Print only server-saved measurements — never invent or print local-only drafts.
+  if (perioResult.error) return { data: null, error: perioResult.error }
 
   const chart = perioResult.data?.data
-  if (!chart) return { data: null, error: null }
+  if (!chart || !perioResult.data?.chart_id) return { data: null, error: null }
 
   const alerts = countPerioAlerts(chart)
   if (alerts.teethRecorded === 0) return { data: null, error: null }

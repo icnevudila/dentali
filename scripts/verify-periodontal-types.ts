@@ -36,6 +36,19 @@ if (alerts.pockets4Plus !== 2 || alerts.bopSites !== 1 || alerts.teethRecorded !
   failed += 1
 }
 
+// Snapshot extract shape used by audit restore UI (kind + data wrapper)
+const auditAfter = { kind: "periodontal", data: stored }
+if (auditAfter.kind !== "periodontal" || countPerioAlerts(auditAfter.data).teethRecorded !== 2) {
+  console.error("audit snapshot shape invalid")
+  failed += 1
+}
+
+// Print honesty: empty chart must not fabricate teeth
+if (countPerioAlerts(emptyPeriodontalChart()).teethRecorded !== 0) {
+  console.error("print honesty: empty chart must stay empty")
+  failed += 1
+}
+
 if (failed > 0) {
   console.error(`verify-periodontal-types: ${failed} failure(s)`)
   process.exit(1)

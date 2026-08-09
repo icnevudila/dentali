@@ -1,26 +1,21 @@
 "use client"
 
-import * as React from "react"
-import { ChevronDown } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import Link from "next/link"
+import { Activity, ExternalLink } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { PeriodontalPocketPanel } from "./PeriodontalPocketPanel"
-import { PeriodontalScreeningPanel } from "./PeriodontalScreeningPanel"
+import { useLocale } from "@/hooks/use-locale"
 
-/** Periodontal module: collapsible screening + 6-site pocket grid */
+/**
+ * Chart-page entry to the dedicated perio route.
+ * Avoids embedding a second editable pocket grid next to `/patients/[id]/perio`.
+ */
 export function PeriodontalChartPanel({
   patientId,
-  branchId,
-  organizationId,
-  actorUserId,
-  canWrite,
-  selectedTooth,
-  onSelectTooth,
-  defaultCollapsed = true,
 }: {
   patientId: string
-  branchId: string
+  /** @deprecated unused — kept for call-site compatibility */
+  branchId?: string
   organizationId?: string | null
   actorUserId?: string | null
   canWrite?: boolean
@@ -28,47 +23,30 @@ export function PeriodontalChartPanel({
   onSelectTooth?: (tooth: number) => void
   defaultCollapsed?: boolean
 }) {
-  const [collapsed, setCollapsed] = React.useState(defaultCollapsed)
+  const { t } = useLocale()
 
   return (
     <Card data-testid="periodontal-chart-panel" className="overflow-hidden">
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <CardTitle className="text-sm">Periodontics</CardTitle>
-            <CardDescription className="text-xs">Pocket depths &amp; screening</CardDescription>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 shrink-0 gap-1 text-xs"
-            onClick={() => setCollapsed((c) => !c)}
-            aria-expanded={!collapsed}
-          >
-            {collapsed ? "Expand" : "Collapse"}
-            <ChevronDown className={cn("h-4 w-4 transition-transform", !collapsed && "rotate-180")} />
-          </Button>
-        </div>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Activity className="h-4 w-4 text-neutral-500" />
+          {t("patients.perioChartLinkTitle", "Periodontics")}
+        </CardTitle>
+        <CardDescription className="text-xs">
+          {t(
+            "patients.perioChartLinkDescription",
+            "Pocket depths and BOP live on the dedicated periodontal chart — open it to edit or restore history."
+          )}
+        </CardDescription>
       </CardHeader>
-      {collapsed ? (
-        <CardContent className="pt-0 pb-4 text-xs text-neutral-500">
-          Periodontal chart collapsed — expand to record pocket depths.
-        </CardContent>
-      ) : (
-        <CardContent className="space-y-4 border-t pt-4">
-          <PeriodontalPocketPanel
-            patientId={patientId}
-            branchId={branchId}
-            organizationId={organizationId}
-            actorUserId={actorUserId}
-            canWrite={canWrite}
-            selectedTooth={selectedTooth}
-            onSelectTooth={onSelectTooth}
-          />
-          <PeriodontalScreeningPanel patientId={patientId} />
-        </CardContent>
-      )}
+      <CardContent className="pt-0 pb-4">
+        <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
+          <Link href={`/patients/${patientId}/perio`}>
+            {t("patients.perioChartLinkCta", "Open periodontal chart")}
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        </Button>
+      </CardContent>
     </Card>
   )
 }

@@ -522,6 +522,27 @@ export const messagesEnPh: MessageTree = {
       "Record pocket depths below. Nothing is invented for print until you save at least one site.",
     perioDepthAria: "Pocket depth mm",
     perioReload: "Reload from server",
+    perioAuditTitle: "Periodontal history",
+    perioAuditDescription:
+      "Previous saved snapshots from chart audit. Restore replaces the current probing chart.",
+    perioAuditLoadError: "Could not load periodontal history. Try again.",
+    perioAuditRestoreError: "Restore failed. Check write permission and try again.",
+    perioAuditRpcMissing:
+      "Restore is not available until the clinic database migration is applied.",
+    perioAuditEmptyTitle: "No periodontal snapshots yet",
+    perioAuditEmptyDescription:
+      "Saved probing changes appear here after the first sync to the dental chart.",
+    perioAuditActionRestore: "Restored",
+    perioAuditActionInsert: "Created",
+    perioAuditActionUpdate: "Updated",
+    perioAuditSystemActor: "System",
+    perioAuditTeethCount: "{count} teeth recorded",
+    perioAuditRestoring: "Restoring…",
+    perioAuditRestore: "Restore",
+    perioChartLinkTitle: "Periodontics",
+    perioChartLinkDescription:
+      "Pocket depths and BOP live on the dedicated periodontal chart — open it to edit or restore history.",
+    perioChartLinkCta: "Open periodontal chart",
     tabRecord: "Patient Record",
     tabMedicalHistory: "Medical History",
     tabDentalChart: "Dental Chart",
@@ -2528,6 +2549,27 @@ export const messagesTr: MessageTree = {
       "Aşağıya cep derinliklerini girin. En az bir site kaydedilene kadar yazdırma için veri uydurulmaz.",
     perioDepthAria: "Cep derinliği mm",
     perioReload: "Sunucudan yeniden yükle",
+    perioAuditTitle: "Periodontal geçmiş",
+    perioAuditDescription:
+      "Chart denetiminden kaydedilmiş önceki anlık görüntüler. Geri yükleme mevcut probing chartını değiştirir.",
+    perioAuditLoadError: "Periodontal geçmiş yüklenemedi. Yeniden deneyin.",
+    perioAuditRestoreError: "Geri yükleme başarısız. Yazma yetkisini kontrol edip yeniden deneyin.",
+    perioAuditRpcMissing:
+      "Klinik veritabanı migration’ı uygulanana kadar geri yükleme kullanılamaz.",
+    perioAuditEmptyTitle: "Henüz periodontal anlık görüntü yok",
+    perioAuditEmptyDescription:
+      "Kaydedilen probing değişiklikleri ilk senkron sonrası burada görünür.",
+    perioAuditActionRestore: "Geri yüklendi",
+    perioAuditActionInsert: "Oluşturuldu",
+    perioAuditActionUpdate: "Güncellendi",
+    perioAuditSystemActor: "Sistem",
+    perioAuditTeethCount: "{count} diş kayıtlı",
+    perioAuditRestoring: "Geri yükleniyor…",
+    perioAuditRestore: "Geri yükle",
+    perioChartLinkTitle: "Periodonti",
+    perioChartLinkDescription:
+      "Cep derinlikleri ve BOP ayrı periodontal grafik sayfasında — düzenlemek veya geçmişi geri yüklemek için açın.",
+    perioChartLinkCta: "Periodontal grafiği aç",
     tabRecord: "Hasta kaydı",
     tabMedicalHistory: "Medikal geçmiş",
     tabDentalChart: "Diş chartı",
@@ -4594,6 +4636,27 @@ export const messagesFil: MessageTree = {
       "I-record ang pocket depths sa ibaba. Walang invented data para sa print hanggang may na-save na site.",
     perioDepthAria: "Pocket depth mm",
     perioReload: "Reload from server",
+    perioAuditTitle: "Periodontal history",
+    perioAuditDescription:
+      "Mga dating saved snapshots mula sa chart audit. Ang restore ay papalitan ang kasalukuyang probing chart.",
+    perioAuditLoadError: "Hindi ma-load ang periodontal history. Subukan ulit.",
+    perioAuditRestoreError: "Hindi na-restore. Tingnan ang write permission at subukan ulit.",
+    perioAuditRpcMissing:
+      "Hindi available ang restore hanggang ma-apply ang clinic database migration.",
+    perioAuditEmptyTitle: "Wala pang periodontal snapshots",
+    perioAuditEmptyDescription:
+      "Lalabas dito ang saved probing changes pagkatapos ng unang sync sa dental chart.",
+    perioAuditActionRestore: "Restored",
+    perioAuditActionInsert: "Created",
+    perioAuditActionUpdate: "Updated",
+    perioAuditSystemActor: "System",
+    perioAuditTeethCount: "{count} teeth recorded",
+    perioAuditRestoring: "Restoring…",
+    perioAuditRestore: "Restore",
+    perioChartLinkTitle: "Periodontics",
+    perioChartLinkDescription:
+      "Ang pocket depths at BOP ay nasa dedicated periodontal chart — buksan para mag-edit o mag-restore ng history.",
+    perioChartLinkCta: "Open periodontal chart",
 
   },
   appointments: {
