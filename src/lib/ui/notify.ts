@@ -10,6 +10,10 @@ export const TOASTER_OPTIONS = {
 type ToastExtras = {
   description?: string
   duration?: number
+  action?: {
+    label: string
+    onClick: () => void
+  }
 }
 
 type ConfirmOptions = {
@@ -24,6 +28,12 @@ export const notify = {
     return toast.success(message, {
       description: extras?.description,
       duration: extras?.duration ?? TOASTER_OPTIONS.duration,
+      action: extras?.action
+        ? {
+            label: extras.action.label,
+            onClick: extras.action.onClick,
+          }
+        : undefined,
     })
   },
 

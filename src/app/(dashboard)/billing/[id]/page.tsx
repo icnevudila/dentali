@@ -6,7 +6,7 @@ import { ArrowLeft, Download, ExternalLink, MessageCircle, Printer, Receipt, X, 
 import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
-import { useParams, useSearchParams } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { getInvoice, recordInvoicePayment, voidInvoice, deleteInvoicePayment, updateInvoiceLineItem, addInvoiceLineItem, updateInvoiceDiscount } from "@/lib/billing/invoice-service"
@@ -36,6 +36,7 @@ import { logManualWhatsAppNotification } from "@/lib/notifications/notification-
 import { buildWhatsAppSendUrl } from "@/lib/notifications/whatsapp"
 import { rememberVisitPatientContext } from "@/lib/patients/visit-patient-context"
 import { notifyVisitAutoClosed } from "@/lib/billing/notify-visit-auto-closed"
+import { COMMISSION_LEDGER_HREF } from "@/lib/billing/commission-ledger-service"
 import {
   centavosToInputValue,
   centavosToPesoMajor,
@@ -55,6 +56,7 @@ export default function InvoiceDetailPage() {
 function InvoiceDetailPageContent() {
   const params = useParams()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const invoiceId = params.id as string
   const focusReminder = searchParams.get("focus") === "reminder"
   const { activeBranch } = useBranch()
@@ -335,7 +337,18 @@ function InvoiceDetailPageContent() {
             "billing.paymentSuccessCommissionLogged",
             "Payment recorded. Provider commission was logged to the ledger."
           )
-        : t("billing.paymentSuccess", "Payment recorded.")
+        : t("billing.paymentSuccess", "Payment recorded."),
+      (data?.commission_amount ?? 0) > 0
+        ? {
+            action: {
+              label: t(
+                "billing.paymentSuccessViewCommissionLedger",
+                "View commission ledger"
+              ),
+              onClick: () => router.push(COMMISSION_LEDGER_HREF),
+            },
+          }
+        : undefined
     )
 
     if (data?.encounter_closed) {

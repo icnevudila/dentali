@@ -9,6 +9,7 @@ import {
   FileCheck2,
   FlaskConical,
   Globe,
+  HandCoins,
   Home,
   Inbox,
   ListOrdered,
@@ -55,7 +56,8 @@ function billingInvoicesActive(pathname: string) {
   return (
     !pathname.startsWith("/billing/hmo") &&
     !pathname.startsWith("/billing/philhealth") &&
-    !pathname.startsWith("/billing/collections")
+    !pathname.startsWith("/billing/collections") &&
+    !pathname.startsWith("/billing/commissions")
   )
 }
 
@@ -223,6 +225,13 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         icon: Wallet,
         permission: PERMISSIONS.BILLING_READ,
       },
+      {
+        nameKey: "nav.commissions",
+        fallback: "Commissions",
+        href: "/billing/commissions",
+        icon: HandCoins,
+        permission: PERMISSIONS.BILLING_READ,
+      },
     ],
   },
   {
@@ -352,6 +361,12 @@ export const BILLING_SUB_NAV = [
     key: "billing.navCollections",
     fallback: "Collections",
     href: "/billing/collections",
+    permission: PERMISSIONS.BILLING_READ,
+  },
+  {
+    key: "billing.navCommissions",
+    fallback: "Commissions",
+    href: "/billing/commissions",
     permission: PERMISSIONS.BILLING_READ,
   },
 ] as const
