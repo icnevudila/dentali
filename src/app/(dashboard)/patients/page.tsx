@@ -9,14 +9,16 @@ import { PatientFilterBar } from "@/components/patients/PatientFilterBar"
 import { PatientIntakeDraftPanel } from "@/components/patients/PatientIntakeDraftPanel"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
-import { searchPatients } from "@/lib/patients/patient-service"
+import { searchPatients, searchPatientsWithPendingConsents } from "@/lib/patients/patient-service"
 import { fetchOdontogramFindingsForPatients } from "@/lib/odontogram/dental-chart-service"
 import type { ToothFinding } from "@/lib/types/dental"
 import {
   countActiveFilters,
   DEFAULT_PATIENT_LIST_FILTERS,
   filtersToSearchParams,
+  parsePatientAttentionFilter,
   parsePatientListFilters,
+  type PatientAttentionFilter,
   type PatientListFilters,
 } from "@/lib/patients/patient-list-filters"
 import { useBranch } from "@/hooks/use-branch"
@@ -91,8 +93,9 @@ function PatientsPageContent() {
 
   const urlQuery = searchParams.get("q") ?? ""
   const urlPage = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1)
-  const attentionConsents = searchParams.get("attention") === "consents"
-  const attentionIntake = searchParams.get("attention") === "intake"
+  const attentionFilter = parsePatientAttentionFilter(searchParams)
+  const attentionConsents = attentionFilter === "consents"
+  const attentionIntake = attentionFilter === "intake"
   const intakeSourceParam = searchParams.get("intakeSource")
   const intakeSourceFilter: IntakeSourceFilter =
     intakeSourceParam === "kiosk" ||
@@ -124,12 +127,33 @@ function PatientsPageContent() {
   const isSearching = query !== debouncedQuery || (loading && debouncedQuery.length > 0)
 
   const syncUrl = React.useCallback(
-    (nextQuery: string, nextPage: number, nextFilters: PatientListFilters) => {
-      const params = filtersToSearchParams(nextFilters, nextQuery, nextPage)
+    (
+      nextQuery: string,
+      nextPage: number,
+      nextFilters: PatientListFilters,
+      extras?: {
+        attention?: PatientAttentionFilter | null
+        intakeSource?: IntakeSourceFilter | null
+      }
+    ) => {
+      const attention =
+        extras && "attention" in extras ? extras.attention ?? null : attentionFilter
+      const intakeSource =
+        extras && "intakeSource" in extras
+          ? extras.intakeSource === "all" || extras.intakeSource == null
+            ? null
+            : extras.intakeSource
+          : intakeSourceFilter === "all"
+            ? null
+            : intakeSourceFilter
+      const params = filtersToSearchParams(nextFilters, nextQuery, nextPage, {
+        attention,
+        intakeSource,
+      })
       const qs = params.toString()
       router.replace(qs ? `/patients?${qs}` : "/patients", { scroll: false })
     },
-    [router]
+    [router, attentionFilter, intakeSourceFilter]
   )
 
   React.useEffect(() => {
@@ -162,9 +186,9 @@ function PatientsPageContent() {
     setQuery("")
     setFilters(DEFAULT_PATIENT_LIST_FILTERS)
     setPage(1)
-    syncUrl("", 1, DEFAULT_PATIENT_LIST_FILTERS)
+    syncUrl("", 1, DEFAULT_PATIENT_LIST_FILTERS, { attention: null, intakeSource: null })
   }, [syncUrl])
-  const registryFiltersActive = countActiveFilters(filters) > 0
+  const registryFiltersActive = countActiveFilters(filters, attentionFilter) > 0
 
   const loadPatients = React.useCallback(async () => {
     if (!activeBranch) {
@@ -175,7 +199,8 @@ function PatientsPageContent() {
     }
     setLoading(true)
     setError(null)
-    const result = await searchPatients(debouncedQuery, activeBranch.id, {
+    const searchFn = attentionConsents ? searchPatientsWithPendingConsents : searchPatients
+    const result = await searchFn(debouncedQuery, activeBranch.id, {
       page,
       pageSize: PAGE_SIZE,
       filters,
@@ -193,7 +218,7 @@ function PatientsPageContent() {
     } else {
       setChartFindingsByPatient({})
     }
-  }, [activeBranch, debouncedQuery, page, filters])
+  }, [activeBranch, debouncedQuery, page, filters, attentionConsents])
 
   React.useEffect(() => {
     const id = window.setTimeout(() => {
@@ -220,20 +245,21 @@ function PatientsPageContent() {
   }, [])
 
   const scrollToIntakePanel = React.useCallback((filter: IntakeSourceFilter = "all") => {
-    const params = new URLSearchParams(searchParams.toString())
-    if (filter === "all") params.delete("intakeSource")
-    else params.set("intakeSource", filter)
-    const qs = params.toString()
-    router.replace(qs ? `/patients?${qs}` : "/patients", { scroll: false })
+    syncUrl(debouncedQuery, page, filters, {
+      attention: "intake",
+      intakeSource: filter,
+    })
     requestAnimationFrame(() => {
       document.getElementById("pending-intake-panel")?.scrollIntoView({ behavior: "smooth", block: "start" })
     })
-  }, [router, searchParams])
+  }, [syncUrl, debouncedQuery, page, filters])
 
   React.useEffect(() => {
     if (!attentionIntake) return
-    scrollToIntakePanel("all")
-  }, [attentionIntake, scrollToIntakePanel])
+    requestAnimationFrame(() => {
+      document.getElementById("pending-intake-panel")?.scrollIntoView({ behavior: "smooth", block: "start" })
+    })
+  }, [attentionIntake])
 
   const handleIntakeCountsChange = React.useCallback((counts: IntakeDraftCounts) => {
     setIntakeCounts(counts)
@@ -252,9 +278,11 @@ function PatientsPageContent() {
     {
       label: t("patients.metricPage", "This page"),
       value: loading && hasActiveBranch ? "—" : patients.length,
-      hint: debouncedQuery
-        ? t("patients.metricFiltered", "Matching search")
-        : t("patients.metricAll", "All records"),
+      hint: attentionConsents
+        ? t("patients.metricPendingConsents", "Pending consents filter")
+        : debouncedQuery
+          ? t("patients.metricFiltered", "Matching search")
+          : t("patients.metricAll", "All records"),
     },
     ...(pendingIntakeCount > 0
       ? [
@@ -358,6 +386,16 @@ function PatientsPageContent() {
                   {filters.status}
                 </Badge>
               ) : null}
+              {attentionConsents ? (
+                <Badge variant="warning" className="font-normal">
+                  {t("patients.attentionConsentsBadge", "Pending consents")}
+                </Badge>
+              ) : null}
+              {attentionIntake ? (
+                <Badge variant="warning" className="font-normal">
+                  {t("patients.attentionIntakeBadge", "Pending intake")}
+                </Badge>
+              ) : null}
             </div>
           ) : null}
 
@@ -367,7 +405,7 @@ function PatientsPageContent() {
               <p className="mt-1 text-amber-900/80">
                 {t(
                   "patients.attentionConsentsHint",
-                  "Open a patient profile → Consents tab to collect or follow up on unsigned forms."
+                  "Showing patients with unsigned consent forms. Open a profile → Consents to collect signatures."
                 )}
               </p>
               <Button variant="outline" size="sm" className="mt-2" asChild>
@@ -384,7 +422,7 @@ function PatientsPageContent() {
               <p className="mt-1 text-amber-900/80">
                 {t(
                   "patients.attentionIntakeHint",
-                  "Review kiosk and portal registrations below before check-in."
+                  "Review kiosk and portal registrations in the intake panel below before check-in."
                 )}
               </p>
               <Button variant="outline" size="sm" className="mt-2" asChild>
@@ -437,7 +475,10 @@ function PatientsPageContent() {
           </div>
 
           {activeBranch ? (
-            <CollapsibleBelowFold summary={t("patients.registryMetricsToggle", "Registry metrics & intake")}>
+            <CollapsibleBelowFold
+              summary={t("patients.registryMetricsToggle", "Registry metrics & intake")}
+              defaultOpen={attentionIntake}
+            >
               <div className="space-y-4">
                 <MetricStrip items={metricItems} className="lg:grid-cols-3 xl:grid-cols-4" />
                 <PatientIntakeDraftPanel
