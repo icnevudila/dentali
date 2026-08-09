@@ -12,8 +12,7 @@ type EmptyStateProps = {
 
 /**
  * Shared empty-state for dashboard modules.
- * Matches light clinic chrome (ContentPanel / waitlist / billing) —
- * no dark-mode navy blotches on light pages.
+ * Always light clinic chrome — never OS-dark navy blotches.
  */
 export function EmptyState({
   icon: Icon,
@@ -24,8 +23,9 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div
+      data-empty-state="light"
       className={cn(
-        "flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-neutral-200 bg-neutral-50/60 px-6 py-14 text-center animate-fade-rise",
+        "flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-neutral-200 bg-neutral-50 px-6 py-14 text-center text-neutral-700 animate-fade-rise",
         className
       )}
     >
@@ -35,7 +35,7 @@ export function EmptyState({
         </div>
       ) : null}
       <div className="max-w-md space-y-1">
-        <h3 className="text-sm font-medium text-neutral-700">{title}</h3>
+        <h3 className="text-sm font-medium text-neutral-800">{title}</h3>
         {description ? <p className="text-sm text-neutral-500">{description}</p> : null}
       </div>
       {action ? <div className="mt-2">{action}</div> : null}
