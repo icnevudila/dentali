@@ -169,3 +169,86 @@ export function recareWaitlistHref(patientId: string, displayName: string): stri
   })
   return `/waitlist?${params.toString()}`
 }
+
+export const RECARE_SNOOZE_DAY_OPTIONS = [7, 14, 30] as const
+
+export type RecareSnoozeDays = (typeof RECARE_SNOOZE_DAY_OPTIONS)[number]
+
+export type RecareSnoozeResult = {
+  patient_id: string
+  branch_id: string
+  days: number
+  snoozed_until: string
+  as_of_date: string
+}
+
+/**
+ * Hide a due patient from the recare worklist for N days (1–90).
+ * Backend enforces appointments.write + audit (no PHI names in logs).
+ */
+export async function snoozeRecarePatient(
+  branchId: string,
+  patientId: string,
+  days: number
+): Promise<{ data: RecareSnoozeResult | null; error: string | null }> {
+  if (!branchId || !patientId) {
+    return { data: null, error: "Branch and patient are required" }
+  }
+  const snoozeDays = Math.trunc(days)
+  if (snoozeDays < 1 || snoozeDays > 90) {
+    return { data: null, error: "Snooze days must be between 1 and 90" }
+  }
+
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("snooze_recare_patient", {
+    p_branch_id: branchId,
+    p_patient_id: patientId,
+    p_days: snoozeDays,
+  })
+
+  if (error) {
+    return { data: null, error: error.message }
+  }
+
+  const payload = (data ?? {}) as Record<string, unknown>
+  const until = asString(payload.snoozed_until)
+  const asOf = asString(payload.as_of_date)
+  if (!until || !asOf) {
+    return { data: null, error: "Unexpected snooze response" }
+  }
+
+  return {
+    data: {
+      patient_id: asString(payload.patient_id) ?? patientId,
+      branch_id: asString(payload.branch_id) ?? branchId,
+      days: asNumber(payload.days) ?? snoozeDays,
+      snoozed_until: until,
+      as_of_date: asOf,
+    },
+    error: null,
+  }
+}
+
+/**
+ * Clear recare snooze so the patient can reappear on the due list.
+ * Backend enforces appointments.write + audit.
+ */
+export async function unsnoozeRecarePatient(
+  branchId: string,
+  patientId: string
+): Promise<{ error: string | null }> {
+  if (!branchId || !patientId) {
+    return { error: "Branch and patient are required" }
+  }
+
+  const supabase = createClient()
+  const { error } = await supabase.rpc("unsnooze_recare_patient", {
+    p_branch_id: branchId,
+    p_patient_id: patientId,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+  return { error: null }
+}
