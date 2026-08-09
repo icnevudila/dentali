@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/client"
 import { toDateKey } from "@/lib/appointments/week-calendar"
 import type { DayBucket } from "@/lib/reports/date-buckets"
 import type { StatusSlice } from "@/lib/reports/reports-service"
+import { isNotWiredWorkflowSettingKey } from "@/lib/settings/workflow-rules-ui"
 
 export type OwnerAnalytics = {
   periodDays: number
@@ -314,6 +315,14 @@ export async function updateWorkflowSettings(
   branchId: string,
   patch: WorkflowSettingsMap
 ): Promise<{ data: WorkflowSettingsMap | null; error: string | null }> {
+  const blocked = Object.keys(patch).filter(isNotWiredWorkflowSettingKey)
+  if (blocked.length > 0) {
+    return {
+      data: null,
+      error:
+        "This workflow setting is not enforced yet and cannot be toggled as live.",
+    }
+  }
   const supabase = createClient()
   const { data, error } = await supabase.rpc("upsert_branch_workflow_settings", {
     p_branch_id: branchId,
