@@ -62,7 +62,7 @@ const allPermissions = new Set<string>([
 
 /** Contract: attention deep-links must stay aligned with destination pages */
 const EXPECTED_HREFS: Record<string, string> = {
-  overdue_invoices: "/billing/collections",
+  overdue_invoices: "/billing/collections?focus=overdue",
   low_stock: "/inventory?alerts=1",
   pending_consents: "/patients?attention=consents",
   pending_intake_drafts: "/patients?attention=intake",
