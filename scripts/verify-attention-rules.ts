@@ -15,6 +15,12 @@ import {
 import type { AttentionLabels } from "@/lib/dashboard/attention-items"
 import { getMessages, type MessageTree } from "@/lib/i18n/messages"
 import type { AppLocale } from "@/lib/i18n/config"
+import {
+  DEFAULT_PATIENT_LIST_FILTERS,
+  countActiveFilters,
+  filtersToSearchParams,
+  parsePatientAttentionFilter,
+} from "@/lib/patients/patient-list-filters"
 
 const labels: AttentionLabels = {
   pendingConsents: "Pending consents",
@@ -95,6 +101,18 @@ const ATTENTION_PANEL_I18N_KEYS = [
   "dashboard.openEncountersStale",
   "dashboard.openQueue",
   "dashboard.recareDue",
+] as const
+
+const PATIENTS_ATTENTION_I18N_KEYS = [
+  "patients.attentionConsentsTitle",
+  "patients.attentionConsentsHint",
+  "patients.attentionConsentsBadge",
+  "patients.attentionIntakeTitle",
+  "patients.attentionIntakeHint",
+  "patients.attentionIntakeBadge",
+  "patients.emptyAttentionConsents",
+  "patients.emptyAttentionConsentsHint",
+  "patients.metricPendingConsents",
 ] as const
 
 function getNestedValue(tree: MessageTree, key: string): string | undefined {
@@ -197,9 +215,33 @@ function run() {
   for (const rule of ATTENTION_RULES) {
     const expected = EXPECTED_HREFS[rule.id]
     assert.ok(expected, `expected href for ${rule.id}`)
-    assert.equal(rule.href, expected, `href contract for ${rule.id}`)
+    assert.ok(
+      rule.href === expected || rule.href.startsWith(`${expected}?`) || rule.href.startsWith(`${expected}#`),
+      `href contract for ${rule.id}: got ${rule.href}, expected ${expected}`
+    )
     assert.ok(rule.href.startsWith("/"), `absolute path for ${rule.id}`)
   }
+
+  // Patients attention deep-links must preserve filter query in registry URL sync
+  assert.equal(
+    parsePatientAttentionFilter(new URLSearchParams("attention=consents")),
+    "consents"
+  )
+  assert.equal(parsePatientAttentionFilter(new URLSearchParams("attention=intake")), "intake")
+  assert.equal(parsePatientAttentionFilter(new URLSearchParams("attention=other")), null)
+  const consentsParams = filtersToSearchParams(DEFAULT_PATIENT_LIST_FILTERS, "", 1, {
+    attention: "consents",
+  })
+  assert.equal(consentsParams.get("attention"), "consents")
+  const clearedParams = filtersToSearchParams(DEFAULT_PATIENT_LIST_FILTERS, "", 1, {
+    attention: null,
+  })
+  assert.equal(clearedParams.get("attention"), null)
+  assert.ok(
+    countActiveFilters(DEFAULT_PATIENT_LIST_FILTERS, "consents") >
+      countActiveFilters(DEFAULT_PATIENT_LIST_FILTERS, null),
+    "consents attention counts as an active filter"
+  )
 
   for (const item of ATTENTION_RULE_UI) {
     assert.ok(item.labelKey.startsWith("settings.attentionRule."), `labelKey for ${item.id}`)
@@ -211,11 +253,12 @@ function run() {
   for (const locale of ["en", "tr", "fil"] as const) {
     assertCatalogKeys(locale, ATTENTION_PANEL_I18N_KEYS)
     assertCatalogKeys(locale, ruleI18nKeys)
+    assertCatalogKeys(locale, PATIENTS_ATTENTION_I18N_KEYS)
   }
 
   const en = getMessages("en")
   const tr = getMessages("tr")
-  for (const key of [...ATTENTION_PANEL_I18N_KEYS, ...ruleI18nKeys]) {
+  for (const key of [...ATTENTION_PANEL_I18N_KEYS, ...ruleI18nKeys, ...PATIENTS_ATTENTION_I18N_KEYS]) {
     const enVal = getNestedValue(en, key)
     const trVal = getNestedValue(tr, key)
     assert.ok(enVal && trVal, `en/tr present for ${key}`)

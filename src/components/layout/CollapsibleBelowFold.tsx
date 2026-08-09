@@ -10,6 +10,8 @@ type CollapsibleBelowFoldProps = {
   className?: string
   /** Start collapsed on viewports below lg (default true) */
   collapseOnMobile?: boolean
+  /** Force open (e.g. attention=intake deep-link) */
+  defaultOpen?: boolean
 }
 
 /** Summary grids and secondary metrics — collapsed on mobile by default. */
@@ -18,8 +20,13 @@ export function CollapsibleBelowFold({
   children,
   className,
   collapseOnMobile = true,
+  defaultOpen = false,
 }: CollapsibleBelowFoldProps) {
-  const [open, setOpen] = React.useState(false)
+  const [open, setOpen] = React.useState(defaultOpen)
+
+  React.useEffect(() => {
+    if (defaultOpen) setOpen(true)
+  }, [defaultOpen])
 
   if (!collapseOnMobile) {
     return <div className={className}>{children}</div>

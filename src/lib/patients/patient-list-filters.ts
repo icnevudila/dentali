@@ -4,12 +4,20 @@ export type PatientVisitFilter = "all" | "today" | "week" | "month" | "never" | 
 
 export type PatientSort = "name" | "last_visit_desc" | "last_visit_asc"
 
+/** AttentionPanel deep-links on /patients (`?attention=…`) */
+export type PatientAttentionFilter = "consents" | "intake"
+
 export type PatientListFilters = {
   status: PatientStatusFilter
   visit: PatientVisitFilter
   visitFrom: string
   visitTo: string
   sort: PatientSort
+}
+
+export type PatientListUrlExtras = {
+  attention?: PatientAttentionFilter | null
+  intakeSource?: "kiosk" | "portal" | "unknown" | null
 }
 
 export const DEFAULT_PATIENT_LIST_FILTERS: PatientListFilters = {
@@ -113,10 +121,18 @@ export function parsePatientListFilters(params: URLSearchParams): PatientListFil
   }
 }
 
+export function parsePatientAttentionFilter(
+  params: URLSearchParams
+): PatientAttentionFilter | null {
+  const attention = params.get("attention")
+  return attention === "consents" || attention === "intake" ? attention : null
+}
+
 export function filtersToSearchParams(
   filters: PatientListFilters,
   query: string,
-  page: number
+  page: number,
+  extras?: PatientListUrlExtras
 ): URLSearchParams {
   const params = new URLSearchParams()
   if (query) params.set("q", query)
@@ -126,13 +142,27 @@ export function filtersToSearchParams(
   if (filters.visit === "custom" && filters.visitFrom) params.set("from", filters.visitFrom)
   if (filters.visit === "custom" && filters.visitTo) params.set("to", filters.visitTo)
   if (filters.sort !== "name") params.set("sort", filters.sort)
+  if (extras?.attention === "consents" || extras?.attention === "intake") {
+    params.set("attention", extras.attention)
+  }
+  if (
+    extras?.intakeSource === "kiosk" ||
+    extras?.intakeSource === "portal" ||
+    extras?.intakeSource === "unknown"
+  ) {
+    params.set("intakeSource", extras.intakeSource)
+  }
   return params
 }
 
-export function countActiveFilters(filters: PatientListFilters): number {
+export function countActiveFilters(
+  filters: PatientListFilters,
+  attention: PatientAttentionFilter | null = null
+): number {
   let n = 0
   if (filters.status !== "active") n++
   if (filters.visit !== "all") n++
   if (filters.sort !== "name") n++
+  if (attention === "consents") n++
   return n
 }

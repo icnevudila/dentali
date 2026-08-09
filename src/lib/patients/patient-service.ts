@@ -189,6 +189,100 @@ export async function searchPatients(
   return { data: dataWithBranches, total: mapped.total, error: null }
 }
 
+/**
+ * Registry list filtered to patients with at least one pending consent on the branch.
+ * Aligns with dashboard `pending_consents` (patient_consents.status = pending + branch_id).
+ */
+export async function searchPatientsWithPendingConsents(
+  query: string,
+  branchId: string | null,
+  options?: PatientSearchOptions
+): Promise<{ data: PatientRecord[]; total: number; error: string | null }> {
+  if (!branchId) return { data: [], total: 0, error: null }
+
+  const showcase = getShowcaseSnapshot()
+  if (showcase && branchId === showcase.branch.id) {
+    return { data: [], total: 0, error: null }
+  }
+
+  const supabase = createClient()
+  const { data: consentRows, error: consentError } = await supabase
+    .from("patient_consents")
+    .select("patient_id")
+    .eq("branch_id", branchId)
+    .eq("status", "pending")
+
+  if (consentError) return { data: [], total: 0, error: consentError.message }
+
+  const uniqueIds = new Set<string>()
+  for (const row of consentRows ?? []) {
+    const id = row.patient_id
+    if (typeof id === "string" && id.length > 0) uniqueIds.add(id)
+  }
+  const patientIds = [...uniqueIds]
+  if (patientIds.length === 0) return { data: [], total: 0, error: null }
+
+  const { data: records, error: recordsError } = await fetchPatientRecordsByIds(patientIds, branchId)
+  if (recordsError) return { data: [], total: 0, error: recordsError }
+
+  const filters = options?.filters ?? DEFAULT_PATIENT_LIST_FILTERS
+  const visitRange = resolveVisitRange(filters)
+  const trimmed = query.trim().toLowerCase()
+
+  let filtered = records
+  if (filters.status !== "all") {
+    filtered = filtered.filter((patient) => patient.status === filters.status)
+  }
+  if (trimmed) {
+    filtered = filtered.filter((patient) => {
+      const haystack = [
+        patient.first_name,
+        patient.last_name,
+        patient.phone ?? "",
+        patient.patient_number ?? "",
+        patient.email ?? "",
+      ]
+        .join(" ")
+        .toLowerCase()
+      return haystack.includes(trimmed)
+    })
+  }
+  if (visitRange.neverVisited) {
+    filtered = filtered.filter((patient) => !patient.last_visit_at)
+  } else if (visitRange.from || visitRange.to) {
+    filtered = filtered.filter((patient) => {
+      if (!patient.last_visit_at) return false
+      const visitAt = new Date(patient.last_visit_at).getTime()
+      if (visitRange.from && visitAt < new Date(visitRange.from).getTime()) return false
+      if (visitRange.to && visitAt > new Date(visitRange.to).getTime()) return false
+      return true
+    })
+  }
+
+  filtered = [...filtered].sort((a, b) => {
+    if (filters.sort === "last_visit_desc") {
+      const aT = a.last_visit_at ? new Date(a.last_visit_at).getTime() : 0
+      const bT = b.last_visit_at ? new Date(b.last_visit_at).getTime() : 0
+      return bT - aT
+    }
+    if (filters.sort === "last_visit_asc") {
+      const aT = a.last_visit_at ? new Date(a.last_visit_at).getTime() : Number.POSITIVE_INFINITY
+      const bT = b.last_visit_at ? new Date(b.last_visit_at).getTime() : Number.POSITIVE_INFINITY
+      return aT - bT
+    }
+    const byLast = a.last_name.localeCompare(b.last_name, "en")
+    if (byLast !== 0) return byLast
+    return a.first_name.localeCompare(b.first_name, "en")
+  })
+
+  const page = Math.max(1, options?.page ?? 1)
+  const pageSize = Math.min(50, Math.max(1, options?.pageSize ?? 20))
+  const offset = (page - 1) * pageSize
+  const slice = filtered.slice(offset, offset + pageSize)
+  const dataWithBranches = await attachPatientBranches(slice)
+  return { data: dataWithBranches, total: filtered.length, error: null }
+}
+
 function computeIntakePct(patient: {
   id: string
   phone: string | null
