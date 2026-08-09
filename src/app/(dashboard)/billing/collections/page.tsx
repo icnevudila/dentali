@@ -26,6 +26,7 @@ import {
   type CollectionsAgingBucket,
   type CollectionsArWorklist,
   type CollectionsDraftRow,
+  type CollectionsReminderChannel,
 } from "@/lib/billing/collections-service"
 
 function formatClinicDate(isoDate: string, locale: string): string {
@@ -37,6 +38,20 @@ function formatClinicDate(isoDate: string, locale: string): string {
     year: "numeric",
     month: "short",
     day: "numeric",
+  })
+}
+
+function formatClinicDateTime(iso: string, locale: string): string {
+  if (!iso) return "—"
+  const parsed = new Date(iso)
+  if (Number.isNaN(parsed.getTime())) return iso
+  return parsed.toLocaleString(locale === "fil" ? "fil-PH" : locale === "tr" ? "tr-TR" : "en-PH", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   })
 }
 
@@ -88,6 +103,15 @@ export default function BillingCollectionsPage() {
       "60_plus": t("billing.collectionsBucket60Plus", "60+ days"),
     }
     return map[bucket]
+  }
+
+  const reminderChannelLabel = (channel: CollectionsReminderChannel) => {
+    const map: Record<CollectionsReminderChannel, string> = {
+      whatsapp: t("billing.collectionsChannelWhatsapp", "WhatsApp"),
+      sms: t("billing.collectionsChannelSms", "SMS"),
+      email: t("billing.collectionsChannelEmail", "Email"),
+    }
+    return map[channel]
   }
 
   const allRows = list?.rows ?? []
@@ -347,6 +371,27 @@ export default function BillingCollectionsPage() {
                                   ).replace("{days}", String(row.days_outstanding))}
                                 </span>
                               ) : null}
+                              {row.last_reminder_at ? (
+                                <span className="tabular-nums">
+                                  {t(
+                                    "billing.collectionsLastReminderAt",
+                                    "Last reminder: {datetime}"
+                                  ).replace(
+                                    "{datetime}",
+                                    formatClinicDateTime(row.last_reminder_at, locale)
+                                  )}
+                                  {row.last_reminder_channel
+                                    ? ` · ${reminderChannelLabel(row.last_reminder_channel)}`
+                                    : null}
+                                </span>
+                              ) : (
+                                <span>
+                                  {t(
+                                    "billing.collectionsLastReminderNone",
+                                    "No reminder logged"
+                                  )}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="flex flex-wrap items-center gap-2">

@@ -45,6 +45,8 @@ const sampleRows: CollectionsArRow[] = [
     days_outstanding: 40,
     aging_bucket: "31_60",
     is_overdue: true,
+    last_reminder_at: "2026-08-08T06:30:00.000Z",
+    last_reminder_channel: "whatsapp",
   },
   {
     invoice_id: "a0000000-0000-4000-8000-000000000002",
@@ -61,12 +63,24 @@ const sampleRows: CollectionsArRow[] = [
     days_outstanding: 5,
     aging_bucket: "0_30",
     is_overdue: false,
+    last_reminder_at: null,
+    last_reminder_channel: null,
   },
 ]
 
 const overdue = filterCollectionsRows(sampleRows, "overdue")
 if (overdue.length !== 1 || !overdue[0]?.is_overdue) {
   console.error("filterCollectionsRows(overdue) expected 1 overdue row")
+  failed += 1
+}
+
+if (sampleRows[0]?.last_reminder_channel !== "whatsapp") {
+  console.error("sample overdue row expected last_reminder_channel whatsapp")
+  failed += 1
+}
+
+if (sampleRows[1]?.last_reminder_at !== null) {
+  console.error("sample non-reminded row expected null last_reminder_at")
   failed += 1
 }
 
