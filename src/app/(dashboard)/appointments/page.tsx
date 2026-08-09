@@ -49,6 +49,7 @@ import { AppointmentRemindersDrawer } from "@/components/appointments/Appointmen
 import { ProviderTimeBlockDialog } from "@/components/appointments/ProviderTimeBlockDialog"
 import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
 import { PatientBillingGateBanner } from "@/components/billing/PatientBillingGateBanner"
+import { WorkflowNotEnforcedNotice } from "@/components/settings/WorkflowNotEnforcedNotice"
 import {
   startOfWeekMonday,
   toDateKey,
@@ -521,7 +522,12 @@ function AppointmentsPageContent() {
         notify.error(err)
         if (appt) patchAppointment(id, { status: appt.status })
       } else {
-        notify.success(t("appointments.noShowMarked", "Appointment marked as no-show"))
+        notify.success(
+          t(
+            "appointments.noShowMarked",
+            "Appointment marked as no-show. No-show fee is not charged yet."
+          )
+        )
         const slotAt = data?.scheduled_at ?? appt?.scheduled_at
         if (slotAt) void tryNotifyWaitlist(slotAt)
       }
@@ -739,6 +745,17 @@ function AppointmentsPageContent() {
               ]}
             />
           ) : null}
+
+          <WorkflowNotEnforcedNotice
+            title={t(
+              "appointments.noShowFeeNotEnforcedTitle",
+              "No-show fee — not enforced yet"
+            )}
+            description={t(
+              "appointments.noShowFeeNotEnforcedBody",
+              "Marking no-show updates status only. No fee invoice or charge is created."
+            )}
+          />
 
           {canCheckIn && todayAwaitingCheckinCount > 0 ? (
             <div className="rounded-xl border border-amber-200/90 bg-amber-50/80 px-4 py-3 text-sm text-amber-950 animate-fade-rise">
@@ -988,6 +1005,17 @@ function AppointmentsPageContent() {
                 </div>
                 <form onSubmit={handleBook} className="flex flex-1 flex-col overflow-hidden">
                   <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] sm:px-6 sm:py-5">
+                    <WorkflowNotEnforcedNotice
+                      className="mb-4"
+                      title={t(
+                        "appointments.depositNotEnforcedTitle",
+                        "Deposit on book — not enforced yet"
+                      )}
+                      description={t(
+                        "appointments.depositNotEnforcedBody",
+                        "Booking does not collect or require a deposit. No deposit fee is charged from this screen."
+                      )}
+                    />
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="sm:col-span-2 space-y-2">
                         <label className="text-xs font-medium">{t("appointments.searchPatient", "Search patient")}</label>

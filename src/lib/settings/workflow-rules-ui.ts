@@ -9,6 +9,18 @@ export type WorkflowRuleHonesty =
   /** Setting is stored but no front-desk or queue UI reads it yet. */
   | "not_wired"
 
+/** Keys that must not look toggleable as live enforcement. */
+export const NOT_WIRED_WORKFLOW_SETTING_KEYS = [
+  "require_deposit_on_book",
+  "no_show_fee_policy",
+] as const
+
+export type NotWiredWorkflowSettingKey = (typeof NOT_WIRED_WORKFLOW_SETTING_KEYS)[number]
+
+export function isNotWiredWorkflowSettingKey(key: string): boolean {
+  return (NOT_WIRED_WORKFLOW_SETTING_KEYS as readonly string[]).includes(key)
+}
+
 export type WorkflowRuleUi = {
   key: string
   label: string
@@ -115,19 +127,19 @@ export function getWorkflowGroups(t: Translate): WorkflowGroupUi[] {
         {
           key: "require_deposit_on_book",
           honesty: "not_wired",
-          label: t("settings.wfDepositLabel", "Warn when booking without deposit"),
+          label: t("settings.wfDepositLabel", "Deposit required on book (not enforced)"),
           description: t(
             "settings.wfDepositDesc",
-            "Planned policy reminder for bookings without a deposit. Not shown in the booking UI yet — toggle is stored only."
+            "Not enforced yet — booking does not collect or require a deposit. This row cannot be turned on; no fee is charged."
           ),
         },
         {
           key: "no_show_fee_policy",
           honesty: "not_wired",
-          label: t("settings.wfNoShowFeeLabel", "No-show fee policy reminder"),
+          label: t("settings.wfNoShowFeeLabel", "No-show fee policy (not enforced)"),
           description: t(
             "settings.wfNoShowFeeDesc",
-            "Planned reminder when marking no-show. Not shown in appointments or queue yet — toggle is stored only."
+            "Not enforced yet — marking no-show does not create or charge a fee. This row cannot be turned on."
           ),
         },
       ],

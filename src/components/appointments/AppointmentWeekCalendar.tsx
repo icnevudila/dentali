@@ -648,7 +648,10 @@ export function AppointmentWeekCalendar({
                               className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                               disabled={updatingId === appt.id}
                               onClick={() => onStatusChange(appt.id, "no_show")}
-                              title="Mark No-Show"
+                              title={t(
+                                "appointments.markNoShowNoFeeTitle",
+                                "Mark no-show (no fee charged yet)"
+                              )}
                             >
                               <UserX className="h-4 w-4" />
                             </Button>
@@ -947,7 +950,10 @@ export function AppointmentWeekCalendar({
                             className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                             disabled={updatingId === appt.id}
                             onClick={() => onStatusChange(appt.id, "no_show")}
-                            title="Mark No-Show"
+                            title={t(
+                              "appointments.markNoShowNoFeeTitle",
+                              "Mark no-show (no fee charged yet)"
+                            )}
                           >
                             <UserX className="h-4 w-4" />
                           </Button>

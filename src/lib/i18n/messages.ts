@@ -681,7 +681,7 @@ export const messagesEnPh: MessageTree = {
     updateSuccess: "Appointment updated successfully",
     rescheduleSuccess: "Appointment rescheduled successfully",
     statusUpdated: "Appointment status updated",
-    noShowMarked: "Appointment marked as no-show",
+    noShowMarked: "Appointment marked as no-show. No-show fee is not charged yet.",
     monthDragRecommendation: "For the best drag-and-drop rescheduling experience, switch to Month view.",
     sourcePortal: "Online",
     sourceKiosk: "Kiosk",
@@ -698,6 +698,13 @@ export const messagesEnPh: MessageTree = {
     loadingSlots: "Loading slots…",
     pickDentistDate: "Select dentist and date.",
     purposePlaceholder: "Consultation, cleaning…",
+    depositNotEnforcedTitle: "Deposit on book — not enforced yet",
+    depositNotEnforcedBody:
+      "Booking does not collect or require a deposit. No deposit fee is charged from this screen.",
+    noShowFeeNotEnforcedTitle: "No-show fee — not enforced yet",
+    noShowFeeNotEnforcedBody:
+      "Marking no-show updates status only. No fee invoice or charge is created.",
+    markNoShowNoFeeTitle: "Mark no-show (no fee charged yet)",
   },
   portal: {
     reasonLabel: "Reason for visit",
@@ -837,6 +844,19 @@ export const messagesEnPh: MessageTree = {
       "Used by the Recare worklist and hygiene recall SMS cron. Clinic default is {months} months when unset.",
     wfHygieneRecallMonthsField: "Months",
     wfHygieneRecallMonthsInvalid: "Enter a whole number between {min} and {max} months.",
+    wfDepositLabel: "Deposit required on book (not enforced)",
+    wfDepositDesc:
+      "Not enforced yet — booking does not collect or require a deposit. This row cannot be turned on; no fee is charged.",
+    wfNoShowFeeLabel: "No-show fee policy (not enforced)",
+    wfNoShowFeeDesc:
+      "Not enforced yet — marking no-show does not create or charge a fee. This row cannot be turned on.",
+    wfHonestyNotWired: "Not enforced yet",
+    wfHonestyEventOnly: "Event log only",
+    wfHonestyPlanned: "Planned",
+    wfHonestyNotEnforced: "Not enforced",
+    wfHonestyCannotToggle: "Cannot turn on",
+    wfHonestyToggleLocked:
+      "Toggle unavailable — product does not enforce this rule yet. No fee is charged.",
     organizationTitle: "Organization Profile",
     organizationSubtitle: "Update your clinic's primary information.",
     organizationSubtitleReadonly: "Read-only organization details for your clinic.",
@@ -2693,7 +2713,7 @@ export const messagesTr: MessageTree = {
     updateSuccess: "Randevu başarıyla güncellendi",
     rescheduleSuccess: "Randevu başarıyla yeniden planlandı",
     statusUpdated: "Randevu durumu güncellendi",
-    noShowMarked: "Randevu gelmedi olarak işaretlendi",
+    noShowMarked: "Randevu gelmedi olarak işaretlendi. Gelmeme ücreti henüz kesilmiyor.",
     monthDragRecommendation: "Sürükle-bırak için en iyi deneyim Aylık (Month) görünümündedir.",
     sourcePortal: "Çevrimiçi",
     sourceKiosk: "Kiosk",
@@ -2710,6 +2730,13 @@ export const messagesTr: MessageTree = {
     loadingSlots: "Saatler yükleniyor…",
     pickDentistDate: "Hekim ve tarih seçin.",
     purposePlaceholder: "Muayene, temizlik…",
+    depositNotEnforcedTitle: "Randevuda depozito — henüz uygulanmıyor",
+    depositNotEnforcedBody:
+      "Rezervasyon depozito toplamıyor veya zorunlu kılmıyor. Bu ekrandan depozito ücreti kesilmez.",
+    noShowFeeNotEnforcedTitle: "Gelmeme ücreti — henüz uygulanmıyor",
+    noShowFeeNotEnforcedBody:
+      "Gelmedi işaretlemek yalnızca durumu günceller. Ücret faturası veya tahsilat oluşturulmaz.",
+    markNoShowNoFeeTitle: "Gelmedi işaretle (ücret henüz kesilmez)",
   },
   portal: {
     reasonLabel: "Randevu nedeni",
@@ -2848,6 +2875,19 @@ export const messagesTr: MessageTree = {
       "Recare listesi ve hijyen recall SMS cron bu değeri kullanır. Ayarlanmazsa klinik varsayılanı {months} aydır.",
     wfHygieneRecallMonthsField: "Ay",
     wfHygieneRecallMonthsInvalid: "{min} ile {max} arasında tam sayı girin.",
+    wfDepositLabel: "Randevuda depozito zorunlu (uygulanmıyor)",
+    wfDepositDesc:
+      "Henüz uygulanmıyor — rezervasyon depozito toplamıyor veya zorunlu kılmıyor. Bu satır açılamaz; ücret kesilmez.",
+    wfNoShowFeeLabel: "Gelmeme ücreti politikası (uygulanmıyor)",
+    wfNoShowFeeDesc:
+      "Henüz uygulanmıyor — gelmedi işaretlemek ücret oluşturmaz veya kesmez. Bu satır açılamaz.",
+    wfHonestyNotWired: "Henüz uygulanmıyor",
+    wfHonestyEventOnly: "Yalnızca olay kaydı",
+    wfHonestyPlanned: "Planlandı",
+    wfHonestyNotEnforced: "Uygulanmıyor",
+    wfHonestyCannotToggle: "Açılamaz",
+    wfHonestyToggleLocked:
+      "Anahtar kullanılamaz — ürün bu kuralı henüz uygulamıyor. Ücret kesilmez.",
     organizationTitle: "Organizasyon Profili",
     organizationSubtitle: "Kliniğinizin temel bilgilerini güncelleyin.",
     organizationSubtitleReadonly: "Kliniğiniz için salt okunur organizasyon bilgileri.",
@@ -4674,6 +4714,14 @@ export const messagesFil: MessageTree = {
     metricNoShowHint: "Hindi dumating",
     metricWeek: "Ngayong linggo",
     eyebrow: "Scheduling",
+    noShowMarked: "Na-mark ang appointment bilang no-show. Hindi pa sisingilin ang no-show fee.",
+    depositNotEnforcedTitle: "Deposit sa pag-book — hindi pa enforced",
+    depositNotEnforcedBody:
+      "Hindi nangongolekta o nangangailangan ng deposit ang booking. Walang deposit fee mula sa screen na ito.",
+    noShowFeeNotEnforcedTitle: "No-show fee — hindi pa enforced",
+    noShowFeeNotEnforcedBody:
+      "Ang pag-mark ng no-show ay status update lang. Walang fee invoice o charge na ginagawa.",
+    markNoShowNoFeeTitle: "I-mark bilang no-show (walang fee pa)",
   },
   treatmentPlan: {
     addProcedure: "Magdagdag ng procedure",
@@ -4778,6 +4826,19 @@ export const messagesFil: MessageTree = {
       "Ginagamit ng Recare worklist at hygiene recall SMS cron. Default ng clinic ay {months} buwan kung walang setting.",
     wfHygieneRecallMonthsField: "Buwan",
     wfHygieneRecallMonthsInvalid: "Maglagay ng buong numero mula {min} hanggang {max}.",
+    wfDepositLabel: "Kailangan ng deposit sa pag-book (hindi pa enforced)",
+    wfDepositDesc:
+      "Hindi pa enforced — ang booking ay hindi nangongolekta o nangangailangan ng deposit. Hindi ito maaaring i-on; walang fee na sisingilin.",
+    wfNoShowFeeLabel: "No-show fee policy (hindi pa enforced)",
+    wfNoShowFeeDesc:
+      "Hindi pa enforced — ang pag-mark ng no-show ay hindi gumagawa o sumisingil ng fee. Hindi ito maaaring i-on.",
+    wfHonestyNotWired: "Hindi pa enforced",
+    wfHonestyEventOnly: "Event log lang",
+    wfHonestyPlanned: "Planned",
+    wfHonestyNotEnforced: "Hindi enforced",
+    wfHonestyCannotToggle: "Hindi maaaring i-on",
+    wfHonestyToggleLocked:
+      "Hindi available ang toggle — hindi pa nene-enforce ng produkto ang rule na ito. Walang fee na sisingilin.",
     organizationTitle: "Organization Profile",
     organizationSubtitle: "I-update ang primary info ng clinic.",
     organizationSubtitleReadonly: "Read-only organization details para sa clinic.",

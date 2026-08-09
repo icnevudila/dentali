@@ -20,6 +20,7 @@ import type { AppointmentSlot } from "@/lib/appointments/provider-availability-s
 import { AppointmentSlotButtons } from "@/components/appointments/AppointmentSlotButtons"
 import { getPatientBillingGate, type PatientBillingGate } from "@/lib/billing/invoice-service"
 import { PatientBillingGateBanner } from "@/components/billing/PatientBillingGateBanner"
+import { WorkflowNotEnforcedNotice } from "@/components/settings/WorkflowNotEnforcedNotice"
 import { notify } from "@/lib/ui/notify"
 
 interface BookAppointmentDialogProps {
@@ -160,6 +161,16 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
         </div>
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] sm:px-6 sm:py-5">
+            <WorkflowNotEnforcedNotice
+              title={t(
+                "appointments.depositNotEnforcedTitle",
+                "Deposit on book — not enforced yet"
+              )}
+              description={t(
+                "appointments.depositNotEnforcedBody",
+                "Booking does not collect or require a deposit. No deposit fee is charged from this screen."
+              )}
+            />
             {billingGate?.has_billing_gap ? (
               <PatientBillingGateBanner
                 gate={billingGate}

@@ -202,13 +202,28 @@ export default function WorkflowSettingsPage() {
                     const eventOnly = item.honesty === "event_only"
                     const toggleDisabled = notWired || savingKey === item.key
                     return (
-                      <li key={item.key} className="flex items-start justify-between gap-4 px-4 py-3">
+                      <li
+                        key={item.key}
+                        className={
+                          notWired
+                            ? "flex items-start justify-between gap-4 bg-neutral-50/80 px-4 py-3"
+                            : "flex items-start justify-between gap-4 px-4 py-3"
+                        }
+                      >
                         <div className="min-w-0 space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-medium text-neutral-900">{item.label}</p>
+                            <p
+                              className={
+                                notWired
+                                  ? "text-sm font-medium text-neutral-700"
+                                  : "text-sm font-medium text-neutral-900"
+                              }
+                            >
+                              {item.label}
+                            </p>
                             {notWired ? (
                               <Badge variant="outline" className="font-normal text-[10px]">
-                                {t("settings.wfHonestyNotWired", "Not wired yet")}
+                                {t("settings.wfHonestyNotWired", "Not enforced yet")}
                               </Badge>
                             ) : null}
                             {eventOnly ? (
@@ -218,11 +233,24 @@ export default function WorkflowSettingsPage() {
                             ) : null}
                           </div>
                           <p className="text-xs text-neutral-500">{item.description}</p>
+                          {notWired ? (
+                            <p className="text-[11px] text-neutral-500">
+                              {t(
+                                "settings.wfHonestyToggleLocked",
+                                "Toggle unavailable — product does not enforce this rule yet. No fee is charged."
+                              )}
+                            </p>
+                          ) : null}
                         </div>
                         {notWired ? (
-                          <Badge variant="outline" className="shrink-0 font-normal">
-                            {t("settings.wfHonestyPlanned", "Planned")}
-                          </Badge>
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            <Badge variant="outline" className="font-normal">
+                              {t("settings.wfHonestyNotEnforced", "Not enforced")}
+                            </Badge>
+                            <span className="text-[10px] text-neutral-400">
+                              {t("settings.wfHonestyCannotToggle", "Cannot turn on")}
+                            </span>
+                          </div>
                         ) : (
                           <Button
                             type="button"
