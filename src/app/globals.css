@@ -2,6 +2,13 @@
 @import "../styles/tokens.css";
 @import "../styles/pda-native-form.css";
 
+/*
+  Clinic chrome is light-first. Do not let OS dark mode activate `dark:` utilities —
+  that painted EmptyState / patient dock / lab panels navy on otherwise light pages.
+  Opt-in only via an explicit `.dark` ancestor (unused while data-theme="light").
+*/
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: var(--font-clinic-body), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-clinic-display), "Archivo", var(--font-sans);

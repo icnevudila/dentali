@@ -579,7 +579,7 @@ function PrescriptionsPage() {
                 {history.length === 0 ? (
                   <EmptyState
                     icon={Pill}
-                    className="border-0 bg-transparent py-6"
+                    className="py-10"
                     title={t("prescriptions.emptyTitle", "No prescriptions yet")}
                     description={t(
                       "prescriptions.emptyHint",

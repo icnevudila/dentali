@@ -1,6 +1,6 @@
 /* dentQL PWA service worker stub — cache shell only, network-first for navigations */
 
-const CACHE_NAME = "dentql-shell-v4"
+const CACHE_NAME = "dentql-shell-v5"
 const SHELL = ["/", "/login", "/manifest.webmanifest"]
 
 self.addEventListener("install", (event) => {
