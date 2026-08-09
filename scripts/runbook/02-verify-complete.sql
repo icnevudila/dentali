@@ -118,6 +118,11 @@ with expected(name) as (
     ,('create_plan_invoice_guarded')
     ,('resync_draft_invoice_from_plan_guarded')
     ,('list_recare_due_patients')
+    ,('count_recare_due_patients')
+    ,('snooze_recare_patient')
+    ,('unsnooze_recare_patient')
+    ,('list_collections_ar_worklist')
+    ,('restore_patient_periodontal')
 )
 select
   e.name,
