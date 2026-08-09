@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { Button } from "@/components/ui/button"
 import { PeriodontalPocketPanel } from "@/components/odontogram/PeriodontalPocketPanel"
 import { PeriodontalScreeningPanel } from "@/components/odontogram/PeriodontalScreeningPanel"
+import { PeriodontalAuditHistoryPanel } from "@/components/odontogram/PeriodontalAuditHistoryPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 
 /**
@@ -35,6 +36,7 @@ export default function PatientPerioChartPage() {
   const [orgLoading, setOrgLoading] = React.useState(true)
   const [orgError, setOrgError] = React.useState<string | null>(null)
   const [orgRetry, setOrgRetry] = React.useState(0)
+  const [chartRefreshKey, setChartRefreshKey] = React.useState(0)
 
   React.useEffect(() => {
     let cancelled = false
@@ -134,12 +136,21 @@ export default function PatientPerioChartPage() {
                   )}
             </p>
             <PeriodontalPocketPanel
+              key={chartRefreshKey}
               patientId={patientId}
               branchId={activeBranch.id}
               organizationId={orgId}
               actorUserId={user?.id ?? null}
               canWrite={canWrite}
               className="shadow-sm"
+            />
+            <PeriodontalAuditHistoryPanel
+              patientId={patientId}
+              branchId={activeBranch.id}
+              organizationId={orgId}
+              actorUserId={user?.id ?? null}
+              canWrite={canWrite}
+              onRestored={() => setChartRefreshKey((n) => n + 1)}
             />
             <PeriodontalScreeningPanel patientId={patientId} />
             <p className="text-xs text-neutral-500">

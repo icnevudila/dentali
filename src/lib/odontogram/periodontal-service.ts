@@ -269,3 +269,132 @@ export function migrateLocalPeriodontalIfNeeded(
 
   return mergePeriodontalChart({ ...server, ...local })
 }
+
+export type PeriodontalAuditEvent = {
+  id: string
+  action: string
+  created_at: string
+  actor_user_id: string | null
+  actor_name: string | null
+  chart_id: string
+  snapshot: PeriodontalChartData
+  restore_from_event_id: string | null
+}
+
+function extractPeriodontalSnapshot(
+  payload: Record<string, unknown> | null
+): PeriodontalChartData | null {
+  if (!payload || payload.kind !== "periodontal") return null
+  const data = payload.data
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null
+  return mergePeriodontalChart(data as PeriodontalChartData)
+}
+
+/** List periodontal audit snapshots (no PHI in console; clinical JSON stays in UI). */
+export async function listPeriodontalAuditHistory(params: {
+  patientId: string
+  branchId: string
+  limit?: number
+}): Promise<{ data: PeriodontalAuditEvent[]; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("dental_chart_audit_events")
+    .select("id, action, before_json, after_json, created_at, actor_user_id, chart_id")
+    .eq("patient_id", params.patientId)
+    .eq("branch_id", params.branchId)
+    .order("created_at", { ascending: false })
+    .limit(params.limit ?? 40)
+
+  if (error) return { data: [], error: error.message }
+
+  const events: PeriodontalAuditEvent[] = []
+  for (const row of data ?? []) {
+    const after = row.after_json as Record<string, unknown> | null
+    const before = row.before_json as Record<string, unknown> | null
+    const snapshot = extractPeriodontalSnapshot(after) ?? extractPeriodontalSnapshot(before)
+    if (!snapshot) continue
+    const restoreFrom =
+      (typeof after?.restore_from_event_id === "string" && after.restore_from_event_id) ||
+      (typeof before?.restore_from_event_id === "string" && before.restore_from_event_id) ||
+      null
+    events.push({
+      id: row.id as string,
+      action: row.action as string,
+      created_at: row.created_at as string,
+      actor_user_id: (row.actor_user_id as string | null) ?? null,
+      actor_name: null,
+      chart_id: row.chart_id as string,
+      snapshot,
+      restore_from_event_id: restoreFrom,
+    })
+  }
+
+  const actorIds = [...new Set(events.map((e) => e.actor_user_id).filter(Boolean))] as string[]
+  const nameMap = new Map<string, string>()
+  if (actorIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", actorIds)
+    for (const p of profiles ?? []) {
+      nameMap.set(p.id, p.full_name ?? p.email ?? "Staff")
+    }
+  }
+
+  return {
+    data: events.map((e) => ({
+      ...e,
+      actor_name: e.actor_user_id ? nameMap.get(e.actor_user_id) ?? "Staff" : "System",
+    })),
+    error: null,
+  }
+}
+
+export async function restorePatientPeriodontal(params: {
+  patientId: string
+  branchId: string
+  organizationId: string
+  actorUserId: string
+  auditEventId: string
+}): Promise<{ data: PeriodontalPayload | null; error: string | null; restored?: boolean }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("restore_patient_periodontal", {
+    p_patient_id: params.patientId,
+    p_branch_id: params.branchId,
+    p_organization_id: params.organizationId,
+    p_audit_event_id: params.auditEventId,
+    p_actor_user_id: params.actorUserId,
+  })
+
+  if (error) {
+    if (isMissingRpcError(error)) {
+      return {
+        data: null,
+        error: "restore_rpc_unavailable",
+      }
+    }
+    return { data: null, error: error.message }
+  }
+
+  const row = data as {
+    chart_id: string
+    patient_id: string
+    branch_id: string
+    data: PeriodontalChartData
+    restored?: boolean
+  }
+
+  const merged = mergePeriodontalChart(row.data ?? null)
+  savePeriodontalChart(params.patientId, params.branchId, merged)
+
+  return {
+    data: {
+      chart_id: row.chart_id,
+      patient_id: row.patient_id,
+      branch_id: row.branch_id,
+      data: merged,
+    },
+    error: null,
+    restored: row.restored !== false,
+  }
+}
