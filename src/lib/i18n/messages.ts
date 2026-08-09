@@ -1338,7 +1338,7 @@ export const messagesEnPh: MessageTree = {
       "Open balances and aging follow-ups will appear here. Until then, review finance reports or open invoices.",
     collectionsNoDataTitle: "No open AR yet",
     collectionsNoDataDescription:
-      "Issued invoices with an unpaid balance (sent or partial) show up here once they exist for this branch.",
+      "Issued invoices with an unpaid balance (sent or partial) show up here once they exist for this branch. Drafts with a balance appear separately as not yet issued.",
     collectionsEmptyOverdueTitle: "No overdue invoices",
     collectionsEmptyOverdueDescription:
       "Nothing is past due right now. Clear the overdue filter to see all open balances, or review invoices.",
@@ -1356,8 +1356,24 @@ export const messagesEnPh: MessageTree = {
     collectionsDaysOutstanding: "{days}d outstanding",
     collectionsOverdue: "Overdue",
     collectionsFilterOverdue: "Overdue only",
+    collectionsFilterOverdueCount: "Overdue only · {count}",
+    collectionsOverdueCount: "{count} overdue",
     collectionsShowAll: "Show all open balances",
     collectionsIssued: "Issued",
+    collectionsIssuedSection: "Issued open balances",
+    collectionsDraftsSection: "Not yet issued (drafts)",
+    collectionsDraftsHint:
+      "Draft invoices with a balance are not accounts receivable until issued. Issue them before chasing payment — reminders apply to issued invoices only.",
+    collectionsDraftBadge: "Draft · not issued",
+    collectionsCreated: "Created",
+    collectionsOpenDraft: "Open draft",
+    collectionsSendReminder: "Send reminder",
+    collectionsDraftsHiddenOverdue:
+      "Draft invoices are hidden in overdue view — they are not yet issued.",
+    collectionsEmptyOverdueWithDrafts:
+      "Nothing is past due right now. Draft invoices with a balance are not overdue — clear the filter to review issued AR and drafts.",
+    paymentReminderNeedsPhone:
+      "Add a patient phone number to send a WhatsApp payment reminder.",
     title: "Billing & Invoices",
     selectBranch: "Select a branch",
     hmoClaims: "HMO Claims",
@@ -3326,7 +3342,7 @@ export const messagesTr: MessageTree = {
       "Açık bakiyeler ve yaşlandırma takipleri burada görünecek. Şimdilik finans raporlarına veya faturalara bakın.",
     collectionsNoDataTitle: "Henüz açık alacak yok",
     collectionsNoDataDescription:
-      "Ödenmemiş bakiyeli kesilmiş faturalar (gönderildi veya kısmi) bu şube için oluşunca burada görünür.",
+      "Ödenmemiş bakiyeli kesilmiş faturalar (gönderildi veya kısmi) bu şube için oluşunca burada görünür. Bakiyeli taslaklar ayrı olarak henüz kesilmemiş kovasında yer alır.",
     collectionsEmptyOverdueTitle: "Vadesi geçmiş fatura yok",
     collectionsEmptyOverdueDescription:
       "Şu an vadesi geçmiş bir şey yok. Tüm açık bakiyeleri görmek için filtreyi temizleyin veya faturaları inceleyin.",
@@ -3344,8 +3360,24 @@ export const messagesTr: MessageTree = {
     collectionsDaysOutstanding: "{days}g bekleyen",
     collectionsOverdue: "Vadesi geçmiş",
     collectionsFilterOverdue: "Yalnızca vadesi geçmiş",
+    collectionsFilterOverdueCount: "Yalnızca vadesi geçmiş · {count}",
+    collectionsOverdueCount: "{count} vadesi geçmiş",
     collectionsShowAll: "Tüm açık bakiyeleri göster",
     collectionsIssued: "Kesildi",
+    collectionsIssuedSection: "Kesilmiş açık bakiyeler",
+    collectionsDraftsSection: "Henüz kesilmedi (taslaklar)",
+    collectionsDraftsHint:
+      "Bakiyeli taslak faturalar kesilene kadar alacak değildir. Ödeme takibinden önce kesin — hatırlatmalar yalnızca kesilmiş faturalar içindir.",
+    collectionsDraftBadge: "Taslak · kesilmedi",
+    collectionsCreated: "Oluşturuldu",
+    collectionsOpenDraft: "Taslağı aç",
+    collectionsSendReminder: "Hatırlatma gönder",
+    collectionsDraftsHiddenOverdue:
+      "Taslak faturalar vadesi geçmiş görünümünde gizlenir — henüz kesilmemişlerdir.",
+    collectionsEmptyOverdueWithDrafts:
+      "Şu an vadesi geçmiş bir şey yok. Bakiyeli taslaklar vadesi geçmiş sayılmaz — kesilmiş AR ve taslakları görmek için filtreyi temizleyin.",
+    paymentReminderNeedsPhone:
+      "WhatsApp ödeme hatırlatması göndermek için hastaya telefon numarası ekleyin.",
     title: "Faturalama ve Faturalar",
     selectBranch: "Bir şube seçin",
     hmoClaims: "HMO Talepleri",
@@ -5010,7 +5042,7 @@ export const messagesFil: MessageTree = {
       "Lilitaw dito ang open balances at aging follow-ups. Samantala, tingnan ang finance reports o invoices.",
     collectionsNoDataTitle: "Wala pang open AR",
     collectionsNoDataDescription:
-      "Ang issued invoices na may unpaid balance (sent o partial) ay lilitaw dito kapag mayroon na sa branch na ito.",
+      "Ang issued invoices na may unpaid balance (sent o partial) ay lilitaw dito kapag mayroon na sa branch na ito. Ang drafts na may balance ay hiwalay bilang not yet issued.",
     collectionsEmptyOverdueTitle: "Walang overdue invoice",
     collectionsEmptyOverdueDescription:
       "Walang past due ngayon. I-clear ang overdue filter para makita ang lahat ng open balances, o tingnan ang invoices.",
@@ -5028,8 +5060,24 @@ export const messagesFil: MessageTree = {
     collectionsDaysOutstanding: "{days}a outstanding",
     collectionsOverdue: "Overdue",
     collectionsFilterOverdue: "Overdue lang",
+    collectionsFilterOverdueCount: "Overdue lang · {count}",
+    collectionsOverdueCount: "{count} overdue",
     collectionsShowAll: "Ipakita ang lahat ng open balances",
     collectionsIssued: "Issued",
+    collectionsIssuedSection: "Issued open balances",
+    collectionsDraftsSection: "Hindi pa issued (drafts)",
+    collectionsDraftsHint:
+      "Ang draft invoices na may balance ay hindi AR hanggang ma-issue. I-issue muna bago mag-chase ng bayad — reminders para sa issued invoices lang.",
+    collectionsDraftBadge: "Draft · hindi pa issued",
+    collectionsCreated: "Created",
+    collectionsOpenDraft: "Buksan ang draft",
+    collectionsSendReminder: "Magpadala ng reminder",
+    collectionsDraftsHiddenOverdue:
+      "Nakatago ang draft invoices sa overdue view — hindi pa sila issued.",
+    collectionsEmptyOverdueWithDrafts:
+      "Walang past due ngayon. Ang draft invoices na may balance ay hindi overdue — i-clear ang filter para makita ang issued AR at drafts.",
+    paymentReminderNeedsPhone:
+      "Magdagdag ng patient phone number para makapagpadala ng WhatsApp payment reminder.",
     title: "Billing & Invoices",
     selectBranch: "Pumili ng branch",
     hmoClaims: "HMO Claims",

@@ -25,6 +25,21 @@ export type CollectionsArRow = {
   is_overdue: boolean
 }
 
+/** Draft invoices with balance — not issued AR; shown in a separate bucket. */
+export type CollectionsDraftRow = {
+  invoice_id: string
+  invoice_number: string | null
+  patient_id: string
+  first_name: string
+  last_name: string
+  status: "draft"
+  total_amount: number
+  paid_amount: number
+  balance: number
+  due_date: string | null
+  created_date: string
+}
+
 export type CollectionsBucketTotal = {
   bucket: CollectionsAgingBucket
   balance: number
@@ -34,15 +49,19 @@ export type CollectionsBucketTotal = {
 export type CollectionsArWorklist = {
   as_of_date: string
   has_open_ar: boolean
+  has_draft_balance: boolean
   bucket_totals: CollectionsBucketTotal[]
   rows: CollectionsArRow[]
+  draft_rows: CollectionsDraftRow[]
 }
 
 type RpcPayload = {
   as_of_date?: unknown
   has_open_ar?: unknown
+  has_draft_balance?: unknown
   bucket_totals?: unknown
   rows?: unknown
+  draft_rows?: unknown
 }
 
 const BUCKETS: CollectionsAgingBucket[] = ["0_30", "31_60", "60_plus"]
@@ -107,6 +126,46 @@ function mapRow(raw: unknown): CollectionsArRow | null {
   }
 }
 
+function mapDraftRow(raw: unknown): CollectionsDraftRow | null {
+  if (!raw || typeof raw !== "object") return null
+  const row = raw as Record<string, unknown>
+  const invoiceId = asString(row.invoice_id)
+  const patientId = asString(row.patient_id)
+  const firstName = asString(row.first_name)
+  const lastName = asString(row.last_name)
+  const totalAmount = asNumber(row.total_amount)
+  const paidAmount = asNumber(row.paid_amount)
+  const balance = asNumber(row.balance)
+  const createdDate = asString(row.created_date)
+  if (
+    !invoiceId ||
+    !patientId ||
+    !firstName ||
+    !lastName ||
+    totalAmount === null ||
+    paidAmount === null ||
+    balance === null ||
+    !createdDate ||
+    balance <= 0
+  ) {
+    return null
+  }
+  const dueDate = typeof row.due_date === "string" ? row.due_date : null
+  return {
+    invoice_id: invoiceId,
+    invoice_number: typeof row.invoice_number === "string" ? row.invoice_number : null,
+    patient_id: patientId,
+    first_name: firstName,
+    last_name: lastName,
+    status: "draft",
+    total_amount: totalAmount,
+    paid_amount: paidAmount,
+    balance,
+    due_date: dueDate,
+    created_date: createdDate,
+  }
+}
+
 function mapBucketTotal(raw: unknown): CollectionsBucketTotal | null {
   if (!raw || typeof raw !== "object") return null
   const row = raw as Record<string, unknown>
@@ -125,13 +184,17 @@ function emptyWorklist(): CollectionsArWorklist {
   return {
     as_of_date: "",
     has_open_ar: false,
+    has_draft_balance: false,
     bucket_totals: [],
     rows: [],
+    draft_rows: [],
   }
 }
 
 /**
  * AR chase worklist for a branch (issued invoices with open balance).
+ * Also returns draft invoices with balance in a separate draft_rows bucket —
+ * drafts are not issued AR and must not inflate aging/overdue totals.
  * Backend enforces billing.read; client must still gate UI with PermissionGate.
  * Does not log patient or invoice identifiers.
  */
@@ -157,8 +220,12 @@ export async function fetchCollectionsArWorklist(
 
   const payload = (data ?? {}) as RpcPayload
   const rowsRaw = Array.isArray(payload.rows) ? payload.rows : []
+  const draftsRaw = Array.isArray(payload.draft_rows) ? payload.draft_rows : []
   const bucketsRaw = Array.isArray(payload.bucket_totals) ? payload.bucket_totals : []
   const rows = rowsRaw.map(mapRow).filter((row): row is CollectionsArRow => row !== null)
+  const draft_rows = draftsRaw
+    .map(mapDraftRow)
+    .filter((row): row is CollectionsDraftRow => row !== null)
   const bucket_totals = bucketsRaw
     .map(mapBucketTotal)
     .filter((row): row is CollectionsBucketTotal => row !== null)
@@ -168,18 +235,24 @@ export async function fetchCollectionsArWorklist(
     data: {
       as_of_date: asString(payload.as_of_date) ?? "",
       has_open_ar: Boolean(payload.has_open_ar),
+      has_draft_balance: Boolean(payload.has_draft_balance) || draft_rows.length > 0,
       bucket_totals,
       rows,
+      draft_rows,
     },
     error: null,
   }
 }
 
-export function collectionsPatientDisplayName(row: CollectionsArRow): string {
+export function collectionsPatientDisplayName(
+  row: Pick<CollectionsArRow, "first_name" | "last_name">
+): string {
   return `${row.first_name} ${row.last_name}`.trim()
 }
 
-export function collectionsInvoiceLabel(row: CollectionsArRow): string {
+export function collectionsInvoiceLabel(
+  row: Pick<CollectionsArRow, "invoice_number" | "invoice_id">
+): string {
   return row.invoice_number?.trim() || row.invoice_id.slice(0, 8)
 }
 
@@ -191,8 +264,20 @@ export function filterCollectionsRows(
   return rows
 }
 
-export function sumCollectionsBalance(rows: CollectionsArRow[]): number {
+/** Overdue focus counts issued AR only — drafts are never overdue. */
+export function countOverdueCollectionsRows(rows: CollectionsArRow[]): number {
+  return rows.filter((row) => row.is_overdue).length
+}
+
+export function sumCollectionsBalance(
+  rows: Array<Pick<CollectionsArRow, "balance">>
+): number {
   return rows.reduce((sum, row) => sum + row.balance, 0)
+}
+
+/** Deep-link to invoice detail where the existing WhatsApp reminder UI lives. */
+export function collectionsReminderHref(invoiceId: string): string {
+  return `/billing/${invoiceId}?focus=reminder`
 }
 
 export function formatCollectionsPhp(pesoMajor: number, locale = "en-PH"): string {

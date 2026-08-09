@@ -62,7 +62,7 @@ const allPermissions = new Set<string>([
 
 /** Contract: attention deep-links must stay aligned with destination pages */
 const EXPECTED_HREFS: Record<string, string> = {
-  overdue_invoices: "/billing/collections",
+  overdue_invoices: "/billing/collections?focus=overdue",
   low_stock: "/inventory?alerts=1",
   pending_consents: "/patients?attention=consents",
   pending_intake_drafts: "/patients?attention=intake",
@@ -140,7 +140,7 @@ function run() {
   assert.ok(withOverdue.some((i) => i.id === "overdue_invoices"), "overdue rule fires")
   const overdueItem = withOverdue.find((i) => i.id === "overdue_invoices")
   assert.equal(overdueItem?.automationOff, true, "automation off when workflow disabled")
-  assert.equal(overdueItem?.href, "/billing/collections")
+  assert.equal(overdueItem?.href, "/billing/collections?focus=overdue")
 
   const withRecare = evaluateAttentionRules({
     stats: { ...baseStats, recare_due: 4 },

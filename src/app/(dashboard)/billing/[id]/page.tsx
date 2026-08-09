@@ -6,7 +6,7 @@ import { ArrowLeft, Download, ExternalLink, MessageCircle, Printer, Receipt, X, 
 import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
-import { useParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { getInvoice, recordInvoicePayment, voidInvoice, deleteInvoicePayment, updateInvoiceLineItem, addInvoiceLineItem, updateInvoiceDiscount } from "@/lib/billing/invoice-service"
@@ -45,12 +45,23 @@ import {
 } from "@/lib/money/php-money"
 
 export default function InvoiceDetailPage() {
+  return (
+    <React.Suspense fallback={<PageLoadingSkeleton variant="detail" className="max-w-5xl" />}>
+      <InvoiceDetailPageContent />
+    </React.Suspense>
+  )
+}
+
+function InvoiceDetailPageContent() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const invoiceId = params.id as string
+  const focusReminder = searchParams.get("focus") === "reminder"
   const { activeBranch } = useBranch()
   const { t } = useLocale()
   const { hasPermission } = usePermission()
   const canWriteBilling = hasPermission(PERMISSIONS.BILLING_WRITE)
+  const reminderPanelRef = React.useRef<HTMLDivElement | null>(null)
   const [invoice, setInvoice] = React.useState<Awaited<ReturnType<typeof getInvoice>>["data"]>(null)
   const [payments, setPayments] = React.useState<Awaited<ReturnType<typeof getInvoice>>["payments"]>([])
   const [lineItems, setLineItems] = React.useState<Awaited<ReturnType<typeof getInvoice>>["lineItems"]>([])
@@ -443,6 +454,18 @@ export default function InvoiceDetailPage() {
     notify.success(t("billing.paymentReminderLogged", "Payment reminder logged"))
   }
 
+  React.useEffect(() => {
+    if (!focusReminder || loading || !invoice) return
+    const node = reminderPanelRef.current
+    if (!node) return
+    const id = window.setTimeout(() => {
+      node.scrollIntoView({ behavior: "smooth", block: "center" })
+      const btn = document.getElementById("payment-reminder-action")
+      btn?.focus()
+    }, 80)
+    return () => window.clearTimeout(id)
+  }, [focusReminder, loading, invoice])
+
   const handleVoid = async () => {
     if (!voidReason.trim()) return
     if (!(await notify.confirm(t("billing.voidInvoiceConfirm", "Void this invoice? This cannot be undone.")))) return
@@ -576,7 +599,18 @@ export default function InvoiceDetailPage() {
 
         <MetricStrip items={metricItems} />
 
-        <ContentPanel className="border-neutral-200/80 bg-white">
+        <div
+          ref={reminderPanelRef}
+          id="payment-reminder"
+          className={focusReminder ? "rounded-xl ring-2 ring-primary-200/80" : undefined}
+        >
+          <ContentPanel
+            className={
+              focusReminder
+                ? "border-primary-300/90 bg-primary-50/40"
+                : "border-neutral-200/80 bg-white"
+            }
+          >
           <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
             <div className="grid gap-2 sm:grid-cols-3">
               <div>
@@ -609,6 +643,7 @@ export default function InvoiceDetailPage() {
             <div className="flex flex-wrap gap-2">
               {invoiceOpen && invoice.patient_phone ? (
                 <Button
+                  id="payment-reminder-action"
                   size="sm"
                   variant="outline"
                   className="gap-2"
@@ -620,6 +655,13 @@ export default function InvoiceDetailPage() {
                     ? t("billing.paymentReminderLogging", "Logging...")
                     : t("billing.whatsAppReminder", "WhatsApp reminder")}
                 </Button>
+              ) : focusReminder && invoiceOpen && !invoice.patient_phone ? (
+                <p className="text-xs text-amber-800">
+                  {t(
+                    "billing.paymentReminderNeedsPhone",
+                    "Add a patient phone number to send a WhatsApp payment reminder."
+                  )}
+                </p>
               ) : null}
               <Button size="sm" variant="outline" asChild>
                 <Link href={`/patients/${invoice.patient_id}`}>
@@ -628,7 +670,8 @@ export default function InvoiceDetailPage() {
               </Button>
             </div>
           </div>
-        </ContentPanel>
+          </ContentPanel>
+        </div>
 
         {paymentJustSettled && balance <= 0 ? (
           <ContentPanel className="border-emerald-200/80 bg-emerald-50/50">
