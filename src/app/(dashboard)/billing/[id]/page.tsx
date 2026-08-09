@@ -342,15 +342,6 @@ function InvoiceDetailPageContent() {
       setVisitAutoClosed(true)
       notifyVisitAutoClosed(t)
     }
-    
-    // Auto-Recall Marketing Simulation
-    if (lineItems.some(i => i.description.toLowerCase().includes("cleaning") || i.description.toLowerCase().includes("temizlik") || i.description.toLowerCase().includes("proph"))) {
-      setTimeout(() => {
-        notify.info(
-          "🔄 Otomasyon: 6 Aylık 'Diş Taşı Temizliği' Geri Çağırma (Recall) kampanyası hastanın profiline eklendi."
-        )
-      }, 1500)
-    }
 
     setAmount("")
     if (data && invoice) {
