@@ -140,7 +140,7 @@ function run() {
   assert.ok(withOverdue.some((i) => i.id === "overdue_invoices"), "overdue rule fires")
   const overdueItem = withOverdue.find((i) => i.id === "overdue_invoices")
   assert.equal(overdueItem?.automationOff, true, "automation off when workflow disabled")
-  assert.equal(overdueItem?.href, "/billing/collections")
+  assert.equal(overdueItem?.href, "/billing/collections?focus=overdue")
 
   const withRecare = evaluateAttentionRules({
     stats: { ...baseStats, recare_due: 4 },
