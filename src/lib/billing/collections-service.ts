@@ -8,6 +8,8 @@ import {
 export type { CollectionsAgingBucket }
 export { classifyAgingBucket }
 
+export type CollectionsReminderChannel = "whatsapp" | "sms" | "email"
+
 export type CollectionsArRow = {
   invoice_id: string
   invoice_number: string | null
@@ -23,6 +25,9 @@ export type CollectionsArRow = {
   days_outstanding: number
   aging_bucket: CollectionsAgingBucket
   is_overdue: boolean
+  /** Last payment reminder from notification_logs (patient-scoped); no phone/body. */
+  last_reminder_at: string | null
+  last_reminder_channel: CollectionsReminderChannel | null
 }
 
 /** Draft invoices with balance — not issued AR; shown in a separate bucket. */
@@ -78,6 +83,10 @@ function asBucket(value: unknown): CollectionsAgingBucket | null {
   return value === "0_30" || value === "31_60" || value === "60_plus" ? value : null
 }
 
+function asReminderChannel(value: unknown): CollectionsReminderChannel | null {
+  return value === "whatsapp" || value === "sms" || value === "email" ? value : null
+}
+
 function mapRow(raw: unknown): CollectionsArRow | null {
   if (!raw || typeof raw !== "object") return null
   const row = raw as Record<string, unknown>
@@ -108,6 +117,10 @@ function mapRow(raw: unknown): CollectionsArRow | null {
     return null
   }
   const dueDate = typeof row.due_date === "string" ? row.due_date : null
+  const lastReminderAt =
+    typeof row.last_reminder_at === "string" && row.last_reminder_at.length > 0
+      ? row.last_reminder_at
+      : null
   return {
     invoice_id: invoiceId,
     invoice_number: typeof row.invoice_number === "string" ? row.invoice_number : null,
@@ -123,6 +136,8 @@ function mapRow(raw: unknown): CollectionsArRow | null {
     days_outstanding: Math.max(0, Math.trunc(daysOutstanding)),
     aging_bucket: agingBucket,
     is_overdue: Boolean(row.is_overdue),
+    last_reminder_at: lastReminderAt,
+    last_reminder_channel: asReminderChannel(row.last_reminder_channel),
   }
 }
 

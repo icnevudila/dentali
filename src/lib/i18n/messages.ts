@@ -1415,6 +1415,11 @@ export const messagesEnPh: MessageTree = {
     collectionsCreated: "Created",
     collectionsOpenDraft: "Open draft",
     collectionsSendReminder: "Send reminder",
+    collectionsLastReminderAt: "Last reminder: {datetime}",
+    collectionsLastReminderNone: "No reminder logged",
+    collectionsChannelWhatsapp: "WhatsApp",
+    collectionsChannelSms: "SMS",
+    collectionsChannelEmail: "Email",
     collectionsDraftsHiddenOverdue:
       "Draft invoices are hidden in overdue view — they are not yet issued.",
     collectionsEmptyOverdueWithDrafts:
@@ -3466,6 +3471,11 @@ export const messagesTr: MessageTree = {
     collectionsCreated: "Oluşturuldu",
     collectionsOpenDraft: "Taslağı aç",
     collectionsSendReminder: "Hatırlatma gönder",
+    collectionsLastReminderAt: "Son hatırlatma: {datetime}",
+    collectionsLastReminderNone: "Hatırlatma kaydı yok",
+    collectionsChannelWhatsapp: "WhatsApp",
+    collectionsChannelSms: "SMS",
+    collectionsChannelEmail: "E-posta",
     collectionsDraftsHiddenOverdue:
       "Taslak faturalar vadesi geçmiş görünümünde gizlenir — henüz kesilmemişlerdir.",
     collectionsEmptyOverdueWithDrafts:
@@ -5214,6 +5224,11 @@ export const messagesFil: MessageTree = {
     collectionsCreated: "Created",
     collectionsOpenDraft: "Buksan ang draft",
     collectionsSendReminder: "Magpadala ng reminder",
+    collectionsLastReminderAt: "Huling reminder: {datetime}",
+    collectionsLastReminderNone: "Walang naka-log na reminder",
+    collectionsChannelWhatsapp: "WhatsApp",
+    collectionsChannelSms: "SMS",
+    collectionsChannelEmail: "Email",
     collectionsDraftsHiddenOverdue:
       "Nakatago ang draft invoices sa overdue view — hindi pa sila issued.",
     collectionsEmptyOverdueWithDrafts:
