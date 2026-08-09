@@ -30,7 +30,8 @@
 
 0. Local preflight (optional): `powershell -ExecutionPolicy Bypass -File scripts/go-live-preflight.ps1` — runs `tsc`, regenerates the idempotent bundle, prints migration count.
 1. Apply migrations: run `supabase/migrations/_APPLY_ALL_IDEMPOTENT.sql` in the SQL editor, or `npm run db:push` from a linked CLI project.
-2. Confirm RPCs exist: `get_owner_analytics`, `check_in_patient`, `complete_payment_intent_by_ref`, `bulk_add_chart_findings_to_plan`.
+2. Confirm RPCs exist: `get_owner_analytics`, `check_in_patient`, `complete_payment_intent`, `complete_payment_intent_by_ref`, `bulk_add_chart_findings_to_plan`.
+   - Payment completion split: **`complete_payment_intent`** = staff UI (“Mark paid” via `payment-gateway-service`); **`complete_payment_intent_by_ref` / `complete_payment_intent_webhook`** = PayMongo webhook / edge. Checking only `by_ref` can false-PASS while staff Mark paid is missing.
 
 ## Edge functions
 

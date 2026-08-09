@@ -13,6 +13,9 @@ WITH expected(name) AS (
     ('bulk_add_chart_findings_to_plan'),
     ('record_invoice_payment'),
     ('void_invoice'),
+    -- Staff UI Mark paid: payment-gateway-service → complete_payment_intent(p_intent_id)
+    ('complete_payment_intent'),
+    -- Webhook / edge: paymongo-webhook → complete_payment_intent_webhook (by_ref is alias)
     ('complete_payment_intent_by_ref'),
     ('complete_payment_intent_webhook'),
     ('enqueue_payment_reminders'),
