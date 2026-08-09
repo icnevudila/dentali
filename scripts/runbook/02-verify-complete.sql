@@ -79,6 +79,8 @@ with expected(name) as (
     ('bulk_add_chart_findings_to_plan'),
     ('record_invoice_payment'),
     ('void_invoice'),
+    -- Staff UI Mark paid (payment-gateway-service); webhook uses by_ref / webhook variants
+    ('complete_payment_intent'),
     ('complete_payment_intent_by_ref'),
     ('complete_payment_intent_webhook'),
     ('enqueue_payment_reminders'),

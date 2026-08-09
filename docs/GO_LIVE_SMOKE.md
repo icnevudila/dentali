@@ -89,7 +89,7 @@ Skip until vendor accounts exist. Without secrets the app stays in dry-run; clin
 | Integration | Verify |
 |-------------|--------|
 | Semaphore SMS | Branch notification dry-run off; reminder cron sends real SMS |
-| PayMongo | Test checkout → webhook marks intent paid |
+| PayMongo | Test checkout → webhook marks intent paid (`complete_payment_intent_webhook` / `by_ref`). Staff “Mark paid” uses `complete_payment_intent` — both must exist (see `scripts/verify-go-live-rpcs.sql`). |
 | Resend | Closeout email cron delivers to owner inbox |
 | PhilHealth | Claim sync returns live provider response (not dry-run) |
 
