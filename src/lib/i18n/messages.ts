@@ -441,7 +441,7 @@ export const messagesEnPh: MessageTree = {
     createTreatmentPlan: "Create treatment plan",
     tabTreatmentHistory: "Treatment History",
     txPlansHint:
-      "Draft and approved plans. Original = not yet approved. Open a plan to edit or approve.",
+      "Draft and approved plans. Open a plan to edit, approve, or invoice.",
     txPlansEmptyHint:
       "Create a plan from chart findings, then approve when the patient agrees.",
     txHistoryHint:
@@ -450,7 +450,8 @@ export const messagesEnPh: MessageTree = {
     txHistoryEmptyHint:
       "Approve a treatment plan first. Completed and pending approved items will show here.",
     txFilterAll: "All",
-    txFilterOriginal: "Original",
+    txFilterOriginal: "Draft",
+    txFilterDraft: "Draft",
     txFilterApproved: "Approved",
     txFilterInProgress: "In progress",
     txFilterCompleted: "Completed",
@@ -2624,7 +2625,7 @@ export const messagesTr: MessageTree = {
     createTreatmentPlan: "Tedavi planı oluştur",
     tabTreatmentHistory: "Tedavi geçmişi",
     txPlansHint:
-      "Taslak ve onaylı planlar. Original = henüz onaylanmamış. Düzenlemek veya onaylamak için planı açın.",
+      "Taslak ve onaylı planlar. Düzenlemek, onaylamak veya faturalandırmak için planı açın.",
     txPlansEmptyHint:
       "Chart bulgularından plan oluşturun; hasta kabul edince onaylayın.",
     txHistoryHint:
@@ -2633,7 +2634,8 @@ export const messagesTr: MessageTree = {
     txHistoryEmptyHint:
       "Önce bir tedavi planını onaylayın. Tamamlanan ve bekleyen onaylı kalemler burada görünür.",
     txFilterAll: "Tümü",
-    txFilterOriginal: "Orijinal",
+    txFilterOriginal: "Taslak",
+    txFilterDraft: "Taslak",
     txFilterApproved: "Onaylı",
     txFilterInProgress: "Devam ediyor",
     txFilterCompleted: "Tamamlandı",
@@ -4882,7 +4884,7 @@ export const messagesFil: MessageTree = {
     tabTreatmentHistory: "Treatment History",
     tabTreatmentPlans: "Treatment Plans",
     txPlansHint:
-      "Draft at approved plans. Original = hindi pa approved. Buksan para i-edit o i-approve.",
+      "Draft at approved plans. Buksan ang plan para i-edit, i-approve, o i-invoice.",
     txPlansEmptyHint:
       "Gumawa ng plan mula sa chart findings, tapos i-approve kapag pumayag ang pasyente.",
     txHistoryHint:
@@ -4891,7 +4893,8 @@ export const messagesFil: MessageTree = {
     txHistoryEmptyHint:
       "I-approve muna ang treatment plan. Completed at pending approved items lalabas dito.",
     txFilterAll: "Lahat",
-    txFilterOriginal: "Original",
+    txFilterOriginal: "Draft",
+    txFilterDraft: "Draft",
     txFilterApproved: "Approved",
     txFilterInProgress: "In progress",
     txFilterCompleted: "Completed",

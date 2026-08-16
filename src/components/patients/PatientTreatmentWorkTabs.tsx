@@ -107,7 +107,7 @@ export function PatientTreatmentPlansTab({
 
   const options: { id: PlanFilter; label: string }[] = [
     { id: "all", label: `${t("patients.txFilterAll", "All")} (${counts.all})` },
-    { id: "original", label: `${t("patients.txFilterOriginal", "Original")} (${counts.original})` },
+    { id: "original", label: `${t("patients.txFilterDraft", "Draft")} (${counts.original})` },
     { id: "approved", label: `${t("patients.txFilterApproved", "Approved")} (${counts.approved})` },
     { id: "in_progress", label: `${t("patients.txFilterInProgress", "In progress")} (${counts.in_progress})` },
     { id: "completed", label: `${t("patients.txFilterCompleted", "Completed")} (${counts.completed})` },
@@ -115,7 +115,7 @@ export function PatientTreatmentPlansTab({
   ]
 
   const statusLabel = (status: string) =>
-    isOriginalPlan(status) ? t("patients.txFilterOriginal", "Original") : status.replaceAll("_", " ")
+    isOriginalPlan(status) ? t("patients.txFilterDraft", "Draft") : status.replaceAll("_", " ")
 
   return (
     <Card>
