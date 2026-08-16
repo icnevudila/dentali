@@ -15,7 +15,6 @@ import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
-import { CollapsibleBelowFold } from "@/components/layout/CollapsibleBelowFold"
 import { StickyActionBar } from "@/components/layout/StickyActionBar"
 import { MetricStrip } from "@/components/layout/MetricStrip"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
@@ -182,6 +181,8 @@ export default function LabCasesPage() {
   }
 
   const canCreate = Boolean(activeBranch?.id)
+  const listIsEmpty = Boolean(activeBranch?.id) && !loading && !error && cases.length === 0
+  const showHeaderCreate = canCreate && !listIsEmpty
 
   return (
     <PermissionGate permission={PERMISSIONS.PATIENTS_READ}>
@@ -196,6 +197,7 @@ export default function LabCasesPage() {
           title={t("labcases.title", "Laboratory Cases")}
           description={t("labcases.description", "Track impressions, crowns, and external lab orders.")}
           actions={
+            showHeaderCreate ? (
             <Button
               size="sm"
               className="hidden gap-2 md:inline-flex"
@@ -205,8 +207,36 @@ export default function LabCasesPage() {
               <Plus className="h-4 w-4" />
               {t("labcases.new", "New Lab Case")}
             </Button>
+            ) : null
           }
         />
+
+        <div className="rounded-xl border border-neutral-200 bg-neutral-50/80 p-4 sm:p-5">
+          <MetricStrip
+            items={[
+              {
+                label: t("labcases.overdue", "Overdue"),
+                value: loading ? "—" : caseStats.overdue,
+                variant: caseStats.overdue > 0 ? ("warning" as const) : undefined,
+              },
+              {
+                label: t("labcases.dueToday", "Due today"),
+                value: loading ? "—" : caseStats.dueToday,
+                variant: caseStats.dueToday > 0 ? ("warning" as const) : undefined,
+              },
+              {
+                label: t("labcases.pending", "Pending"),
+                value: loading ? "—" : caseStats.pending,
+              },
+              {
+                label: t("labcases.received", "Received"),
+                value: loading ? "—" : caseStats.received,
+                variant: caseStats.received > 0 ? ("success" as const) : undefined,
+              },
+            ]}
+            className="lg:grid-cols-4"
+          />
+        </div>
 
         {overdueCases.length > 0 && !error ? (
           <div className="rounded-xl border border-red-200 bg-red-50/50 p-4 text-sm text-red-950 flex items-start gap-3 shadow-sm animate-fade-in">
@@ -235,6 +265,7 @@ export default function LabCasesPage() {
           </div>
         ) : null}
 
+        {listIsEmpty ? null : (
         <StickyActionBar>
           <Button
             className="h-11 w-full gap-2"
@@ -245,6 +276,7 @@ export default function LabCasesPage() {
             {t("labcases.new", "New Lab Case")}
           </Button>
         </StickyActionBar>
+        )}
 
         {!activeBranch?.id ? (
           <EmptyState
@@ -431,33 +463,6 @@ export default function LabCasesPage() {
             )})}
           </div>
         )}
-
-        <CollapsibleBelowFold summary={t("labcases.statsToggle", "Lab case stats")}>
-          <MetricStrip
-            items={[
-              {
-                label: t("labcases.overdue", "Overdue"),
-                value: loading ? "—" : caseStats.overdue,
-                variant: caseStats.overdue > 0 ? ("warning" as const) : undefined,
-              },
-              {
-                label: t("labcases.dueToday", "Due today"),
-                value: loading ? "—" : caseStats.dueToday,
-                variant: caseStats.dueToday > 0 ? ("warning" as const) : undefined,
-              },
-              {
-                label: t("labcases.pending", "Pending"),
-                value: loading ? "—" : caseStats.pending,
-              },
-              {
-                label: t("labcases.received", "Received"),
-                value: loading ? "—" : caseStats.received,
-                variant: caseStats.received > 0 ? ("success" as const) : undefined,
-              },
-            ]}
-            className="lg:grid-cols-4"
-          />
-        </CollapsibleBelowFold>
 
       </ContentPanel>
 

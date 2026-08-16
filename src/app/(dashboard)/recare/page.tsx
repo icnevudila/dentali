@@ -240,13 +240,13 @@ export default function RecarePage() {
                   icon={CalendarHeart}
                   title={
                     list?.has_visit_history
-                      ? t("recare.emptyTitle", "No recall patients yet")
+                      ? t("recare.dueEmptyTitle", "No patients due right now")
                       : t("recare.noDataTitle", "Not enough recall data yet")
                   }
                   description={
                     list?.has_visit_history
                       ? t(
-                          "recare.emptyDescription",
+                          "recare.dueEmptyDescription",
                           "Nobody is due for a {months}-month recall right now, or due patients already have a future booking. Book from appointments or park them on the waitlist."
                         ).replace("{months}", String(intervalMonths))
                       : t(

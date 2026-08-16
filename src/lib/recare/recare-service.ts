@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client"
+import { getShowcaseSnapshot } from "@/lib/showcase/intercept"
 import {
   DEFAULT_RECARE_INTERVAL_MONTHS,
   resolveRecareIntervalMonthsFromSettings,
@@ -120,6 +121,21 @@ export async function fetchRecareDueList(
 
   if (!branchId) {
     return { data: emptyList(DEFAULT_RECARE_INTERVAL_MONTHS), error: "Branch is required" }
+  }
+
+  const showcase = getShowcaseSnapshot()
+  if (showcase && branchId === showcase.branch.id) {
+    const months =
+      options?.months ??
+      resolveRecareIntervalMonthsFromSettings(null)
+    return {
+      data: {
+        ...emptyList(months),
+        has_visit_history: showcase.appointments.length > 0,
+        as_of_date: new Date().toISOString().slice(0, 10),
+      },
+      error: null,
+    }
   }
 
   let months = options?.months

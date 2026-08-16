@@ -413,7 +413,9 @@ export const messagesEnPh: MessageTree = {
     documentsSubtitle: "X-rays, IDs, referrals, and other files (private storage).",
     documentsEmpty: "No documents uploaded yet.",
     insuranceSelfPayTitle: "Self-pay",
-    insuranceSelfPayHint: "Self-pay — no insurance on file.",
+    insuranceSelfPayHint: "No insurance on file.",
+    insuranceTitle: "Insurance / Coverage",
+    insuranceSubtitle: "HMO, PhilHealth, or private payer details.",
     noTreatmentPlans: "No treatment plans yet.",
     createTreatmentPlan: "Create treatment plan",
     noAppointmentsTitle: "No appointments yet",
@@ -1343,6 +1345,9 @@ export const messagesEnPh: MessageTree = {
     openWorkflow: "Hygiene recall settings",
     emptyTitle: "No patients due right now",
     emptyDescription:
+      "Nobody is due for a {months}-month recall right now, or due patients already have a future booking. Book from appointments or park them on the waitlist.",
+    dueEmptyTitle: "No patients due right now",
+    dueEmptyDescription:
       "Nobody is due for a {months}-month recall right now, or due patients already have a future booking. Book from appointments or park them on the waitlist.",
     noDataTitle: "Not enough recall data yet",
     noDataDescription:
@@ -2489,7 +2494,9 @@ export const messagesTr: MessageTree = {
     documentsSubtitle: "Röntgen, kimlik, sevk ve diğer dosyalar (özel depolama).",
     documentsEmpty: "Henüz belge yüklenmedi.",
     insuranceSelfPayTitle: "Özel ödeme",
-    insuranceSelfPayHint: "Özel ödeme — dosyada sigorta yok.",
+    insuranceSelfPayHint: "Dosyada sigorta yok.",
+    insuranceTitle: "Sigorta / Teminat",
+    insuranceSubtitle: "HMO, PhilHealth veya özel ödeyici bilgileri.",
     noTreatmentPlans: "Henüz tedavi planı yok.",
     createTreatmentPlan: "Tedavi planı oluştur",
     noAppointmentsTitle: "Henüz randevu yok",
@@ -3417,6 +3424,9 @@ export const messagesTr: MessageTree = {
     openWorkflow: "Hijyen recall ayarları",
     emptyTitle: "Şu an due hasta yok",
     emptyDescription:
+      "Şu an {months} aylık recall için due olan kimse yok veya due hastaların gelecek randevusu var. Randevulardan rezervasyon yapın veya bekleme listesine ekleyin.",
+    dueEmptyTitle: "Şu an due hasta yok",
+    dueEmptyDescription:
       "Şu an {months} aylık recall için due olan kimse yok veya due hastaların gelecek randevusu var. Randevulardan rezervasyon yapın veya bekleme listesine ekleyin.",
     noDataTitle: "Henüz yeterli recall verisi yok",
     noDataDescription:
@@ -4628,7 +4638,22 @@ export const messagesFil: MessageTree = {
     documentsSubtitle: "X-ray, ID, referral, at iba pang files (private storage).",
     documentsEmpty: "Walang na-upload na dokumento pa.",
     insuranceSelfPayTitle: "Self-pay",
-    insuranceSelfPayHint: "Self-pay — walang insurance sa file.",
+    insuranceSelfPayHint: "Walang insurance sa file.",
+    insuranceTitle: "Insurance / Coverage",
+    insuranceSubtitle: "HMO, PhilHealth, o private payer details.",
+    recordContactTitle: "Contact at emergency",
+    recordContactEdit: "I-edit ang profile",
+    recordMobile: "Mobile",
+    recordEmail: "Email",
+    recordAddress: "Address",
+    recordEmergency: "Emergency",
+    recordNotProvided: "Hindi ibinigay",
+    recordMedicalTitle: "Medical history",
+    recordMedicalDesc: "Allergies, conditions, at medications",
+    recordNoneRecorded: "Walang naitala",
+    recordAllergies: "Allergies",
+    recordConditions: "Conditions",
+    recordMedications: "Medications",
     noTreatmentPlans: "Wala pang treatment plans.",
     createTreatmentPlan: "Gumawa ng treatment plan",
     noAppointmentsTitle: "Wala pang appointments",
@@ -5193,6 +5218,9 @@ export const messagesFil: MessageTree = {
     openWorkflow: "Mga setting ng hygiene recall",
     emptyTitle: "Walang due na pasyente ngayon",
     emptyDescription:
+      "Walang due para sa {months}-buwang recall ngayon, o may future booking na ang due patients. Mag-book mula sa appointments o i-park sa waitlist.",
+    dueEmptyTitle: "Walang due na pasyente ngayon",
+    dueEmptyDescription:
       "Walang due para sa {months}-buwang recall ngayon, o may future booking na ang due patients. Mag-book mula sa appointments o i-park sa waitlist.",
     noDataTitle: "Kulang pa ang recall data",
     noDataDescription:

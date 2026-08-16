@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { EmptyState } from "@/components/ui/empty-state"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
@@ -87,8 +86,10 @@ export function PatientInsurancePanel({ patientId }: PatientInsurancePanelProps)
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4">
         <div>
-          <CardTitle className="text-base">Insurance / Coverage</CardTitle>
-          <CardDescription>HMO, PhilHealth, or private payer details.</CardDescription>
+          <CardTitle className="text-base">{t("patients.insuranceTitle", "Insurance / Coverage")}</CardTitle>
+          <CardDescription>
+            {t("patients.insuranceSubtitle", "HMO, PhilHealth, or private payer details.")}
+          </CardDescription>
         </div>
         <PermissionGate permission={PERMISSIONS.PATIENTS_WRITE}>
           <Button size="sm" variant="outline" onClick={() => setEditing((v) => !v)}>
@@ -148,15 +149,17 @@ export function PatientInsurancePanel({ patientId }: PatientInsurancePanelProps)
             {primary.plan_name && <p><span className="text-neutral-500">Plan:</span> {primary.plan_name}</p>}
           </div>
         ) : (
-          <EmptyState
-            icon={Shield}
-            className="border-0 bg-transparent py-4"
-            title={t("patients.insuranceSelfPayTitle", "Self-pay")}
-            description={t(
-              "patients.insuranceSelfPayHint",
-              "Self-pay — no insurance on file."
-            )}
-          />
+          <div className="flex items-start gap-2.5 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-3">
+            <Shield className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
+            <div className="min-w-0 space-y-0.5">
+              <p className="text-sm font-medium text-neutral-800">
+                {t("patients.insuranceSelfPayTitle", "Self-pay")}
+              </p>
+              <p className="text-xs text-neutral-500">
+                {t("patients.insuranceSelfPayHint", "No insurance on file.")}
+              </p>
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>
