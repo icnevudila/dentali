@@ -478,7 +478,7 @@ function InvoiceDetailPageContent() {
         <td style="padding:8px 12px;font-size:13px">${item.description ?? '—'}</td>
         <td style="padding:8px 12px;font-size:13px;text-align:center">${item.quantity ?? 1}</td>
         <td style="padding:8px 12px;font-size:13px;text-align:right">₱${Number(item.unit_price ?? 0).toLocaleString()}</td>
-        <td style="padding:8px 12px;font-size:13px;text-align:right;font-weight:600">₱${Number(item.total_price ?? 0).toLocaleString()}</td>
+        <td style="padding:8px 12px;font-size:13px;text-align:right;font-weight:600">₱${Number(item.line_total ?? 0).toLocaleString()}</td>
       </tr>
     `).join('')
     win.document.write(`<!DOCTYPE html><html><head>
