@@ -31,7 +31,11 @@ export function HorizontalScrollTabs({
     const root = scrollerRef.current
     if (!root) return
     const active = root.querySelector<HTMLElement>('[data-tab-active="true"]')
-    active?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" })
+    if (!active) return
+    const rootRect = root.getBoundingClientRect()
+    const activeRect = active.getBoundingClientRect()
+    const offset = activeRect.left - rootRect.left - (rootRect.width / 2) + (activeRect.width / 2)
+    root.scrollBy({ left: offset, behavior: "smooth" })
   }, [activeId])
 
   return (

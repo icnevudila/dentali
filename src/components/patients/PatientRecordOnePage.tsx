@@ -96,45 +96,18 @@ function RecordSection({
 function SectionNav({
   activeId,
   sections,
+  onSelect,
 }: {
   activeId: string | null
   sections: { id: string; label: string; icon: LucideIcon }[]
+  onSelect: (id: string) => void
 }) {
-  // scroll-mt-* CSS alone doesn't work reliably inside overflow-y-auto containers.
-  // We find the nearest scrollable ancestor and manually compute the offset.
-  const scrollTo = (id: string) => {
-    const target = document.getElementById(id)
-    if (!target) return
-
-    // Walk up to find the scrollable container (main or body)
-    let container: HTMLElement | null = target.parentElement
-    while (container && container !== document.documentElement) {
-      const { overflowY } = getComputedStyle(container)
-      if (overflowY === "auto" || overflowY === "scroll") break
-      container = container.parentElement
-    }
-
-    if (!container || container === document.documentElement) {
-      // Fallback: window scroll
-      target.scrollIntoView({ behavior: "smooth", block: "start" })
-      return
-    }
-
-    // Account for the sticky outer patient tab bar (~44px) + some breathing room
-    const STICKY_OFFSET = 56
-    const containerTop = container.getBoundingClientRect().top
-    const targetTop = target.getBoundingClientRect().top
-    const scrollDelta = targetTop - containerTop - STICKY_OFFSET
-
-    container.scrollBy({ top: scrollDelta, behavior: "smooth" })
-  }
-
   return (
     <div className="mb-3">
       <HorizontalScrollTabs
         tabs={sections}
         activeId={activeId}
-        onSelect={scrollTo}
+        onSelect={onSelect}
         ariaLabel="Record sections"
         stickyClassName="sticky top-[52px] z-10"
         activeVariant="soft"
@@ -185,7 +158,34 @@ export function PatientRecordOnePage({
     fetchOrthoCase(patientId, activeBranch.id).then(({ data }) => setOrthoCase(data))
   }, [patientId, activeBranch?.id])
 
+  const scrollTo = React.useCallback((id: string) => {
+    setActiveSection(id)
+    const target = document.getElementById(id)
+    if (!target) return
+
+    // Walk up to find the scrollable container (main or body)
+    let container: HTMLElement | null = target.parentElement
+    while (container && container !== document.documentElement) {
+      const { overflowY } = getComputedStyle(container)
+      if (overflowY === "auto" || overflowY === "scroll") break
+      container = container.parentElement
+    }
+
+    if (!container || container === document.documentElement) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" })
+      return
+    }
+
+    const STICKY_OFFSET = 56
+    const containerTop = container.getBoundingClientRect().top
+    const targetTop = target.getBoundingClientRect().top
+    const scrollDelta = targetTop - containerTop - STICKY_OFFSET
+
+    container.scrollBy({ top: scrollDelta, behavior: "smooth" })
+  }, [])
+
   React.useEffect(() => {
+    const mainEl = document.querySelector("main")
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries
@@ -193,7 +193,7 @@ export function PatientRecordOnePage({
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
         if (visible?.target.id) setActiveSection(visible.target.id)
       },
-      { rootMargin: "-20% 0px -60% 0px", threshold: [0, 0.25, 0.5] }
+      { root: mainEl ?? null, rootMargin: "-10% 0px -50% 0px", threshold: [0, 0.2, 0.5] }
     )
     for (const s of recordSections) {
       const el = document.getElementById(s.id)
@@ -230,7 +230,7 @@ export function PatientRecordOnePage({
 
   return (
     <div>
-      <SectionNav activeId={activeSection} sections={recordSections} />
+      <SectionNav activeId={activeSection} sections={recordSections} onSelect={scrollTo} />
 
       <div className="min-w-0 space-y-8 pb-8">
         <RecordSection
