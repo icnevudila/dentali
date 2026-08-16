@@ -163,15 +163,21 @@ export function PatientRecordOnePage({
     const target = document.getElementById(id)
     if (!target) return
 
+    // 1. Native scroll into view with CSS scroll-margin-top
+    try {
+      target.scrollIntoView({ behavior: "smooth", block: "start" })
+    } catch {
+      // ignore
+    }
+
+    // 2. Direct scroll on main dashboard container
     const mainEl = document.querySelector("main")
-    if (mainEl) {
+    if (mainEl && mainEl.scrollHeight > mainEl.clientHeight) {
       const mainRect = mainEl.getBoundingClientRect()
       const targetRect = target.getBoundingClientRect()
-      const STICKY_HEADER_OFFSET = 70
+      const STICKY_HEADER_OFFSET = 65
       const targetScrollTop = mainEl.scrollTop + (targetRect.top - mainRect.top) - STICKY_HEADER_OFFSET
       mainEl.scrollTo({ top: Math.max(0, targetScrollTop), behavior: "smooth" })
-    } else {
-      target.scrollIntoView({ behavior: "smooth", block: "start" })
     }
   }, [])
 
