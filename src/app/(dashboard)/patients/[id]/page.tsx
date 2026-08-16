@@ -862,6 +862,7 @@ export default function PatientProfilePage() {
                 )}
               </p>
             )}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 print:hidden lg:justify-end">
