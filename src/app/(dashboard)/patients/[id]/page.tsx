@@ -131,7 +131,7 @@ export default function PatientProfilePage() {
     (tabId: PatientTabId) => {
       const params = new URLSearchParams(searchParams.toString())
       params.set("tab", tabId)
-      router.replace(`/patients/${patientId}?${params.toString()}`, { scroll: false })
+      router.push(`/patients/${patientId}?${params.toString()}`, { scroll: false })
     },
     [patientId, router, searchParams]
   )
