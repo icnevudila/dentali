@@ -75,8 +75,8 @@ function MetricCard({
       >
         {item.value}
       </p>
-      {item.hint ? (
-        <p className={cn("text-xs text-neutral-500", compact ? "mt-0.5" : "mt-1")}>
+      {item.hint && !compact ? (
+        <p className="mt-1 text-xs text-neutral-500">
           {(item.href || item.onClick) ? (
             <span className="text-primary-600 group-hover:underline">{item.hint}</span>
           ) : (

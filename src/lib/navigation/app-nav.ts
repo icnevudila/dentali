@@ -148,6 +148,14 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         permission: PERMISSIONS.PATIENTS_READ,
       },
       {
+        nameKey: "nav.treatmentPlans",
+        fallback: "Treatment plans",
+        href: "/treatment-plans",
+        icon: ListOrdered,
+        permission: PERMISSIONS.DENTAL_CHART_READ,
+        isActive: (pathname) => pathname === "/treatment-plans" || pathname.startsWith("/treatment-plans/"),
+      },
+      {
         nameKey: "nav.prescriptions",
         fallback: "Prescriptions",
         href: "/prescriptions",

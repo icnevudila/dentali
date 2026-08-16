@@ -12,6 +12,7 @@ import {
   CreditCard,
   Building,
   Command,
+  ListOrdered,
   X,
   ChevronRight,
 } from "lucide-react"
@@ -124,6 +125,14 @@ export function CommandPalette() {
       category: "Clinical Actions",
       icon: FlaskConical,
       action: () => navigateTo("/lab-cases"),
+    },
+    {
+      id: "nav-treatment-plans",
+      title: "Treatment plans",
+      subtitle: "Branch case list — open one plan at a time",
+      category: "Clinical Actions",
+      icon: ListOrdered,
+      action: () => navigateTo("/treatment-plans"),
     },
     {
       id: "nav-billing",

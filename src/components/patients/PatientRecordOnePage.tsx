@@ -104,58 +104,30 @@ function SectionNav({
   }
 
   return (
-    <>
-      <nav className="xl:hidden sticky top-0 z-10 -mx-1 mb-4 flex gap-1.5 overflow-x-auto hide-scrollbar rounded-lg border border-neutral-200 bg-white/95 p-1.5 backdrop-blur-sm">
-        {sections.map((s) => {
-          const SectionIcon = s.icon
-          return (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => scrollTo(s.id)}
-              className={cn(
-                "inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                activeId === s.id
-                  ? "bg-primary-600 text-white"
-                  : "text-neutral-600 hover:bg-neutral-100"
-              )}
-            >
-              <SectionIcon className="h-3.5 w-3.5 shrink-0" />
-              {s.label}
-            </button>
-          )
-        })}
-      </nav>
-
-      <aside className="hidden xl:block w-40 shrink-0">
-        <nav className="sticky top-24 space-y-0.5 text-sm">
-          {sections.map((s) => {
-            const SectionIcon = s.icon
-            return (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => scrollTo(s.id)}
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 transition-colors text-left",
-                  activeId === s.id
-                    ? "bg-primary-50 text-primary-700 font-medium"
-                    : "text-neutral-500 hover:text-neutral-800 hover:bg-neutral-50"
-                )}
-              >
-                <SectionIcon
-                  className={cn(
-                    "h-4 w-4 shrink-0",
-                    activeId === s.id ? "text-primary-600" : "text-neutral-400"
-                  )}
-                />
-                <span className="truncate">{s.label}</span>
-              </button>
-            )
-          })}
-        </nav>
-      </aside>
-    </>
+    <nav
+      className="sticky top-11 z-10 mb-4 flex gap-1 overflow-x-auto hide-scrollbar rounded-lg border border-neutral-200 bg-white/95 p-1 backdrop-blur-sm"
+      aria-label="Record sections"
+    >
+      {sections.map((s) => {
+        const SectionIcon = s.icon
+        return (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => scrollTo(s.id)}
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
+              activeId === s.id
+                ? "bg-primary-50 text-primary-700"
+                : "text-neutral-600 hover:bg-neutral-100"
+            )}
+          >
+            <SectionIcon className="h-3.5 w-3.5 shrink-0" />
+            {s.label}
+          </button>
+        )
+      })}
+    </nav>
   )
 }
 
@@ -244,10 +216,10 @@ export function PatientRecordOnePage({
     .replace("{pending}", String(pendingConsents))
 
   return (
-    <div className="flex flex-col xl:flex-row gap-6 xl:gap-8">
+    <div>
       <SectionNav activeId={activeSection} sections={recordSections} />
 
-      <div className="min-w-0 flex-1 space-y-10 pb-8">
+      <div className="min-w-0 space-y-8 pb-8">
         <RecordSection
           id="record-status"
           title={t("patients.recordStatusTitle", "Record status")}
@@ -494,11 +466,16 @@ export function PatientRecordOnePage({
           id="record-treatment"
           title={t("patients.recordTreatmentTitle", "Treatment plans")}
           action={
-            <Button size="sm" className="gap-1" asChild>
-              <Link href={`/patients/${patientId}/treatment-plan`}>
-                <FileText className="h-3.5 w-3.5" /> {t("patients.recordNewPlan", "New plan")}
-              </Link>
-            </Button>
+            <div className="flex flex-wrap gap-1.5">
+              <Button size="sm" variant="outline" className="h-8 gap-1" type="button" onClick={() => onOpenTab("treatment-history")}>
+                {t("patients.tabTreatmentHistory", "Treatment History")}
+              </Button>
+              <Button size="sm" className="h-8 gap-1" asChild>
+                <Link href={`/patients/${patientId}/treatment-plan`}>
+                  <FileText className="h-3.5 w-3.5" /> {t("patients.recordNewPlan", "New plan")}
+                </Link>
+              </Button>
+            </div>
           }
         >
           <TreatmentPlanProgressBar

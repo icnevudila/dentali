@@ -48,6 +48,42 @@ export interface TreatmentPlanItem {
   status: string
 }
 
+export type BranchTreatmentPlanStatusGroup =
+  | "all"
+  | "unapproved"
+  | "approved"
+  | "ongoing"
+  | "completed"
+
+export type BranchTreatmentPlanRow = {
+  plan_id: string
+  patient_id: string
+  patient_first_name: string
+  patient_last_name: string
+  title: string
+  status: string
+  status_group: Exclude<BranchTreatmentPlanStatusGroup, "all">
+  total_estimated: number
+  item_count: number
+  completed_item_count: number
+  created_at: string
+  approved_at: string | null
+}
+
+export async function fetchBranchTreatmentPlans(
+  branchId: string,
+  options?: { limit?: number; statusGroup?: BranchTreatmentPlanStatusGroup }
+): Promise<{ data: BranchTreatmentPlanRow[]; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("list_branch_treatment_plans", {
+    p_branch_id: branchId,
+    p_limit: options?.limit ?? 100,
+    p_status_group: options?.statusGroup ?? "all",
+  })
+  if (error) return { data: [], error: error.message }
+  return { data: (data ?? []) as BranchTreatmentPlanRow[], error: null }
+}
+
 export async function fetchPatientTreatmentPlans(
   patientId: string
 ): Promise<{ data: TreatmentPlanSummary[]; error: string | null }> {

@@ -5,10 +5,9 @@ import { createPortal } from "react-dom"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { addTransitionType, startTransition } from "react"
-import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Users, Plus, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen, ScrollText, Shield, DoorClosed } from "lucide-react"
+import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Plus, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen, ScrollText, Shield, DoorClosed, History } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
-import { SectionEyebrow } from "@/components/layout/SectionEyebrow"
 import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
@@ -40,6 +39,7 @@ import { MedicalAlertBanner } from "@/components/patients/MedicalAlertBanner"
 import { PatientDocumentsPanel } from "@/components/patients/PatientDocumentsPanel"
 import { PatientRadiologyPanel } from "@/components/patients/PatientRadiologyPanel"
 import { PatientRecordOnePage } from "@/components/patients/PatientRecordOnePage"
+import { PatientTreatmentHistoryTab, PatientTreatmentPlansTab } from "@/components/patients/PatientTreatmentWorkTabs"
 import { OrthoRecordSummary } from "@/components/patients/OrthoRecordSummary"
 import { PrescriptionsSummary } from "@/components/patients/PrescriptionsSummary"
 import { PatientAuditPanel } from "@/components/patients/PatientAuditPanel"
@@ -84,6 +84,7 @@ type PatientTabId =
   | "dental-chart"
   | "clinical-notes"
   | "treatment-plans"
+  | "treatment-history"
   | "orthodontics"
   | "prescriptions"
   | "appointments"
@@ -100,6 +101,7 @@ const PATIENT_TAB_DEFS: { id: PatientTabId; labelKey: string; fallback: string; 
   { id: "dental-chart", labelKey: "patients.tabDentalChart", fallback: "Dental Chart", icon: Scan },
   { id: "clinical-notes", labelKey: "patients.tabClinicalNotes", fallback: "Clinical Notes", icon: FileText },
   { id: "treatment-plans", labelKey: "patients.tabTreatmentPlans", fallback: "Treatment Plans", icon: ListOrdered },
+  { id: "treatment-history", labelKey: "patients.tabTreatmentHistory", fallback: "Treatment History", icon: History },
   { id: "orthodontics", labelKey: "patients.tabOrthodontics", fallback: "Orthodontics", icon: Braces },
   { id: "prescriptions", labelKey: "patients.tabPrescriptions", fallback: "Prescriptions", icon: Pill },
   { id: "appointments", labelKey: "patients.tabAppointments", fallback: "Appointments", icon: Calendar },
@@ -723,11 +725,9 @@ export default function PatientProfilePage() {
         </div>
       )}
 
-      <SectionEyebrow icon={Users}>Clinical · Patient profile</SectionEyebrow>
-
-      <div className="space-y-2.5">
+      <div className="space-y-2">
       {/* HEADER */}
-      <div className="rounded-xl border border-neutral-200/80 bg-white px-3 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+      <div className="rounded-xl border border-neutral-200/80 bg-white px-3 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           <Button variant="ghost" size="icon" asChild className="h-8 w-8 shrink-0 print:hidden">
@@ -827,7 +827,15 @@ export default function PatientProfilePage() {
         </div>
         </div>
         <div className="mt-2 border-t border-neutral-100 pt-2">
-          <MetricStrip items={profileMetrics} compact />
+          <MetricStrip items={profileMetrics} compact desktopCols={4} />
+        </div>
+        <div className="mt-2 border-t border-neutral-100 pt-2 print:hidden">
+          <PatientOutreachCard
+            patientId={patientId}
+            patientName={fullName}
+            phone={patient.phone}
+            className="border-0 shadow-none"
+          />
         </div>
       </div>
 
@@ -852,18 +860,13 @@ export default function PatientProfilePage() {
         </div>
       ) : null}
 
-      <PatientOutreachCard
-        patientId={patientId}
-        patientName={fullName}
-        phone={patient.phone}
-        className="print:hidden"
-      />
       </div>
     </div>
 
-    <div className="mt-4 space-y-6">
+    <div className="mt-3 space-y-3">
       <ClinicalVisitJourneyPanel
         journey={visitJourney}
+        compact
         headerBadge={
           activeEncounter?.encounter.status === "open" ? (
             <Badge variant="info">{t("visits.activeVisit", "Today’s visit")}</Badge>
@@ -952,20 +955,14 @@ export default function PatientProfilePage() {
       ) : null}
 
       {!activeEncounter ? (
-        <ContentPanel className="border-neutral-200/80">
-          <p className="text-sm font-medium text-neutral-900">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2">
+          <p className="text-sm text-neutral-700">
             {t("visits.noActiveVisit", "No active visit")}
           </p>
-          <p className="mt-1 text-sm text-neutral-600">
-            {t(
-              "visits.noActiveVisitHint",
-              "Send this patient to Queue when they physically arrive. Check-in opens today's visit and puts them in Waiting."
-            )}
-          </p>
-          <Button size="sm" className="mt-3" asChild>
+          <Button size="sm" className="h-7" asChild>
             <Link href={patientArrivalHref}>{t("visits.checkInCta", "Open patient arrival")}</Link>
           </Button>
-        </ContentPanel>
+        </div>
       ) : null}
 
       {intakeComplete ? (
@@ -989,6 +986,7 @@ export default function PatientProfilePage() {
       ) : null}
 
       <MedicalAlertBanner
+        compact
         alerts={
           medicalHistory
             ? { allergies: medicalHistory.allergies, conditions: medicalHistory.conditions, medications: medicalHistory.medications }
@@ -1032,51 +1030,17 @@ export default function PatientProfilePage() {
 
         <div className="min-w-0">
           {activeTab === "record" && (
-            <div className="space-y-6">
-              <div className="grid gap-3 md:grid-cols-3">
-                <Link
-                  href={`/patients/${patientId}/epicrisis`}
-                  className="group rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors hover:border-primary-200 hover:bg-primary-50/30"
-                >
-                  <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                    Discharge summary
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-neutral-950">
-                    Open epicrisis document
-                  </p>
-                  <p className="mt-2 text-xs text-neutral-500">
-                    Printable clinical summary only — does not close today&apos;s visit. Use Finish visit
-                    on the header to close the visit.
-                  </p>
-                </Link>
-                <Link
-                  href={`/patients/${patientId}/medical-abstract`}
-                  className="group rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors hover:border-primary-200 hover:bg-primary-50/30"
-                >
-                  <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                    Referral
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-neutral-950">
-                    Open medical abstract
-                  </p>
-                  <p className="mt-2 text-xs text-neutral-500">
-                    Useful for referrals and external handovers when discharge is too heavy.
-                  </p>
-                </Link>
-                <Link
-                  href={`/patients/${patientId}/ortho`}
-                  className="group rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors hover:border-primary-200 hover:bg-primary-50/30"
-                >
-                  <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                    Specialty
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-neutral-950">
-                    Open orthodontic record
-                  </p>
-                  <p className="mt-2 text-xs text-neutral-500">
-                    Log ortho adjustments, payments, and next visit dates.
-                  </p>
-                </Link>
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-1.5">
+                <Button size="sm" variant="outline" className="h-7" asChild>
+                  <Link href={`/patients/${patientId}/epicrisis`}>Epicrisis</Link>
+                </Button>
+                <Button size="sm" variant="outline" className="h-7" asChild>
+                  <Link href={`/patients/${patientId}/medical-abstract`}>Abstract</Link>
+                </Button>
+                <Button size="sm" variant="outline" className="h-7" asChild>
+                  <Link href={`/patients/${patientId}/ortho`}>Ortho</Link>
+                </Button>
               </div>
 
               <PatientRecordOnePage
@@ -1252,74 +1216,12 @@ export default function PatientProfilePage() {
             </Card>
           )}
 
-          {/* TREATMENT PLANS TAB */}
           {activeTab === "treatment-plans" && (
-            <Card>
-              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <CardTitle>Proposed Treatments</CardTitle>
-                  <CardDescription>Active and historical treatment plans.</CardDescription>
-                </div>
-                <Button size="sm" className="gap-2" asChild>
-                  <Link href={`/patients/${patientId}/treatment-plan`} transitionTypes={NAV_FORWARD_TRANSITION}>
-                    <FileText className="h-4 w-4" /> Create Plan
-                  </Link>
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="border border-neutral-200 rounded-lg overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-neutral-50 border-b border-neutral-200">
-                      <tr>
-                        <th className="px-4 py-3 font-medium text-neutral-700">Plan Name</th>
-                        <th className="px-4 py-3 font-medium text-neutral-700">Date Created</th>
-                        <th className="px-4 py-3 font-medium text-neutral-700">Total Cost</th>
-                        <th className="px-4 py-3 font-medium text-neutral-700">Status</th>
-                        <th className="px-4 py-3 font-medium text-right text-neutral-700">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-200">
-                      {treatmentPlans.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="px-4 py-8 text-center">
-                            <p className="text-neutral-500">
-                              {t("patients.noTreatmentPlans", "No treatment plans yet.")}
-                            </p>
-                            <Button size="sm" className="mt-3" asChild>
-                              <Link
-                                href={`/patients/${patientId}/treatment-plan`}
-                                transitionTypes={NAV_FORWARD_TRANSITION}
-                              >
-                                {t("patients.createTreatmentPlan", "Create treatment plan")}
-                              </Link>
-                            </Button>
-                          </td>
-                        </tr>
-                      ) : (
-                        treatmentPlans.map((plan) => (
-                          <tr key={plan.id} className="hover:bg-neutral-50">
-                            <td className="px-4 py-3 font-medium text-neutral-900">{plan.title}</td>
-                            <td className="px-4 py-3 text-neutral-600">{new Date(plan.created_at).toLocaleDateString("en-PH")}</td>
-                            <td className="px-4 py-3 text-neutral-900">₱{Number(plan.total_estimated).toLocaleString()}</td>
-                            <td className="px-4 py-3"><Badge variant={plan.status === "completed" ? "success" : plan.status === "accepted" ? "info" : plan.status === "cancelled" || plan.status === "rejected" ? "danger" : plan.status === "in_progress" ? "warning" : "outline"}>{plan.status.replace("_", " ")}</Badge></td>
-                            <td className="px-4 py-3 text-right">
-                              <Button variant="ghost" size="sm" asChild>
-                                <Link
-                                  href={`/patients/${patientId}/treatment-plan?plan=${plan.id}`}
-                                  transitionTypes={NAV_FORWARD_TRANSITION}
-                                >
-                                  View
-                                </Link>
-                              </Button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+            <PatientTreatmentPlansTab patientId={patientId} plans={treatmentPlans} />
+          )}
+
+          {activeTab === "treatment-history" && (
+            <PatientTreatmentHistoryTab patientId={patientId} branchId={activeBranch?.id} />
           )}
 
           {/* VISITS TAB */}

@@ -236,7 +236,7 @@ export const TR_UI_STRINGS: Record<string, string> = {
   "Billing & Invoices": "Faturalama ve Faturalar",
   "Billing & inventory": "Faturalama ve stok",
   "Billing & invoices": "Faturalama",
-  "Billing action required before checkout": "Çıkış öncesi faturalama gerekli",
+  "Billing action required before Finish visit": "Ziyareti bitirmeden önce faturalama gerekli",
   "Billing locked for today": "Faturalandırma bugün için kilitlendi",
   "Billing review before check-in": "Check-in öncesi billing kontrolü",
   "Billing review required before check-in.": "Check-in öncesi faturalama incelemesi gerekli.",

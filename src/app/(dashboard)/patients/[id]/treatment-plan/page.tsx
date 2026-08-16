@@ -154,7 +154,7 @@ function TreatmentPlanContent() {
   const [seeding, setSeeding] = React.useState(false)
   const [billingGate, setBillingGate] = React.useState<PatientBillingGate | null>(null)
   const [carryPlan, setCarryPlan] = React.useState<CarryForwardPlan | null>(null)
-  const [showPlanCarryPicker, setShowPlanCarryPicker] = React.useState(true)
+  const [showPlanCarryPicker, setShowPlanCarryPicker] = React.useState(false)
   const [noPlanTab, setNoPlanTab] = React.useState<"quick" | "standard">("quick")
 
   const planEditable = planStatus === "proposed" || planStatus === "draft"
@@ -229,10 +229,19 @@ function TreatmentPlanContent() {
     fetchProcedures(activeBranch?.id).then(({ data }) => setProcedures(data))
     if (planId) {
       queueMicrotask(() => {
+        setActivePlanId(planId)
         void loadPlan(planId)
       })
     } else {
-      queueMicrotask(() => setLoading(false))
+      queueMicrotask(() => {
+        setActivePlanId("")
+        setItems([])
+        setPlanTitle("")
+        setPlanStatus("proposed")
+        setTotal(0)
+        setAutoInvoiceId(null)
+        setLoading(false)
+      })
     }
   }, [patientId, planId, loadPlan, activeBranch?.id])
 
@@ -768,6 +777,13 @@ function TreatmentPlanContent() {
         }
       ]
     : baseGroups
+  const visiblePhaseGroups = (items || []).length === 0
+    ? []
+    : phaseGroups.filter((phase) => phase.items.length > 0)
+  const thisPlanNeedsInvoice = Boolean(
+    activePlanId &&
+      billingGate?.approved_plans_missing_invoice.some((plan) => plan.plan_id === activePlanId)
+  )
   const clinicalChecklist = activePlanId
     ? [
         {
@@ -808,14 +824,18 @@ function TreatmentPlanContent() {
       <PatientPageShell
         patientId={patientId}
         section="Treatment plan"
-        title="Treatment plan"
-        description={patientName || "Proposed procedures and estimates"}
+        title={activePlanId && planTitle ? planTitle : "Treatment plan"}
+        description={
+          activePlanId
+            ? patientName || "This case only"
+            : patientName || "Start a blank Quick Case or a new plan — previous visits stay in Treatment History."
+        }
         maxWidth="max-w-4xl"
         className="pb-10"
         error={error}
         metrics={metricItems}
       >
-        {billingGate?.has_billing_gap ? (
+        {thisPlanNeedsInvoice ? (
           <PatientBillingGateBanner
             gate={billingGate}
             patientId={patientId}
@@ -838,6 +858,17 @@ function TreatmentPlanContent() {
                 }}
                 onDismiss={() => setShowPlanCarryPicker(false)}
               />
+            ) : null}
+            {carryPlan && !showPlanCarryPicker && carryPlan.itemCount > 0 ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8"
+                onClick={() => setShowPlanCarryPicker(true)}
+              >
+                {t("treatmentPlan.copyLastVisit", "Copy last visit plan (optional)")}
+              </Button>
             ) : null}
             {/* ── 2-tab plan picker ── */}
             <Card>
@@ -1092,7 +1123,7 @@ function TreatmentPlanContent() {
                   />
                 ) : (
                   <div className="space-y-3">
-                    {phaseGroups.map((phase) => (
+                    {visiblePhaseGroups.map((phase) => (
                       <section key={phase.value} className="rounded-xl border border-neutral-200 bg-white">
                         <div className="flex flex-col gap-1 border-b border-neutral-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                           <div>
