@@ -192,7 +192,10 @@ export function HorizontalScrollTabs({
                 role="tab"
                 aria-selected={isActive}
                 data-tab-active={isActive ? "true" : "false"}
-                onClick={() => {
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  if (hasDraggedRef.current) return
+                  e.stopPropagation()
                   onSelect(tab.id)
                 }}
                 className={cn(
