@@ -1479,7 +1479,6 @@ export default function PatientProfilePage() {
             document.body
           )
         : null}
-    </div>
     </DirectionalTransition>
     </PermissionGate>
   )

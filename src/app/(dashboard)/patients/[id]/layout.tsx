@@ -21,7 +21,8 @@ export default function PatientSectionLayout({
     Boolean(patientId) &&
     (pathname === `/patients/${patientId}` || pathname === `/patients/${patientId}/`)
   const isPrint = pathname.includes("/print")
-  const showActionRail = Boolean(patientId) && !isProfileRoot && !isPrint
+  const isTreatmentPlan = pathname.includes("/treatment-plan")
+  const showActionRail = Boolean(patientId) && !isProfileRoot && !isPrint && !isTreatmentPlan
 
   return (
     <div className="min-w-0">

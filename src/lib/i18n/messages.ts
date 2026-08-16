@@ -826,6 +826,10 @@ export const messagesEnPh: MessageTree = {
     addFromChart: "Add findings from dental chart",
     noPhaseProcedures: "No procedure in this phase.",
     copyLastVisit: "Copy last visit plan (optional)",
+    openHistory: "Treatment history",
+    viewThisPlanOnly: "This plan only — history is on the patient file when you need it.",
+    showChartSuggestions: "Show chart findings (optional)",
+    hideChartSuggestions: "Hide chart findings",
   },
   chartFindings: {
     title: "Suggested from chart findings",
@@ -2949,6 +2953,10 @@ export const messagesTr: MessageTree = {
     addFromChart: "Diş kartından bulgu ekle",
     noPhaseProcedures: "Bu aşamada işlem yok.",
     copyLastVisit: "Son ziyaret planını kopyala (isteğe bağlı)",
+    openHistory: "Tedavi geçmişi",
+    viewThisPlanOnly: "Yalnızca bu plan — geçmiş, istediğinizde hasta dosyasında.",
+    showChartSuggestions: "Chart bulgularını göster (isteğe bağlı)",
+    hideChartSuggestions: "Chart bulgularını gizle",
   },
   chartFindings: {
     title: "Chart bulgularından öneriler",
@@ -5013,6 +5021,10 @@ export const messagesFil: MessageTree = {
     addFromChart: "Magdagdag ng findings mula sa dental chart",
     noPhaseProcedures: "Walang procedure sa phase na ito.",
     copyLastVisit: "Kopyahin ang last visit plan (optional)",
+    openHistory: "Treatment history",
+    viewThisPlanOnly: "This plan only — history is on the patient file when you need it.",
+    showChartSuggestions: "Show chart findings (optional)",
+    hideChartSuggestions: "Hide chart findings",
   },
   encounter: {
     carryForwardNoteTitle: "Kopyahin mula sa previous visit?",

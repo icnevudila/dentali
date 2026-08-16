@@ -4,12 +4,12 @@ import * as React from "react"
 import { Suspense } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Plus, CheckCircle, Sparkles, Undo2, Lock, ClipboardList } from "lucide-react"
+import { Plus, CheckCircle, Sparkles, Undo2, Lock, ClipboardList, History } from "lucide-react"
 import { useLocale } from "@/hooks/use-locale"
 import { PatientPageShell } from "@/components/patients/PatientPageShell"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Input } from "@/components/ui/input"
 import { BulletTextarea } from "@/components/ui/BulletTextarea"
@@ -155,6 +155,7 @@ function TreatmentPlanContent() {
   const [billingGate, setBillingGate] = React.useState<PatientBillingGate | null>(null)
   const [carryPlan, setCarryPlan] = React.useState<CarryForwardPlan | null>(null)
   const [showPlanCarryPicker, setShowPlanCarryPicker] = React.useState(false)
+  const [showChartSuggestions, setShowChartSuggestions] = React.useState(false)
   const [noPlanTab, setNoPlanTab] = React.useState<"quick" | "standard">("quick")
 
   const planEditable = planStatus === "proposed" || planStatus === "draft"
@@ -197,7 +198,7 @@ function TreatmentPlanContent() {
       setPlanTitle(result.plan.title)
       setPlanStatus(result.plan.status)
       setTotal(Number(result.plan.total_estimated))
-      setItems(result.items || [])
+      setItems((result.items || []).filter((item) => item.plan_id === id))
     }
     setAutoInvoiceId(invoiceResult.data?.id ?? null)
     setLoading(false)
@@ -230,6 +231,7 @@ function TreatmentPlanContent() {
     if (planId) {
       queueMicrotask(() => {
         setActivePlanId(planId)
+        setShowChartSuggestions(false)
         void loadPlan(planId)
       })
     } else {
@@ -746,23 +748,26 @@ function TreatmentPlanContent() {
     return Number.isNaN(num) ? "0" : num.toLocaleString("en-PH")
   }
 
+  const planItems = (items || []).filter(
+    (item) => !activePlanId || !item.plan_id || item.plan_id === activePlanId
+  )
   const metricItems = activePlanId
     ? [
         { label: "Status", value: planStatus, hint: patientName },
-        { label: "Items", value: String((items || []).length), hint: "Procedures on plan" },
+        { label: "Items", value: String(planItems.length), hint: "Procedures on this plan" },
         { label: "Estimated total", value: `₱${formatPrice(total)}`, hint: "Before invoice" },
       ]
     : undefined
 
   const baseGroups = PLAN_PHASES.map((phase) => {
-    const phaseItems = (items || []).filter((item) => normalizePlanPhase(item.priority) === phase.value)
+    const phaseItems = planItems.filter((item) => normalizePlanPhase(item.priority) === phase.value)
     return {
       ...phase,
       items: phaseItems,
       total: phaseItems.reduce((sum, item) => sum + Number(item.estimated_price || 0), 0),
     }
   })
-  const otherItems = (items || []).filter(
+  const otherItems = planItems.filter(
     (item) => !PLAN_PHASES.some((phase) => phase.value === normalizePlanPhase(item.priority))
   )
   const phaseGroups = otherItems.length > 0
@@ -777,63 +782,40 @@ function TreatmentPlanContent() {
         }
       ]
     : baseGroups
-  const visiblePhaseGroups = (items || []).length === 0
+  const visiblePhaseGroups = planItems.length === 0
     ? []
     : phaseGroups.filter((phase) => phase.items.length > 0)
   const thisPlanNeedsInvoice = Boolean(
     activePlanId &&
       billingGate?.approved_plans_missing_invoice.some((plan) => plan.plan_id === activePlanId)
   )
-  const clinicalChecklist = activePlanId
-    ? [
-        {
-          label: "Medical",
-          value: riskFlags.length > 0 ? `${riskFlags.length} risk` : "Clear",
-          tone: riskFlags.length > 0 ? "warning" : "ok",
-          href: `/patients/${patientId}/medical-history`,
-        },
-        {
-          label: "Chart",
-          value: "Open chart",
-          tone: "neutral",
-          href: `/patients/${patientId}/chart`,
-        },
-        {
-          label: "Billing",
-          value: autoInvoiceId ? "Invoice linked" : billingGate?.has_billing_gap ? "Needs draft" : "Ready",
-          tone: autoInvoiceId ? "ok" : billingGate?.has_billing_gap ? "warning" : "neutral",
-          href: autoInvoiceId ? `/billing/${autoInvoiceId}` : "/billing",
-        },
-        {
-          label: "Visit",
-          value: encounterIdParam ? "Visit linked" : "No active visit",
-          tone: encounterIdParam ? "ok" : "neutral",
-          href: `/patients/${patientId}/visits`,
-        },
-      ]
-    : []
-
-  const checklistToneClass = (tone: string) => {
-    if (tone === "ok") return "border-emerald-200 bg-emerald-50 text-emerald-900"
-    if (tone === "warning") return "border-amber-200 bg-amber-50 text-amber-950"
-    return "border-neutral-200 bg-white text-neutral-700"
-  }
 
   return (
     <PermissionGate permission={PERMISSIONS.DENTAL_CHART_WRITE}>
       <PatientPageShell
         patientId={patientId}
+        showInlineBack
         section="Treatment plan"
         title={activePlanId && planTitle ? planTitle : "Treatment plan"}
         description={
           activePlanId
-            ? patientName || "This case only"
+            ? t("treatmentPlan.viewThisPlanOnly", "This plan only — history is on the patient file when you need it.")
             : patientName || "Start a blank Quick Case or a new plan — previous visits stay in Treatment History."
         }
         maxWidth="max-w-4xl"
         className="pb-10"
         error={error}
         metrics={metricItems}
+        actions={
+          activePlanId ? (
+            <Button size="sm" variant="outline" className="h-8 gap-1.5" asChild>
+              <Link href={`/patients/${patientId}?tab=treatment-history`}>
+                <History className="h-3.5 w-3.5" />
+                {t("treatmentPlan.openHistory", "Treatment history")}
+              </Link>
+            </Button>
+          ) : null
+        }
       >
         {thisPlanNeedsInvoice ? (
           <PatientBillingGateBanner
@@ -1063,42 +1045,6 @@ function TreatmentPlanContent() {
         ) : (
           <>
             <Card>
-              <CardHeader className="pb-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <CardTitle className="text-base">Case cockpit</CardTitle>
-                    <CardDescription>
-                      {activeBranch?.name ?? "Active branch"} · {items.length} procedure(s) · {getPlanPhaseLabel(itemPhase)} ready for next add
-                    </CardDescription>
-                  </div>
-                  {autoInvoiceId ? (
-                    <Button size="sm" variant="outline" asChild>
-                      <Link href={`/billing/${autoInvoiceId}`}>Open invoice</Link>
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="outline" asChild>
-                      <Link href={`/patients/${patientId}/chart`}>Open chart</Link>
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                {clinicalChecklist.map((item) => (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className={`rounded-xl border px-3 py-2 text-sm transition hover:-translate-y-0.5 hover:shadow-sm ${checklistToneClass(item.tone)}`}
-                  >
-                    <span className="block text-[11px] font-semibold uppercase tracking-wider opacity-70">
-                      {item.label}
-                    </span>
-                    <span className="mt-1 block font-semibold">{item.value}</span>
-                  </Link>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card>
               <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <CardTitle>{planTitle}</CardTitle>
@@ -1107,7 +1053,7 @@ function TreatmentPlanContent() {
                 <p className="shrink-0 text-lg font-bold">₱{total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</p>
               </CardHeader>
               <CardContent>
-                {items.length === 0 ? (
+                {planItems.length === 0 ? (
                   <EmptyState
                     icon={ClipboardList}
                     className="border-0 bg-transparent py-6"
@@ -1169,40 +1115,6 @@ function TreatmentPlanContent() {
                         )}
                       </section>
                     ))}
-                    {otherItems.length > 0 ? (
-                      <section className="rounded-xl border border-neutral-200 bg-white">
-                        <div className="border-b border-neutral-100 px-3 py-2">
-                          <p className="text-sm font-semibold text-neutral-900">Other</p>
-                        </div>
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left border-collapse">
-                              <thead>
-                                <tr className="border-b border-neutral-100 bg-neutral-50/50 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-                                  <th className="py-2 px-3 w-24">Tooth</th>
-                                  <th className="py-2 px-3">Procedure</th>
-                                  <th className="py-2 px-3 w-32">Phase</th>
-                                  <th className="py-2 px-3 w-28 text-right">Price</th>
-                                  <th className="py-2 px-3 w-24 text-right">Actions</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {otherItems.map((item) => (
-                                  <TreatmentPlanItemRow
-                                    key={item.id}
-                                    item={item}
-                                    editable={planEditable}
-                                    saving={saving}
-                                    phaseOptions={PLAN_PHASES}
-                                    phaseLabel={getPlanPhaseLabel}
-                                    onSave={(patch) => handleUpdateItem(item.id, patch)}
-                                    onDelete={() => handleDeleteItem(item.id)}
-                                  />
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                      </section>
-                    ) : null}
                   </div>
                 )}
               </CardContent>
@@ -1270,15 +1182,38 @@ function TreatmentPlanContent() {
                     </div>
                   </div>
                 )}
-                <ChartFindingSuggestionsCard
-                  patientId={patientId}
-                  branchId={activeBranch?.id ?? null}
-                  procedures={procedures}
-                  planItems={items}
-                  onAddAll={() => void handleBulkFromChart()}
-                  saving={saving}
-                  disabled={!activePlanId}
-                />
+                {showChartSuggestions ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => setShowChartSuggestions(false)}
+                    >
+                      {t("treatmentPlan.hideChartSuggestions", "Hide chart findings")}
+                    </Button>
+                    <ChartFindingSuggestionsCard
+                      patientId={patientId}
+                      branchId={activeBranch?.id ?? null}
+                      procedures={procedures}
+                      planItems={planItems}
+                      onAddAll={() => void handleBulkFromChart()}
+                      saving={saving}
+                      disabled={!activePlanId}
+                    />
+                  </>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setShowChartSuggestions(true)}
+                  >
+                    {t("treatmentPlan.showChartSuggestions", "Show chart findings (optional)")}
+                  </Button>
+                )}
               </>
             ) : null}
 
@@ -1471,7 +1406,7 @@ function TreatmentPlanContent() {
                 </Button>
               ) : null}
               {planEditable ? (
-                <Button onClick={handleApprove} disabled={saving || items.length === 0} className="gap-2">
+                <Button onClick={handleApprove} disabled={saving || planItems.length === 0} className="gap-2">
                   <CheckCircle className="h-4 w-4" /> Approve Plan
                 </Button>
               ) : null}
