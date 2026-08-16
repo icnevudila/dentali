@@ -256,23 +256,49 @@ export function PatientRecordOnePage({
               </div>
             </div>
             <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-              {checklist.map((item) => (
-                <li key={item.id} className="flex items-center gap-2 text-sm">
-                  <span
-                    className={cn(
-                      "h-2 w-2 rounded-full shrink-0",
-                      item.done ? "bg-emerald-500" : "bg-amber-400"
-                    )}
-                  />
-                  {item.href && !item.done ? (
-                    <Link href={item.href} className="text-primary-600 hover:underline">
-                      {item.label}
-                    </Link>
-                  ) : (
-                    <span className={item.done ? "text-neutral-700" : "text-neutral-600"}>{item.label}</span>
-                  )}
-                </li>
-              ))}
+              {checklist.map((item) => {
+                const handleClick = () => {
+                  if (item.id === "profile") {
+                    scrollTo("record-contact")
+                  } else if (item.id === "medical") {
+                    scrollTo("record-medical")
+                  } else if (item.id === "consents") {
+                    onOpenTab("consents")
+                  } else if (item.href) {
+                    window.location.href = item.href
+                  }
+                }
+
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      onClick={handleClick}
+                      className="group flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-neutral-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 cursor-pointer"
+                    >
+                      <span
+                        className={cn(
+                          "h-2.5 w-2.5 rounded-full shrink-0 transition-transform group-hover:scale-125",
+                          item.done ? "bg-emerald-500" : "bg-amber-400"
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          "font-medium transition-colors group-hover:underline",
+                          item.done
+                            ? "text-neutral-800 group-hover:text-primary-700"
+                            : "text-amber-700 group-hover:text-amber-800"
+                        )}
+                      >
+                        {item.label}
+                      </span>
+                      <span className="ml-auto text-xs text-neutral-400 opacity-0 transition-opacity group-hover:opacity-100">
+                        {item.id === "consents" ? "Open tab →" : "View ↓"}
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           </ContentPanel>
         </RecordSection>
