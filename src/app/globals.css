@@ -76,6 +76,16 @@
     --foreground: var(--color-neutral-950);
   }
 
+  html {
+    color-scheme: light;
+  }
+
+  [data-empty-state="light"] {
+    background-color: var(--color-neutral-50) !important;
+    color: var(--color-neutral-700) !important;
+    border-color: var(--color-neutral-200) !important;
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);

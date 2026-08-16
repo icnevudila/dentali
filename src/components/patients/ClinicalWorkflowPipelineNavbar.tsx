@@ -77,20 +77,19 @@ export function ClinicalWorkflowPipelineNavbar({ patientId }: ClinicalWorkflowPi
   const activeIndex = getActiveStepIndex()
 
   return (
-    <nav className="no-print mb-4 rounded-2xl bg-white dark:bg-slate-900 p-2 shadow-lg border border-slate-200 dark:border-slate-800">
-      {/* Top Header Row */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-slate-100 dark:border-slate-800 mb-2">
+    <nav className="no-print mb-4 rounded-xl border border-neutral-200 bg-white p-2 shadow-sm">
+      <div className="mb-2 flex items-center justify-between border-b border-neutral-100 px-3 py-1.5">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-white text-[10px] font-black">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-[10px] font-bold text-white">
             {activeIndex + 1}
           </span>
-          <h2 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-800">
             Klinik Hasta Muayene İş Akışı (Adım {activeIndex + 1} / 5)
           </h2>
         </div>
-        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-500">
           <span>Sıradaki Adım:</span>
-          <span className="font-bold text-teal-600 dark:text-teal-400">
+          <span className="font-bold text-primary-700">
             {steps[(activeIndex + 1) % steps.length].title}
           </span>
         </div>
@@ -109,20 +108,20 @@ export function ClinicalWorkflowPipelineNavbar({ patientId }: ClinicalWorkflowPi
               href={step.href}
               className={`relative flex items-center gap-3 rounded-xl p-2.5 transition-all border text-left group ${
                 isActive
-                  ? "bg-teal-600 text-white border-teal-600 shadow-md ring-2 ring-teal-500/20"
+                  ? "bg-primary-600 text-white border-primary-600 shadow-sm ring-1 ring-primary-500/20"
                   : isCompleted
-                  ? "bg-slate-50 text-slate-800 border-slate-200 hover:bg-slate-100 dark:bg-slate-800/60 dark:text-slate-200 dark:border-slate-700"
-                  : "bg-white text-slate-500 border-slate-100 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400"
+                  ? "bg-neutral-50 text-neutral-800 border-neutral-200 hover:bg-neutral-100"
+                  : "bg-white text-neutral-500 border-neutral-100 hover:bg-neutral-50"
               }`}
             >
               {/* Step Number Circle */}
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-lg font-bold text-xs shrink-0 transition-colors ${
                   isActive
-                    ? "bg-white text-teal-700 shadow-sm"
+                    ? "bg-white text-primary-700 shadow-sm"
                     : isCompleted
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                    : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-neutral-100 text-neutral-600"
                 }`}
               >
                 {isCompleted ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : step.stepNumber}
@@ -136,7 +135,7 @@ export function ClinicalWorkflowPipelineNavbar({ patientId }: ClinicalWorkflowPi
                 </div>
                 <p
                   className={`text-[10px] truncate ${
-                    isActive ? "text-teal-100" : "text-slate-400 dark:text-slate-500"
+                    isActive ? "text-primary-100" : "text-neutral-400"
                   }`}
                 >
                   {step.subtitle}

@@ -2,12 +2,11 @@
 
 import * as React from "react"
 import { Shield } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { EmptyState } from "@/components/ui/empty-state"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
+import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PermissionGate } from "@/components/auth/PermissionGate"
 import { PERMISSIONS } from "@/lib/auth/permissions"
 import { fetchOrganization } from "@/lib/auth/auth-service"
@@ -84,81 +83,97 @@ export function PatientInsurancePanel({ patientId }: PatientInsurancePanelProps)
   const primary = profiles.find((p) => p.is_primary) ?? profiles[0]
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4">
+    <ContentPanel className="space-y-3">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <CardTitle className="text-base">Insurance / Coverage</CardTitle>
-          <CardDescription>HMO, PhilHealth, or private payer details.</CardDescription>
+          <p className="text-sm font-semibold text-neutral-950">
+            {t("patients.insuranceTitle", "Insurance / Coverage")}
+          </p>
+          <p className="text-xs text-neutral-500">
+            {t("patients.insuranceHint", "HMO, PhilHealth, or private payer details.")}
+          </p>
         </div>
         <PermissionGate permission={PERMISSIONS.PATIENTS_WRITE}>
-          <Button size="sm" variant="outline" onClick={() => setEditing((v) => !v)}>
-            {editing ? "Cancel" : "Edit"}
+          <Button size="sm" variant="outline" className="h-8" onClick={() => setEditing((v) => !v)}>
+            {editing ? t("common.cancel", "Cancel") : t("common.edit", "Edit")}
           </Button>
         </PermissionGate>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {error && (
-          <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">{error}</p>
-        )}
-        {loading ? (
-          <PageLoadingSkeleton variant="compact" className="h-16 rounded-md" />
-        ) : editing ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1 sm:col-span-2">
-              <label className="text-xs font-medium">Payer type</label>
-              <select
-                value={payerType}
-                onChange={(e) => setPayerType(e.target.value as PatientInsuranceProfile["payer_type"])}
-                className="h-10 w-full rounded-md border border-neutral-300 px-3 text-sm"
-              >
-                {(Object.keys(PAYER_LABELS) as PatientInsuranceProfile["payer_type"][]).map((key) => (
-                  <option key={key} value={key}>
-                    {PAYER_LABELS[key]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {payerType !== "none" && (
-              <>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">Payer name</label>
-                  <Input value={payerName} onChange={(e) => setPayerName(e.target.value)} placeholder="Maxicare, Intellicare…" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">Member ID</label>
-                  <Input value={memberId} onChange={(e) => setMemberId(e.target.value)} />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-xs font-medium">Plan name</label>
-                  <Input value={planName} onChange={(e) => setPlanName(e.target.value)} />
-                </div>
-              </>
-            )}
-            <div className="sm:col-span-2">
-              <Button size="sm" onClick={handleSave} disabled={saving}>
-                {saving ? "Saving…" : "Save coverage"}
-              </Button>
-            </div>
+      </div>
+      {error ? (
+        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+      ) : null}
+      {loading ? (
+        <PageLoadingSkeleton variant="compact" className="h-16 rounded-md" />
+      ) : editing ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1 sm:col-span-2">
+            <label className="text-xs font-medium text-neutral-600">Payer type</label>
+            <select
+              value={payerType}
+              onChange={(e) => setPayerType(e.target.value as PatientInsuranceProfile["payer_type"])}
+              className="h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-sm"
+            >
+              {(Object.keys(PAYER_LABELS) as PatientInsuranceProfile["payer_type"][]).map((key) => (
+                <option key={key} value={key}>
+                  {PAYER_LABELS[key]}
+                </option>
+              ))}
+            </select>
           </div>
-        ) : primary && primary.payer_type !== "none" ? (
-          <div className="space-y-2 text-sm">
-            <Badge variant="info">{PAYER_LABELS[primary.payer_type]}</Badge>
-            {primary.payer_name && <p><span className="text-neutral-500">Payer:</span> {primary.payer_name}</p>}
-            {primary.member_id && <p><span className="text-neutral-500">Member ID:</span> {primary.member_id}</p>}
-            {primary.plan_name && <p><span className="text-neutral-500">Plan:</span> {primary.plan_name}</p>}
+          {payerType !== "none" ? (
+            <>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-neutral-600">Payer name</label>
+                <Input value={payerName} onChange={(e) => setPayerName(e.target.value)} placeholder="Maxicare, Intellicare…" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-neutral-600">Member ID</label>
+                <Input value={memberId} onChange={(e) => setMemberId(e.target.value)} />
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <label className="text-xs font-medium text-neutral-600">Plan name</label>
+                <Input value={planName} onChange={(e) => setPlanName(e.target.value)} />
+              </div>
+            </>
+          ) : null}
+          <div className="sm:col-span-2">
+            <Button size="sm" className="h-8" onClick={handleSave} disabled={saving}>
+              {saving ? "Saving…" : "Save coverage"}
+            </Button>
           </div>
-        ) : (
-          <EmptyState
-            icon={Shield}
-            className="border-0 bg-transparent py-4"
-            title={t("patients.insuranceSelfPayTitle", "Self-pay")}
-            description={t(
-              "patients.insuranceSelfPayHint",
-              "Self-pay — no insurance on file."
-            )}
-          />
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      ) : primary && primary.payer_type !== "none" ? (
+        <div className="space-y-1.5 text-sm">
+          <Badge variant="info">{PAYER_LABELS[primary.payer_type]}</Badge>
+          {primary.payer_name ? (
+            <p>
+              <span className="text-neutral-500">Payer:</span> {primary.payer_name}
+            </p>
+          ) : null}
+          {primary.member_id ? (
+            <p>
+              <span className="text-neutral-500">Member ID:</span> {primary.member_id}
+            </p>
+          ) : null}
+          {primary.plan_name ? (
+            <p>
+              <span className="text-neutral-500">Plan:</span> {primary.plan_name}
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <div className="flex items-start gap-3">
+          <Shield className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
+          <div>
+            <p className="text-sm font-medium text-neutral-900">
+              {t("patients.insuranceSelfPayTitle", "Self-pay")}
+            </p>
+            <p className="text-xs text-neutral-500">
+              {t("patients.insuranceSelfPayHint", "Self-pay — no insurance on file.")}
+            </p>
+          </div>
+        </div>
+      )}
+    </ContentPanel>
   )
 }

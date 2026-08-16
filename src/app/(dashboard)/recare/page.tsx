@@ -156,6 +156,7 @@ export default function RecarePage() {
           eyebrow={t("recare.eyebrow", "Front desk")}
           icon={CalendarHeart}
           title={t("nav.recare", "Recare")}
+          compactHeader
           description={t(
             "recare.description",
             "Patients due for hygiene or recall visits. Book or park on the waitlist from one worklist."
