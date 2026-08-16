@@ -263,8 +263,8 @@ export function BookAppointmentDialog({ patientId, onBooked }: BookAppointmentDi
 
   return (
     <>
-      <Button size="sm" className="gap-2" onClick={() => setOpen(true)}>
-        <Calendar className="h-4 w-4" /> {t("appointments.bookNow", "Book now")}
+      <Button size="sm" className="h-8 gap-1.5" onClick={() => setOpen(true)}>
+        <Calendar className="h-3.5 w-3.5" /> {t("appointments.bookNow", "Book now")}
       </Button>
       {typeof document !== "undefined" && dialog ? createPortal(dialog, document.body) : null}
     </>

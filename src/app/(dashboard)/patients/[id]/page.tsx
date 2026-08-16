@@ -689,7 +689,8 @@ export default function PatientProfilePage() {
 
   return (
     <PermissionGate permission={PERMISSIONS.PATIENTS_READ}>
-    <DirectionalTransition className="space-y-6 pb-10 flex flex-col h-full max-w-7xl mx-auto">
+    <DirectionalTransition className="flex h-full max-w-7xl flex-col pb-10 mx-auto">
+    <div className="space-y-3">
       {pendingHistoryUpdate && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in">
           <div className="flex items-start gap-3">
@@ -724,18 +725,20 @@ export default function PatientProfilePage() {
 
       <SectionEyebrow icon={Users}>Clinical · Patient profile</SectionEyebrow>
 
+      <div className="space-y-2.5">
       {/* HEADER */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <Button variant="ghost" size="icon" asChild className="mt-1 print:hidden">
+      <div className="rounded-xl border border-neutral-200/80 bg-white px-3 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <Button variant="ghost" size="icon" asChild className="h-8 w-8 shrink-0 print:hidden">
             <Link href="/patients" transitionTypes={NAV_BACK_TRANSITION}>
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <PatientAvatar patientId={patientId} initials={initials} editable size="lg" className="print:hidden" />
-          <div>
+          <PatientAvatar patientId={patientId} initials={initials} editable size="md" className="print:hidden" />
+          <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold tracking-tight text-neutral-950">{fullName}</h1>
+              <h1 className="text-xl font-bold tracking-tight text-neutral-950">{fullName}</h1>
               <Badge variant={patient.status === "active" ? "success" : "default"}>{patient.status}</Badge>
               {balance && balance.open_balance > 0 && (
                 <Link href={`/billing?patient=${patientId}`}>
@@ -746,7 +749,7 @@ export default function PatientProfilePage() {
                 </Link>
               )}
             </div>
-            <p className="text-sm text-neutral-500">
+            <p className="text-xs text-neutral-500">
               {patient.patient_number ? (
                 <>
                   <span className="font-mono font-medium text-neutral-700">{patient.patient_number}</span>
@@ -758,32 +761,32 @@ export default function PatientProfilePage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 print:hidden">
-          <WorkflowSettingsLink className="order-[-1] sm:order-none" />
+        <div className="flex flex-wrap items-center gap-1.5 print:hidden lg:justify-end">
           {activeEncounter && activeEncounter.encounter.status === "open" ? (
             <Button
               size="sm"
-              className="gap-2"
+              className="h-8 gap-1.5"
               onClick={handleFinishVisit}
               title={t(
                 "queue.checkoutDischargeHint",
                 "Finish today’s visit: note → bill → pay → close"
               )}
             >
-              <DoorClosed className="h-4 w-4" />
+              <DoorClosed className="h-3.5 w-3.5" />
               {t("queue.checkoutDischargeCta", "Finish visit")}
             </Button>
           ) : null}
-          <Button variant="outline" size="sm" className="gap-2" asChild>
+          <BookAppointmentDialog patientId={patientId} onBooked={refreshAppointments} />
+          <Button variant="outline" size="sm" className="h-8 gap-1.5" asChild>
             <Link href={`/patients/${patientId}/chart`} transitionTypes={NAV_FORWARD_TRANSITION}>
-              <Activity className="h-4 w-4" /> Chart
+              <Activity className="h-3.5 w-3.5" /> Chart
             </Link>
           </Button>
           <PermissionGate permission={PERMISSIONS.DENTAL_CHART_WRITE}>
             <Button
               variant="outline"
               size="sm"
-              className="gap-2"
+              className="h-8 gap-1.5"
               onClick={() => triggerMedicalSensitiveAction(() => {
                 startTransition(() => {
                   addTransitionType("nav-forward")
@@ -791,36 +794,40 @@ export default function PatientProfilePage() {
                 })
               })}
             >
-              <ListOrdered className="h-4 w-4" /> Add Treatment
+              <ListOrdered className="h-3.5 w-3.5" /> Treatment
             </Button>
           </PermissionGate>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="gap-2" 
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5"
             onClick={() => handleTabChangeAndScroll("consents")}
           >
-            <ShieldCheck className="h-4 w-4" /> Consents
+            <ShieldCheck className="h-3.5 w-3.5" /> Consents
           </Button>
           <PermissionGate permission={PERMISSIONS.BILLING_WRITE}>
             <Button
               variant="outline"
               size="sm"
-              className="gap-2"
+              className="h-8 gap-1.5"
               onClick={() => setShowInvoiceDrawer(true)}
             >
-              <Plus className="h-4 w-4" /> New Invoice
+              <Plus className="h-3.5 w-3.5" /> Invoice
             </Button>
           </PermissionGate>
-          <Button variant="outline" className="gap-2" onClick={() => printCurrentPage({ title: `Patient — ${patient.first_name} ${patient.last_name}` })}>
-            <Printer className="h-4 w-4"/> Print
+          <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => printCurrentPage({ title: `Patient — ${patient.first_name} ${patient.last_name}` })}>
+            <Printer className="h-3.5 w-3.5"/> Print
           </Button>
-          <Button variant="outline" className="gap-2" asChild>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5" asChild>
             <Link href={`/patients/${patientId}/edit`} transitionTypes={NAV_FORWARD_TRANSITION}>
-              <Edit className="h-4 w-4"/> Edit Profile
+              <Edit className="h-3.5 w-3.5"/> Edit
             </Link>
           </Button>
-          <BookAppointmentDialog patientId={patientId} onBooked={refreshAppointments} />
+          <WorkflowSettingsLink compact className="h-8 w-8" />
+        </div>
+        </div>
+        <div className="mt-2 border-t border-neutral-100 pt-2">
+          <MetricStrip items={profileMetrics} compact />
         </div>
       </div>
 
@@ -834,20 +841,16 @@ export default function PatientProfilePage() {
           }}
         />
       ) : balance && balance.open_balance > 0 ? (
-        <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50/50 p-4 text-red-900 shadow-sm animate-in slide-in-from-top-4 duration-300">
-          <AlertTriangle className="h-6 w-6 text-red-600 shrink-0" />
-          <div className="flex-1 text-sm font-medium">
-            <span className="font-bold">Outstanding Balance Warning:</span> This patient has an outstanding balance of{" "}
-            <span className="font-bold">₱{balance.open_balance.toLocaleString()}</span>. Please settle outstanding
-            invoices before proceeding with new appointments or treatments.
-          </div>
-          <Button size="sm" variant="destructive" asChild className="shrink-0 bg-red-600 hover:bg-red-700">
-            <Link href={`/billing?patient=${patientId}`}>Settle Balance</Link>
+        <div className="flex flex-col gap-1.5 rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-1.5 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between">
+          <p className="min-w-0">
+            <span className="font-semibold">{t("billing.gateOpenBalance", "Outstanding balance:")}</span>{" "}
+            <span className="font-semibold tabular-nums">₱{balance.open_balance.toLocaleString()}</span>
+          </p>
+          <Button size="sm" className="h-7 shrink-0" asChild>
+            <Link href={`/billing?patient=${patientId}`}>{t("billing.gateCollectPayment", "Collect payment")}</Link>
           </Button>
         </div>
       ) : null}
-
-      <MetricStrip items={profileMetrics} />
 
       <PatientOutreachCard
         patientId={patientId}
@@ -855,7 +858,10 @@ export default function PatientProfilePage() {
         phone={patient.phone}
         className="print:hidden"
       />
+      </div>
+    </div>
 
+    <div className="mt-4 space-y-6">
       <ClinicalVisitJourneyPanel
         journey={visitJourney}
         headerBadge={
@@ -991,61 +997,40 @@ export default function PatientProfilePage() {
         editHref={`/patients/${patientId}/medical-history`}
       />
 
-      {/* TWO-COLUMN SIDEBAR & CONTENT LAYOUT */}
-      <div id="patient-profile-tabs" className="mt-4 flex min-w-0 flex-col items-start gap-6 xl:flex-row">
-        {/* SIDEBAR TABS NAVIGATION */}
-        <aside className="w-full shrink-0 xl:w-60">
-          {/* Mobile dropdown selector */}
-          <div className="xl:hidden">
-            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1 block">
-              Menu Tab
-            </label>
-            <select
-              value={activeTab}
-              onChange={(e) => setActiveTab(e.target.value as PatientTabId)}
-              className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              {PATIENT_TAB_DEFS.map((tab) => (
-                <option key={tab.id} value={tab.id}>
-                  {t(tab.labelKey, tab.fallback)}
-                </option>
-              ))}
-            </select>
-          </div>
+      <div id="patient-profile-tabs" className="mt-3 min-w-0">
+        <nav
+          className="sticky top-0 z-20 mb-3 flex gap-1 overflow-x-auto hide-scrollbar rounded-lg border border-neutral-200 bg-white/95 p-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)] backdrop-blur-sm"
+          role="tablist"
+          aria-label={t("patients.profileSections", "Patient sections")}
+        >
+          {PATIENT_TAB_DEFS.map((tab) => {
+            const isActive = activeTab === tab.id
+            const TabIcon = tab.icon
+            const tabLabel = t(tab.labelKey, tab.fallback)
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveTab(tab.id as PatientTabId)}
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors sm:text-sm",
+                  isActive
+                    ? "bg-primary-600 text-white shadow-sm"
+                    : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                )}
+              >
+                <TabIcon
+                  className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-white" : "text-neutral-500")}
+                />
+                <span className="whitespace-nowrap">{tabLabel}</span>
+              </button>
+            )
+          })}
+        </nav>
 
-          {/* Desktop sidebar list */}
-          <nav className="hidden xl:flex w-full flex-col gap-1 border-r border-neutral-200 pr-6">
-            {PATIENT_TAB_DEFS.map((tab) => {
-              const isActive = activeTab === tab.id
-              const TabIcon = tab.icon
-              const tabLabel = t(tab.labelKey, tab.fallback)
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id as PatientTabId)}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-primary-50 text-primary-700"
-                      : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
-                  )}
-                >
-                  <TabIcon
-                    className={cn(
-                      "h-4 w-4 shrink-0",
-                      isActive ? "text-primary-600" : "text-neutral-500"
-                    )}
-                  />
-                  <span className="truncate">{tabLabel}</span>
-                </button>
-              )
-            })}
-          </nav>
-        </aside>
-
-        {/* TAB CONTENT PANEL */}
-        <div className="flex-1 w-full min-w-0">
+        <div className="min-w-0">
           {activeTab === "record" && (
             <div className="space-y-6">
               <div className="grid gap-3 md:grid-cols-3">
@@ -1060,8 +1045,8 @@ export default function PatientProfilePage() {
                     Open epicrisis document
                   </p>
                   <p className="mt-2 text-xs text-neutral-500">
-                    Printable clinical summary only — does not close today&apos;s visit. Use Checkout /
-                    Discharge to finish the visit.
+                    Printable clinical summary only — does not close today&apos;s visit. Use Finish visit
+                    on the header to close the visit.
                   </p>
                 </Link>
                 <Link
@@ -1577,6 +1562,7 @@ export default function PatientProfilePage() {
             document.body
           )
         : null}
+    </div>
     </DirectionalTransition>
     </PermissionGate>
   )

@@ -54,12 +54,13 @@ export function PatientBillingGateBanner({
   }
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-950 animate-fade-rise">
-      <div className="flex gap-3">
-        <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
-        <div className="min-w-0 flex-1 space-y-2">
-          <p className="font-semibold">
-            {t("billing.gateTitle", "Billing action required before checkout")}
+    <div className="rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-1.5 text-sm text-amber-950 animate-fade-rise">
+      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+          <div className="min-w-0 space-y-0.5">
+          <p className="font-semibold leading-snug">
+            {t("billing.gateTitle", "Billing action required before Finish visit")}
           </p>
 
           {missingPlans.length > 0 ? (
@@ -91,7 +92,9 @@ export function PatientBillingGateBanner({
             </p>
           ) : null}
 
-          <div className="flex flex-wrap gap-2 pt-1">
+          </div>
+        </div>
+          <div className="flex shrink-0 flex-wrap gap-1.5 sm:justify-end">
             {gate.primary_open_invoice_id ? (
               <Button size="sm" className="gap-1.5" asChild>
                 <Link href={invoiceHref}>
@@ -139,7 +142,6 @@ export function PatientBillingGateBanner({
               </Button>
             ) : null}
           </div>
-        </div>
       </div>
     </div>
   )

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { MessageCircle, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { useLocale } from "@/hooks/use-locale"
 import { useBranch } from "@/hooks/use-branch"
 import { useAuth } from "@/hooks/use-auth"
@@ -85,30 +85,34 @@ export function PatientOutreachCard({
 
   return (
     <Card className={className}>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <MessageCircle className="h-4 w-4 text-emerald-600" aria-hidden />
-          {t("outreach.title", "Patient outreach")}
-        </CardTitle>
-        <p className="text-xs text-neutral-500">
-          {t(
-            "outreach.hint",
-            "Opens WhatsApp with a ready message. No paid WhatsApp API — logged for the clinic inbox."
-          )}
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="flex items-center gap-2 text-sm text-neutral-700">
-          <Phone className="h-3.5 w-3.5 text-neutral-400" aria-hidden />
-          {phone?.trim() || t("outreach.noPhoneShort", "No phone on file")}
-        </p>
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-2">
+          <MessageCircle className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+          <p className="text-sm font-semibold text-neutral-900">
+            {t("outreach.title", "Patient outreach")}
+          </p>
+          <span className="hidden text-neutral-300 sm:inline" aria-hidden>
+            ·
+          </span>
+          <p
+            className="flex min-w-0 items-center gap-1.5 truncate text-xs text-neutral-600"
+            title={t(
+              "outreach.hint",
+              "Opens WhatsApp with a ready message. No paid WhatsApp API — logged for the clinic inbox."
+            )}
+          >
+            <Phone className="h-3 w-3 shrink-0 text-neutral-400" aria-hidden />
+            {phone?.trim() || t("outreach.noPhoneShort", "No phone on file")}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-1">
           {PRESETS.map((preset) => (
             <Button
               key={preset.id}
               type="button"
               size="sm"
               variant="outline"
+              className="h-7 px-2 text-xs"
               disabled={!phone?.trim() || busyId === preset.id}
               onClick={() =>
                 void openWhatsApp(preset.id, preset.body(firstName, clinicName))
@@ -118,7 +122,7 @@ export function PatientOutreachCard({
             </Button>
           ))}
         </div>
-      </CardContent>
+      </div>
     </Card>
   )
 }

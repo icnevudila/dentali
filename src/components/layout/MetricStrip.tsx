@@ -15,13 +15,22 @@ export type MetricItem = {
   active?: boolean
 }
 
-function MetricCard({ item, index }: { item: MetricItem; index: number }) {
+function MetricCard({
+  item,
+  index,
+  compact = false,
+}: {
+  item: MetricItem
+  index: number
+  compact?: boolean
+}) {
   const Icon = item.icon
   const inner = (
     <div
       className={cn(
         "animate-stagger-item h-full",
-        "group relative overflow-hidden rounded-xl border px-4 py-3.5 transition-shadow",
+        "group relative overflow-hidden rounded-xl border transition-shadow",
+        compact ? "px-2.5 py-1.5" : "px-4 py-3.5",
         item.variant === "warning" && "border-amber-200/90 bg-amber-50/60",
         item.variant === "success" && "border-emerald-200/90 bg-emerald-50/50",
         item.active && "border-primary-300 bg-primary-50/60 ring-1 ring-primary-200/80",
@@ -39,24 +48,26 @@ function MetricCard({ item, index }: { item: MetricItem; index: number }) {
           aria-hidden
         />
       )}
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-2">
         <p className="text-xs font-medium text-neutral-500">{item.label}</p>
         {Icon ? (
           <span
             className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+              "flex shrink-0 items-center justify-center rounded-lg",
+              compact ? "h-6 w-6" : "h-8 w-8",
               item.variant === "warning" && "bg-amber-100/80 text-amber-700",
               item.variant === "success" && "bg-emerald-100/80 text-emerald-700",
               (!item.variant || item.variant === "default") && "bg-primary-50 text-primary-600"
             )}
           >
-            <Icon className="h-4 w-4" aria-hidden />
+            <Icon className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} aria-hidden />
           </span>
         ) : null}
       </div>
       <p
         className={cn(
-          "mt-2 text-2xl font-bold tabular-nums tracking-tight",
+          "font-bold tabular-nums tracking-tight",
+          compact ? "mt-0 text-base" : "mt-2 text-2xl",
           item.variant === "warning" && "text-amber-900",
           item.variant === "success" && "text-emerald-900",
           (!item.variant || item.variant === "default") && "text-neutral-950"
@@ -65,7 +76,7 @@ function MetricCard({ item, index }: { item: MetricItem; index: number }) {
         {item.value}
       </p>
       {item.hint ? (
-        <p className="mt-1 text-xs text-neutral-500">
+        <p className={cn("text-xs text-neutral-500", compact ? "mt-0.5" : "mt-1")}>
           {(item.href || item.onClick) ? (
             <span className="text-primary-600 group-hover:underline">{item.hint}</span>
           ) : (
@@ -105,11 +116,13 @@ export function MetricStrip({
   className,
   snapOnMobile = false,
   desktopCols = 4,
+  compact = false,
 }: {
   items: MetricItem[]
   className?: string
   snapOnMobile?: boolean
   desktopCols?: 2 | 3 | 4 | 5 | 6
+  compact?: boolean
 }) {
   if (items.length === 0) return null
 
@@ -117,7 +130,7 @@ export function MetricStrip({
     return (
       <HorizontalSnapStrip desktopCols={desktopCols} className={className}>
         {items.map((item, index) => (
-          <MetricCard key={item.label} item={item} index={index} />
+          <MetricCard key={item.label} item={item} index={index} compact={compact} />
         ))}
       </HorizontalSnapStrip>
     )
@@ -135,9 +148,16 @@ export function MetricStrip({
             : "lg:grid-cols-4"
 
   return (
-    <div className={cn("grid w-full min-w-0 gap-3 sm:grid-cols-2", desktopGrid, className)}>
+    <div
+      className={cn(
+        "grid w-full min-w-0 sm:grid-cols-2",
+        compact ? "gap-2" : "gap-3",
+        desktopGrid,
+        className
+      )}
+    >
       {items.map((item, index) => (
-        <MetricCard key={item.label} item={item} index={index} />
+        <MetricCard key={item.label} item={item} index={index} compact={compact} />
       ))}
     </div>
   )
