@@ -109,6 +109,15 @@ export const codeMessagesTrOverrides: MessageTree = {
     recordTablePlan: "Tedavi planı",
     sourceKiosk: "Kiosk tableti",
     sourcePortalShort: "hasta portalı",
+    attentionConsentsTitle: "Bekleyen Onamlar",
+    attentionConsentsHint: "İmzalı onam formu gereken hastalar",
+    attentionConsentsBadge: "Onam gerekli",
+    attentionIntakeTitle: "Eksik Giriş / Kayıt",
+    attentionIntakeHint: "Giriş bilgileri eksik hastalar",
+    attentionIntakeBadge: "Giriş bekliyor",
+    emptyAttentionConsents: "Bekleyen onam yok",
+    emptyAttentionConsentsHint: "Tüm hasta onam formları günceldir.",
+    metricPendingConsents: "Bekleyen onamlar",
   },
   consent: {
     notStarted: "Başlamadı",
@@ -160,16 +169,5 @@ export const codeMessagesTrOverrides: MessageTree = {
   common: {
     none: "Yok",
     clear: "Temizle",
-  },
-  patients: {
-    attentionConsentsTitle: "Bekleyen Onamlar",
-    attentionConsentsHint: "İmzalı onam formu gereken hastalar",
-    attentionConsentsBadge: "Onam gerekli",
-    attentionIntakeTitle: "Eksik Giriş / Kayıt",
-    attentionIntakeHint: "Giriş bilgileri eksik hastalar",
-    attentionIntakeBadge: "Giriş bekliyor",
-    emptyAttentionConsents: "Bekleyen onam yok",
-    emptyAttentionConsentsHint: "Tüm hasta onam formları günceldir.",
-    metricPendingConsents: "Bekleyen onamlar",
   },
 }
