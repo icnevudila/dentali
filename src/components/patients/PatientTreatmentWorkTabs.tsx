@@ -40,6 +40,13 @@ function matchesPlanFilter(status: string, filter: PlanFilter) {
   return status === filter
 }
 
+function resolveEffectiveItemStatus(entry: TreatmentTimelineEntry): string {
+  if (entry.item_status === "cancelled") return "cancelled"
+  if (entry.item_status === "completed" || entry.plan_status === "completed") return "completed"
+  if (entry.item_status === "in_progress" || entry.plan_status === "in_progress") return "in_progress"
+  return entry.item_status || "planned"
+}
+
 function isHistoryEligible(entry: TreatmentTimelineEntry) {
   const plan = entry.plan_status
   return plan === "approved" || plan === "in_progress" || plan === "completed" || plan === "accepted"
@@ -48,10 +55,11 @@ function isHistoryEligible(entry: TreatmentTimelineEntry) {
 function matchesHistoryFilter(entry: TreatmentTimelineEntry, filter: HistoryFilter) {
   if (!isHistoryEligible(entry)) return false
   if (filter === "all") return true
+  const effective = resolveEffectiveItemStatus(entry)
   if (filter === "pending") {
-    return entry.item_status !== "completed" && entry.item_status !== "in_progress"
+    return effective !== "completed" && effective !== "in_progress" && effective !== "cancelled"
   }
-  return entry.item_status === filter
+  return effective === filter
 }
 
 function FilterChips({
@@ -242,9 +250,12 @@ export function PatientTreatmentHistoryTab({
   const filtered = eligible.filter((entry) => matchesHistoryFilter(entry, filter))
   const counts = {
     all: eligible.length,
-    completed: eligible.filter((e) => e.item_status === "completed").length,
-    in_progress: eligible.filter((e) => e.item_status === "in_progress").length,
-    pending: eligible.filter((e) => e.item_status !== "completed" && e.item_status !== "in_progress").length,
+    completed: eligible.filter((e) => resolveEffectiveItemStatus(e) === "completed").length,
+    in_progress: eligible.filter((e) => resolveEffectiveItemStatus(e) === "in_progress").length,
+    pending: eligible.filter((e) => {
+      const s = resolveEffectiveItemStatus(e)
+      return s !== "completed" && s !== "in_progress" && s !== "cancelled"
+    }).length,
   }
 
   const options: { id: HistoryFilter; label: string }[] = [
@@ -306,66 +317,73 @@ export function PatientTreatmentHistoryTab({
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200">
-                {filtered.map((item) => (
-                  <tr key={item.item_id} className="hover:bg-neutral-50">
-                    <td className="px-3 py-2.5 whitespace-nowrap text-xs text-neutral-600">
-                      {new Date(item.item_created_at).toLocaleString("en-PH", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                        timeZone: "Asia/Manila",
-                      })}
-                    </td>
-                    <td className="px-3 py-2.5 whitespace-nowrap text-xs">
-                      {item.item_status_changed_at ? (
-                        <span className="font-medium text-neutral-900">
-                          {new Date(item.item_status_changed_at).toLocaleString("en-PH", {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                            timeZone: "Asia/Manila",
-                          })}
-                        </span>
-                      ) : item.item_status === "completed" ? (
-                        <span className="font-medium text-neutral-900">
-                          {new Date(item.item_created_at).toLocaleString("en-PH", {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                            timeZone: "Asia/Manila",
-                          })}
-                        </span>
-                      ) : (
-                        <span className="text-neutral-400 italic">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2.5 font-mono text-neutral-800">{item.tooth_number ?? "—"}</td>
-                    <td className="px-3 py-2.5 text-neutral-900">{item.description}</td>
-                    <td className="px-3 py-2.5">
-                      <Link
-                        href={`/patients/${patientId}/treatment-plan?plan=${item.plan_id}`}
-                        className={cn("text-primary-700 hover:underline")}
-                      >
-                        {item.plan_title}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-2.5 tabular-nums">{formatPhpMajor(item.estimated_price)}</td>
-                    <td className="px-3 py-2.5">
-                      <Badge
-                        variant={
-                          item.item_status === "completed"
-                            ? "success"
-                            : item.item_status === "in_progress"
-                              ? "warning"
-                              : "info"
-                        }
-                      >
-                        {item.item_status === "completed"
-                          ? t("patients.txFilterCompleted", "Completed")
-                          : item.item_status === "in_progress"
-                            ? t("patients.txFilterInProgress", "In progress")
-                            : t("patients.txFilterPending", "Pending approved")}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map((item) => {
+                  const effectiveStatus = resolveEffectiveItemStatus(item)
+                  return (
+                    <tr key={item.item_id} className="hover:bg-neutral-50">
+                      <td className="px-3 py-2.5 whitespace-nowrap text-xs text-neutral-600">
+                        {new Date(item.item_created_at).toLocaleString("en-PH", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                          timeZone: "Asia/Manila",
+                        })}
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap text-xs">
+                        {item.item_status_changed_at ? (
+                          <span className="font-medium text-neutral-900">
+                            {new Date(item.item_status_changed_at).toLocaleString("en-PH", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                              timeZone: "Asia/Manila",
+                            })}
+                          </span>
+                        ) : effectiveStatus === "completed" ? (
+                          <span className="font-medium text-neutral-900">
+                            {new Date(item.plan_approved_at || item.item_created_at).toLocaleString("en-PH", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                              timeZone: "Asia/Manila",
+                            })}
+                          </span>
+                        ) : (
+                          <span className="text-neutral-400 italic">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 font-mono text-neutral-800">{item.tooth_number ?? "—"}</td>
+                      <td className="px-3 py-2.5 text-neutral-900">{item.description}</td>
+                      <td className="px-3 py-2.5">
+                        <Link
+                          href={`/patients/${patientId}/treatment-plan?plan=${item.plan_id}`}
+                          className={cn("text-primary-700 hover:underline")}
+                        >
+                          {item.plan_title}
+                        </Link>
+                      </td>
+                      <td className="px-3 py-2.5 tabular-nums">{formatPhpMajor(item.estimated_price)}</td>
+                      <td className="px-3 py-2.5">
+                        <Badge
+                          variant={
+                            effectiveStatus === "completed"
+                              ? "success"
+                              : effectiveStatus === "in_progress"
+                                ? "warning"
+                                : effectiveStatus === "cancelled"
+                                  ? "danger"
+                                  : "info"
+                          }
+                        >
+                          {effectiveStatus === "completed"
+                            ? t("patients.txFilterCompleted", "Completed")
+                            : effectiveStatus === "in_progress"
+                              ? t("patients.txFilterInProgress", "In progress")
+                              : effectiveStatus === "cancelled"
+                                ? t("patients.txFilterCancelled", "Cancelled")
+                                : t("patients.txFilterPending", "Pending approved")}
+                        </Badge>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
