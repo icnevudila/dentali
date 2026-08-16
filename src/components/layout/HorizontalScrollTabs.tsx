@@ -62,17 +62,26 @@ export function HorizontalScrollTabs({
               data-tab-active={isActive ? "true" : "false"}
               onClick={() => onSelect(tab.id)}
               className={cn(
-                "inline-flex shrink-0 snap-start items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors sm:text-sm",
-                isActive && activeVariant === "solid" && "bg-primary-600 text-white shadow-sm",
-                isActive && activeVariant === "soft" && "bg-primary-50 text-primary-700",
-                !isActive && "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                "inline-flex shrink-0 snap-start items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all duration-150 sm:text-sm",
+                // Solid variant (main patient tabs)
+                isActive && activeVariant === "solid" &&
+                  "bg-primary-600 text-white font-semibold shadow-[0_1px_4px_rgba(0,82,204,0.35)]",
+                // Soft variant (inner record sub-nav)
+                isActive && activeVariant === "soft" &&
+                  "bg-primary-50 text-primary-700 font-semibold border border-primary-200 shadow-[0_1px_2px_rgba(0,82,204,0.12)]",
+                // Inactive
+                !isActive && "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
               )}
             >
               {Icon ? (
                 <Icon
                   className={cn(
                     "h-3.5 w-3.5 shrink-0",
-                    isActive && activeVariant === "solid" ? "text-white" : "text-neutral-500"
+                    isActive && activeVariant === "solid"
+                      ? "text-white"
+                      : isActive && activeVariant === "soft"
+                        ? "text-primary-500"
+                        : "text-neutral-400"
                   )}
                 />
               ) : null}

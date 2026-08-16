@@ -26,6 +26,8 @@ function itemStatusLabel(
   return t("treatmentPlan.itemPlanned", "Planned")
 }
 
+import { cn } from "@/lib/utils"
+
 export function TreatmentPlanItemRow({
   item,
   editable,
@@ -48,7 +50,7 @@ export function TreatmentPlanItemRow({
     priority?: string
   }) => Promise<void>
   onDelete: () => Promise<void>
-  onMarkStatus?: (status: "planned" | "in_progress" | "completed") => Promise<void>
+  onMarkStatus?: (status: "planned" | "in_progress" | "completed" | "cancelled") => Promise<void>
 }) {
   const { t } = useLocale()
   const [editing, setEditing] = React.useState(false)
@@ -104,49 +106,84 @@ export function TreatmentPlanItemRow({
         <td className="py-2.5 px-3 text-xs text-neutral-500">
           {labelForPriority(item.priority)}
         </td>
-        <td className="py-2.5 px-3 text-xs text-neutral-600">
-          {itemStatusLabel(item.status, t)}
+        <td className="py-2.5 px-3">
+          {onMarkStatus ? (
+            <select
+              value={item.status || "planned"}
+              disabled={saving}
+              onChange={(e) => void onMarkStatus(e.target.value as "planned" | "in_progress" | "completed" | "cancelled")}
+              className={cn(
+                "h-7 rounded border text-xs font-medium px-2 py-0.5 transition-colors focus:outline-none cursor-pointer",
+                item.status === "completed" && "bg-emerald-50 text-emerald-700 border-emerald-300",
+                item.status === "in_progress" && "bg-amber-50 text-amber-700 border-amber-300",
+                item.status === "cancelled" && "bg-rose-50 text-rose-700 border-rose-300",
+                (!item.status || item.status === "planned") && "bg-neutral-50 text-neutral-700 border-neutral-300"
+              )}
+            >
+              <option value="planned">⚪ Planned</option>
+              <option value="in_progress">🟡 Ongoing (In Progress)</option>
+              <option value="completed">🟢 Done (Completed)</option>
+              <option value="cancelled">🔴 Cancelled</option>
+            </select>
+          ) : (
+            <span className="text-xs text-neutral-600">{itemStatusLabel(item.status, t)}</span>
+          )}
         </td>
         <td className="py-2.5 px-3 text-right font-medium text-neutral-900">
           ₱{Number(item.estimated_price || 0).toLocaleString("en-PH")}
         </td>
         <td className="py-2.5 px-3 text-right">
-          {onMarkStatus && item.status !== "cancelled" ? (
-            <div className="flex flex-wrap justify-end gap-1">
-              {item.status === "planned" ? (
+          {onMarkStatus && (
+            <div className="flex justify-end gap-1">
+              {item.status === "planned" && (
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
+                  className="h-7 text-xs px-2"
                   disabled={saving}
                   onClick={() => void onMarkStatus("in_progress")}
                 >
                   {t("treatmentPlan.markInProgress", "Start")}
                 </Button>
-              ) : null}
-              {item.status === "in_progress" ? (
+              )}
+              {item.status === "in_progress" && (
                 <Button
                   type="button"
                   size="sm"
+                  className="h-7 text-xs px-2 bg-emerald-600 hover:bg-emerald-700 text-white"
                   disabled={saving}
                   onClick={() => void onMarkStatus("completed")}
                 >
                   {t("treatmentPlan.markCompleted", "Mark done")}
                 </Button>
-              ) : null}
-              {item.status === "completed" ? (
+              )}
+              {item.status === "completed" && (
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
+                  className="h-7 text-xs px-2 text-neutral-500"
                   disabled={saving}
                   onClick={() => void onMarkStatus("in_progress")}
                 >
                   {t("treatmentPlan.reopenItem", "Reopen")}
                 </Button>
-              ) : null}
+              )}
+              {item.status === "cancelled" && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs px-2 text-neutral-500"
+                  disabled={saving}
+                  onClick={() => void onMarkStatus("planned")}
+                >
+                  Restore
+                </Button>
+              )}
             </div>
-          ) : null}
+          )}
         </td>
       </tr>
     )

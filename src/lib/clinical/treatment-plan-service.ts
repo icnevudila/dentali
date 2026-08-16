@@ -155,9 +155,9 @@ export async function addPlanItem(params: {
   estimatedPrice: number
   toothNumber?: string
   priority?: string
-}): Promise<{ error: string | null }> {
+}): Promise<{ itemId: string | null; error: string | null }> {
   const supabase = createClient()
-  const { error } = await supabase.rpc("add_treatment_plan_item", {
+  const { data, error } = await supabase.rpc("add_treatment_plan_item", {
     p_payload: {
       plan_id: params.planId,
       procedure_id: params.procedureId ?? null,
@@ -168,7 +168,11 @@ export async function addPlanItem(params: {
     },
   })
 
-  return { error: error?.message ?? null }
+  if (error) return { itemId: null, error: error.message }
+  // RPC may return { id } or just the uuid string
+  const raw = data as { id?: string } | string | null
+  const itemId = typeof raw === "string" ? raw : (raw as { id?: string } | null)?.id ?? null
+  return { itemId, error: null }
 }
 
 export async function duplicatePlanItemsFromPlan(
@@ -312,14 +316,31 @@ export async function unapproveTreatmentPlan(planId: string): Promise<{
 
 export async function markTreatmentPlanItemStatus(
   itemId: string,
-  status: "planned" | "in_progress" | "completed"
+  status: "planned" | "in_progress" | "completed" | "cancelled"
 ): Promise<{ data: { status: string; plan_status: string } | null; error: string | null }> {
   const supabase = createClient()
   const { data, error } = await supabase.rpc("mark_treatment_plan_item_status", {
     p_item_id: itemId,
     p_status: status,
   })
-  if (error) return { data: null, error: error.message }
+
+  // If the RPC isn't deployed yet, fall back to a direct table update
+  if (error) {
+    const isSchemaCache =
+      error.message?.includes("schema cache") ||
+      error.message?.includes("Could not find the function") ||
+      error.code === "PGRST202"
+    if (isSchemaCache) {
+      const { error: updateErr } = await supabase
+        .from("treatment_plan_items")
+        .update({ status, status_changed_at: new Date().toISOString() })
+        .eq("id", itemId)
+      if (updateErr) return { data: null, error: updateErr.message }
+      return { data: { status, plan_status: "" }, error: null }
+    }
+    return { data: null, error: error.message }
+  }
+
   const raw = data as Record<string, unknown>
   return {
     data: {

@@ -100,8 +100,33 @@ function SectionNav({
   activeId: string | null
   sections: { id: string; label: string; icon: LucideIcon }[]
 }) {
+  // scroll-mt-* CSS alone doesn't work reliably inside overflow-y-auto containers.
+  // We find the nearest scrollable ancestor and manually compute the offset.
   const scrollTo = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
+    const target = document.getElementById(id)
+    if (!target) return
+
+    // Walk up to find the scrollable container (main or body)
+    let container: HTMLElement | null = target.parentElement
+    while (container && container !== document.documentElement) {
+      const { overflowY } = getComputedStyle(container)
+      if (overflowY === "auto" || overflowY === "scroll") break
+      container = container.parentElement
+    }
+
+    if (!container || container === document.documentElement) {
+      // Fallback: window scroll
+      target.scrollIntoView({ behavior: "smooth", block: "start" })
+      return
+    }
+
+    // Account for the sticky outer patient tab bar (~44px) + some breathing room
+    const STICKY_OFFSET = 56
+    const containerTop = container.getBoundingClientRect().top
+    const targetTop = target.getBoundingClientRect().top
+    const scrollDelta = targetTop - containerTop - STICKY_OFFSET
+
+    container.scrollBy({ top: scrollDelta, behavior: "smooth" })
   }
 
   return (
@@ -111,12 +136,13 @@ function SectionNav({
         activeId={activeId}
         onSelect={scrollTo}
         ariaLabel="Record sections"
-        stickyClassName="sticky top-11 z-10"
+        stickyClassName="sticky top-[52px] z-10"
         activeVariant="soft"
       />
     </div>
   )
 }
+
 
 export function PatientRecordOnePage({
   patientId,

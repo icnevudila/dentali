@@ -663,7 +663,7 @@ function TreatmentPlanContent() {
 
   const handleMarkItemStatus = async (
     itemId: string,
-    status: "planned" | "in_progress" | "completed"
+    status: "planned" | "in_progress" | "completed" | "cancelled"
   ) => {
     setSaving(true)
     setError(null)
@@ -846,7 +846,7 @@ function TreatmentPlanContent() {
             }}
           />
         ) : null}
-        {activeBranch?.id ? (
+        {activeBranch?.id && !activePlanId ? (
           <TreatmentPlanTimelinePanel
             patientId={patientId}
             branchId={activeBranch.id}

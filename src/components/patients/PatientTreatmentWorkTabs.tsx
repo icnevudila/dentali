@@ -296,7 +296,8 @@ export function PatientTreatmentHistoryTab({
             <table className="w-full text-left text-sm">
               <thead className="border-b border-neutral-200 bg-neutral-50">
                 <tr>
-                  <th className="px-3 py-2 font-medium text-neutral-700">{t("patients.txColDate", "Created")}</th>
+                  <th className="px-3 py-2 font-medium text-neutral-700">{t("patients.txColPlanDate", "Plan Date")}</th>
+                  <th className="px-3 py-2 font-medium text-neutral-700">{t("patients.txColTreatedDate", "Treatment Date / Time")}</th>
                   <th className="px-3 py-2 font-medium text-neutral-700">{t("patients.txColTooth", "Tooth")}</th>
                   <th className="px-3 py-2 font-medium text-neutral-700">{t("patients.txColProcedure", "Procedure")}</th>
                   <th className="px-3 py-2 font-medium text-neutral-700">{t("patients.txColPlan", "Plan")}</th>
@@ -307,12 +308,33 @@ export function PatientTreatmentHistoryTab({
               <tbody className="divide-y divide-neutral-200">
                 {filtered.map((item) => (
                   <tr key={item.item_id} className="hover:bg-neutral-50">
-                    <td className="px-3 py-2.5 whitespace-nowrap text-neutral-600">
+                    <td className="px-3 py-2.5 whitespace-nowrap text-xs text-neutral-600">
                       {new Date(item.item_created_at).toLocaleString("en-PH", {
                         dateStyle: "medium",
                         timeStyle: "short",
                         timeZone: "Asia/Manila",
                       })}
+                    </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap text-xs">
+                      {item.item_status_changed_at ? (
+                        <span className="font-medium text-neutral-900">
+                          {new Date(item.item_status_changed_at).toLocaleString("en-PH", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                            timeZone: "Asia/Manila",
+                          })}
+                        </span>
+                      ) : item.item_status === "completed" ? (
+                        <span className="font-medium text-neutral-900">
+                          {new Date(item.item_created_at).toLocaleString("en-PH", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                            timeZone: "Asia/Manila",
+                          })}
+                        </span>
+                      ) : (
+                        <span className="text-neutral-400 italic">—</span>
+                      )}
                     </td>
                     <td className="px-3 py-2.5 font-mono text-neutral-800">{item.tooth_number ?? "—"}</td>
                     <td className="px-3 py-2.5 text-neutral-900">{item.description}</td>

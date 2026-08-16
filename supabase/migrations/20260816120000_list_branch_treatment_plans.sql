@@ -254,7 +254,7 @@ begin
   if p_item_id is null then
     raise exception 'Item is required';
   end if;
-  if v_next not in ('planned', 'in_progress', 'completed') then
+  if v_next not in ('planned', 'in_progress', 'completed', 'cancelled') then
     raise exception 'Invalid item status';
   end if;
 

@@ -459,6 +459,8 @@ export const messagesEnPh: MessageTree = {
     txFilterEmpty: "Nothing in this status. Try All.",
     txColPlan: "Plan",
     txColDate: "Created",
+    txColPlanDate: "Plan Date",
+    txColTreatedDate: "Treatment Date / Time",
     txColItems: "Items",
     txColCost: "Estimate",
     txColStatus: "Status",
@@ -2186,8 +2188,15 @@ export const messagesEnPh: MessageTree = {
   },
 }
 
-export const messagesEn: MessageTree = {
-  ...messagesEnPh,
+export const messagesPh: MessageTree = {
+  txColPlan: "Plano",
+  txColDate: "Nilikha",
+  txColPlanDate: "Petsa ng Plano",
+  txColTreatedDate: "Oras / Petsa ng Paggamot",
+  txColItems: "Mga Aytem",
+  txColCost: "Tantiya",
+  txColStatus: "Status",
+  txColAction: "Aksyon",
 }
 
 export const messagesTr: MessageTree = {
@@ -2273,6 +2282,8 @@ export const messagesTr: MessageTree = {
       "Planı hasta dosyasından oluşturun. Orijinal = onay bekliyor. Onaylı = tedavi edilebilir.",
     colPatient: "Hasta",
     colPlan: "Plan",
+    colPlanDate: "Plan Tarihi",
+    colTreatedDate: "Tedavi Tarihi / Saati",
     colProgress: "İlerleme",
     colEstimate: "Tahmin",
     colStatus: "Durum",
