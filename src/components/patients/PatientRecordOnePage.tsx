@@ -494,11 +494,18 @@ export function PatientRecordOnePage({
           id="record-treatment"
           title={t("patients.recordTreatmentTitle", "Treatment plans")}
           action={
-            <Button size="sm" className="gap-1" asChild>
-              <Link href={`/patients/${patientId}/treatment-plan`}>
-                <FileText className="h-3.5 w-3.5" /> {t("patients.recordNewPlan", "New plan")}
-              </Link>
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" asChild>
+                <Link href="/treatment-plans">
+                  {t("treatmentPlans.viewAll", "View all plans")}
+                </Link>
+              </Button>
+              <Button size="sm" className="gap-1" asChild>
+                <Link href={`/patients/${patientId}/treatment-plan`}>
+                  <FileText className="h-3.5 w-3.5" /> {t("patients.recordNewPlan", "New plan")}
+                </Link>
+              </Button>
+            </div>
           }
         >
           <TreatmentPlanProgressBar
