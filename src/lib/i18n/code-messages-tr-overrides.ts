@@ -161,4 +161,15 @@ export const codeMessagesTrOverrides: MessageTree = {
     none: "Yok",
     clear: "Temizle",
   },
+  patients: {
+    attentionConsentsTitle: "Bekleyen Onamlar",
+    attentionConsentsHint: "İmzalı onam formu gereken hastalar",
+    attentionConsentsBadge: "Onam gerekli",
+    attentionIntakeTitle: "Eksik Giriş / Kayıt",
+    attentionIntakeHint: "Giriş bilgileri eksik hastalar",
+    attentionIntakeBadge: "Giriş bekliyor",
+    emptyAttentionConsents: "Bekleyen onam yok",
+    emptyAttentionConsentsHint: "Tüm hasta onam formları günceldir.",
+    metricPendingConsents: "Bekleyen onamlar",
+  },
 }

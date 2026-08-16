@@ -836,7 +836,7 @@ function TreatmentPlanContent() {
         description: item.description,
         estimatedPrice: Number(item.estimated_price) || 0,
         toothNumber: item.tooth_number,
-        procedureId: item.procedureId,
+        procedureId: item.procedure_id,
       })),
     })
 
