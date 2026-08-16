@@ -163,25 +163,16 @@ export function PatientRecordOnePage({
     const target = document.getElementById(id)
     if (!target) return
 
-    // Walk up to find the scrollable container (main or body)
-    let container: HTMLElement | null = target.parentElement
-    while (container && container !== document.documentElement) {
-      const { overflowY } = getComputedStyle(container)
-      if (overflowY === "auto" || overflowY === "scroll") break
-      container = container.parentElement
-    }
-
-    if (!container || container === document.documentElement) {
+    const mainEl = document.querySelector("main")
+    if (mainEl) {
+      const mainRect = mainEl.getBoundingClientRect()
+      const targetRect = target.getBoundingClientRect()
+      const STICKY_HEADER_OFFSET = 70
+      const targetScrollTop = mainEl.scrollTop + (targetRect.top - mainRect.top) - STICKY_HEADER_OFFSET
+      mainEl.scrollTo({ top: Math.max(0, targetScrollTop), behavior: "smooth" })
+    } else {
       target.scrollIntoView({ behavior: "smooth", block: "start" })
-      return
     }
-
-    const STICKY_OFFSET = 56
-    const containerTop = container.getBoundingClientRect().top
-    const targetTop = target.getBoundingClientRect().top
-    const scrollDelta = targetTop - containerTop - STICKY_OFFSET
-
-    container.scrollBy({ top: scrollDelta, behavior: "smooth" })
   }, [])
 
   React.useEffect(() => {

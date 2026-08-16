@@ -97,17 +97,19 @@ export function HorizontalScrollTabs({
     if (isExpanded || !isDraggingRef.current) return
     const root = scrollerRef.current
     if (!root) return
-    e.preventDefault()
     const x = e.pageX - root.offsetLeft
-    const walk = (x - startXRef.current) * 1.3
-    if (Math.abs(walk) > 4) {
+    const walk = (x - startXRef.current) * 1.2
+    if (Math.abs(walk) > 10) {
       hasDraggedRef.current = true
+      root.scrollLeft = scrollLeftRef.current - walk
     }
-    root.scrollLeft = scrollLeftRef.current - walk
   }
 
   const handleMouseUpOrLeave = () => {
     isDraggingRef.current = false
+    window.setTimeout(() => {
+      hasDraggedRef.current = false
+    }, 60)
   }
 
   const scrollByAmount = (direction: "left" | "right") => {
