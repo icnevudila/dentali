@@ -180,32 +180,64 @@ export async function createPartialInvoiceFromPlanItems(params: {
   }
 
   const supabase = createClient()
-  const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase()
-  const invoiceNumber = `${params.series || "INV"}-${randomSuffix}`
 
-  const { data: inv, error: invError } = await supabase
+  // 1. Check if an active master invoice already exists for this treatment plan
+  const { data: existingInv } = await supabase
     .from("invoices")
-    .insert({
-      organization_id: params.organizationId,
-      branch_id: params.branchId,
-      patient_id: params.patientId,
-      treatment_plan_id: params.treatmentPlanId,
-      invoice_number: invoiceNumber,
-      total_amount: totalAmount,
-      subtotal_amount: totalAmount,
-      discount_amount: 0,
-      paid_amount: 0,
-      status: "draft",
-    })
-    .select("id, invoice_number")
-    .single()
+    .select("id, invoice_number, total_amount, subtotal_amount")
+    .eq("treatment_plan_id", params.treatmentPlanId)
+    .neq("status", "void")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle()
 
-  if (invError || !inv) {
-    return { data: null, error: invError?.message ?? "Failed to create invoice." }
+  let invoiceId = existingInv?.id
+  let invoiceNumber = existingInv?.invoice_number ?? ""
+
+  if (!invoiceId) {
+    // Create the master invoice for this plan
+    const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase()
+    invoiceNumber = `${params.series || "INV"}-${randomSuffix}`
+
+    const { data: newInv, error: invError } = await supabase
+      .from("invoices")
+      .insert({
+        organization_id: params.organizationId,
+        branch_id: params.branchId,
+        patient_id: params.patientId,
+        treatment_plan_id: params.treatmentPlanId,
+        invoice_number: invoiceNumber,
+        total_amount: totalAmount,
+        subtotal_amount: totalAmount,
+        discount_amount: 0,
+        paid_amount: 0,
+        status: "draft",
+      })
+      .select("id, invoice_number")
+      .single()
+
+    if (invError || !newInv) {
+      return { data: null, error: invError?.message ?? "Failed to create master invoice." }
+    }
+    invoiceId = newInv.id
+    invoiceNumber = newInv.invoice_number ?? invoiceNumber
+  } else {
+    // Increment the existing master invoice's total
+    const updatedTotal = (Number(existingInv.total_amount) || 0) + totalAmount
+    const updatedSubtotal = (Number(existingInv.subtotal_amount) || 0) + totalAmount
+    await supabase
+      .from("invoices")
+      .update({
+        total_amount: updatedTotal,
+        subtotal_amount: updatedSubtotal,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", invoiceId)
   }
 
+  // 2. Insert line items into this master invoice
   const lineItems = params.items.map((item, idx) => ({
-    invoice_id: inv.id,
+    invoice_id: invoiceId,
     organization_id: params.organizationId,
     procedure_id: item.procedureId || null,
     treatment_plan_item_id: item.id,
@@ -219,10 +251,10 @@ export async function createPartialInvoiceFromPlanItems(params: {
 
   const { error: linesError } = await supabase.from("invoice_line_items").insert(lineItems)
   if (linesError) {
-    return { data: { id: inv.id, invoiceNumber: inv.invoice_number }, error: linesError.message }
+    return { data: { id: invoiceId, invoiceNumber }, error: linesError.message }
   }
 
-  return { data: { id: inv.id, invoiceNumber: inv.invoice_number }, error: null }
+  return { data: { id: invoiceId, invoiceNumber }, error: null }
 }
 
 export async function createInvoiceFromPlan(params: {
