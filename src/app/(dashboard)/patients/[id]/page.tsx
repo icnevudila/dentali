@@ -48,6 +48,7 @@ import { useRouteParams } from "@/hooks/use-route-params"
 import { useBranch } from "@/hooks/use-branch"
 import { useAuth } from "@/hooks/use-auth"
 import { useIntakeConsentSlugs } from "@/hooks/use-intake-consent-slugs"
+import { useRecentPatients } from "@/hooks/use-recent-patients"
 import { DirectionalTransition } from "@/components/layout/DirectionalTransition"
 import { WorkflowSettingsLink } from "@/components/layout/WorkflowSettingsLink"
 import { NAV_BACK_TRANSITION, NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
@@ -141,6 +142,7 @@ export default function PatientProfilePage() {
   const { user } = useAuth()
   const intakeConsentSlugs = useIntakeConsentSlugs(activeBranch?.organization_id)
   const { t } = useLocale()
+  const { addRecent } = useRecentPatients()
   const realtimeInstanceId = React.useId().replace(/:/g, "")
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -363,6 +365,12 @@ export default function PatientProfilePage() {
         .then(([patientRes, consentsRes, apptsRes, plansRes, medRes, balanceRes, gateRes, timelineRes, pendingRes]) => {
           setPatient(patientRes.data)
           setLoadError(patientRes.error)
+          if (patientRes.data) {
+            addRecent({
+              id: patientRes.data.id,
+              name: `${patientRes.data.first_name} ${patientRes.data.last_name}`,
+            })
+          }
           setConsents(consentsRes.data)
           setAppointments(apptsRes.data)
           setTreatmentPlans(plansRes.data)
@@ -847,15 +855,26 @@ export default function PatientProfilePage() {
               <Plus className="h-3.5 w-3.5" /> Invoice
             </Button>
           </PermissionGate>
-          {billingGate?.has_billing_gap || (balance && balance.open_balance > 0) ? (
+          {billingGate?.has_billing_gap ? (
             <Button
               variant="outline"
               size="sm"
-              className="h-8 gap-1.5 border-amber-300 text-amber-900"
+              className="h-8 gap-1.5 border-amber-300 text-amber-900 hover:bg-amber-50"
               onClick={() => setShowBillingModal(true)}
             >
               <Wallet className="h-3.5 w-3.5" />
               {t("billing.gateCollectPayment", "Collect")}
+            </Button>
+          ) : balance && balance.open_balance > 0 ? (
+            <Button
+              size="sm"
+              className="h-8 gap-1.5 bg-amber-500 text-white hover:bg-amber-600 shadow-sm"
+              asChild
+            >
+              <Link href={`/billing?patient=${patientId}`}>
+                <Wallet className="h-3.5 w-3.5" />
+                ₱{balance.open_balance.toLocaleString()} — Ödeme Al
+              </Link>
             </Button>
           ) : null}
           <PatientOutreachCard
