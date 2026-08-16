@@ -126,6 +126,105 @@ export async function createManualInvoice(params: {
   return { data: { id: raw.id }, error: null }
 }
 
+export async function fetchInvoicedItemIdsForPlan(
+  treatmentPlanId: string
+): Promise<{
+  data: Record<string, { invoiceId: string; invoiceNumber: string | null; status: string }>
+  error: string | null
+}> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("invoice_line_items")
+    .select("treatment_plan_item_id, invoice_id, invoices!inner(id, invoice_number, status, treatment_plan_id)")
+    .eq("invoices.treatment_plan_id", treatmentPlanId)
+    .neq("invoices.status", "void")
+
+  if (error) return { data: {}, error: error.message }
+  const result: Record<string, { invoiceId: string; invoiceNumber: string | null; status: string }> = {}
+  for (const row of data ?? []) {
+    if (row.treatment_plan_item_id) {
+      const rawInv = row.invoices as unknown
+      const inv = Array.isArray(rawInv) ? rawInv[0] : (rawInv as { id: string; invoice_number: string | null; status: string } | null)
+      if (inv) {
+        result[row.treatment_plan_item_id] = {
+          invoiceId: inv.id,
+          invoiceNumber: inv.invoice_number,
+          status: inv.status,
+        }
+      }
+    }
+  }
+  return { data: result, error: null }
+}
+
+export async function createPartialInvoiceFromPlanItems(params: {
+  organizationId: string
+  branchId: string
+  patientId: string
+  treatmentPlanId: string
+  items: {
+    id: string
+    description: string
+    estimatedPrice: number
+    toothNumber?: string | null
+    procedureId?: string | null
+  }[]
+  series?: string
+}): Promise<{ data: { id: string; invoiceNumber: string } | null; error: string | null }> {
+  if (!params.items.length) {
+    return { data: null, error: "No items selected for invoicing." }
+  }
+  const totalAmount = params.items.reduce((sum, item) => sum + (Number(item.estimatedPrice) || 0), 0)
+  if (totalAmount <= 0) {
+    return { data: null, error: "Total amount must be greater than zero." }
+  }
+
+  const supabase = createClient()
+  const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase()
+  const invoiceNumber = `${params.series || "INV"}-${randomSuffix}`
+
+  const { data: inv, error: invError } = await supabase
+    .from("invoices")
+    .insert({
+      organization_id: params.organizationId,
+      branch_id: params.branchId,
+      patient_id: params.patientId,
+      treatment_plan_id: params.treatmentPlanId,
+      invoice_number: invoiceNumber,
+      total_amount: totalAmount,
+      subtotal_amount: totalAmount,
+      discount_amount: 0,
+      paid_amount: 0,
+      status: "draft",
+    })
+    .select("id, invoice_number")
+    .single()
+
+  if (invError || !inv) {
+    return { data: null, error: invError?.message ?? "Failed to create invoice." }
+  }
+
+  const lineItems = params.items.map((item, idx) => ({
+    invoice_id: inv.id,
+    organization_id: params.organizationId,
+    procedure_id: item.procedureId || null,
+    treatment_plan_item_id: item.id,
+    description: item.description,
+    tooth_number: item.toothNumber || null,
+    quantity: 1,
+    unit_price: Number(item.estimatedPrice) || 0,
+    line_total: Number(item.estimatedPrice) || 0,
+    sort_order: idx,
+  }))
+
+  const { error: linesError } = await supabase.from("invoice_line_items").insert(lineItems)
+  if (linesError) {
+    return { data: { id: inv.id, invoiceNumber: inv.invoice_number }, error: linesError.message }
+  }
+
+  return { data: { id: inv.id, invoiceNumber: inv.invoice_number }, error: null }
+}
+
 export async function createInvoiceFromPlan(params: {
   organizationId: string
   branchId: string
