@@ -5,7 +5,7 @@ import { createPortal } from "react-dom"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { addTransitionType, startTransition } from "react"
-import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Plus, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen, ScrollText, Shield, DoorClosed, History } from "lucide-react"
+import { ArrowLeft, ArrowUp, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Plus, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen, ScrollText, Shield, DoorClosed, History } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
 import { ContentPanel } from "@/components/layout/ContentPanel"
@@ -111,6 +111,29 @@ const PATIENT_TAB_DEFS: { id: PatientTabId; labelKey: string; fallback: string; 
   { id: "documents", labelKey: "patients.tabDocuments", fallback: "Documents", icon: FolderOpen },
   { id: "audit", labelKey: "patients.tabAudit", fallback: "Audit Log", icon: Shield },
 ]
+
+function ScrollToTopButton() {
+  const [visible, setVisible] = React.useState(false)
+
+  React.useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 300)
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
+
+  if (!visible) return null
+
+  return (
+    <button
+      type="button"
+      aria-label="Scroll to top"
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      className="fixed bottom-6 right-6 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-white shadow-lg ring-2 ring-primary-600/20 transition-all duration-200 hover:bg-primary-700 hover:scale-110 active:scale-95 animate-in fade-in slide-in-from-bottom-2"
+    >
+      <ArrowUp className="h-4 w-4" />
+    </button>
+  )
+}
 
 export default function PatientProfilePage() {
   const { id: patientId } = useRouteParams<{ id: string }>()
@@ -898,7 +921,10 @@ export default function PatientProfilePage() {
     </div>
     </div>
 
-    <div id="patient-profile-tabs" className="mt-2 min-w-0">
+    <div
+      id="patient-profile-tabs"
+      className="sticky top-0 z-30 mt-2 min-w-0 bg-white/95 backdrop-blur-sm shadow-[0_1px_0_rgba(15,23,42,0.06)] -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-12 xl:px-12"
+    >
       <HorizontalScrollTabs
         tabs={PATIENT_TAB_DEFS.map((tab) => ({
           id: tab.id,
@@ -908,6 +934,7 @@ export default function PatientProfilePage() {
         activeId={activeTab}
         onSelect={(id) => setActiveTab(id as PatientTabId)}
         ariaLabel={t("patients.profileSections", "Patient sections")}
+        stickyClassName=""
       />
     </div>
 
@@ -1479,6 +1506,8 @@ export default function PatientProfilePage() {
             document.body
           )
         : null}
+    {/* Scroll-to-top floating button */}
+    <ScrollToTopButton />
     </DirectionalTransition>
     </PermissionGate>
   )
