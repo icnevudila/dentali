@@ -26,6 +26,7 @@ export function EmptyState({
       data-empty-state="light"
       className={cn(
         "flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-neutral-200 bg-neutral-50 px-6 py-14 text-center text-neutral-700 animate-fade-rise",
+        "dark:border-neutral-200 dark:bg-neutral-50 dark:text-neutral-700",
         className
       )}
     >
