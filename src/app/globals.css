@@ -9,6 +9,12 @@
 */
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  --font-clinic-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-clinic-display: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-clinic-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
 @theme {
   --font-sans: var(--font-clinic-body), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-clinic-display), "Archivo", var(--font-sans);

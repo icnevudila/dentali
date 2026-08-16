@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { CookieConsentBanner } from "@/components/marketing/CookieConsentBanner";
 import { LocaleBootstrap } from "@/components/i18n/LocaleBootstrap";
@@ -9,23 +8,6 @@ import { Toaster } from "sonner";
 import { TOASTER_OPTIONS } from "@/lib/ui/notify";
 import "./globals.css";
 
-const bodyFont = IBM_Plex_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-clinic-body",
-  display: "swap",
-});
-const displayFont = Archivo({
-  subsets: ["latin"],
-  variable: "--font-clinic-display",
-  display: "swap",
-});
-const monoFont = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-clinic-mono",
-  display: "swap",
-});
 const siteUrl = getSiteUrl();
 
 export const metadata: Metadata = {
@@ -65,7 +47,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning data-theme="light">
-      <body className={`${bodyFont.variable} ${displayFont.variable} ${monoFont.variable} font-sans`}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="font-sans antialiased">
         <LocaleBootstrap />
         <ServiceWorkerRegister />
         <CookieConsentBanner />
