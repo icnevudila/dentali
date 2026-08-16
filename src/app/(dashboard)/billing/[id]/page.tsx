@@ -470,6 +470,52 @@ function InvoiceDetailPageContent() {
     return () => window.clearTimeout(id)
   }, [focusReminder, loading, invoice])
 
+  const handlePrintPreview = () => {
+    const win = window.open('', '_blank', 'width=800,height=700')
+    if (!win || !invoice) return
+    const itemsHtml = (lineItems ?? []).map(item => `
+      <tr style="border-bottom:1px solid #f0f0f0">
+        <td style="padding:8px 12px;font-size:13px">${item.description ?? '—'}</td>
+        <td style="padding:8px 12px;font-size:13px;text-align:center">${item.quantity ?? 1}</td>
+        <td style="padding:8px 12px;font-size:13px;text-align:right">₱${Number(item.unit_price ?? 0).toLocaleString()}</td>
+        <td style="padding:8px 12px;font-size:13px;text-align:right;font-weight:600">₱${Number(item.total_price ?? 0).toLocaleString()}</td>
+      </tr>
+    `).join('')
+    win.document.write(`<!DOCTYPE html><html><head>
+      <title>Invoice ${invoice.invoice_number ?? ''}</title>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, sans-serif; margin: 40px; color: #1a1a1a; }
+        .header { display:flex; justify-content:space-between; margin-bottom:32px; }
+        h1 { font-size:24px; font-weight:700; margin:0 0 4px; }
+        .badge { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:600; background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+        table { width:100%; border-collapse:collapse; margin-top:24px; }
+        th { background:#f8fafc; padding:10px 12px; font-size:11px; text-transform:uppercase; letter-spacing:.05em; text-align:left; color:#64748b; }
+        .total-row td { font-weight:700; font-size:15px; padding:12px; border-top:2px solid #e2e8f0; }
+        @media print { body { margin:20px; } }
+      </style>
+    </head><body>
+      <div class="header">
+        <div>
+          <h1>Fatura #${invoice.invoice_number ?? invoice.id.slice(0,8)}</h1>
+          <p style="color:#64748b;margin:0">${invoice.patient_name ?? 'Hasta'}</p>
+          <p style="color:#94a3b8;font-size:12px;margin:4px 0 0">${new Date(invoice.created_at ?? Date.now()).toLocaleDateString('tr-TR', {day:'numeric',month:'long',year:'numeric'})}</p>
+        </div>
+        <div style="text-align:right">
+          <span class="badge">${invoice.status ?? 'draft'}</span>
+          <p style="font-size:28px;font-weight:800;margin:8px 0 0">₱${Number(invoice.total_amount ?? 0).toLocaleString()}</p>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Prosedür</th><th style="text-align:center">Adet</th><th style="text-align:right">Birim Fiyat</th><th style="text-align:right">Toplam</th></tr></thead>
+        <tbody>${itemsHtml}</tbody>
+        <tfoot><tr class="total-row"><td colspan="3">TOPLAM</td><td style="text-align:right">₱${Number(invoice.total_amount ?? 0).toLocaleString()}</td></tr></tfoot>
+      </table>
+      <script>window.onload = () => { window.print() }<\/script>
+    </body></html>`)
+    win.document.close()
+  }
+
   const handleVoid = async () => {
     if (!voidReason.trim()) return
     if (!(await notify.confirm(t("billing.voidInvoiceConfirm", "Void this invoice? This cannot be undone.")))) return
@@ -597,6 +643,9 @@ function InvoiceDetailPageContent() {
             >
               <Printer className="h-4 w-4" />
               {t("billing.print", "Print")}
+            </Button>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 shrink-0" onClick={handlePrintPreview}>
+              <Printer className="h-3.5 w-3.5" /> Önizle & Yazdır
             </Button>
           </div>
         </div>

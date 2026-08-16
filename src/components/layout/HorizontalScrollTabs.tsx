@@ -8,6 +8,7 @@ export type HorizontalScrollTab = {
   id: string
   label: string
   icon?: LucideIcon
+  hint?: string
 }
 
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, LayoutGrid, Rows3 } from "lucide-react"
@@ -192,6 +193,7 @@ export function HorizontalScrollTabs({
                 role="tab"
                 aria-selected={isActive}
                 data-tab-active={isActive ? "true" : "false"}
+                title={tab.hint ?? tab.label}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   if (hasDraggedRef.current) return

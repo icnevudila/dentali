@@ -1319,6 +1319,35 @@ function TreatmentPlanContent() {
                   ) : null}
                 </div>
               </CardHeader>
+              {planItems.length > 0 && (() => {
+                const completed = planItems.filter((i) => i.status === "completed" || i.status === "done").length
+                const inProgress = planItems.filter((i) => i.status === "in_progress" || i.status === "started").length
+                const totalCount = planItems.length
+                const pct = Math.round((completed / totalCount) * 100)
+                return (
+                  <div className="px-6 pb-2">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-medium text-neutral-600">
+                        {completed}/{totalCount} {t("treatmentPlan.completedProcedures", "prosedür tamamlandı")}
+                      </span>
+                      <span className="text-xs font-bold text-neutral-800">{pct}%</span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-neutral-100 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-500"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-3 mt-1.5">
+                      {completed > 0 && <span className="text-[11px] text-emerald-600 font-medium">{completed} tamamlandı</span>}
+                      {inProgress > 0 && <span className="text-[11px] text-blue-600 font-medium">{inProgress} devam ediyor</span>}
+                      {totalCount - completed - inProgress > 0 && (
+                        <span className="text-[11px] text-neutral-400">{totalCount - completed - inProgress} bekliyor</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
               <CardContent>
                 {planItems.length === 0 ? (
                   <EmptyState

@@ -39,6 +39,7 @@ import { ReportDrillLink } from "@/components/reports/ReportDrillLink"
 import { CollapsibleBelowFold } from "@/components/layout/CollapsibleBelowFold"
 import { StickyActionBar } from "@/components/layout/StickyActionBar"
 import type { IntakeDraftCounts } from "@/lib/patients/intake-draft-review"
+import { cn } from "@/lib/utils"
 
 const PAGE_SIZE = 20
 
@@ -454,6 +455,60 @@ function PatientsPageContent() {
                 <p className="hidden text-[11px] text-neutral-400 sm:block">
                   {t("patients.searchShortcut", "Press / to focus search")}
                 </p>
+                {/* Smart Quick Filters */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {([
+                    { label: "📅 Bugün Gelecekler", key: "today", description: "Bugün randevusu olanlar" },
+                    { label: "💳 Bakiyesi Olanlar", key: "balance", description: "Açık bakiyesi olan hastalar" },
+                    { label: "📝 Eksik Onay", key: "consents", description: "İmzalanmamış formu olanlar" },
+                    { label: "🆕 Bu Ay Kayıt", key: "new-this-month", description: "Bu ay eklenen hastalar" },
+                  ] as const).map((chip) => {
+                    const isActive =
+                      attentionFilter === chip.key ||
+                      (chip.key === "today" && (filters as Record<string, unknown>).appointmentToday === true) ||
+                      (chip.key === "balance" && (filters as Record<string, unknown>).hasOpenBalance === true) ||
+                      (chip.key === "new-this-month" && (filters as Record<string, unknown>).registeredThisMonth === true)
+                    return (
+                      <button
+                        key={chip.key}
+                        type="button"
+                        title={chip.description}
+                        onClick={() => {
+                          if (chip.key === "consents") {
+                            const next = attentionFilter === "consents" ? null : "consents"
+                            syncUrl(debouncedQuery, 1, filters, { attention: next })
+                          } else if (chip.key === "today") {
+                            const next = { ...filters, appointmentToday: (filters as Record<string, unknown>).appointmentToday ? undefined : true }
+                            handleFiltersChange(next as typeof filters)
+                          } else if (chip.key === "balance") {
+                            const next = { ...filters, hasOpenBalance: (filters as Record<string, unknown>).hasOpenBalance ? undefined : true }
+                            handleFiltersChange(next as typeof filters)
+                          } else if (chip.key === "new-this-month") {
+                            const next = { ...filters, registeredThisMonth: (filters as Record<string, unknown>).registeredThisMonth ? undefined : true }
+                            handleFiltersChange(next as typeof filters)
+                          }
+                        }}
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-all",
+                          isActive
+                            ? "border-primary-300 bg-primary-50 text-primary-700"
+                            : "border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50"
+                        )}
+                      >
+                        {chip.label}
+                      </button>
+                    )
+                  })}
+                  {(attentionFilter || registryFiltersActive) && (
+                    <button
+                      type="button"
+                      onClick={handleClearRegistryFilters}
+                      className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600 transition-all hover:bg-red-100"
+                    >
+                      ✕ Filtreleri Temizle
+                    </button>
+                  )}
+                </div>
               </div>
 
               <PatientTable

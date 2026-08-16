@@ -5,7 +5,7 @@ import { createPortal } from "react-dom"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { addTransitionType, startTransition } from "react"
-import { ArrowLeft, ArrowUp, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Plus, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen, ScrollText, Shield, DoorClosed, History } from "lucide-react"
+import { ArrowLeft, ArrowUp, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Plus, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen, ScrollText, Shield, DoorClosed, History, MoreHorizontal } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
 import { ContentPanel } from "@/components/layout/ContentPanel"
@@ -95,22 +95,22 @@ type PatientTabId =
   | "documents"
   | "audit"
 
-const PATIENT_TAB_DEFS: { id: PatientTabId; labelKey: string; fallback: string; icon: LucideIcon }[] = [
-  { id: "record", labelKey: "patients.tabRecord", fallback: "Patient Record", icon: ClipboardList },
-  { id: "medical-history", labelKey: "patients.tabMedicalHistory", fallback: "Medical History", icon: Activity },
-  { id: "dental-chart", labelKey: "patients.tabDentalChart", fallback: "Dental Chart", icon: Scan },
-  { id: "clinical-notes", labelKey: "patients.tabClinicalNotes", fallback: "Clinical Notes", icon: FileText },
-  { id: "treatment-plans", labelKey: "patients.tabTreatmentPlans", fallback: "Treatment Plans", icon: ListOrdered },
-  { id: "treatment-history", labelKey: "patients.tabTreatmentHistory", fallback: "Treatment History", icon: History },
-  { id: "orthodontics", labelKey: "patients.tabOrthodontics", fallback: "Orthodontics", icon: Braces },
-  { id: "prescriptions", labelKey: "patients.tabPrescriptions", fallback: "Prescriptions", icon: Pill },
-  { id: "appointments", labelKey: "patients.tabAppointments", fallback: "Appointments", icon: Calendar },
-  { id: "visits", labelKey: "patients.tabVisits", fallback: "Visits", icon: UserCheck },
-  { id: "epicrisis", labelKey: "patients.tabEpicrisis", fallback: "Epicrisis & Letters", icon: FileCheck2 },
-  { id: "consents", labelKey: "patients.tabConsents", fallback: "Consents & Forms", icon: ShieldCheck },
-  { id: "radiology", labelKey: "patients.tabRadiology", fallback: "Radiology & Imaging", icon: ScanLine },
-  { id: "documents", labelKey: "patients.tabDocuments", fallback: "Documents", icon: FolderOpen },
-  { id: "audit", labelKey: "patients.tabAudit", fallback: "Audit Log", icon: Shield },
+const PATIENT_TAB_DEFS: { id: PatientTabId; labelKey: string; fallback: string; icon: LucideIcon; hint?: string }[] = [
+  { id: "record", labelKey: "patients.tabRecord", fallback: "Patient Record", icon: ClipboardList, hint: "Hasta kartı, iletişim ve demografik bilgiler (R)" },
+  { id: "medical-history", labelKey: "patients.tabMedicalHistory", fallback: "Medical History", icon: Activity, hint: "Alerjiler, ilaçlar ve tıbbi geçmiş (M)" },
+  { id: "dental-chart", labelKey: "patients.tabDentalChart", fallback: "Dental Chart", icon: Scan, hint: "Diş odontogram ve bulgular (D)" },
+  { id: "clinical-notes", labelKey: "patients.tabClinicalNotes", fallback: "Clinical Notes", icon: FileText, hint: "Klinik notlar ve gözlemler (N)" },
+  { id: "treatment-plans", labelKey: "patients.tabTreatmentPlans", fallback: "Treatment Plans", icon: ListOrdered, hint: "Aktif ve tamamlanan tedavi planları (T)" },
+  { id: "treatment-history", labelKey: "patients.tabTreatmentHistory", fallback: "Treatment History", icon: History, hint: "Geçmiş tedavi kayıtları" },
+  { id: "orthodontics", labelKey: "patients.tabOrthodontics", fallback: "Orthodontics", icon: Braces, hint: "Ortodonti takibi ve kayıtlar" },
+  { id: "prescriptions", labelKey: "patients.tabPrescriptions", fallback: "Prescriptions", icon: Pill, hint: "Reçeteler ve ilaç yazma (P)" },
+  { id: "appointments", labelKey: "patients.tabAppointments", fallback: "Appointments", icon: Calendar, hint: "Randevular ve takvim (A)" },
+  { id: "visits", labelKey: "patients.tabVisits", fallback: "Visits", icon: UserCheck, hint: "Ziyaret geçmişi ve check-in kayıtları (V)" },
+  { id: "epicrisis", labelKey: "patients.tabEpicrisis", fallback: "Epicrisis & Letters", icon: FileCheck2, hint: "Taburcu özeti ve referans mektupları" },
+  { id: "consents", labelKey: "patients.tabConsents", fallback: "Consents & Forms", icon: ShieldCheck, hint: "Onam formları ve imzalar (C)" },
+  { id: "radiology", labelKey: "patients.tabRadiology", fallback: "Radiology & Imaging", icon: ScanLine, hint: "X-ray ve radyolojik görüntüler" },
+  { id: "documents", labelKey: "patients.tabDocuments", fallback: "Documents", icon: FolderOpen, hint: "Yüklenen belgeler ve dosyalar" },
+  { id: "audit", labelKey: "patients.tabAudit", fallback: "Audit Log", icon: Shield, hint: "Sistem değişiklik kaydı" },
 ]
 
 function ScrollToTopButton() {
@@ -200,7 +200,52 @@ export default function PatientProfilePage() {
   const [showInvoiceDrawer, setShowInvoiceDrawer] = React.useState(false)
   const [showBillingModal, setShowBillingModal] = React.useState(false)
   const [showMedicalAlertConfirm, setShowMedicalAlertConfirm] = React.useState(false)
+  const [showQuickActions, setShowQuickActions] = React.useState(false)
+  const quickActionsRef = React.useRef<HTMLDivElement>(null)
   const pendingMedicalActionRef = React.useRef<(() => void) | null>(null)
+
+  React.useEffect(() => {
+    if (!showQuickActions) return
+    const handler = (e: MouseEvent) => {
+      if (quickActionsRef.current && !quickActionsRef.current.contains(e.target as Node)) {
+        setShowQuickActions(false)
+      }
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [showQuickActions])
+
+  // Keyboard shortcuts for tab switching
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Don't trigger if typing in an input/textarea
+      if ((e.target as HTMLElement).closest('input, textarea, select, [contenteditable]')) return
+      // Don't trigger with modifier keys
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+
+      const shortcuts: Record<string, PatientTabId> = {
+        'r': 'record',
+        'm': 'medical-history',
+        'd': 'dental-chart',
+        'n': 'clinical-notes',
+        't': 'treatment-plans',
+        'h': 'treatment-history',
+        'a': 'appointments',
+        'v': 'visits',
+        'c': 'consents',
+        'p': 'prescriptions',
+      }
+
+      const target = shortcuts[e.key.toLowerCase()]
+      if (target) {
+        e.preventDefault()
+        handleTabChangeAndScroll(target)
+      }
+    }
+
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [handleTabChangeAndScroll])
 
   const triggerMedicalSensitiveAction = (action: () => void) => {
     if (medicalHistory && (medicalHistory.allergies.length > 0 || medicalHistory.conditions.length > 0)) {
@@ -798,7 +843,25 @@ export default function PatientProfilePage() {
                 </button>
               ))}
             </p>
-          </div>
+            {/* Last activity strip */}
+            {((appointments && appointments.length > 0) || balance?.last_payment_date || consents.length > 0) && (
+              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0 text-[11px] text-neutral-400">
+                {appointments && appointments.length > 0 && (() => {
+                  const last = [...appointments].sort((a, b) => new Date((b as {appointment_date?: string; scheduled_at?: string}).appointment_date ?? (b as {appointment_date?: string; scheduled_at?: string}).scheduled_at ?? 0).getTime() - new Date((a as {appointment_date?: string; scheduled_at?: string}).appointment_date ?? (a as {appointment_date?: string; scheduled_at?: string}).scheduled_at ?? 0).getTime())[0]
+                  const dateStr = (last as {appointment_date?: string; scheduled_at?: string} | undefined)?.appointment_date ?? (last as {appointment_date?: string; scheduled_at?: string} | undefined)?.scheduled_at
+                  return dateStr ? <span>📅 Son randevu: {new Date(dateStr).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" })}</span> : null
+                })()}
+                {treatmentPlans && treatmentPlans.length > 0 && (
+                  <span>📋 {treatmentPlans.length} tedavi planı</span>
+                )}
+                {consents.length > 0 && (
+                  <span>📝 {consents.filter(c => c.status === 'signed' || c.signed_at).length}/{consents.length} onay</span>
+                )}
+                {balance && balance.open_balance > 0 && (
+                  <span className="text-amber-500 font-medium">💳 ₱{balance.open_balance.toLocaleString()} bakiye</span>
+                )}
+              </p>
+            )}
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 print:hidden lg:justify-end">
@@ -890,6 +953,80 @@ export default function PatientProfilePage() {
               <Edit className="h-3.5 w-3.5"/> Edit
             </Link>
           </Button>
+          {/* Quick Actions Dropdown */}
+          <div className="relative" ref={quickActionsRef}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setShowQuickActions((prev) => !prev)}
+              aria-label="More actions"
+              title="Hızlı İşlemler"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+            {showQuickActions && (
+              <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-xl border border-neutral-200 bg-white py-1 shadow-lg animate-fade-rise">
+                <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Hızlı İşlemler</p>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left"
+                  onClick={() => {
+                    handleTabChangeAndScroll("clinical-notes")
+                    setShowQuickActions(false)
+                  }}
+                >
+                  <FileText className="h-4 w-4 text-neutral-400" />
+                  Not Ekle
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left"
+                  onClick={() => {
+                    setShowInvoiceDrawer(true)
+                    setShowQuickActions(false)
+                  }}
+                >
+                  <Plus className="h-4 w-4 text-neutral-400" />
+                  Fatura Oluştur
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left"
+                  onClick={() => {
+                    handleTabChangeAndScroll("treatment-plans")
+                    setShowQuickActions(false)
+                  }}
+                >
+                  <ListOrdered className="h-4 w-4 text-neutral-400" />
+                  Tedavi Planı
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left"
+                  onClick={() => {
+                    handleTabChangeAndScroll("consents")
+                    setShowQuickActions(false)
+                  }}
+                >
+                  <ShieldCheck className="h-4 w-4 text-neutral-400" />
+                  Onay Formları
+                </button>
+                <div className="my-1 border-t border-neutral-100" />
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left"
+                  onClick={() => {
+                    printCurrentPage({ title: `Patient — ${patient.first_name} ${patient.last_name}` })
+                    setShowQuickActions(false)
+                  }}
+                >
+                  <Printer className="h-4 w-4 text-neutral-400" />
+                  Yazdır
+                </button>
+              </div>
+            )}
+          </div>
           <WorkflowSettingsLink compact className="h-8 w-8" />
         </div>
         </div>
@@ -949,12 +1086,21 @@ export default function PatientProfilePage() {
           id: tab.id,
           label: t(tab.labelKey, tab.fallback),
           icon: tab.icon,
+          hint: tab.hint,
         }))}
         activeId={activeTab}
         onSelect={(id) => setActiveTab(id as PatientTabId)}
         ariaLabel={t("patients.profileSections", "Patient sections")}
         stickyClassName=""
       />
+      <p className="mt-1 hidden text-[10px] text-neutral-400 lg:block">
+        Kısayollar: <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">R</kbd> Kayıt ·{" "}
+        <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">M</kbd> Tıbbi ·{" "}
+        <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">D</kbd> Diş ·{" "}
+        <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">N</kbd> Not ·{" "}
+        <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">T</kbd> Plan ·{" "}
+        <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">A</kbd> Randevu
+      </p>
     </div>
 
     <div className="mt-3 space-y-3">
