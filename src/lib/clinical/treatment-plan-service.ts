@@ -22,6 +22,7 @@ export interface TreatmentTimelineEntry {
   item_status: string
   estimated_price: number
   item_created_at: string
+  item_status_changed_at: string | null
 }
 
 export async function fetchPatientTreatmentTimeline(
@@ -34,7 +35,8 @@ export async function fetchPatientTreatmentTimeline(
     p_branch_id: branchId ?? null,
   })
   if (error) return { data: [], error: error.message }
-  return { data: (data ?? []) as TreatmentTimelineEntry[], error: null }
+  const rows = (Array.isArray(data) ? data : []) as TreatmentTimelineEntry[]
+  return { data: rows, error: null }
 }
 
 export interface TreatmentPlanItem {
@@ -303,6 +305,26 @@ export async function unapproveTreatmentPlan(planId: string): Promise<{
       plan_id: String(raw.plan_id),
       status: String(raw.status),
       voided_invoice_id: raw.voided_invoice_id ? String(raw.voided_invoice_id) : null,
+    },
+    error: null,
+  }
+}
+
+export async function markTreatmentPlanItemStatus(
+  itemId: string,
+  status: "planned" | "in_progress" | "completed"
+): Promise<{ data: { status: string; plan_status: string } | null; error: string | null }> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc("mark_treatment_plan_item_status", {
+    p_item_id: itemId,
+    p_status: status,
+  })
+  if (error) return { data: null, error: error.message }
+  const raw = data as Record<string, unknown>
+  return {
+    data: {
+      status: String(raw.status ?? status),
+      plan_status: String(raw.plan_status ?? ""),
     },
     error: null,
   }

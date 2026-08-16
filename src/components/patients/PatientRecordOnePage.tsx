@@ -260,39 +260,47 @@ export function PatientRecordOnePage({
             </Button>
           }
         >
-          <div className="grid gap-4 md:grid-cols-2">
-            <ContentPanel className="space-y-4">
-              <div className="flex items-start gap-3">
-                <Phone className="h-4 w-4 text-neutral-400 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium">{patient.phone ?? "—"}</p>
+          <div className="grid items-stretch gap-4 md:grid-cols-2">
+            <ContentPanel className="flex h-full flex-col justify-evenly gap-3 py-4">
+              <div className="flex items-center gap-3">
+                <Phone className="h-4 w-4 shrink-0 text-neutral-400" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-neutral-900">{patient.phone ?? "—"}</p>
                   <p className="text-xs text-neutral-500">{t("patients.recordMobile", "Mobile")}</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <Mail className="h-4 w-4 text-neutral-400 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium">{patient.email ?? "—"}</p>
+              <div className="flex items-center gap-3">
+                <Mail className="h-4 w-4 shrink-0 text-neutral-400" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-neutral-900">{patient.email ?? "—"}</p>
                   <p className="text-xs text-neutral-500">{t("patients.recordEmail", "Email")}</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <MapPin className="h-4 w-4 text-neutral-400 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium">{patient.address ?? "—"}</p>
+              <div className="flex items-center gap-3">
+                <MapPin className="h-4 w-4 shrink-0 text-neutral-400" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-neutral-900">{patient.address ?? "—"}</p>
                   <p className="text-xs text-neutral-500">{t("patients.recordAddress", "Address")}</p>
                 </div>
               </div>
             </ContentPanel>
-            <div className="space-y-4">
-              <ContentPanel>
-                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+            <div className="flex h-full flex-col gap-4">
+              <ContentPanel className="space-y-1.5 py-4">
+                <p className="text-xs font-medium text-neutral-500">
                   {t("patients.recordEmergency", "Emergency")}
                 </p>
-                <p className="mt-2 text-sm font-medium">
-                  {patient.emergency_contact?.name ?? t("patients.recordNotProvided", "Not provided")}
-                </p>
-                <p className="text-sm text-neutral-500">{patient.emergency_contact?.phone ?? "—"}</p>
+                {patient.emergency_contact?.name ? (
+                  <>
+                    <p className="text-sm font-medium text-neutral-900">{patient.emergency_contact.name}</p>
+                    {patient.emergency_contact.phone ? (
+                      <p className="text-sm text-neutral-500">{patient.emergency_contact.phone}</p>
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="text-sm text-neutral-600">
+                    {t("patients.recordNotProvided", "Not provided")}
+                  </p>
+                )}
               </ContentPanel>
               <PatientInsurancePanel patientId={patientId} />
             </div>
@@ -312,9 +320,9 @@ export function PatientRecordOnePage({
           }
         >
           <ContentPanel>
-            <div className="grid gap-6 md:grid-cols-3">
-              <div>
-                <h3 className="text-xs font-semibold uppercase text-neutral-500 mb-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-4">
+              <div className="min-w-0">
+                <h3 className="mb-2 text-xs font-medium text-neutral-500">
                   {t("patients.recordAllergies", "Allergies")}
                 </h3>
                 <ul className="space-y-1">
@@ -331,8 +339,8 @@ export function PatientRecordOnePage({
                   )}
                 </ul>
               </div>
-              <div>
-                <h3 className="text-xs font-semibold uppercase text-neutral-500 mb-2">
+              <div className="min-w-0">
+                <h3 className="mb-2 text-xs font-medium text-neutral-500">
                   {t("patients.recordConditions", "Conditions")}
                 </h3>
                 <ul className="space-y-1">
@@ -349,8 +357,8 @@ export function PatientRecordOnePage({
                   )}
                 </ul>
               </div>
-              <div>
-                <h3 className="text-xs font-semibold uppercase text-neutral-500 mb-2">
+              <div className="min-w-0">
+                <h3 className="mb-2 text-xs font-medium text-neutral-500">
                   {t("patients.recordMedications", "Medications")}
                 </h3>
                 <ul className="space-y-1">
@@ -456,6 +464,11 @@ export function PatientRecordOnePage({
             <div className="flex flex-wrap gap-1.5">
               <Button size="sm" variant="outline" className="h-8 gap-1" type="button" onClick={() => onOpenTab("treatment-history")}>
                 {t("patients.tabTreatmentHistory", "Treatment History")}
+              </Button>
+              <Button size="sm" variant="outline" className="h-8" asChild>
+                <Link href="/treatment-plans">
+                  {t("treatmentPlans.viewAll", "View all plans")}
+                </Link>
               </Button>
               <Button size="sm" className="h-8 gap-1" asChild>
                 <Link href={`/patients/${patientId}/treatment-plan`}>

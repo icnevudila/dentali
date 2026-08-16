@@ -35,6 +35,7 @@ import {
   updatePlanItem,
   deletePlanItem,
   duplicatePlanItemsFromPlan,
+  markTreatmentPlanItemStatus,
 } from "@/lib/clinical/treatment-plan-service"
 import { fetchActiveEncounter } from "@/lib/clinical/encounter-service"
 import {
@@ -56,6 +57,7 @@ import { fetchProcedureStockWarnings } from "@/lib/inventory/inventory-service"
 import { ProcedureStockWarningBanner } from "@/components/inventory/ProcedureStockWarningBanner"
 import { ChartFindingSuggestionsCard } from "@/components/clinical/ChartFindingSuggestionsCard"
 import { TreatmentPlanItemRow } from "@/components/clinical/TreatmentPlanItemRow"
+import { TreatmentPlanTimelinePanel } from "@/components/clinical/TreatmentPlanTimelinePanel"
 import { toStoredBulletText } from "@/lib/text/bullet-text"
 import { cn } from "@/lib/utils"
 import {
@@ -659,6 +661,23 @@ function TreatmentPlanContent() {
     setSaving(false)
   }
 
+  const handleMarkItemStatus = async (
+    itemId: string,
+    status: "planned" | "in_progress" | "completed"
+  ) => {
+    setSaving(true)
+    setError(null)
+    const { error: err } = await markTreatmentPlanItemStatus(itemId, status)
+    if (err) {
+      setError(err)
+      notify.error(err)
+    } else if (activePlanId) {
+      await loadPlan(activePlanId)
+      notify.success(t("treatmentPlan.itemStatusUpdated", "Procedure status updated"))
+    }
+    setSaving(false)
+  }
+
   const handleApprove = async () => {
     if (!activePlanId) return
     setSaving(true)
@@ -825,6 +844,13 @@ function TreatmentPlanContent() {
             onBackfill={() => {
               getPatientBillingGate(patientId).then(({ data }) => data && setBillingGate(data))
             }}
+          />
+        ) : null}
+        {activeBranch?.id ? (
+          <TreatmentPlanTimelinePanel
+            patientId={patientId}
+            branchId={activeBranch.id}
+            variant="history"
           />
         ) : null}
         {!activePlanId ? (
@@ -1092,6 +1118,7 @@ function TreatmentPlanContent() {
                                   <th className="py-2 px-3 w-24">Tooth</th>
                                   <th className="py-2 px-3">Procedure</th>
                                   <th className="py-2 px-3 w-32">Phase</th>
+                                  <th className="py-2 px-3 w-28">{t("treatmentPlan.itemStatus", "Status")}</th>
                                   <th className="py-2 px-3 w-28 text-right">Price</th>
                                   <th className="py-2 px-3 w-24 text-right">Actions</th>
                                 </tr>
@@ -1107,6 +1134,13 @@ function TreatmentPlanContent() {
                                     phaseLabel={getPlanPhaseLabel}
                                     onSave={(patch) => handleUpdateItem(item.id, patch)}
                                     onDelete={() => handleDeleteItem(item.id)}
+                                    onMarkStatus={
+                                      planStatus === "approved" ||
+                                      planStatus === "in_progress" ||
+                                      planStatus === "completed"
+                                        ? (status) => handleMarkItemStatus(item.id, status)
+                                        : undefined
+                                    }
                                   />
                                 ))}
                               </tbody>

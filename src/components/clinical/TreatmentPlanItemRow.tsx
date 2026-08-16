@@ -16,6 +16,16 @@ import {
   pesoMajorToCentavos,
 } from "@/lib/money/php-money"
 
+function itemStatusLabel(
+  status: string,
+  t: (key: string, fallback: string) => string
+) {
+  if (status === "completed") return t("treatmentPlan.itemCompleted", "Completed")
+  if (status === "in_progress") return t("treatmentPlan.itemInProgress", "In progress")
+  if (status === "cancelled") return t("treatmentPlan.itemCancelled", "Cancelled")
+  return t("treatmentPlan.itemPlanned", "Planned")
+}
+
 export function TreatmentPlanItemRow({
   item,
   editable,
@@ -24,6 +34,7 @@ export function TreatmentPlanItemRow({
   phaseLabel,
   onSave,
   onDelete,
+  onMarkStatus,
 }: {
   item: TreatmentPlanItem
   editable: boolean
@@ -37,6 +48,7 @@ export function TreatmentPlanItemRow({
     priority?: string
   }) => Promise<void>
   onDelete: () => Promise<void>
+  onMarkStatus?: (status: "planned" | "in_progress" | "completed") => Promise<void>
 }) {
   const { t } = useLocale()
   const [editing, setEditing] = React.useState(false)
@@ -92,10 +104,50 @@ export function TreatmentPlanItemRow({
         <td className="py-2.5 px-3 text-xs text-neutral-500">
           {labelForPriority(item.priority)}
         </td>
+        <td className="py-2.5 px-3 text-xs text-neutral-600">
+          {itemStatusLabel(item.status, t)}
+        </td>
         <td className="py-2.5 px-3 text-right font-medium text-neutral-900">
           ₱{Number(item.estimated_price || 0).toLocaleString("en-PH")}
         </td>
-        <td className="py-2.5 px-3 text-right"></td>
+        <td className="py-2.5 px-3 text-right">
+          {onMarkStatus && item.status !== "cancelled" ? (
+            <div className="flex flex-wrap justify-end gap-1">
+              {item.status === "planned" ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={saving}
+                  onClick={() => void onMarkStatus("in_progress")}
+                >
+                  {t("treatmentPlan.markInProgress", "Start")}
+                </Button>
+              ) : null}
+              {item.status === "in_progress" ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={saving}
+                  onClick={() => void onMarkStatus("completed")}
+                >
+                  {t("treatmentPlan.markCompleted", "Mark done")}
+                </Button>
+              ) : null}
+              {item.status === "completed" ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={saving}
+                  onClick={() => void onMarkStatus("in_progress")}
+                >
+                  {t("treatmentPlan.reopenItem", "Reopen")}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+        </td>
       </tr>
     )
   }
@@ -103,7 +155,7 @@ export function TreatmentPlanItemRow({
   if (editing) {
     return (
       <tr className="bg-primary-50/20">
-        <td colSpan={5} className="p-3">
+        <td colSpan={6} className="p-3">
           <div className="grid w-full gap-3">
             <BulletTextarea
               value={description}
@@ -199,6 +251,9 @@ export function TreatmentPlanItemRow({
             </option>
           ))}
         </select>
+      </td>
+      <td className="py-2.5 px-3 text-xs text-neutral-600">
+        {itemStatusLabel(item.status, t)}
       </td>
       <td className="py-2.5 px-3 text-right font-medium text-neutral-900">
         ₱{Number(item.estimated_price).toLocaleString()}

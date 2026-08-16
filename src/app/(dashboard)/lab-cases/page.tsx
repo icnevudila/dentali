@@ -181,6 +181,8 @@ export default function LabCasesPage() {
   }
 
   const canCreate = Boolean(activeBranch?.id)
+  const listIsEmpty = Boolean(activeBranch?.id) && !loading && !error && cases.length === 0
+  const showHeaderCreate = canCreate && !listIsEmpty
 
   return (
     <PermissionGate permission={PERMISSIONS.PATIENTS_READ}>
@@ -195,6 +197,7 @@ export default function LabCasesPage() {
           title={t("labcases.title", "Laboratory Cases")}
           description={t("labcases.description", "Track impressions, crowns, and external lab orders.")}
           actions={
+            showHeaderCreate ? (
             <Button
               size="sm"
               className="hidden gap-2 md:inline-flex"
@@ -204,6 +207,7 @@ export default function LabCasesPage() {
               <Plus className="h-4 w-4" />
               {t("labcases.new", "New Lab Case")}
             </Button>
+            ) : null
           }
         />
 
@@ -259,6 +263,7 @@ export default function LabCasesPage() {
           </div>
         ) : null}
 
+        {listIsEmpty ? null : (
         <StickyActionBar>
           <Button
             className="h-11 w-full gap-2"
@@ -269,6 +274,7 @@ export default function LabCasesPage() {
             {t("labcases.new", "New Lab Case")}
           </Button>
         </StickyActionBar>
+        )}
 
         {!activeBranch?.id ? (
           <EmptyState
