@@ -8,7 +8,6 @@ import { addTransitionType, startTransition } from "react"
 import { ArrowLeft, Edit, FileText, Activity, AlertTriangle, Calendar, Printer, Wallet, Plus, Pill, ClipboardList, Scan, ListOrdered, Braces, UserCheck, FileCheck2, ShieldCheck, ScanLine, FolderOpen, ScrollText, Shield, DoorClosed, History } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { printCurrentPage } from "@/lib/utils/print"
-import { MetricStrip } from "@/components/layout/MetricStrip"
 import { ContentPanel } from "@/components/layout/ContentPanel"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { Button } from "@/components/ui/button"
@@ -73,7 +72,7 @@ import {
   rememberVisitPatientContext,
   writeVisitJourneyCache,
 } from "@/lib/patients/visit-patient-context"
-import { cn } from "@/lib/utils"
+import { HorizontalScrollTabs } from "@/components/layout/HorizontalScrollTabs"
 import { useLocale } from "@/hooks/use-locale"
 import { notify } from "@/lib/ui/notify"
 import { fetchUnifiedAuditTrail, type AuditLogRecord } from "@/lib/audit/audit-log-service"
@@ -174,6 +173,7 @@ export default function PatientProfilePage() {
   const [checkoutOpen, setCheckoutOpen] = React.useState(false)
   const checkoutDeepLinkHandled = React.useRef(false)
   const [showInvoiceDrawer, setShowInvoiceDrawer] = React.useState(false)
+  const [showBillingModal, setShowBillingModal] = React.useState(false)
   const [showMedicalAlertConfirm, setShowMedicalAlertConfirm] = React.useState(false)
   const pendingMedicalActionRef = React.useRef<(() => void) | null>(null)
 
@@ -678,7 +678,7 @@ export default function PatientProfilePage() {
       value: balance ? `₱${balance.open_balance.toLocaleString()}` : balanceError ? "—" : "₱0",
       hint: balanceError ?? (balance && balance.open_balance > 0 ? "Outstanding" : "Settled"),
       variant: balance && balance.open_balance > 0 ? ("warning" as const) : ("default" as const),
-      href: balance && balance.open_balance > 0 ? `/billing?patient=${patientId}` : undefined,
+      onClick: () => setShowBillingModal(true),
     },
     {
       label: "Consents",
@@ -737,26 +737,35 @@ export default function PatientProfilePage() {
           </Button>
           <PatientAvatar patientId={patientId} initials={initials} editable size="md" className="print:hidden" />
           <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold tracking-tight text-neutral-950">{fullName}</h1>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h1 className="text-lg font-bold tracking-tight text-neutral-950">{fullName}</h1>
               <Badge variant={patient.status === "active" ? "success" : "default"}>{patient.status}</Badge>
-              {balance && balance.open_balance > 0 && (
-                <Link href={`/billing?patient=${patientId}`}>
-                  <Badge variant="warning" className="gap-1 cursor-pointer print:border print:border-amber-500 print:text-amber-800">
-                    <Wallet className="h-3 w-3 inline print:hidden" />
+              {balance && balance.open_balance > 0 ? (
+                <button type="button" onClick={() => setShowBillingModal(true)}>
+                  <Badge variant="warning" className="cursor-pointer gap-1">
+                    <Wallet className="h-3 w-3" />
                     ₱{balance.open_balance.toLocaleString()} due
                   </Badge>
-                </Link>
-              )}
-            </div>
-            <p className="text-xs text-neutral-500">
-              {patient.patient_number ? (
-                <>
-                  <span className="font-mono font-medium text-neutral-700">{patient.patient_number}</span>
-                  {" · "}
-                </>
+                </button>
               ) : null}
-              {patient.date_of_birth ?? "—"} · {patient.gender ?? "—"}
+            </div>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-neutral-500">
+              {patient.patient_number ? (
+                <span className="font-mono font-medium text-neutral-700">{patient.patient_number}</span>
+              ) : null}
+              <span>
+                {patient.date_of_birth ?? "—"} · {patient.gender ?? "—"}
+              </span>
+              {profileMetrics.map((metric) => (
+                <button
+                  key={metric.label}
+                  type="button"
+                  className="rounded-md px-1 font-medium text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950"
+                  onClick={metric.onClick}
+                >
+                  {metric.label} {metric.value}
+                </button>
+              ))}
             </p>
           </div>
         </div>
@@ -815,6 +824,22 @@ export default function PatientProfilePage() {
               <Plus className="h-3.5 w-3.5" /> Invoice
             </Button>
           </PermissionGate>
+          {billingGate?.has_billing_gap || (balance && balance.open_balance > 0) ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 border-amber-300 text-amber-900"
+              onClick={() => setShowBillingModal(true)}
+            >
+              <Wallet className="h-3.5 w-3.5" />
+              {t("billing.gateCollectPayment", "Collect")}
+            </Button>
+          ) : null}
+          <PatientOutreachCard
+            patientId={patientId}
+            patientName={fullName}
+            phone={patient.phone}
+          />
           <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => printCurrentPage({ title: `Patient — ${patient.first_name} ${patient.last_name}` })}>
             <Printer className="h-3.5 w-3.5"/> Print
           </Button>
@@ -826,41 +851,64 @@ export default function PatientProfilePage() {
           <WorkflowSettingsLink compact className="h-8 w-8" />
         </div>
         </div>
-        <div className="mt-2 border-t border-neutral-100 pt-2">
-          <MetricStrip items={profileMetrics} compact desktopCols={4} />
-        </div>
-        <div className="mt-2 border-t border-neutral-100 pt-2 print:hidden">
-          <PatientOutreachCard
-            patientId={patientId}
-            patientName={fullName}
-            phone={patient.phone}
-            className="border-0 shadow-none"
-          />
-        </div>
       </div>
+      {showBillingModal && typeof document !== "undefined"
+        ? createPortal(
+            <div className="fixed inset-0 z-[80] flex items-end justify-center p-0 sm:items-center sm:p-4">
+              <button
+                type="button"
+                className="absolute inset-0 bg-neutral-950/40"
+                aria-label={t("common.close", "Close")}
+                onClick={() => setShowBillingModal(false)}
+              />
+              <div className="relative z-10 w-full max-w-lg rounded-t-2xl border border-neutral-200 bg-white p-4 shadow-xl sm:rounded-2xl">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-neutral-950">
+                    {t("billing.gateTitle", "Billing action required before Finish visit")}
+                  </p>
+                  <Button type="button" size="sm" variant="ghost" className="h-8" onClick={() => setShowBillingModal(false)}>
+                    {t("common.close", "Close")}
+                  </Button>
+                </div>
+                {billingGate?.has_billing_gap ? (
+                  <PatientBillingGateBanner
+                    gate={billingGate}
+                    patientId={patientId}
+                    branchId={activeBranch?.id}
+                    onBackfill={() => {
+                      getPatientBillingGate(patientId).then(({ data }) => data && setBillingGate(data))
+                    }}
+                  />
+                ) : (
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm text-neutral-800">
+                      {t("billing.gateOpenBalance", "Outstanding balance:")}{" "}
+                      <span className="font-semibold tabular-nums">₱{balance?.open_balance.toLocaleString()}</span>
+                    </p>
+                    <Button size="sm" className="h-8" asChild>
+                      <Link href={`/billing?patient=${patientId}`}>{t("billing.gateCollectPayment", "Collect payment")}</Link>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
+    </div>
+    </div>
 
-      {billingGate?.has_billing_gap ? (
-        <PatientBillingGateBanner
-          gate={billingGate}
-          patientId={patientId}
-          branchId={activeBranch?.id}
-          onBackfill={() => {
-            getPatientBillingGate(patientId).then(({ data }) => data && setBillingGate(data))
-          }}
-        />
-      ) : balance && balance.open_balance > 0 ? (
-        <div className="flex flex-col gap-1.5 rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-1.5 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between">
-          <p className="min-w-0">
-            <span className="font-semibold">{t("billing.gateOpenBalance", "Outstanding balance:")}</span>{" "}
-            <span className="font-semibold tabular-nums">₱{balance.open_balance.toLocaleString()}</span>
-          </p>
-          <Button size="sm" className="h-7 shrink-0" asChild>
-            <Link href={`/billing?patient=${patientId}`}>{t("billing.gateCollectPayment", "Collect payment")}</Link>
-          </Button>
-        </div>
-      ) : null}
-
-      </div>
+    <div id="patient-profile-tabs" className="mt-2 min-w-0">
+      <HorizontalScrollTabs
+        tabs={PATIENT_TAB_DEFS.map((tab) => ({
+          id: tab.id,
+          label: t(tab.labelKey, tab.fallback),
+          icon: tab.icon,
+        }))}
+        activeId={activeTab}
+        onSelect={(id) => setActiveTab(id as PatientTabId)}
+        ariaLabel={t("patients.profileSections", "Patient sections")}
+      />
     </div>
 
     <div className="mt-3 space-y-3">
@@ -995,40 +1043,7 @@ export default function PatientProfilePage() {
         editHref={`/patients/${patientId}/medical-history`}
       />
 
-      <div id="patient-profile-tabs" className="mt-3 min-w-0">
-        <nav
-          className="sticky top-0 z-20 mb-3 flex gap-1 overflow-x-auto hide-scrollbar rounded-lg border border-neutral-200 bg-white/95 p-1 shadow-[0_1px_2px_rgba(15,23,42,0.04)] backdrop-blur-sm"
-          role="tablist"
-          aria-label={t("patients.profileSections", "Patient sections")}
-        >
-          {PATIENT_TAB_DEFS.map((tab) => {
-            const isActive = activeTab === tab.id
-            const TabIcon = tab.icon
-            const tabLabel = t(tab.labelKey, tab.fallback)
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => setActiveTab(tab.id as PatientTabId)}
-                className={cn(
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors sm:text-sm",
-                  isActive
-                    ? "bg-primary-600 text-white shadow-sm"
-                    : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
-                )}
-              >
-                <TabIcon
-                  className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-white" : "text-neutral-500")}
-                />
-                <span className="whitespace-nowrap">{tabLabel}</span>
-              </button>
-            )
-          })}
-        </nav>
-
-        <div className="min-w-0">
+      <div className="min-w-0">
           {activeTab === "record" && (
             <div className="space-y-3">
               <div className="flex flex-wrap gap-1.5">

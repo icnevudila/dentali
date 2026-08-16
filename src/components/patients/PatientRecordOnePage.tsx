@@ -42,6 +42,7 @@ import { useBranch } from "@/hooks/use-branch"
 import { useIntakeConsentSlugs } from "@/hooks/use-intake-consent-slugs"
 import { useLocale } from "@/hooks/use-locale"
 import { cn } from "@/lib/utils"
+import { HorizontalScrollTabs } from "@/components/layout/HorizontalScrollTabs"
 
 function useRecordSections() {
   const { t } = useLocale()
@@ -104,30 +105,16 @@ function SectionNav({
   }
 
   return (
-    <nav
-      className="sticky top-11 z-10 mb-4 flex gap-1 overflow-x-auto hide-scrollbar rounded-lg border border-neutral-200 bg-white/95 p-1 backdrop-blur-sm"
-      aria-label="Record sections"
-    >
-      {sections.map((s) => {
-        const SectionIcon = s.icon
-        return (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => scrollTo(s.id)}
-            className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
-              activeId === s.id
-                ? "bg-primary-50 text-primary-700"
-                : "text-neutral-600 hover:bg-neutral-100"
-            )}
-          >
-            <SectionIcon className="h-3.5 w-3.5 shrink-0" />
-            {s.label}
-          </button>
-        )
-      })}
-    </nav>
+    <div className="mb-3">
+      <HorizontalScrollTabs
+        tabs={sections}
+        activeId={activeId}
+        onSelect={scrollTo}
+        ariaLabel="Record sections"
+        stickyClassName="sticky top-11 z-10"
+        activeVariant="soft"
+      />
+    </div>
   )
 }
 

@@ -54,14 +54,14 @@ function matchesHistoryFilter(entry: TreatmentTimelineEntry, filter: HistoryFilt
   return entry.item_status === filter
 }
 
-function FilterChips<T extends string>({
+function FilterChips({
   value,
   onChange,
   options,
 }: {
-  value: T
-  onChange: (next: T) => void
-  options: { id: T; label: string }[]
+  value: string
+  onChange: (next: string) => void
+  options: { id: string; label: string }[]
 }) {
   return (
     <div className="flex flex-wrap gap-1">
@@ -137,7 +137,11 @@ export function PatientTreatmentPlansTab({
             </Link>
           </Button>
         </div>
-        <FilterChips value={filter} onChange={setFilter} options={options} />
+        <FilterChips
+          value={filter}
+          onChange={(next) => setFilter(next as PlanFilter)}
+          options={options}
+        />
       </CardHeader>
       <CardContent>
         {filtered.length === 0 ? (
@@ -262,7 +266,11 @@ export function PatientTreatmentHistoryTab({
             )}
           </CardDescription>
         </div>
-        <FilterChips value={filter} onChange={setFilter} options={options} />
+        <FilterChips
+          value={filter}
+          onChange={(next) => setFilter(next as HistoryFilter)}
+          options={options}
+        />
       </CardHeader>
       <CardContent>
         {loading ? <PageLoadingSkeleton variant="stack" /> : null}
