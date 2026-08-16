@@ -844,18 +844,18 @@ export default function PatientProfilePage() {
               ))}
             </p>
             {/* Last activity strip */}
-            {((appointments && appointments.length > 0) || balance?.last_payment_date || consents.length > 0) && (
+            {((appointments && appointments.length > 0) || (balance && balance.open_balance > 0) || consents.length > 0 || (treatmentPlans && treatmentPlans.length > 0)) && (
               <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0 text-[11px] text-neutral-400">
                 {appointments && appointments.length > 0 && (() => {
-                  const last = [...appointments].sort((a, b) => new Date((b as {appointment_date?: string; scheduled_at?: string}).appointment_date ?? (b as {appointment_date?: string; scheduled_at?: string}).scheduled_at ?? 0).getTime() - new Date((a as {appointment_date?: string; scheduled_at?: string}).appointment_date ?? (a as {appointment_date?: string; scheduled_at?: string}).scheduled_at ?? 0).getTime())[0]
-                  const dateStr = (last as {appointment_date?: string; scheduled_at?: string} | undefined)?.appointment_date ?? (last as {appointment_date?: string; scheduled_at?: string} | undefined)?.scheduled_at
+                  const last = [...appointments].sort((a, b) => new Date(b.scheduled_at ?? 0).getTime() - new Date(a.scheduled_at ?? 0).getTime())[0]
+                  const dateStr = last?.scheduled_at
                   return dateStr ? <span>📅 Son randevu: {new Date(dateStr).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" })}</span> : null
                 })()}
                 {treatmentPlans && treatmentPlans.length > 0 && (
                   <span>📋 {treatmentPlans.length} tedavi planı</span>
                 )}
                 {consents.length > 0 && (
-                  <span>📝 {consents.filter(c => c.status === 'signed' || c.signed_at).length}/{consents.length} onay</span>
+                  <span>📝 {consents.filter(c => c.status === "signed" || c.signed_at).length}/{consents.length} onay</span>
                 )}
                 {balance && balance.open_balance > 0 && (
                   <span className="text-amber-500 font-medium">💳 ₱{balance.open_balance.toLocaleString()} bakiye</span>
