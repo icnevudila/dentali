@@ -2188,15 +2188,8 @@ export const messagesEnPh: MessageTree = {
   },
 }
 
-export const messagesPh: MessageTree = {
-  txColPlan: "Plano",
-  txColDate: "Nilikha",
-  txColPlanDate: "Petsa ng Plano",
-  txColTreatedDate: "Oras / Petsa ng Paggamot",
-  txColItems: "Mga Aytem",
-  txColCost: "Tantiya",
-  txColStatus: "Status",
-  txColAction: "Aksyon",
+export const messagesEn: MessageTree = {
+  ...messagesEnPh,
 }
 
 export const messagesTr: MessageTree = {
@@ -2649,6 +2642,8 @@ export const messagesTr: MessageTree = {
     txFilterEmpty: "Bu durumda kayıt yok. Tümü’ne bakın.",
     txColPlan: "Plan",
     txColDate: "Oluşturuldu",
+    txColPlanDate: "Plan Tarihi",
+    txColTreatedDate: "Tedavi Tarihi / Saati",
     txColItems: "Kalem",
     txColCost: "Tahmin",
     txColStatus: "Durum",
@@ -4905,6 +4900,8 @@ export const messagesFil: MessageTree = {
     txFilterEmpty: "Walang laman ang status na ito. Subukan ang Lahat.",
     txColPlan: "Plan",
     txColDate: "Created",
+    txColPlanDate: "Petsa ng Plano",
+    txColTreatedDate: "Oras / Petsa ng Paggamot",
     txColItems: "Items",
     txColCost: "Estimate",
     txColStatus: "Status",
