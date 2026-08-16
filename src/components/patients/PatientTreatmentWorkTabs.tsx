@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton"
 import { NAV_FORWARD_TRANSITION } from "@/lib/navigation/view-transition"
 import { useLocale } from "@/hooks/use-locale"
+import { useBranch } from "@/hooks/use-branch"
 import {
   fetchPatientTreatmentTimeline,
   type TreatmentPlanSummary,
@@ -227,6 +228,7 @@ export function PatientTreatmentHistoryTab({
   branchId?: string | null
 }) {
   const { t } = useLocale()
+  const { branchRevision } = useBranch()
   const [filter, setFilter] = React.useState<HistoryFilter>("all")
   const [entries, setEntries] = React.useState<TreatmentTimelineEntry[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -235,7 +237,8 @@ export function PatientTreatmentHistoryTab({
   React.useEffect(() => {
     let cancelled = false
     setLoading(true)
-    void fetchPatientTreatmentTimeline(patientId, branchId).then(({ data, error: err }) => {
+    // Query org-wide patient treatment timeline so all clinic/branch procedures appear in history
+    void fetchPatientTreatmentTimeline(patientId, null).then(({ data, error: err }) => {
       if (cancelled) return
       setEntries(data)
       setError(err)
@@ -244,7 +247,7 @@ export function PatientTreatmentHistoryTab({
     return () => {
       cancelled = true
     }
-  }, [patientId, branchId])
+  }, [patientId, branchId, branchRevision])
 
   const eligible = entries.filter(isHistoryEligible)
   const filtered = eligible.filter((entry) => matchesHistoryFilter(entry, filter))
