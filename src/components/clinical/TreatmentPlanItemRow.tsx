@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Pencil, Trash2, Check, X } from "lucide-react"
+import { Pencil, Trash2, Check, X, Receipt } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { BulletTextarea } from "@/components/ui/BulletTextarea"
@@ -34,15 +34,18 @@ export function TreatmentPlanItemRow({
   saving,
   phaseOptions,
   phaseLabel,
+  invoiced = false,
   onSave,
   onDelete,
   onMarkStatus,
+  onInvoiceItem,
 }: {
   item: TreatmentPlanItem
   editable: boolean
   saving: boolean
   phaseOptions?: readonly { value: string; label: string }[]
   phaseLabel?: (value: string | null | undefined) => string
+  invoiced?: boolean
   onSave: (patch: {
     description: string
     estimatedPrice: number
@@ -51,6 +54,7 @@ export function TreatmentPlanItemRow({
   }) => Promise<void>
   onDelete: () => Promise<void>
   onMarkStatus?: (status: "planned" | "in_progress" | "completed" | "cancelled") => Promise<void>
+  onInvoiceItem?: () => Promise<void>
 }) {
   const { t } = useLocale()
   const [editing, setEditing] = React.useState(false)
@@ -133,57 +137,78 @@ export function TreatmentPlanItemRow({
           ₱{Number(item.estimated_price || 0).toLocaleString("en-PH")}
         </td>
         <td className="py-2.5 px-3 text-right">
-          {onMarkStatus && (
-            <div className="flex justify-end gap-1">
-              {item.status === "planned" && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs px-2"
-                  disabled={saving}
-                  onClick={() => void onMarkStatus("in_progress")}
-                >
-                  {t("treatmentPlan.markInProgress", "Start")}
-                </Button>
-              )}
-              {item.status === "in_progress" && (
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-7 text-xs px-2 bg-emerald-600 hover:bg-emerald-700 text-white"
-                  disabled={saving}
-                  onClick={() => void onMarkStatus("completed")}
-                >
-                  {t("treatmentPlan.markCompleted", "Mark done")}
-                </Button>
-              )}
-              {item.status === "completed" && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs px-2 text-neutral-500"
-                  disabled={saving}
-                  onClick={() => void onMarkStatus("in_progress")}
-                >
-                  {t("treatmentPlan.reopenItem", "Reopen")}
-                </Button>
-              )}
-              {item.status === "cancelled" && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs px-2 text-neutral-500"
-                  disabled={saving}
-                  onClick={() => void onMarkStatus("planned")}
-                >
-                  Restore
-                </Button>
-              )}
-            </div>
-          )}
+          <div className="flex items-center justify-end gap-1.5">
+            {invoiced ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <Check className="h-3 w-3" /> Invoiced
+              </span>
+            ) : onInvoiceItem && item.status !== "cancelled" ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs px-2 gap-1 border-primary-200 text-primary-700 hover:bg-primary-50 bg-white"
+                disabled={saving}
+                onClick={onInvoiceItem}
+                title="Create draft invoice for this procedure"
+              >
+                <Receipt className="h-3 w-3" />
+                Invoice
+              </Button>
+            ) : null}
+
+            {onMarkStatus && (
+              <>
+                {item.status === "planned" && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs px-2"
+                    disabled={saving}
+                    onClick={() => void onMarkStatus("in_progress")}
+                  >
+                    {t("treatmentPlan.markInProgress", "Start")}
+                  </Button>
+                )}
+                {item.status === "in_progress" && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-7 text-xs px-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    disabled={saving}
+                    onClick={() => void onMarkStatus("completed")}
+                  >
+                    {t("treatmentPlan.markCompleted", "Mark done")}
+                  </Button>
+                )}
+                {item.status === "completed" && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs px-2 text-neutral-500"
+                    disabled={saving}
+                    onClick={() => void onMarkStatus("in_progress")}
+                  >
+                    {t("treatmentPlan.reopenItem", "Reopen")}
+                  </Button>
+                )}
+                {item.status === "cancelled" && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs px-2 text-neutral-500"
+                    disabled={saving}
+                    onClick={() => void onMarkStatus("planned")}
+                  >
+                    Restore
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
         </td>
       </tr>
     )

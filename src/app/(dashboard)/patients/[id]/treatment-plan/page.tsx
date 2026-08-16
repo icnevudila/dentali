@@ -854,6 +854,47 @@ function TreatmentPlanContent() {
     router.push(`/billing/${newInv.id}`)
   }
 
+  const handleInvoiceItem = async (item: (typeof planItems)[number]) => {
+    if (!activePlanId || !activeBranch?.id || !user) return
+    if (invoicedItemsMap[item.id]) {
+      notify.info("This procedure is already invoiced.")
+      return
+    }
+    const org = await fetchOrganization()
+    if (!org) {
+      notify.error("Organization not found.")
+      return
+    }
+
+    setSaving(true)
+    const { data: newInv, error: invErr } = await createPartialInvoiceFromPlanItems({
+      organizationId: org.id,
+      branchId: activeBranch.id,
+      patientId,
+      treatmentPlanId: activePlanId,
+      items: [
+        {
+          id: item.id,
+          description: item.description,
+          estimatedPrice: Number(item.estimated_price) || 0,
+          toothNumber: item.tooth_number,
+          procedureId: item.procedure_id,
+        },
+      ],
+    })
+
+    if (invErr || !newInv) {
+      notify.error(invErr ?? "Failed to create invoice for procedure.")
+      setSaving(false)
+      return
+    }
+
+    notify.success(`Draft invoice ${newInv.invoiceNumber} created for this procedure!`)
+    await loadPlan(activePlanId)
+    setSaving(false)
+    router.push(`/billing/${newInv.id}`)
+  }
+
   if (loading || !mounted) {
     return <PageLoadingSkeleton variant="detail" className="max-w-4xl px-4 py-8" />
   }
@@ -1291,6 +1332,7 @@ function TreatmentPlanContent() {
                                     saving={saving}
                                     phaseOptions={PLAN_PHASES}
                                     phaseLabel={getPlanPhaseLabel}
+                                    invoiced={Boolean(invoicedItemsMap[item.id])}
                                     onSave={(patch) => handleUpdateItem(item.id, patch)}
                                     onDelete={() => handleDeleteItem(item.id)}
                                     onMarkStatus={
@@ -1298,6 +1340,14 @@ function TreatmentPlanContent() {
                                       planStatus === "in_progress" ||
                                       planStatus === "completed"
                                         ? (status) => handleMarkItemStatus(item.id, status)
+                                        : undefined
+                                    }
+                                    onInvoiceItem={
+                                      (planStatus === "approved" ||
+                                        planStatus === "in_progress" ||
+                                        planStatus === "completed") &&
+                                      !invoicedItemsMap[item.id]
+                                        ? () => void handleInvoiceItem(item)
                                         : undefined
                                     }
                                   />
