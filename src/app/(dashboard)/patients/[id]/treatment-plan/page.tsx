@@ -93,6 +93,34 @@ const QUICK_CASE_PROCEDURES = [
   { name: "Complete Denture (Upper & Lower)", defaultPrice: 20000, code: "DENT" },
 ]
 
+const PLAN_TEMPLATES = [
+  { id: "routine-checkup", name: "Rutin Kontrol", icon: "🦷", items: [
+    { name: "Oral Examination", code: "EXAM", price: 500, phase: "diagnostic" },
+    { name: "Prophylaxis / Cleaning", code: "PROPH", price: 1000, phase: "preventive" },
+  ]},
+  { id: "rct-crown", name: "Kanal + Kron", icon: "👑", items: [
+    { name: "Root Canal Treatment", code: "RCT", price: 12000, phase: "phase_1" },
+    { name: "Jacket Crown", code: "CRWN", price: 8000, phase: "phase_3" },
+  ]},
+  { id: "cosmetic-smile", name: "Estetik Gülüş", icon: "✨", items: [
+    { name: "Prophylaxis / Cleaning", code: "PROPH", price: 1000, phase: "preventive" },
+    { name: "E-Max Veneer", code: "EMAX", price: 15000, phase: "phase_3" },
+  ]},
+  { id: "full-extraction", name: "Çekim + Temizlik", icon: "🔧", items: [
+    { name: "Tooth Extraction", code: "EXT", price: 1500, phase: "phase_1" },
+    { name: "Prophylaxis / Cleaning", code: "PROPH", price: 1000, phase: "preventive" },
+  ]},
+  { id: "full-rehab", name: "Tam Rehabilitasyon", icon: "🏥", items: [
+    { name: "Oral Examination", code: "EXAM", price: 500, phase: "diagnostic" },
+    { name: "Prophylaxis / Cleaning", code: "PROPH", price: 1000, phase: "preventive" },
+    { name: "Root Canal Treatment", code: "RCT", price: 12000, phase: "phase_1" },
+    { name: "Zirconia Crown (Single)", code: "ZIRC", price: 15000, phase: "phase_3" },
+  ]},
+]
+
+const CUSTOM_TEMPLATES_KEY = "dentql:plan-templates"
+type CustomTemplate = { id: string; name: string; items: { name: string; price: number; phase: string }[] }
+
 
 const PLAN_PHASES = [
   { value: "urgent", label: "Urgent / Emergency", hint: "Acute pain, emergency relief, trauma, or infection" },
@@ -168,6 +196,12 @@ function TreatmentPlanContent() {
   const [showPlanCarryPicker, setShowPlanCarryPicker] = React.useState(false)
   const [showChartSuggestions, setShowChartSuggestions] = React.useState(false)
   const [noPlanTab, setNoPlanTab] = React.useState<"quick" | "standard">("quick")
+  const [showTemplates, setShowTemplates] = React.useState(false)
+  const [applyingTemplate, setApplyingTemplate] = React.useState(false)
+  const [customTemplates, setCustomTemplates] = React.useState<CustomTemplate[]>(() => {
+    if (typeof window === "undefined") return []
+    try { return JSON.parse(localStorage.getItem(CUSTOM_TEMPLATES_KEY) ?? "[]") } catch { return [] }
+  })
 
   const planEditable = planStatus === "proposed" || planStatus === "draft"
 
@@ -444,6 +478,46 @@ function TreatmentPlanContent() {
       setItemPhase("phase_1")
     }
     setSaving(false)
+  }
+
+  const handleApplyTemplate = async (templateItems: { name: string; code?: string; price: number; phase: string }[]) => {
+    if (!activePlanId) { notify.error("Create a plan first"); return }
+    setApplyingTemplate(true)
+    const org = await fetchOrganization()
+    if (!org) { setApplyingTemplate(false); return }
+    let added = 0
+    for (const item of templateItems) {
+      let procId: string | undefined
+      if (item.code) {
+        const existing = procedures.find(p => p.code?.toUpperCase() === item.code?.toUpperCase() || p.name.toLowerCase() === item.name.toLowerCase())
+        if (existing) { procId = existing.id }
+        else {
+          const { data: newProc } = await createProcedure({ organizationId: org.id, name: item.name, code: item.code, basePrice: item.price })
+          if (newProc) { procId = newProc.id; const { data: up } = await fetchProcedures(activeBranch?.id); setProcedures(up) }
+        }
+      }
+      const { error: err } = await addPlanItem({ planId: activePlanId, procedureId: procId, description: item.name, estimatedPrice: item.price, priority: item.phase })
+      if (!err) added++
+    }
+    await loadPlan(activePlanId)
+    setShowTemplates(false)
+    notify.success(`${added} prosedur şablondan eklendi!`)
+    setApplyingTemplate(false)
+  }
+
+  const handleSaveAsTemplate = () => {
+    if (items.length === 0) { notify.error("Plan boş"); return }
+    const templateName = window.prompt("Şablon adı:", "Yeni Şablon")
+    if (!templateName) return
+    const newTemplate: CustomTemplate = {
+      id: Date.now().toString(),
+      name: templateName,
+      items: items.map(i => ({ name: i.description || "Prosedür", price: i.estimated_price || 0, phase: i.priority || "phase_1" })),
+    }
+    const updated = [...customTemplates, newTemplate]
+    setCustomTemplates(updated)
+    try { localStorage.setItem(CUSTOM_TEMPLATES_KEY, JSON.stringify(updated)) } catch {}
+    notify.success(`"${templateName}" şablon olarak kaydedildi!`)
   }
 
   // ─── Quick Case: create plan + add procedure + approve, one shot ────────
@@ -1459,6 +1533,49 @@ function TreatmentPlanContent() {
                 )}
               </>
             ) : null}
+
+            {planEditable && (
+              <div className="mb-4 rounded-xl border border-neutral-200 bg-neutral-50/50 p-3">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowTemplates(prev => !prev)}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-primary-600 hover:text-primary-700 transition-colors"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Şablondan Başla {showTemplates ? "▲" : "▼"}
+                  </button>
+                  {items.length > 0 && (
+                    <button type="button" onClick={handleSaveAsTemplate}
+                      className="text-xs text-neutral-500 hover:text-neutral-700 underline">
+                      Bu planı şablon olarak kaydet
+                    </button>
+                  )}
+                </div>
+                {showTemplates && (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                    {PLAN_TEMPLATES.map(tpl => (
+                      <button key={tpl.id} type="button" disabled={applyingTemplate}
+                        onClick={() => handleApplyTemplate(tpl.items)}
+                        className="flex flex-col items-start gap-1 rounded-lg border border-neutral-200 bg-white p-3 text-left text-xs shadow-sm transition-all hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 disabled:opacity-50">
+                        <span className="text-lg">{tpl.icon}</span>
+                        <span className="font-semibold text-neutral-800">{tpl.name}</span>
+                        <span className="text-[10px] text-neutral-400">{tpl.items.length} prosedür</span>
+                      </button>
+                    ))}
+                    {customTemplates.map(tpl => (
+                      <button key={tpl.id} type="button" disabled={applyingTemplate}
+                        onClick={() => handleApplyTemplate(tpl.items)}
+                        className="flex flex-col items-start gap-1 rounded-lg border border-dashed border-primary-300 bg-primary-50/50 p-3 text-left text-xs shadow-sm transition-all hover:border-primary-400 hover:bg-primary-50 disabled:opacity-50">
+                        <span className="text-lg">📋</span>
+                        <span className="font-semibold text-primary-700">{tpl.name}</span>
+                        <span className="text-[10px] text-primary-400">{tpl.items.length} prosedür · Özel</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {planEditable ? (
             <Card>

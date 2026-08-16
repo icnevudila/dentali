@@ -3,11 +3,12 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ExternalLink, Loader2, Menu, X } from "lucide-react"
+import { ExternalLink, Loader2, Menu, User2, X } from "lucide-react"
 import { useBranch } from "@/hooks/use-branch"
 import { usePermission } from "@/hooks/use-permission"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/hooks/use-locale"
+import { useRecentPatients } from "@/hooks/use-recent-patients"
 import { buildPublicDeviceUrl, generateBranchPublicToken } from "@/lib/kiosk/kiosk-service"
 import { Button } from "@/components/ui/button"
 import { DentQLLogo } from "@/components/brand/dentql-logo"
@@ -194,7 +195,31 @@ function MobileNavDrawer({ open, onClose }: { open: boolean; onClose: () => void
           </Button>
         </div>
         <SidebarNav onNavigate={onClose} />
+        <RecentPatientsSection />
       </aside>
+    </div>
+  )
+}
+
+function RecentPatientsSection() {
+  const { recent } = useRecentPatients()
+  if (recent.length === 0) return null
+
+  return (
+    <div className="border-t border-neutral-100 px-3 py-3">
+      <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">Son Hastalar</p>
+      <div className="flex flex-col gap-0.5">
+        {recent.map((p) => (
+          <Link
+            key={p.id}
+            href={`/patients/${p.id}`}
+            className="flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-neutral-950"
+          >
+            <User2 className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+            <span className="flex-1 truncate text-xs">{p.name}</span>
+          </Link>
+        ))}
+      </div>
     </div>
   )
 }
@@ -209,6 +234,7 @@ export function Sidebar() {
         <DentQLLogo href="/" size="sm" />
       </div>
       <SidebarNav />
+      <RecentPatientsSection />
     </aside>
   )
 }
