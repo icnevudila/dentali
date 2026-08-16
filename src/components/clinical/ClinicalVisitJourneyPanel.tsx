@@ -165,22 +165,105 @@ export function ClinicalVisitJourneyPanel({
 
   if (compact) {
     return (
-      <ContentPanel className="border-neutral-200/80">
+      <ContentPanel className="border-neutral-200/80 transition-all duration-200">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-medium text-neutral-900">
-              {t("journey.title", "Visit progress")}
-            </p>
-            <p className="mt-0.5 text-xs text-neutral-500">
-              {phaseLabel} · {percentComplete}% {t("journey.complete", "complete")}
-            </p>
+          <button
+            type="button"
+            onClick={toggleExpanded}
+            className="group flex min-w-0 flex-1 items-center gap-2 text-left outline-none"
+            aria-expanded={expanded}
+          >
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 shrink-0 text-neutral-400 group-hover:text-primary-600 transition-transform duration-200",
+                !expanded && "-rotate-90"
+              )}
+              aria-hidden
+            />
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-neutral-900 group-hover:text-primary-800">
+                  {t("journey.title", "Visit progress")}
+                </p>
+                <Badge variant="outline" className="text-[10px] font-normal text-neutral-500 py-0 h-4">
+                  {doneCount}/{steps.length} {t("journey.stepsDone", "done")}
+                </Badge>
+              </div>
+              <p className="mt-0.5 text-xs text-neutral-500">
+                {phaseLabel} · <span className="font-semibold text-primary-700">{percentComplete}%</span> {t("journey.complete", "complete")}
+              </p>
+            </div>
+          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {showCelebration ? (
+              <Badge variant="success">{t("journey.completeBadge", "Complete")}</Badge>
+            ) : nextStep ? (
+              renderNextStepAction("sm", "gap-1")
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-neutral-500 hover:text-neutral-900"
+              onClick={toggleExpanded}
+              aria-expanded={expanded}
+            >
+              {expanded ? t("journey.collapse", "Collapse") : t("journey.expand", "Expand")}
+            </Button>
           </div>
-          {showCelebration ? (
-            <Badge variant="success">{t("journey.completeBadge", "Complete")}</Badge>
-          ) : nextStep ? (
-            renderNextStepAction("sm", "gap-1")
-          ) : null}
         </div>
+
+        {/* Progress Bar in compact header */}
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-500",
+              showCelebration ? "bg-emerald-500" : "bg-primary-500"
+            )}
+            style={{ width: `${percentComplete}%` }}
+          />
+        </div>
+
+        {/* Expanded Steps Grid */}
+        {expanded && (
+          <div className="mt-3 pt-3 border-t border-neutral-100 animate-in fade-in-50 duration-200">
+            <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {steps.map((step) => (
+                <li
+                  key={step.id}
+                  className={cn(
+                    "flex items-start gap-2 rounded-lg border p-2.5 text-xs transition-colors",
+                    step.status === "current"
+                      ? "border-primary-300 bg-primary-50/60"
+                      : step.status === "done"
+                        ? "border-emerald-200 bg-emerald-50/40"
+                        : "border-neutral-200 bg-white"
+                  )}
+                >
+                  <StepIcon status={step.status} />
+                  <div className="min-w-0 flex-1 text-left">
+                    {onStepClick ? (
+                      <button
+                        type="button"
+                        onClick={() => onStepClick(step)}
+                        className="block cursor-pointer text-left font-semibold text-primary-700 hover:underline"
+                      >
+                        {step.label}
+                      </button>
+                    ) : step.href && step.status !== "done" ? (
+                      <Link href={step.href} className="font-semibold text-primary-700 hover:underline">
+                        {step.label}
+                      </Link>
+                    ) : (
+                      <p className="font-semibold text-neutral-900">{step.label}</p>
+                    )}
+                    <p className="line-clamp-2 text-[11px] text-neutral-500 mt-0.5">{step.description}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
       </ContentPanel>
     )
   }
