@@ -11,18 +11,18 @@ import "./globals.css";
 
 const bodyFont = IBM_Plex_Sans({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-clinic-body",
   display: "swap",
 });
 const displayFont = Archivo({
   subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
   variable: "--font-clinic-display",
   display: "swap",
 });
 const monoFont = IBM_Plex_Mono({
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: ["400", "500", "600"],
   variable: "--font-clinic-mono",
   display: "swap",
 });
