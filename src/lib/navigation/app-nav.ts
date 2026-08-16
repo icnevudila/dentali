@@ -4,6 +4,7 @@ import {
   Bell,
   Calendar,
   CalendarHeart,
+  ClipboardList,
   Clock,
   CreditCard,
   FileCheck2,
@@ -146,6 +147,13 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         href: "/lab-cases",
         icon: FlaskConical,
         permission: PERMISSIONS.PATIENTS_READ,
+      },
+      {
+        nameKey: "nav.treatmentPlans",
+        fallback: "Treatment plans",
+        href: "/treatment-plans",
+        icon: ClipboardList,
+        anyOf: [PERMISSIONS.PATIENTS_READ, PERMISSIONS.DENTAL_CHART_READ],
       },
       {
         nameKey: "nav.prescriptions",
