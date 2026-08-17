@@ -96,21 +96,21 @@ type PatientTabId =
   | "audit"
 
 const PATIENT_TAB_DEFS: { id: PatientTabId; labelKey: string; fallback: string; icon: LucideIcon; hint?: string }[] = [
-  { id: "record", labelKey: "patients.tabRecord", fallback: "Patient Record", icon: ClipboardList, hint: "Hasta kartı, iletişim ve demografik bilgiler (R)" },
-  { id: "medical-history", labelKey: "patients.tabMedicalHistory", fallback: "Medical History", icon: Activity, hint: "Alerjiler, ilaçlar ve tıbbi geçmiş (M)" },
-  { id: "dental-chart", labelKey: "patients.tabDentalChart", fallback: "Dental Chart", icon: Scan, hint: "Diş odontogram ve bulgular (D)" },
-  { id: "clinical-notes", labelKey: "patients.tabClinicalNotes", fallback: "Clinical Notes", icon: FileText, hint: "Klinik notlar ve gözlemler (N)" },
-  { id: "treatment-plans", labelKey: "patients.tabTreatmentPlans", fallback: "Treatment Plans", icon: ListOrdered, hint: "Aktif ve tamamlanan tedavi planları (T)" },
-  { id: "treatment-history", labelKey: "patients.tabTreatmentHistory", fallback: "Treatment History", icon: History, hint: "Geçmiş tedavi kayıtları" },
-  { id: "orthodontics", labelKey: "patients.tabOrthodontics", fallback: "Orthodontics", icon: Braces, hint: "Ortodonti takibi ve kayıtlar" },
-  { id: "prescriptions", labelKey: "patients.tabPrescriptions", fallback: "Prescriptions", icon: Pill, hint: "Reçeteler ve ilaç yazma (P)" },
-  { id: "appointments", labelKey: "patients.tabAppointments", fallback: "Appointments", icon: Calendar, hint: "Randevular ve takvim (A)" },
-  { id: "visits", labelKey: "patients.tabVisits", fallback: "Visits", icon: UserCheck, hint: "Ziyaret geçmişi ve check-in kayıtları (V)" },
-  { id: "epicrisis", labelKey: "patients.tabEpicrisis", fallback: "Epicrisis & Letters", icon: FileCheck2, hint: "Taburcu özeti ve referans mektupları" },
-  { id: "consents", labelKey: "patients.tabConsents", fallback: "Consents & Forms", icon: ShieldCheck, hint: "Onam formları ve imzalar (C)" },
-  { id: "radiology", labelKey: "patients.tabRadiology", fallback: "Radiology & Imaging", icon: ScanLine, hint: "X-ray ve radyolojik görüntüler" },
-  { id: "documents", labelKey: "patients.tabDocuments", fallback: "Documents", icon: FolderOpen, hint: "Yüklenen belgeler ve dosyalar" },
-  { id: "audit", labelKey: "patients.tabAudit", fallback: "Audit Log", icon: Shield, hint: "Sistem değişiklik kaydı" },
+  { id: "record", labelKey: "patients.tabRecord", fallback: "Patient Record", icon: ClipboardList, hint: "Patient record, contact and demographics (R)" },
+  { id: "medical-history", labelKey: "patients.tabMedicalHistory", fallback: "Medical History", icon: Activity, hint: "Allergies, medications and medical history (M)" },
+  { id: "dental-chart", labelKey: "patients.tabDentalChart", fallback: "Dental Chart", icon: Scan, hint: "Odontogram chart and tooth findings (D)" },
+  { id: "clinical-notes", labelKey: "patients.tabClinicalNotes", fallback: "Clinical Notes", icon: FileText, hint: "Clinical notes and observations (N)" },
+  { id: "treatment-plans", labelKey: "patients.tabTreatmentPlans", fallback: "Treatment Plans", icon: ListOrdered, hint: "Active and completed treatment plans (T)" },
+  { id: "treatment-history", labelKey: "patients.tabTreatmentHistory", fallback: "Treatment History", icon: History, hint: "Past treatment history records" },
+  { id: "orthodontics", labelKey: "patients.tabOrthodontics", fallback: "Orthodontics", icon: Braces, hint: "Orthodontics tracking and cases" },
+  { id: "prescriptions", labelKey: "patients.tabPrescriptions", fallback: "Prescriptions", icon: Pill, hint: "Prescriptions and Rx management (P)" },
+  { id: "appointments", labelKey: "patients.tabAppointments", fallback: "Appointments", icon: Calendar, hint: "Appointments and calendar (A)" },
+  { id: "visits", labelKey: "patients.tabVisits", fallback: "Visits", icon: UserCheck, hint: "Visit history and check-in timeline (V)" },
+  { id: "epicrisis", labelKey: "patients.tabEpicrisis", fallback: "Epicrisis & Letters", icon: FileCheck2, hint: "Discharge summary and referral letters" },
+  { id: "consents", labelKey: "patients.tabConsents", fallback: "Consents & Forms", icon: ShieldCheck, hint: "Consent forms and signatures (C)" },
+  { id: "radiology", labelKey: "patients.tabRadiology", fallback: "Radiology & Imaging", icon: ScanLine, hint: "X-rays and radiological imaging" },
+  { id: "documents", labelKey: "patients.tabDocuments", fallback: "Documents", icon: FolderOpen, hint: "Uploaded documents and files" },
+  { id: "audit", labelKey: "patients.tabAudit", fallback: "Audit Log", icon: Shield, hint: "System audit log and changes" },
 ]
 
 function ScrollToTopButton() {
@@ -849,16 +849,16 @@ export default function PatientProfilePage() {
                 {appointments && appointments.length > 0 && (() => {
                   const last = [...appointments].sort((a, b) => new Date(b.scheduled_at ?? 0).getTime() - new Date(a.scheduled_at ?? 0).getTime())[0]
                   const dateStr = last?.scheduled_at
-                  return dateStr ? <span>📅 Son randevu: {new Date(dateStr).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" })}</span> : null
+                  return dateStr ? <span>📅 Last appointment: {new Date(dateStr).toLocaleDateString("en-PH", { day: "numeric", month: "short", year: "numeric" })}</span> : null
                 })()}
                 {treatmentPlans && treatmentPlans.length > 0 && (
-                  <span>📋 {treatmentPlans.length} tedavi planı</span>
+                  <span>📋 {treatmentPlans.length} {treatmentPlans.length === 1 ? "treatment plan" : "treatment plans"}</span>
                 )}
                 {consents.length > 0 && (
-                  <span>📝 {consents.filter(c => c.status === "signed" || c.signed_at).length}/{consents.length} onay</span>
+                  <span>📝 {consents.filter(c => c.status === "signed" || c.signed_at).length}/{consents.length} consents signed</span>
                 )}
                 {balance && balance.open_balance > 0 && (
-                  <span className="text-amber-500 font-medium">💳 ₱{balance.open_balance.toLocaleString()} bakiye</span>
+                  <span className="text-amber-500 font-medium">💳 ₱{balance.open_balance.toLocaleString()} balance</span>
                 )}
               </p>
             )}
@@ -989,7 +989,7 @@ export default function PatientProfilePage() {
                   }}
                 >
                   <Plus className="h-4 w-4 text-neutral-400" />
-                  Fatura Oluştur
+                  {t("billing.createInvoice", "Create Invoice")}
                 </button>
                 <button
                   type="button"
@@ -1000,7 +1000,7 @@ export default function PatientProfilePage() {
                   }}
                 >
                   <ListOrdered className="h-4 w-4 text-neutral-400" />
-                  Tedavi Planı
+                  {t("patients.tabTreatmentPlans", "Treatment Plans")}
                 </button>
                 <button
                   type="button"
@@ -1011,7 +1011,7 @@ export default function PatientProfilePage() {
                   }}
                 >
                   <ShieldCheck className="h-4 w-4 text-neutral-400" />
-                  Onay Formları
+                  {t("patients.tabConsents", "Consent Forms")}
                 </button>
                 <div className="my-1 border-t border-neutral-100" />
                 <button
@@ -1023,7 +1023,7 @@ export default function PatientProfilePage() {
                   }}
                 >
                   <Printer className="h-4 w-4 text-neutral-400" />
-                  Yazdır
+                  {t("common.print", "Print Record")}
                 </button>
               </div>
             )}
@@ -1095,12 +1095,12 @@ export default function PatientProfilePage() {
         stickyClassName=""
       />
       <p className="mt-1 hidden text-[10px] text-neutral-400 lg:block">
-        Kısayollar: <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">R</kbd> Kayıt ·{" "}
-        <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">M</kbd> Tıbbi ·{" "}
-        <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">D</kbd> Diş ·{" "}
-        <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">N</kbd> Not ·{" "}
-        <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">T</kbd> Plan ·{" "}
-        <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">A</kbd> Randevu
+        Shortcuts: <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">R</kbd> Record ·{" "}
+        <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">M</kbd> Medical ·{" "}
+        <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">D</kbd> Chart ·{" "}
+        <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">N</kbd> Notes ·{" "}
+        <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">T</kbd> Plans ·{" "}
+        <kbd className="rounded bg-neutral-100 px-1 font-mono text-[10px]">A</kbd> Appts
       </p>
     </div>
 

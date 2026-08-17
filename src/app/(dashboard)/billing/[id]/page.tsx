@@ -497,9 +497,9 @@ function InvoiceDetailPageContent() {
     </head><body>
       <div class="header">
         <div>
-          <h1>Fatura #${invoice.invoice_number ?? invoice.id.slice(0,8)}</h1>
-          <p style="color:#64748b;margin:0">${invoice.patient_name ?? 'Hasta'}</p>
-          <p style="color:#94a3b8;font-size:12px;margin:4px 0 0">${new Date(invoice.created_at ?? Date.now()).toLocaleDateString('tr-TR', {day:'numeric',month:'long',year:'numeric'})}</p>
+          <h1>Invoice #${invoice.invoice_number ?? invoice.id.slice(0,8)}</h1>
+          <p style="color:#64748b;margin:0">${invoice.patient_name ?? 'Patient'}</p>
+          <p style="color:#94a3b8;font-size:12px;margin:4px 0 0">${new Date(invoice.created_at ?? Date.now()).toLocaleDateString('en-PH', {day:'numeric',month:'long',year:'numeric'})}</p>
         </div>
         <div style="text-align:right">
           <span class="badge">${invoice.status ?? 'draft'}</span>
@@ -507,9 +507,9 @@ function InvoiceDetailPageContent() {
         </div>
       </div>
       <table>
-        <thead><tr><th>Prosedür</th><th style="text-align:center">Adet</th><th style="text-align:right">Birim Fiyat</th><th style="text-align:right">Toplam</th></tr></thead>
+        <thead><tr><th>Procedure</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Total</th></tr></thead>
         <tbody>${itemsHtml}</tbody>
-        <tfoot><tr class="total-row"><td colspan="3">TOPLAM</td><td style="text-align:right">₱${Number(invoice.total_amount ?? 0).toLocaleString()}</td></tr></tfoot>
+        <tfoot><tr class="total-row"><td colspan="3">TOTAL</td><td style="text-align:right">₱${Number(invoice.total_amount ?? 0).toLocaleString()}</td></tr></tfoot>
       </table>
       <script>window.onload = () => { window.print() }<\/script>
     </body></html>`)
@@ -645,7 +645,7 @@ function InvoiceDetailPageContent() {
               {t("billing.print", "Print")}
             </Button>
             <Button variant="outline" size="sm" className="h-8 gap-1.5 shrink-0" onClick={handlePrintPreview}>
-              <Printer className="h-3.5 w-3.5" /> Önizle & Yazdır
+              <Printer className="h-3.5 w-3.5" /> Preview & Print
             </Button>
           </div>
         </div>

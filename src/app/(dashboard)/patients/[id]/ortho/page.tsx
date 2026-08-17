@@ -285,7 +285,7 @@ export default function OrthoRecordPage() {
                     ) : null}
                     <Button size="sm" variant="outline" className="gap-2" asChild>
                       <Link href={`/patients/${patientId}/ortho/print`} target="_blank">
-                        <Printer className="h-4 w-4" /> Form Yazdır (Print)
+                        <Printer className="h-4 w-4" /> Print Form
                       </Link>
                     </Button>
                   </div>

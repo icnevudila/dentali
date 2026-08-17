@@ -202,12 +202,15 @@ function MobileNavDrawer({ open, onClose }: { open: boolean; onClose: () => void
 }
 
 function RecentPatientsSection() {
+  const { t } = useLocale()
   const { recent } = useRecentPatients()
   if (recent.length === 0) return null
 
   return (
     <div className="border-t border-neutral-100 px-3 py-3">
-      <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">Son Hastalar</p>
+      <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+        {t("patients.recentPatients", "Recent Patients")}
+      </p>
       <div className="flex flex-col gap-0.5">
         {recent.map((p) => (
           <Link

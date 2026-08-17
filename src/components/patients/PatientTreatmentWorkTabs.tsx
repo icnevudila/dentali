@@ -44,7 +44,7 @@ function matchesPlanFilter(status: string, filter: PlanFilter) {
 function resolveEffectiveItemStatus(entry: TreatmentTimelineEntry): string {
   if (entry.item_status === "cancelled") return "cancelled"
   if (entry.item_status === "completed" || entry.plan_status === "completed") return "completed"
-  if (entry.item_status === "in_progress" || entry.plan_status === "in_progress") return "in_progress"
+  if (entry.item_status === "in_progress") return "in_progress"
   return entry.item_status || "planned"
 }
 

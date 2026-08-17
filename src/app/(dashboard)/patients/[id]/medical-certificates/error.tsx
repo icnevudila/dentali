@@ -20,17 +20,17 @@ export default function MedicalCertificatesError({
         <AlertTriangle className="h-5 w-5" />
       </div>
       <h3 className="text-sm font-semibold text-rose-900 dark:text-rose-200">
-        Medikal Raporlar Yüklenirken Bir Hata Oluştu
+        An Error Occurred While Loading Medical Certificates
       </h3>
       <p className="text-xs text-rose-700 dark:text-rose-300 max-w-md">
-        {error.message || "İsteyiniz işlenirken bir sorun meydana geldi. Lütfen tekrar deneyiniz."}
+        {error.message || "A problem occurred while processing your request. Please try again."}
       </p>
       <button
         onClick={reset}
         className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 transition-colors shadow-sm"
       >
         <RefreshCw className="h-3.5 w-3.5" />
-        <span>Yeniden Dene</span>
+        <span>Try Again</span>
       </button>
     </div>
   )

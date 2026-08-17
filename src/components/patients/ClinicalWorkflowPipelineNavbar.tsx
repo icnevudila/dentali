@@ -84,11 +84,11 @@ export function ClinicalWorkflowPipelineNavbar({ patientId }: ClinicalWorkflowPi
             {activeIndex + 1}
           </span>
           <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-800">
-            Klinik Hasta Muayene İş Akışı (Adım {activeIndex + 1} / 5)
+            Clinical Patient Care Workflow (Step {activeIndex + 1} of 5)
           </h2>
         </div>
         <div className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-500">
-          <span>Sıradaki Adım:</span>
+          <span>Next Step:</span>
           <span className="font-bold text-primary-700">
             {steps[(activeIndex + 1) % steps.length].title}
           </span>

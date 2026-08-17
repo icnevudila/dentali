@@ -458,10 +458,10 @@ function PatientsPageContent() {
                 {/* Smart Quick Filters */}
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {([
-                    { label: "📅 Bugün Gelecekler", key: "today", description: "Bugün randevusu olanlar" },
-                    { label: "💳 Bakiyesi Olanlar", key: "balance", description: "Açık bakiyesi olan hastalar" },
-                    { label: "📝 Eksik Onay", key: "consents", description: "İmzalanmamış formu olanlar" },
-                    { label: "🆕 Bu Ay Kayıt", key: "new-this-month", description: "Bu ay eklenen hastalar" },
+                    { label: "📅 Today's Appointments", key: "today", description: "Patients scheduled for today" },
+                    { label: "💳 Outstanding Balance", key: "balance", description: "Patients with unpaid balance" },
+                    { label: "📝 Missing Consent", key: "consents", description: "Patients with unsigned consent forms" },
+                    { label: "🆕 Registered This Month", key: "new-this-month", description: "Patients registered this month" },
                   ] as const).map((chip) => {
                     const isActive =
                       attentionFilter === chip.key ||
