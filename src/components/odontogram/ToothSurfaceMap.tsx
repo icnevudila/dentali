@@ -160,7 +160,7 @@ export function ToothSurfaceMap({
           {/* Enamel Label */}
           <line x1="220" y1="120" x2="278" y2="120" className="label-line" />
           <circle cx="218" cy="120" r="3" fill="#64748b" />
-          <text x="286" y="124" className="label-text">Enamel (Mine)</text>
+          <text x="286" y="124" className="label-text">Enamel</text>
 
           {/* Dentin Label */}
           <line x1="205" y1="165" x2="278" y2="165" className="label-line" />
@@ -170,17 +170,17 @@ export function ToothSurfaceMap({
           {/* Pulp Label */}
           <line x1="175" y1="235" x2="278" y2="235" className="label-line" />
           <circle cx="173" cy="235" r="3" fill="#64748b" />
-          <text x="286" y="239" className="label-text">Pulp (Pulpa)</text>
+          <text x="286" y="239" className="label-text">Pulp</text>
 
           {/* Root Label */}
           <line x1="170" y1="390" x2="278" y2="390" className="label-line" />
           <circle cx="168" cy="390" r="3" fill="#64748b" />
-          <text x="286" y="394" className="label-text">Root (Kök)</text>
+          <text x="286" y="394" className="label-text">Root</text>
 
           {/* Bone Label */}
           <line x1="180" y1="450" x2="278" y2="450" className="label-line" />
           <circle cx="178" cy="450" r="3" fill="#64748b" />
-          <text x="286" y="454" className="label-text">Bone (Kemik)</text>
+          <text x="286" y="454" className="label-text">Bone</text>
         </g>
       </svg>
       

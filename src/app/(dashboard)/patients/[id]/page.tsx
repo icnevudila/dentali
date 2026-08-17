@@ -937,7 +937,7 @@ export default function PatientProfilePage() {
             >
               <Link href={`/billing?patient=${patientId}`}>
                 <Wallet className="h-3.5 w-3.5" />
-                ₱{balance.open_balance.toLocaleString()} — Ödeme Al
+                ₱{balance.open_balance.toLocaleString()} — Collect Payment
               </Link>
             </Button>
           ) : null}
@@ -962,13 +962,13 @@ export default function PatientProfilePage() {
               className="h-8 w-8 p-0"
               onClick={() => setShowQuickActions((prev) => !prev)}
               aria-label="More actions"
-              title="Hızlı İşlemler"
+              title="Quick Actions"
             >
               <MoreHorizontal className="h-4 w-4" />
             </Button>
             {showQuickActions && (
               <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-xl border border-neutral-200 bg-white py-1 shadow-lg animate-fade-rise">
-                <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Hızlı İşlemler</p>
+                <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Quick Actions</p>
                 <button
                   type="button"
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left"
@@ -978,7 +978,7 @@ export default function PatientProfilePage() {
                   }}
                 >
                   <FileText className="h-4 w-4 text-neutral-400" />
-                  Not Ekle
+                  Add Clinical Note
                 </button>
                 <button
                   type="button"

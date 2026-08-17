@@ -94,23 +94,23 @@ const QUICK_CASE_PROCEDURES = [
 ]
 
 const PLAN_TEMPLATES = [
-  { id: "routine-checkup", name: "Rutin Kontrol", icon: "🦷", items: [
+  { id: "routine-checkup", name: "Routine Checkup", icon: "🦷", items: [
     { name: "Oral Examination", code: "EXAM", price: 500, phase: "diagnostic" },
     { name: "Prophylaxis / Cleaning", code: "PROPH", price: 1000, phase: "preventive" },
   ]},
-  { id: "rct-crown", name: "Kanal + Kron", icon: "👑", items: [
+  { id: "rct-crown", name: "RCT + Crown", icon: "👑", items: [
     { name: "Root Canal Treatment", code: "RCT", price: 12000, phase: "phase_1" },
     { name: "Jacket Crown", code: "CRWN", price: 8000, phase: "phase_3" },
   ]},
-  { id: "cosmetic-smile", name: "Estetik Gülüş", icon: "✨", items: [
+  { id: "cosmetic-smile", name: "Cosmetic Smile Makeover", icon: "✨", items: [
     { name: "Prophylaxis / Cleaning", code: "PROPH", price: 1000, phase: "preventive" },
     { name: "E-Max Veneer", code: "EMAX", price: 15000, phase: "phase_3" },
   ]},
-  { id: "full-extraction", name: "Çekim + Temizlik", icon: "🔧", items: [
+  { id: "full-extraction", name: "Extraction & Cleaning", icon: "🔧", items: [
     { name: "Tooth Extraction", code: "EXT", price: 1500, phase: "phase_1" },
     { name: "Prophylaxis / Cleaning", code: "PROPH", price: 1000, phase: "preventive" },
   ]},
-  { id: "full-rehab", name: "Tam Rehabilitasyon", icon: "🏥", items: [
+  { id: "full-rehab", name: "Full Mouth Rehab", icon: "🏥", items: [
     { name: "Oral Examination", code: "EXAM", price: 500, phase: "diagnostic" },
     { name: "Prophylaxis / Cleaning", code: "PROPH", price: 1000, phase: "preventive" },
     { name: "Root Canal Treatment", code: "RCT", price: 12000, phase: "phase_1" },
@@ -501,23 +501,23 @@ function TreatmentPlanContent() {
     }
     await loadPlan(activePlanId)
     setShowTemplates(false)
-    notify.success(`${added} prosedur şablondan eklendi!`)
+    notify.success(`${added} procedures added from template!`)
     setApplyingTemplate(false)
   }
 
   const handleSaveAsTemplate = () => {
-    if (items.length === 0) { notify.error("Plan boş"); return }
-    const templateName = window.prompt("Şablon adı:", "Yeni Şablon")
+    if (items.length === 0) { notify.error("Plan is empty"); return }
+    const templateName = window.prompt("Template name:", "New Template")
     if (!templateName) return
     const newTemplate: CustomTemplate = {
       id: Date.now().toString(),
       name: templateName,
-      items: items.map(i => ({ name: i.description || "Prosedür", price: i.estimated_price || 0, phase: i.priority || "phase_1" })),
+      items: items.map(i => ({ name: i.description || "Procedure", price: i.estimated_price || 0, phase: i.priority || "phase_1" })),
     }
     const updated = [...customTemplates, newTemplate]
     setCustomTemplates(updated)
     try { localStorage.setItem(CUSTOM_TEMPLATES_KEY, JSON.stringify(updated)) } catch {}
-    notify.success(`"${templateName}" şablon olarak kaydedildi!`)
+    notify.success(`"${templateName}" saved as template!`)
   }
 
   // ─── Quick Case: create plan + add procedure + approve, one shot ────────
@@ -1328,7 +1328,7 @@ function TreatmentPlanContent() {
                   <div className="px-6 pb-2">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs font-medium text-neutral-600">
-                        {completed}/{totalCount} {t("treatmentPlan.completedProcedures", "prosedür tamamlandı")}
+                        {completed}/{totalCount} {t("treatmentPlan.completedProcedures", "procedures completed")}
                       </span>
                       <span className="text-xs font-bold text-neutral-800">{pct}%</span>
                     </div>
@@ -1339,10 +1339,10 @@ function TreatmentPlanContent() {
                       />
                     </div>
                     <div className="flex flex-wrap gap-3 mt-1.5">
-                      {completed > 0 && <span className="text-[11px] text-emerald-600 font-medium">{completed} tamamlandı</span>}
-                      {inProgress > 0 && <span className="text-[11px] text-blue-600 font-medium">{inProgress} devam ediyor</span>}
+                      {completed > 0 && <span className="text-[11px] text-emerald-600 font-medium">{completed} completed</span>}
+                      {inProgress > 0 && <span className="text-[11px] text-blue-600 font-medium">{inProgress} in progress</span>}
                       {totalCount - completed - inProgress > 0 && (
-                        <span className="text-[11px] text-neutral-400">{totalCount - completed - inProgress} bekliyor</span>
+                        <span className="text-[11px] text-neutral-400">{totalCount - completed - inProgress} pending</span>
                       )}
                     </div>
                   </div>
@@ -1572,12 +1572,12 @@ function TreatmentPlanContent() {
                     className="flex items-center gap-1.5 text-xs font-semibold text-primary-600 hover:text-primary-700 transition-colors"
                   >
                     <Sparkles className="h-3.5 w-3.5" />
-                    Şablondan Başla {showTemplates ? "▲" : "▼"}
+                    Start from Template {showTemplates ? "▲" : "▼"}
                   </button>
                   {items.length > 0 && (
                     <button type="button" onClick={handleSaveAsTemplate}
                       className="text-xs text-neutral-500 hover:text-neutral-700 underline">
-                      Bu planı şablon olarak kaydet
+                      Save this plan as template
                     </button>
                   )}
                 </div>
@@ -1589,7 +1589,7 @@ function TreatmentPlanContent() {
                         className="flex flex-col items-start gap-1 rounded-lg border border-neutral-200 bg-white p-3 text-left text-xs shadow-sm transition-all hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 disabled:opacity-50">
                         <span className="text-lg">{tpl.icon}</span>
                         <span className="font-semibold text-neutral-800">{tpl.name}</span>
-                        <span className="text-[10px] text-neutral-400">{tpl.items.length} prosedür</span>
+                        <span className="text-[10px] text-neutral-400">{tpl.items.length} procedures</span>
                       </button>
                     ))}
                     {customTemplates.map(tpl => (
@@ -1598,7 +1598,7 @@ function TreatmentPlanContent() {
                         className="flex flex-col items-start gap-1 rounded-lg border border-dashed border-primary-300 bg-primary-50/50 p-3 text-left text-xs shadow-sm transition-all hover:border-primary-400 hover:bg-primary-50 disabled:opacity-50">
                         <span className="text-lg">📋</span>
                         <span className="font-semibold text-primary-700">{tpl.name}</span>
-                        <span className="text-[10px] text-primary-400">{tpl.items.length} prosedür · Özel</span>
+                        <span className="text-[10px] text-primary-400">{tpl.items.length} procedures · Custom</span>
                       </button>
                     ))}
                   </div>
