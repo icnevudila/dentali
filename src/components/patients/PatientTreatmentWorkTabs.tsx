@@ -41,11 +41,19 @@ function matchesPlanFilter(status: string, filter: PlanFilter) {
   return status === filter
 }
 
+function normalizeClinicalStatus(status: string | null | undefined): string {
+  const value = (status || "").toLowerCase().trim()
+  if (value === "done" || value === "finished" || value === "complete") return "completed"
+  if (value === "started") return "in_progress"
+  return value
+}
+
 function resolveEffectiveItemStatus(entry: TreatmentTimelineEntry): string {
-  if (entry.item_status === "cancelled") return "cancelled"
-  if (entry.item_status === "completed" || entry.plan_status === "completed") return "completed"
-  if (entry.item_status === "in_progress") return "in_progress"
-  return entry.item_status || "planned"
+  const item = normalizeClinicalStatus(entry.item_status)
+  if (item === "cancelled") return "cancelled"
+  if (item === "completed") return "completed"
+  if (item === "in_progress") return "in_progress"
+  return item || "planned"
 }
 
 function isHistoryEligible(entry: TreatmentTimelineEntry) {

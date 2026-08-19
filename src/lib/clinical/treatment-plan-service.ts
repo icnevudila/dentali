@@ -35,7 +35,9 @@ export async function fetchPatientTreatmentTimeline(
     p_branch_id: branchId ?? null,
   })
   if (error) return { data: [], error: error.message }
-  const rows = (Array.isArray(data) ? data : []) as TreatmentTimelineEntry[]
+  if (Array.isArray(data)) return { data: data as TreatmentTimelineEntry[], error: null }
+  const wrapped = data as { rows?: TreatmentTimelineEntry[] } | null
+  const rows = Array.isArray(wrapped?.rows) ? wrapped.rows : []
   return { data: rows, error: null }
 }
 
@@ -55,19 +57,23 @@ export type BranchTreatmentPlanStatusGroup =
   | "unapproved"
   | "approved"
   | "ongoing"
+  | "history"
   | "completed"
 
 export type BranchTreatmentPlanRow = {
   plan_id: string
   patient_id: string
-  patient_first_name: string
-  patient_last_name: string
+  patient_first_name?: string
+  patient_last_name?: string
+  first_name?: string
+  last_name?: string
   title: string
   status: string
   status_group: Exclude<BranchTreatmentPlanStatusGroup, "all">
   total_estimated: number
   item_count: number
-  completed_item_count: number
+  completed_item_count?: number
+  items_completed?: number
   created_at: string
   approved_at: string | null
 }
@@ -77,13 +83,17 @@ export async function fetchBranchTreatmentPlans(
   options?: { limit?: number; statusGroup?: BranchTreatmentPlanStatusGroup }
 ): Promise<{ data: BranchTreatmentPlanRow[]; error: string | null }> {
   const supabase = createClient()
+  const statusGroup = options?.statusGroup === "completed" ? "history" : (options?.statusGroup ?? "all")
   const { data, error } = await supabase.rpc("list_branch_treatment_plans", {
     p_branch_id: branchId,
     p_limit: options?.limit ?? 100,
-    p_status_group: options?.statusGroup ?? "all",
+    p_status_group: statusGroup,
   })
   if (error) return { data: [], error: error.message }
-  return { data: (data ?? []) as BranchTreatmentPlanRow[], error: null }
+  const raw = data as Record<string, unknown> | BranchTreatmentPlanRow[] | null
+  if (Array.isArray(raw)) return { data: raw, error: null }
+  const rows = Array.isArray(raw?.rows) ? (raw.rows as BranchTreatmentPlanRow[]) : []
+  return { data: rows, error: null }
 }
 
 export async function fetchPatientTreatmentPlans(

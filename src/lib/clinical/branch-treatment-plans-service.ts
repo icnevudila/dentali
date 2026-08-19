@@ -67,7 +67,7 @@ export async function fetchBranchTreatmentPlans(
         unapproved: Number(countsRaw.unapproved ?? 0),
         approved: Number(countsRaw.approved ?? 0),
         ongoing: Number(countsRaw.ongoing ?? 0),
-        history: Number(countsRaw.history ?? 0),
+        history: Number(countsRaw.history ?? countsRaw.completed ?? 0),
       },
       rows,
     },

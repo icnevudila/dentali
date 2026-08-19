@@ -170,6 +170,7 @@ export async function createPartialInvoiceFromPlanItems(params: {
     procedureId?: string | null
   }[]
   series?: string
+  label?: string | null
 }): Promise<{ data: { id: string; invoiceNumber: string } | null; error: string | null }> {
   if (!params.items.length) {
     return { data: null, error: "No items selected for invoicing." }
@@ -180,81 +181,17 @@ export async function createPartialInvoiceFromPlanItems(params: {
   }
 
   const supabase = createClient()
-
-  // 1. Check if an active master invoice already exists for this treatment plan
-  const { data: existingInv } = await supabase
-    .from("invoices")
-    .select("id, invoice_number, total_amount, subtotal_amount")
-    .eq("treatment_plan_id", params.treatmentPlanId)
-    .neq("status", "void")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle()
-
-  let invoiceId = existingInv?.id
-  let invoiceNumber = existingInv?.invoice_number ?? ""
-
-  if (!invoiceId) {
-    // Create the master invoice for this plan
-    const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase()
-    invoiceNumber = `${params.series || "INV"}-${randomSuffix}`
-
-    const { data: newInv, error: invError } = await supabase
-      .from("invoices")
-      .insert({
-        organization_id: params.organizationId,
-        branch_id: params.branchId,
-        patient_id: params.patientId,
-        treatment_plan_id: params.treatmentPlanId,
-        invoice_number: invoiceNumber,
-        total_amount: totalAmount,
-        subtotal_amount: totalAmount,
-        discount_amount: 0,
-        paid_amount: 0,
-        status: "draft",
-      })
-      .select("id, invoice_number")
-      .single()
-
-    if (invError || !newInv) {
-      return { data: null, error: invError?.message ?? "Failed to create master invoice." }
-    }
-    invoiceId = newInv.id
-    invoiceNumber = newInv.invoice_number ?? invoiceNumber
-  } else {
-    // Increment the existing master invoice's total
-    const updatedTotal = (Number(existingInv.total_amount) || 0) + totalAmount
-    const updatedSubtotal = (Number(existingInv.subtotal_amount) || 0) + totalAmount
-    await supabase
-      .from("invoices")
-      .update({
-        total_amount: updatedTotal,
-        subtotal_amount: updatedSubtotal,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", invoiceId)
+  const { data, error } = await supabase.rpc("create_invoice_from_plan_items_guarded", {
+    p_plan_id: params.treatmentPlanId,
+    p_item_ids: params.items.map((item) => item.id),
+    p_label: params.label ?? null,
+  })
+  if (error || !data) {
+    return { data: null, error: error?.message ?? "Failed to create invoice for selected procedures." }
   }
-
-  // 2. Insert line items into this master invoice
-  const lineItems = params.items.map((item, idx) => ({
-    invoice_id: invoiceId,
-    organization_id: params.organizationId,
-    procedure_id: item.procedureId || null,
-    treatment_plan_item_id: item.id,
-    description: item.description,
-    tooth_number: item.toothNumber || null,
-    quantity: 1,
-    unit_price: Number(item.estimatedPrice) || 0,
-    line_total: Number(item.estimatedPrice) || 0,
-    sort_order: idx,
-  }))
-
-  const { error: linesError } = await supabase.from("invoice_line_items").insert(lineItems)
-  if (linesError) {
-    return { data: { id: invoiceId, invoiceNumber }, error: linesError.message }
-  }
-
-  return { data: { id: invoiceId, invoiceNumber }, error: null }
+  const raw = data as { id?: string; invoice_number?: string }
+  if (!raw.id) return { data: null, error: "Failed to create invoice for selected procedures." }
+  return { data: { id: raw.id, invoiceNumber: raw.invoice_number ?? "" }, error: null }
 }
 
 export async function createInvoiceFromPlan(params: {
@@ -265,11 +202,10 @@ export async function createInvoiceFromPlan(params: {
   totalAmount: number
   userId: string
   series?: string
-}): Promise<{ data: { id: string } | null; error: string | null }> {
-  const existing = await getLinkedInvoiceForPlan(params.treatmentPlanId)
-  if (existing.error) return { data: null, error: existing.error }
-  if (existing.data) return { data: { id: existing.data.id }, error: null }
-
+}): Promise<{
+  data: { id: string; invoiceNumber?: string; existing?: boolean } | null
+  error: string | null
+}> {
   const supabase = createClient()
   const series = params.series || "INV"
   const { data, error } = await supabase.rpc("create_plan_invoice_guarded", {
@@ -277,7 +213,16 @@ export async function createInvoiceFromPlan(params: {
     p_series: series,
   })
   if (error || !data) return { data: null, error: error?.message ?? "Failed" }
-  return { data: { id: (data as { id: string }).id }, error: null }
+  const raw = data as { id?: string; invoice_number?: string; existing?: boolean }
+  if (!raw.id) return { data: null, error: "Failed" }
+  return {
+    data: {
+      id: raw.id,
+      invoiceNumber: raw.invoice_number,
+      existing: Boolean(raw.existing),
+    },
+    error: null,
+  }
 }
 
 export interface InvoiceDetail extends InvoiceRecord {

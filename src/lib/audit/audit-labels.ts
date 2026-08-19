@@ -17,6 +17,7 @@ export const AUDIT_ACTION_LABELS_EN: Record<string, string> = {
   "staff.invite": "Staff invited / added",
   "staff.invite.revoke": "Staff invitation revoked",
   "invoice.create": "Invoice created",
+  "invoice.create_from_plan_items": "Invoice drafted from selected procedures",
   "invoice.payment": "Payment collected",
   "invoice.void": "Invoice voided",
   "invoice.payment_delete": "Payment deleted",

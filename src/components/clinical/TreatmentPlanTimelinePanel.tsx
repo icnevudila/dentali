@@ -42,9 +42,18 @@ function planStatusVariant(status: string): "info" | "success" | "warning" | "ou
   return "outline"
 }
 
-function itemStatusVariant(status: string): "info" | "success" | "outline" {
-  if (status === "in_progress") return "info"
-  if (status === "completed") return "success"
+function normalizeClinicalStatus(status: string | null | undefined): string {
+  const value = (status || "").toLowerCase().trim()
+  if (value === "done" || value === "finished" || value === "complete") return "completed"
+  if (value === "started") return "in_progress"
+  return value
+}
+
+function itemStatusVariant(status: string): "info" | "success" | "outline" | "danger" {
+  const normalized = normalizeClinicalStatus(status)
+  if (normalized === "in_progress") return "info"
+  if (normalized === "completed") return "success"
+  if (normalized === "cancelled") return "danger"
   return "outline"
 }
 
@@ -73,13 +82,24 @@ export function TreatmentPlanTimelinePanel({
 
   const visible = React.useMemo(() => {
     if (variant === "history") {
-      return [...entries].sort((a, b) => eventDate(b).localeCompare(eventDate(a)))
+      const rank = (status: string) => {
+        const normalized = normalizeClinicalStatus(status)
+        if (normalized === "completed") return 0
+        if (normalized === "cancelled") return 1
+        if (normalized === "in_progress") return 2
+        return 3
+      }
+      return [...entries].sort((a, b) => {
+        const byStatus = rank(a.item_status) - rank(b.item_status)
+        if (byStatus !== 0) return byStatus
+        return eventDate(b).localeCompare(eventDate(a))
+      })
     }
-    return entries.filter(
-      (e) =>
-        !["cancelled", "completed"].includes(e.plan_status) &&
-        !["cancelled", "completed"].includes(e.item_status)
-    )
+    return entries.filter((e) => {
+      const plan = normalizeClinicalStatus(e.plan_status)
+      const item = normalizeClinicalStatus(e.item_status)
+      return !["cancelled", "completed"].includes(plan) && !["cancelled", "completed"].includes(item)
+    })
   }, [entries, variant])
 
   const groups = React.useMemo(() => groupByPlan(visible), [visible])
@@ -163,11 +183,13 @@ export function TreatmentPlanTimelinePanel({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs text-neutral-500">{formatWhen(eventDate(item))}</p>
                   <Badge variant={itemStatusVariant(item.item_status)} className="text-[10px]">
-                    {item.item_status === "completed"
+                    {normalizeClinicalStatus(item.item_status) === "completed"
                       ? t("treatmentPlan.itemCompleted", "Completed")
-                      : item.item_status === "in_progress"
+                      : normalizeClinicalStatus(item.item_status) === "in_progress"
                         ? t("treatmentPlan.itemInProgress", "In progress")
-                        : t("treatmentPlan.itemPlanned", "Planned")}
+                        : normalizeClinicalStatus(item.item_status) === "cancelled"
+                          ? t("treatmentPlan.itemCancelled", "Cancelled")
+                          : t("treatmentPlan.itemPlanned", "Planned")}
                   </Badge>
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -224,7 +246,7 @@ export function TreatmentPlanTimelinePanel({
                         </div>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500">
                           <Badge variant={itemStatusVariant(item.item_status)} className="text-[10px]">
-                            {item.item_status}
+                            {normalizeClinicalStatus(item.item_status)}
                           </Badge>
                           <span>{item.priority}</span>
                           <span>₱{Number(item.estimated_price).toLocaleString("en-PH")}</span>

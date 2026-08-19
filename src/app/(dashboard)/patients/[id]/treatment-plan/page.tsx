@@ -36,6 +36,7 @@ import {
   deletePlanItem,
   duplicatePlanItemsFromPlan,
   markTreatmentPlanItemStatus,
+  type TreatmentPlanItem,
 } from "@/lib/clinical/treatment-plan-service"
 import { fetchActiveEncounter } from "@/lib/clinical/encounter-service"
 import {
@@ -46,10 +47,10 @@ import { EncounterCarryForwardPicker } from "@/components/clinical/EncounterCarr
 import {
   getLinkedInvoiceForPlan,
   resyncDraftInvoiceFromPlan,
-  backfillPatientPlanInvoices,
   getPatientBillingGate,
   createPartialInvoiceFromPlanItems,
   fetchInvoicedItemIdsForPlan,
+  createInvoiceFromPlan,
   type PatientBillingGate,
 } from "@/lib/billing/invoice-service"
 import { PatientBillingGateBanner } from "@/components/billing/PatientBillingGateBanner"
@@ -119,6 +120,11 @@ const PLAN_TEMPLATES = [
 ]
 
 const CUSTOM_TEMPLATES_KEY = "dentql:plan-templates"
+function isCompletedProcedureStatus(status: string | null | undefined) {
+  const value = (status || "").toLowerCase()
+  return value === "completed" || value === "done" || value === "finished"
+}
+
 type CustomTemplate = { id: string; name: string; items: { name: string; price: number; phase: string }[] }
 
 
@@ -814,41 +820,13 @@ function TreatmentPlanContent() {
     setSaving(false)
   }
 
-  const handleBackfillInvoice = async () => {
-    if (!activeBranch) return
-    setSaving(true)
-    setError(null)
-    const { data, error: err } = await backfillPatientPlanInvoices({
-      patientId,
-      branchId: activeBranch.id,
-    })
-    if (err) {
-      setError(err)
-      notify.error(err)
-    } else if (data && data.created > 0) {
-      const { data: linked } = await getLinkedInvoiceForPlan(activePlanId!)
-      if (linked) setAutoInvoiceId(linked.id)
-      notify.success(
-        t("billing.gateBackfillDone", "Created {count} draft invoice(s).").replace(
-          "{count}",
-          String(data.created)
-        )
-      )
-    } else {
-      const msg = t("treatmentPlan.noInvoiceBackfill", "No missing invoices to create.")
-      setError(msg)
-      notify.info(msg)
-    }
-    setSaving(false)
-  }
-
-  const handleInvoicePhase = async (phaseLabel: string, phaseItems: typeof planItems) => {
+  const handleInvoicePhase = async (phaseLabel: string, phaseItems: TreatmentPlanItem[]) => {
     if (!activePlanId || !activeBranch?.id || !user) return
     const uninvoicedItems = phaseItems.filter(
       (i) => !invoicedItemsMap[i.id] && i.status !== "cancelled"
     )
     if (uninvoicedItems.length === 0) {
-      notify.info("All procedures in this phase have already been invoiced.")
+      notify.info(t("treatmentPlan.allPhaseInvoiced", "All procedures in this phase have already been invoiced."))
       return
     }
     const org = await fetchOrganization()
@@ -863,9 +841,10 @@ function TreatmentPlanContent() {
       branchId: activeBranch.id,
       patientId,
       treatmentPlanId: activePlanId,
+      label: phaseLabel,
       items: uninvoicedItems.map((item) => ({
         id: item.id,
-        description: `[${phaseLabel}] ${item.description}`,
+        description: item.description,
         estimatedPrice: Number(item.estimated_price) || 0,
         toothNumber: item.tooth_number,
         procedureId: item.procedure_id,
@@ -873,12 +852,16 @@ function TreatmentPlanContent() {
     })
 
     if (invErr || !newInv) {
-      notify.error(invErr ?? "Failed to create phase invoice.")
+      notify.error(invErr ?? t("treatmentPlan.phaseInvoiceFailed", "Failed to create phase invoice."))
       setSaving(false)
       return
     }
 
-    notify.success(`Draft invoice ${newInv.invoiceNumber} created for ${phaseLabel}!`)
+    notify.success(
+      t("treatmentPlan.invoiceCreatedForPhase", "Draft invoice {number} created for {phase}.")
+        .replace("{number}", newInv.invoiceNumber)
+        .replace("{phase}", phaseLabel)
+    )
     await loadPlan(activePlanId)
     setSaving(false)
     router.push(`/billing/${newInv.id}`)
@@ -887,10 +870,10 @@ function TreatmentPlanContent() {
   const handleInvoiceCompletedItems = async () => {
     if (!activePlanId || !activeBranch?.id || !user) return
     const completedUninvoiced = planItems.filter(
-      (i) => i.status === "completed" && !invoicedItemsMap[i.id]
+      (i) => isCompletedProcedureStatus(i.status) && !invoicedItemsMap[i.id]
     )
     if (completedUninvoiced.length === 0) {
-      notify.info("No completed uninvoiced procedures found.")
+      notify.info(t("treatmentPlan.noCompletedUninvoiced", "No completed uninvoiced procedures found."))
       return
     }
     const org = await fetchOrganization()
@@ -905,6 +888,7 @@ function TreatmentPlanContent() {
       branchId: activeBranch.id,
       patientId,
       treatmentPlanId: activePlanId,
+      label: t("treatmentPlan.completedInvoiceLabel", "Completed"),
       items: completedUninvoiced.map((item) => ({
         id: item.id,
         description: item.description,
@@ -915,23 +899,28 @@ function TreatmentPlanContent() {
     })
 
     if (invErr || !newInv) {
-      notify.error(invErr ?? "Failed to create invoice for completed procedures.")
+      notify.error(invErr ?? t("treatmentPlan.completedInvoiceFailed", "Failed to create invoice for completed procedures."))
       setSaving(false)
       return
     }
 
     notify.success(
-      `Draft invoice ${newInv.invoiceNumber} created for ${completedUninvoiced.length} completed procedure(s)!`
+      t(
+        "treatmentPlan.invoiceCreatedForCompleted",
+        "Draft invoice {number} created for {count} completed procedure(s)."
+      )
+        .replace("{number}", newInv.invoiceNumber)
+        .replace("{count}", String(completedUninvoiced.length))
     )
     await loadPlan(activePlanId)
     setSaving(false)
     router.push(`/billing/${newInv.id}`)
   }
 
-  const handleInvoiceItem = async (item: (typeof planItems)[number]) => {
+  const handleInvoiceItem = async (item: TreatmentPlanItem) => {
     if (!activePlanId || !activeBranch?.id || !user) return
     if (invoicedItemsMap[item.id]) {
-      notify.info("This procedure is already invoiced.")
+      notify.info(t("treatmentPlan.procedureAlreadyInvoiced", "This procedure is already invoiced."))
       return
     }
     const org = await fetchOrganization()
@@ -958,15 +947,49 @@ function TreatmentPlanContent() {
     })
 
     if (invErr || !newInv) {
-      notify.error(invErr ?? "Failed to create invoice for procedure.")
+      notify.error(invErr ?? t("treatmentPlan.itemInvoiceFailed", "Failed to create invoice for procedure."))
       setSaving(false)
       return
     }
 
-    notify.success(`Draft invoice ${newInv.invoiceNumber} created for this procedure!`)
+    notify.success(
+      t("treatmentPlan.invoiceCreatedForProcedure", "Draft invoice {number} created for this procedure.")
+        .replace("{number}", newInv.invoiceNumber)
+    )
     await loadPlan(activePlanId)
     setSaving(false)
     router.push(`/billing/${newInv.id}`)
+  }
+
+  const handleInvoiceRemaining = async () => {
+    if (!activePlanId || !activeBranch?.id || !user) return
+    const org = await fetchOrganization()
+    if (!org) {
+      notify.error("Organization not found.")
+      return
+    }
+    setSaving(true)
+    const { data, error: err } = await createInvoiceFromPlan({
+      organizationId: org.id,
+      branchId: activeBranch.id,
+      patientId,
+      treatmentPlanId: activePlanId,
+      totalAmount: 0,
+      userId: user.id,
+    })
+    if (err || !data) {
+      notify.error(err ?? t("treatmentPlan.remainingInvoiceFailed", "Failed to invoice remaining procedures."))
+      setSaving(false)
+      return
+    }
+    if (data.existing) {
+      notify.info(t("treatmentPlan.remainingAlreadyInvoiced", "All remaining procedures are already on an invoice."))
+    } else {
+      notify.success(t("treatmentPlan.remainingInvoiceCreated", "Draft invoice created for remaining procedures."))
+    }
+    await loadPlan(activePlanId)
+    setSaving(false)
+    router.push(`/billing/${data.id}`)
   }
 
   if (loading || !mounted) {
@@ -1299,7 +1322,7 @@ function TreatmentPlanContent() {
                 </div>
                 <div className="flex flex-col sm:items-end gap-2">
                   <p className="shrink-0 text-lg font-bold">₱{total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</p>
-                  {planItems.some((i) => i.status === "completed" && !invoicedItemsMap[i.id]) &&
+                  {planItems.some((i) => isCompletedProcedureStatus(i.status) && !invoicedItemsMap[i.id]) &&
                   (planStatus === "approved" || planStatus === "in_progress" || planStatus === "completed") ? (
                     <Button
                       size="sm"
@@ -1308,19 +1331,25 @@ function TreatmentPlanContent() {
                       onClick={() => void handleInvoiceCompletedItems()}
                     >
                       <Receipt className="h-3.5 w-3.5" />
-                      Invoice Completed (
-                      {planItems.filter((i) => i.status === "completed" && !invoicedItemsMap[i.id]).length}) · ₱
-                      {formatPrice(
-                        planItems
-                          .filter((i) => i.status === "completed" && !invoicedItemsMap[i.id])
-                          .reduce((sum, i) => sum + (Number(i.estimated_price) || 0), 0)
-                      )}
+                      {t("treatmentPlan.invoiceCompletedCount", "Invoice completed ({count}) · ₱{amount}")
+                        .replace(
+                          "{count}",
+                          String(planItems.filter((i) => isCompletedProcedureStatus(i.status) && !invoicedItemsMap[i.id]).length)
+                        )
+                        .replace(
+                          "{amount}",
+                          formatPrice(
+                            planItems
+                              .filter((i) => isCompletedProcedureStatus(i.status) && !invoicedItemsMap[i.id])
+                              .reduce((sum, i) => sum + (Number(i.estimated_price) || 0), 0)
+                          )
+                        )}
                     </Button>
                   ) : null}
                 </div>
               </CardHeader>
               {planItems.length > 0 && (() => {
-                const completed = planItems.filter((i) => i.status === "completed" || i.status === "done").length
+                const completed = planItems.filter((i) => isCompletedProcedureStatus(i.status)).length
                 const inProgress = planItems.filter((i) => i.status === "in_progress" || i.status === "started").length
                 const totalCount = planItems.length
                 const pct = Math.round((completed / totalCount) * 100)
@@ -1374,7 +1403,35 @@ function TreatmentPlanContent() {
                           </div>
                           <div className="flex flex-wrap items-center gap-2.5">
                             <div className="text-xs font-semibold text-neutral-600">
-                              {phase.items.length} · ₱{formatPrice(phase.total)}
+                              {(() => {
+                                const uninvoiced = phase.items.filter(
+                                  (i) => !invoicedItemsMap[i.id] && i.status !== "cancelled"
+                                )
+                                const uninvoicedTotal = uninvoiced.reduce(
+                                  (sum, i) => sum + (Number(i.estimated_price) || 0),
+                                  0
+                                )
+                                const completedInPhase = phase.items.filter((i) =>
+                                  isCompletedProcedureStatus(i.status)
+                                ).length
+                                const parts = [`${phase.items.length} · ₱${formatPrice(phase.total)}`]
+                                if (completedInPhase > 0) {
+                                  parts.push(
+                                    t("treatmentPlan.phaseCompletedCount", "{count} completed").replace(
+                                      "{count}",
+                                      String(completedInPhase)
+                                    )
+                                  )
+                                }
+                                if (uninvoiced.length > 0 && uninvoiced.length < phase.items.length) {
+                                  parts.push(
+                                    t("treatmentPlan.phaseUninvoicedSummary", "{count} uninvoiced · ₱{amount}")
+                                      .replace("{count}", String(uninvoiced.length))
+                                      .replace("{amount}", formatPrice(uninvoicedTotal))
+                                  )
+                                }
+                                return parts.join(" · ")
+                              })()}
                             </div>
                             {phase.items.length > 0 &&
                             (planStatus === "approved" || planStatus === "in_progress" || planStatus === "completed") ? (
@@ -1387,9 +1444,25 @@ function TreatmentPlanContent() {
                                   0
                                 )
                                 if (uninvoiced.length === 0) {
-                                  return (
+                                  const invoicedEntry = phase.items
+                                    .map((item) => invoicedItemsMap[item.id])
+                                    .find((entry) => entry?.invoiceId)
+                                  return invoicedEntry?.invoiceId ? (
+                                    <Link
+                                      href={`/billing/${invoicedEntry.invoiceId}`}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                                    >
+                                      <Check className="h-3 w-3" />
+                                      {invoicedEntry.invoiceNumber
+                                        ? t("treatmentPlan.invoicedAs", "Invoiced · {number}").replace(
+                                            "{number}",
+                                            invoicedEntry.invoiceNumber
+                                          )
+                                        : t("treatmentPlan.invoicedBadge", "Invoiced")}
+                                    </Link>
+                                  ) : (
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                      <Check className="h-3 w-3" /> Invoiced
+                                      <Check className="h-3 w-3" /> {t("treatmentPlan.invoicedBadge", "Invoiced")}
                                     </span>
                                   )
                                 }
@@ -1402,7 +1475,10 @@ function TreatmentPlanContent() {
                                     onClick={() => void handleInvoicePhase(phase.label, phase.items)}
                                   >
                                     <Receipt className="h-3 w-3" />
-                                    Invoice Phase · ₱{formatPrice(uninvoicedTotal)}
+                                    {t("treatmentPlan.invoicePhaseAmount", "Invoice phase · ₱{amount}").replace(
+                                      "{amount}",
+                                      formatPrice(uninvoicedTotal)
+                                    )}
                                   </Button>
                                 )
                               })()
@@ -1436,6 +1512,8 @@ function TreatmentPlanContent() {
                                     phaseOptions={PLAN_PHASES}
                                     phaseLabel={getPlanPhaseLabel}
                                     invoiced={Boolean(invoicedItemsMap[item.id])}
+                                    invoiceId={invoicedItemsMap[item.id]?.invoiceId ?? null}
+                                    invoiceNumber={invoicedItemsMap[item.id]?.invoiceNumber ?? null}
                                     onSave={(patch) => handleUpdateItem(item.id, patch)}
                                     onDelete={() => handleDeleteItem(item.id)}
                                     onMarkStatus={
@@ -1799,14 +1877,16 @@ function TreatmentPlanContent() {
                   <CheckCircle className="h-4 w-4" /> Approve Plan
                 </Button>
               ) : null}
-              {(planStatus === "approved" || planStatus === "in_progress") && !autoInvoiceId ? (
-                <Button variant="default" onClick={handleBackfillInvoice} disabled={saving}>
-                  {t("treatmentPlan.createMissingInvoice", "Create invoice from plan")}
+              {(planStatus === "approved" || planStatus === "in_progress" || planStatus === "completed") &&
+              planItems.some((item) => item.status !== "cancelled" && !invoicedItemsMap[item.id]) ? (
+                <Button variant="default" onClick={() => void handleInvoiceRemaining()} disabled={saving}>
+                  {t("treatmentPlan.createRemainingInvoice", "Invoice remaining procedures")}
                 </Button>
               ) : null}
             </div>
 
-            {autoInvoiceId ? (
+            {autoInvoiceId &&
+            !planItems.some((item) => item.status !== "cancelled" && !invoicedItemsMap[item.id]) ? (
               <p className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900">
                 {t(
                   "treatmentPlan.invoiceLinked",
@@ -1819,6 +1899,13 @@ function TreatmentPlanContent() {
                 <Link href="/billing/hmo?status=draft" className="font-medium underline">
                   HMO claim drafts
                 </Link>
+              </p>
+            ) : planItems.some((item) => invoicedItemsMap[item.id]) ? (
+              <p className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-800">
+                {t(
+                  "treatmentPlan.partialInvoicedHint",
+                  "Invoice procedures by item, phase, or completed work. Each action creates a new draft — it does not add lines to a paid invoice."
+                )}
               </p>
             ) : null}
           </>

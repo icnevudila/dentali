@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { Pencil, Trash2, Check, X, Receipt } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,8 +21,10 @@ function itemStatusLabel(
   status: string,
   t: (key: string, fallback: string) => string
 ) {
-  if (status === "completed") return t("treatmentPlan.itemCompleted", "Completed")
-  if (status === "in_progress") return t("treatmentPlan.itemInProgress", "In progress")
+  if (status === "completed" || status === "done" || status === "finished") {
+    return t("treatmentPlan.itemCompleted", "Completed")
+  }
+  if (status === "in_progress" || status === "started") return t("treatmentPlan.itemInProgress", "In progress")
   if (status === "cancelled") return t("treatmentPlan.itemCancelled", "Cancelled")
   return t("treatmentPlan.itemPlanned", "Planned")
 }
@@ -35,6 +38,8 @@ export function TreatmentPlanItemRow({
   phaseOptions,
   phaseLabel,
   invoiced = false,
+  invoiceId = null,
+  invoiceNumber = null,
   onSave,
   onDelete,
   onMarkStatus,
@@ -46,6 +51,8 @@ export function TreatmentPlanItemRow({
   phaseOptions?: readonly { value: string; label: string }[]
   phaseLabel?: (value: string | null | undefined) => string
   invoiced?: boolean
+  invoiceId?: string | null
+  invoiceNumber?: string | null
   onSave: (patch: {
     description: string
     estimatedPrice: number
@@ -139,9 +146,21 @@ export function TreatmentPlanItemRow({
         <td className="py-2.5 px-3 text-right">
           <div className="flex items-center justify-end gap-1.5">
             {invoiced ? (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <Check className="h-3 w-3" /> Invoiced
-              </span>
+              invoiceId ? (
+                <Link
+                  href={`/billing/${invoiceId}`}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                >
+                  <Check className="h-3 w-3" />
+                  {invoiceNumber
+                    ? t("treatmentPlan.invoicedAs", "Invoiced · {number}").replace("{number}", invoiceNumber)
+                    : t("treatmentPlan.invoicedBadge", "Invoiced")}
+                </Link>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <Check className="h-3 w-3" /> {t("treatmentPlan.invoicedBadge", "Invoiced")}
+                </span>
+              )
             ) : onInvoiceItem && item.status !== "cancelled" ? (
               <Button
                 type="button"
@@ -150,10 +169,10 @@ export function TreatmentPlanItemRow({
                 className="h-7 text-xs px-2 gap-1 border-primary-200 text-primary-700 hover:bg-primary-50 bg-white"
                 disabled={saving}
                 onClick={onInvoiceItem}
-                title="Create draft invoice for this procedure"
+                title={t("treatmentPlan.invoiceThisProcedure", "Create draft invoice for this procedure")}
               >
                 <Receipt className="h-3 w-3" />
-                Invoice
+                {t("treatmentPlan.invoiceItem", "Invoice")}
               </Button>
             ) : null}
 
